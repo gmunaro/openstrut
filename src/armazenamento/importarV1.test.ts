@@ -280,8 +280,9 @@ describe("importação: arquivos inválidos dão erro claro", () => {
   });
 
   it(".LAJ truncado no meio de uma laje", () => {
+    // o checkout pode trazer o fixture com LF (.gitattributes eol=lf)
     const texto = fluxoLaj
-      .split("\r\n")
+      .split(/\r?\n/)
       .slice(0, 3)
       .join("\r\n")
       .replace(/,"V3\/V2\/V4\/V1"$/, "");
@@ -290,13 +291,13 @@ describe("importação: arquivos inválidos dão erro claro", () => {
   });
 
   it(".LAJ sem a segunda laje", () => {
-    const texto = fluxoLaj.split("\r\n").slice(0, 3).join("\r\n");
+    const texto = fluxoLaj.split(/\r?\n/).slice(0, 3).join("\r\n");
     const [e] = erros(importarV1([{ nome: "FLUXO.LAJ", texto }]));
     expect(e).toBe("FLUXO.LAJ: arquivo truncado ou corrompido: acabou sem o nome da laje 2.");
   });
 
   it(".VIG truncado", () => {
-    const texto = fluxoVig.split("\r\n").slice(0, 10).join("\r\n");
+    const texto = fluxoVig.split(/\r?\n/).slice(0, 10).join("\r\n");
     const [e] = erros(importarV1([LAJ, { nome: "FLUXO.VIG", texto }]));
     expect(e).toMatch(
       /^FLUXO\.VIG: arquivo truncado ou corrompido: acabou sem o vão do tramo 1 da viga V2\.$/,

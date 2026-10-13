@@ -191,10 +191,10 @@ describe("DXF da planta de formas", () => {
     // cotas: x parciais 400 + 400 e total 800; y só a total 500
     const cotas = textos(daCamada(es, "COTAS"));
     expect(cotas.sort()).toEqual(["400", "400", "500", "800"]);
-    // título: acentos como \U+XXXX (DXF R12 é ANSI); área 77,32 m² (formas.test.ts)
+    // título: acentos como \U+XXXX (DXF R12 é ANSI); área 78,66 m² (formas.test.ts: 78,664 com o pilar até o fundo da laje)
     expect(t).toContain("PLANTA DE FORMAS - T\\U+00E9rreo");
     expect(t).toContain("Obra: Casa \\U+00C1vila - medidas em cm");
-    expect(t).toContain("\\U+00C1rea de f\\U+00F4rma: 77,32 m\\U+00B2 por pavimento");
+    expect(t).toContain("\\U+00C1rea de f\\U+00F4rma: 78,66 m\\U+00B2 por pavimento");
   });
 
   it("obra inteira: um arquivo, pavimentos lado a lado em x", () => {

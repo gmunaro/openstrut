@@ -225,11 +225,12 @@ describe("obra de duas lajes (4 × 5 e 3,5 × 5 m, h 10), pavimento repetido 2×
     // vigas: 30 m · 0,12 · 0,30 = 1,08 m³; forma 30 · (0,12 + 0,60) = 21,6 m²
     perto(p.vigas.concreto, 2 * 1.08, 1e-9);
     perto(p.vigas.forma, 2 * 21.6, 1e-9);
-    // pilares: 6 · 0,20 · 0,30 · 3 = 1,08 m³; forma até o fundo da viga (h 40):
-    // 6 · 1,0 · (3 − 0,40) = 15,6 m²
+    // pilares: 6 · 0,20 · 0,30 · 3 = 1,08 m³; forma até o fundo da laje, 1,0·(3 − 0,10) = 2,9,
+    // menos 0,12·0,30 = 0,036 por face onde chega viga: 4 cantos (2 faces) 2,828;
+    // (4;0) e (4;5) (3 faces) 2,792 → 4·2,828 + 2·2,792 = 16,896 m²
     perto(p.pilares.concreto, 2 * 1.08, 1e-9);
-    perto(p.pilares.forma, 2 * 15.6, 1e-9);
-    perto(q.total.forma, 2 * (37.5 + 21.6 + 15.6), 1e-9);
+    perto(p.pilares.forma, 2 * 16.896, 1e-9);
+    perto(q.total.forma, 2 * (37.5 + 21.6 + 16.896), 1e-9);
     perto(q.total.concreto, 2 * (3.75 + 1.08 + 1.08), 1e-9);
   });
 

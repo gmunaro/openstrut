@@ -119,7 +119,7 @@ describe("tela inicial", () => {
   it("arquivo da V1 truncado mostra o erro e não abre nada", async () => {
     const { router, user } = renderizarApp("/");
     const entrada = await screen.findByLabelText("Arquivos da V1 (.LAJ, .VIG, .COL)");
-    const truncado = fluxoLaj.split("\r\n").slice(0, 3).join("\r\n");
+    const truncado = fluxoLaj.split(/\r?\n/).slice(0, 3).join("\r\n");
     await user.upload(entrada, new File([truncado], "FLUXO.LAJ"));
     const alerta = await screen.findByRole("alert");
     expect(within(alerta).getByText("Não foi possível importar a obra da V1:")).toBeTruthy();

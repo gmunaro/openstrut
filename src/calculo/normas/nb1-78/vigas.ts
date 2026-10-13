@@ -27,12 +27,18 @@ const taxaAswMin = (aco: MateriaisCalc["acoEstribo"]) =>
   aco === "CA-25" ? TAXA_ASW_MIN_CA25 : TAXA_ASW_MIN;
 /** As + As' ≤ 4 % de Ac (V1 ArmAsMax#; RECONSTRUCAO: NB-1/78 6.3.1.1 não conferido). */
 export const TAXA_AS_MAX = 0.04;
-/** [VERIFICAR] As,min = 0,25 % bw·h para CA-25 (e CA-30), 0,15 % para CA-40 a CA-60:
- *  fonte secundária de confiança média-baixa (Silva e Araújo 2015, Essentia, citando
- *  Sussekind 1987; docs/norma/pendencias.md item 7). A V1 usa 0,15 % para todo aço;
- *  com CA-25 vale a taxa maior, a favor da segurança. */
+/** As,min = 0,25 % bw·h para CA-25 (e CA-30) no modo "corrigido". Fonte secundária:
+ *  Silva e Araújo, "Estudo das taxas mínimas de armadura de tração em vigas...",
+ *  Revista Essentia (Sobral) v. 16, 2015, citando a NB-1/1978 (0,25 % para CA-25 e
+ *  CA-30; 0,15 % para CA-40, CA-50 e CA-60); docs/norma/pendencias.md item 7.
+ *  [VERIFICAR] texto da norma não lido. */
 export const TAXA_AS_MIN_CA25 = 0.0025;
-const taxaAsMin = (aco: MateriaisCalc["aco"]) => (aco === "CA-25" ? TAXA_AS_MIN_CA25 : TAXA_AS_MIN);
+/** Taxa de As,min de viga por modo de cálculo (item H de docs/MODO-CALCULO.md):
+ *  - "original": 0,15 % para qualquer aço, como o SISTRUT de 1991 (SISTRUT.LAP,
+ *    linhas 150-151; V1 VcDimensiona, CcaAsMin#(bw, h, 0,0015));
+ *  - "corrigido": 0,25 % com CA-25 e 0,15 % com CA-50 e CA-60 (TAXA_AS_MIN_CA25). */
+export const taxaAsMinNb178 = (mat: Pick<MateriaisCalc, "aco" | "modoCalculo">) =>
+  mat.modoCalculo !== "original" && mat.aco === "CA-25" ? TAXA_AS_MIN_CA25 : TAXA_AS_MIN;
 /** Teto de τwu, MPa (V1 CcaAswEstriboRho). */
 const TAU_WU_MAX = 4.5;
 
@@ -69,7 +75,8 @@ export function momentoLimiteNb178(
  * (V1 ArmAsDupla) e a comprimida com σ's pela compatibilidade de deformações,
  * ε's = 0,0035 (x_lim − d')/x_lim, σ's do diagrama da classe do aço (V1 ArmAsLinha).
  * `classe` = classe do aço (B: diagrama curvo e x/d limite menor, V1 CcaAcoClasse%).
- * A tracionada respeita As,min = 0,15 % bw·h (0,25 % com CA-25). Sem solução
+ * A tracionada respeita As,min = taxaAsMinNb178 · bw·h (0,15 %; 0,25 % com CA-25 no
+ * modo "corrigido"). Sem solução
  * (d ≤ d' com armadura dupla, ou As + As' > 4 % Ac) devolve NaN nas áreas e um aviso.
  */
 export function vigaFlexaoNb178(
@@ -88,7 +95,7 @@ export function vigaFlexaoNb178(
   const t = tensoes(mat, classe);
   const xdLim = xdLimiteNb178(mat, classe);
   const mdLim = momentoLimiteNb178(bw, d, mat, classe) * 100;
-  const taxaMin = taxaAsMin(mat.aco);
+  const taxaMin = taxaAsMinNb178(mat);
   const asMin = taxaMin * bw * h;
   memoria.push(
     { descricao: "Momento de cálculo", valor: Math.abs(md), unidade: "kN·m" },
@@ -209,10 +216,13 @@ export function vigaFlexaoNb178(
   if (as < asMin) {
     memoria.push({
       descricao: "Armadura mínima prevalece",
-      formula: `As,min = ${taxaMin === TAXA_AS_MIN ? "0,0015" : "0,0025 (CA-25) [VERIFICAR]"} · bw · h`,
+      formula: `As,min = ${taxaMin === TAXA_AS_MIN ? "0,0015" : "0,0025 (CA-25)"} · bw · h`,
       valor: asMin,
       unidade: "cm²",
-      ref: VIGCALC,
+      ref:
+        mat.modoCalculo === "original"
+          ? `${VIGCALC} (modo original: SISTRUT.LAP, 0,15 % para todo aço)`
+          : "NB-1/78 segundo Silva e Araújo, Essentia 2015 (0,25 % CA-25/30; 0,15 % CA-40/50/60) [VERIFICAR]",
     });
     as = asMin;
   }

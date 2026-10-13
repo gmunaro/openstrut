@@ -666,6 +666,33 @@ function aplicarPilares(pav: Pavimento, col: ColV1, avisos: string[]): Pavimento
   return { ...pav, pilares };
 }
 
+/** Pontas de viga em balanço: apoio "-" na extremidade (V1 VcCaso%). */
+function pontasEmBalanco(vig: VigV1) {
+  return vig.vigas.flatMap((v) =>
+    [v.apoios[0], v.apoios.at(-1)]
+      .filter((a) => a?.nome === "-")
+      .map((a) => ({ viga: v.nome, ponto: { x: a?.x ?? 0, y: a?.y ?? 0 } })),
+  );
+}
+
+/** Ponta "-" do .VIG vira ponta livre (balanço) da viga gerada: a posição entra em
+ *  pilaresRemovidos e a V2 não cria pilar ali, como a V1 calcula (sem isso o balanço
+ *  viraria um tramo apoiado num pilar fictício). Avisa o que entrou e o que não. */
+function avisarBalancos(
+  balancos: ReturnType<typeof pontasEmBalanco>,
+  pav: Pavimento,
+  avisos: string[],
+) {
+  for (const { viga, ponto: p } of balancos) {
+    const aplicado = pav.pilaresRemovidos.some((r) => mesmoPonto(r, p));
+    avisos.push(
+      aplicado
+        ? `Viga ${viga}: apoio "-" em ${ponto(p.x, p.y)} importado como balanço (ponta livre, sem pilar).`
+        : `Viga ${viga}: apoio "-" em ${ponto(p.x, p.y)} não é ponta nem cruzamento de viga gerada pela V2; balanço NÃO importado. Confira.`,
+    );
+  }
+}
+
 const mesmaObra = (a: string, b: string) => a.toUpperCase() === b.toUpperCase();
 
 function importar(arquivos: readonly ArquivoV1[]): ImportacaoV1 {
@@ -733,7 +760,9 @@ function importar(arquivos: readonly ArquivoV1[]): ImportacaoV1 {
 
   const lajes = converterLajes(laj, avisos);
   if (lajes.length === 0) throw new ErroV1(`${laj.arquivo}: nenhuma laje pôde ser importada.`);
-  let pav = gerarEstrutura({ ...base, lajes });
+  const balancos = vig ? pontasEmBalanco(vig) : [];
+  let pav = gerarEstrutura({ ...base, lajes, pilaresRemovidos: balancos.map((b) => b.ponto) });
+  if (vig) avisarBalancos(balancos, pav, avisos);
   if (vig) pav = aplicarVigas(pav, vig, laj, avisos);
   if (col) pav = aplicarPilares(pav, col, avisos);
   if (laj.res.size > 0 || col)
