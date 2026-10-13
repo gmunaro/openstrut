@@ -31,6 +31,6 @@ As lajes não têm switch de armadura mínima.
 
 ## Casos de referência
 
-- **q1** (`_rev5/quant/q1.ts`): L1 4×5 apoiada e L2 em balanço 1,5×5, h 10, pilares 20x30, pé-direito 3. A fôrma certa é 53,724 m²; a regra antiga dava 52,46 (2,35 % a menos). O aço da L2 é 26,49 kg; antes era 3,97 kg.
-- **E2E** (V1, `dist/roteiros/saida/e2e_10_forma-*`): 4 lajes 4×5 h 10, vigas 12x40 e 12x50, 9 pilares 20x20, pé-direito 3. O volume certo é 11,384 m³. O editor da V1 dá 10,304 m³ e 146,48 m²; a impressão dá 12,032 m³ e 157,28 m².
-- **BALC** (V1, `dist/_rev5/difnb`): é a fixture `src/armazenamento/__fixtures__/v1/BALC.*`.
+- **q1** (obra montada nos testes de `src/calculo/formas.test.ts` e `modoCalculo.test.ts`): L1 4×5 apoiada e L2 em balanço 1,5×5, h 10, pilares 20x30, pé-direito 3. A fôrma certa é 53,724 m²; a regra antiga dava 52,46 (2,35 % a menos). O aço da L2 é 26,49 kg; antes era 3,97 kg.
+- **E2E** (roteiro de formas da V1, no repositório da V1, privado): 4 lajes 4×5 h 10, vigas 12x40 e 12x50, 9 pilares 20x20, pé-direito 3. O volume certo é 11,384 m³. O editor da V1 dá 10,304 m³ e 146,48 m²; a impressão dá 12,032 m³ e 157,28 m².
+- **BALC** (obra com balanço gravada pela V1): é a fixture `src/armazenamento/__fixtures__/v1/BALC.*`.

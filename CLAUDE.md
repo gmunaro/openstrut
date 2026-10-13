@@ -1,7 +1,7 @@
-# SISTRUT V2
+# OpenStrut V2
 
 ## Identidade
-App web local (offline, sem servidor) para calcular a estrutura de concreto armado de edifícios simples: o usuário desenha a planta de cada pavimento, e o app calcula lajes → vigas → pilares pela NBR 6118:2023 ou pela NB-1/78 e mostra a memória de cálculo. É o sucessor do SISTRUT 4.0 (1991). A V1, reconstrução em QB64, está em `../_Arquivo/Sistrust/dist` e é a referência de comportamento para a NB-1/78. Especificação: `docs/SPEC.md`.
+App web local (offline, sem servidor) para calcular a estrutura de concreto armado de edifícios simples: o usuário desenha a planta de cada pavimento, e o app calcula lajes → vigas → pilares pela NBR 6118:2023 ou pela NB-1/78 e mostra a memória de cálculo. É uma reconstrução independente do SISTRUT 4.0 (1991), sem vínculo com os autores do original. A V1, reconstrução em QB64, fica num repositório separado (privado) e é a referência de comportamento para a NB-1/78; os valores dela que importam já estão nos testes e nas fixtures de `src/armazenamento/__fixtures__/v1/`. Especificação: `docs/SPEC.md`. Licença: GPL-3.0-or-later.
 
 ## Inegociáveis
 - **Resultado errado é o pior bug.** Toda fórmula leva o item da norma em comentário e na memória. Todo teste de cálculo tem valor de referência independente (exemplo publicado, conta à mão ou V1), nunca a saída da própria função.
@@ -9,7 +9,7 @@ App web local (offline, sem servidor) para calcular a estrutura de concreto arma
 - As diferenças entre normas ficam na implementação de `Norma` (`src/calculo/normas/`), não em `if` espalhado.
 - Unidades internas em SI: kN, m, MPa e cm² para armadura. A conversão para tf acontece só na exibição.
 - Fora dos limites da norma, o resultado vira aviso visível. Nunca esconda nem "ajuste" valores.
-- Offline e sem servidor. A obra fica em arquivo `.sistrut.json` com `versao` e migração por versão.
+- Offline e sem servidor. A obra fica em arquivo `.openstrut.json` com `versao` e migração por versão. Arquivos `.sistrut.json`, de antes do renome, continuam abrindo.
 - O app avisa na tela e no relatório que os resultados exigem conferência de engenheiro responsável.
 
 ## Glossário
@@ -28,9 +28,9 @@ App web local (offline, sem servidor) para calcular a estrutura de concreto arma
 - `bun run typecheck`
 - `bun run lint` / `bun run fmt`
 - `bun run test`: Vitest (motor de cálculo e domínio)
-- `bun run e2e`: Playwright (fluxo na tela)
-- `bun run build`
-- `bun run check`: typecheck + lint + test (rode antes de dizer "pronto")
+- `bunx playwright test` (ou `bun run e2e`): Playwright (fluxo na tela, em `e2e/`)
+- `bun run build`; `bun run build:pages` para o GitHub Pages (base `/openstrut/`)
+- `bun run check`: typecheck + lint + formatação + test (rode antes de dizer "pronto")
 
 ## Verificação
 - Mudou cálculo: rode `bun run test` focado (`bun run test src/calculo/vigas`) e mostre os valores esperados e de onde vieram.
