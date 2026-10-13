@@ -2,7 +2,7 @@
 
 ## Problema
 
-O SISTRUT 4.0 (1991) calculava a estrutura de concreto armado de um edifício inteiro. A carga saía das lajes, passava pelas vigas e chegava aos pilares, andar por andar. Ele roda em MS-DOS, usa a norma NB-1/78 e tem interface de teclado com telas de 80×25. A V1 (OpenStrut V1, em `_Arquivo/Sistrust/dist`) reconstruiu esse programa em QB64 e o faz rodar no Windows atual, mas a interface e a norma continuam as de 1991.
+O SISTRUT 4.0 (1991) calculava a estrutura de concreto armado de um edifício inteiro. A carga saía das lajes, passava pelas vigas e chegava aos pilares, andar por andar. Ele roda em MS-DOS, usa a norma NB-1/78 e tem interface de teclado com telas de 80×25. A V1 (OpenStrut V1, num repositório separado e privado) reconstruiu esse programa em QB64 e o faz rodar no Windows atual, mas a interface e a norma continuam as de 1991.
 
 A V2 leva o mesmo fluxo para uma ferramenta atual:
 - desenha a planta com o mouse;
@@ -82,7 +82,7 @@ Engenheiro civil que faz o pré-dimensionamento e o cálculo de edifícios simpl
 | Offline | vite-plugin-pwa | instalável e offline |
 | Testes | Vitest para o motor de cálculo; Playwright para o fluxo na tela | padrão |
 | Lint/format | oxlint + oxfmt | padrão |
-| Deploy | site estático (Vercel ou Cloudflare Pages), opcional | o app roda local com `bun run preview` |
+| Deploy | site estático no GitHub Pages (https://gmunaro.github.io/openstrut/) | o app também roda local com `bun run preview` |
 
 ## Arquitetura
 

@@ -24,7 +24,7 @@ O que muda de uma norma para outra fica em `RegrasDetalhamento`: zona de aderên
 
 ## Regras: NBR 6118:2023
 
-Fontes: Bastos, *Ancoragem e emenda de armaduras* (UNESP, mar/2024), chamada aqui de F4, e Bastos, *Vigas de concreto armado* (UNESP, abr/2024), chamada de F6. Os textos extraídos estão em `%TEMP%/norma-scratch/Ancoragem.txt` e `Vigas.txt`. O texto da norma não foi lido.
+Fontes: Bastos, *Ancoragem e emenda de armaduras* (UNESP, mar/2024), chamada aqui de F4, e Bastos, *Vigas de concreto armado* (UNESP, abr/2024), chamada de F6. O texto da norma não foi lido.
 
 | Regra | Fórmula / valor | Item | Fonte |
 |---|---|---|---|
@@ -33,7 +33,7 @@ Fontes: Bastos, *Ancoragem e emenda de armaduras* (UNESP, mar/2024), chamada aqu
 | lb | φ/4 · fyd/fbd ≥ 25 φ | 9.4.2.4 | F4 Eq. 3 |
 | lb,nec | α lb As,calc/As,ef ≥ lb,mín = máx(0,3 lb; 10 φ; 10 cm). α = 0,7 com gancho, 1,0 sem gancho. A razão As,calc/As,ef fica limitada a 1 | 9.4.2.5 | F4 Eq. 4 e 5 |
 | Gancho de 90° (nervurada) | Ponta reta de 8 φ. Pino D pela Tabela 9.1: φ < 20 → CA-25 4φ, CA-50 5φ, CA-60 6φ; φ ≥ 20 → CA-25 5φ, CA-50 8φ. Acréscimo = 8 φ + D/2 + φ, medido por fora | 9.4.2.3 | F4 item 5.2.3, Tabela 1 |
-| Gancho semicircular (barra lisa, CA-25) | Ponta reta de 2 φ. Acréscimo = π (D + φ)/2 + 2 φ, pelo eixo, sem descontar o trecho D/2 + φ já contado no reto. Altura por fora: D + 2 φ | 9.4.2.3 a ("para as barras lisas, os ganchos devem ser semicirculares") | F4 p. 13-14 |
+| Gancho semicircular (barra lisa, CA-25) | Ponta reta de 2 φ. Acréscimo = π (D + φ)/2 + 2 φ, pelo eixo, sem descontar o trecho D/2 + φ já contado no reto. Altura por fora: D + 2 φ | 9.4.2.3 a (barra lisa leva gancho semicircular) | F4 p. 13-14 |
 | Barra lisa tracionada | Ancoragem obrigatoriamente com gancho: toda ponta de positivo e de negativo leva gancho, também dentro do vão e no apoio interno; lb,nec usa α = 0,7 | 9.4.2.1 a | F4 p. 12 |
 | Ganchos do estribo | 135° com ponta de 5 φt, no mínimo 5 cm, em cada um dos dois ganchos | 9.4.6.1 a | F4 item 5.2.5 |
 | Decalagem (Modelo I, estribo vertical) | al = d VSd,máx / (2 (VSd,máx − Vc)), com 0,5 d ≤ al ≤ d. al = d quando VSd ≤ Vc. Vc = Vc0 = 0,6 fctd bw d. VSd = γf · máx(vEsq, vDir) do tramo | 17.4.2.2 c | F6 Eq. 31 |
@@ -43,7 +43,7 @@ Fontes: Bastos, *Ancoragem e emenda de armaduras* (UNESP, mar/2024), chamada aqu
 
 ## Regras: NB-1/78
 
-A referência de comportamento é a V1, em `../_Arquivo/Sistrust/dist/src-reconstructed/desenho/DESCALC.BM` e `tests/T_DESCALC.BAS`. Onde a V1 reconstruída não tem a regra, vale o padrão do SISTRUT 4.0 original, no arquivo `sistrut-game/SISTRUT.DSP` (linhas citadas abaixo).
+A referência de comportamento é a V1 (repositório da V1, privado), nos arquivos `DESCALC.BM` e `T_DESCALC.BAS`. Onde a V1 reconstruída não tem a regra, vale o padrão do SISTRUT 4.0 original, no arquivo `SISTRUT.DSP` (linhas citadas abaixo).
 
 | Regra | Valor | Fonte |
 |---|---|---|
@@ -138,7 +138,7 @@ A aderência, lb, lb,nec, os ganchos de barra e os ganchos de estribo vêm de `a
 
 ### Regras: lajes
 
-Fonte: Bastos, *Lajes de Concreto* (UNESP), texto em `%TEMP%/norma-scratch/pdf/lajes-bastos.txt`. As páginas são as impressas.
+Fonte: Bastos, *Lajes de Concreto* (UNESP). As páginas são as impressas.
 
 | Regra | NBR 6118:2023 | NB-1/78 (V1) |
 |---|---|---|
@@ -157,13 +157,13 @@ Fonte: Bastos, *Lajes de Concreto* (UNESP), texto em `%TEMP%/norma-scratch/pdf/l
 
 ### Regras: pilares
 
-Fontes: Bastos, *Ancoragem e emenda de armaduras* (F4) e Bastos, *Pilares* (jun/2024), textos em `%TEMP%/norma-scratch/`.
+Fontes: Bastos, *Ancoragem e emenda de armaduras* (F4) e Bastos, *Pilares* (jun/2024).
 
 | Regra | NBR 6118:2023 | NB-1/78 |
 |---|---|---|
 | Aderência | barra vertical: boa (9.3.1 a) | boa |
 | Traspasse | l0t = α0t lb,nec ≥ máx(0,3 α0t lb; 15 φ; 20 cm), α0t = 2,0 (todas as barras na mesma seção, Tabela 9.4). lb,nec sem gancho e com As,calc/As,ef = 1. Fórmula das tracionadas, a favor da segurança (9.5.2.2.1; F4 Eq. 6 e 7, Tabela 4, p. 19-20) | l0 = ⌈lb⌉, lb de boa aderência da V1 (`DESEDC.BM` `DecEmenda#`) |
-| Bitola da emenda | a menor das duas (9.5.2.1: "deve ser calculado pela barra de menor diâmetro"; F4 p. 18) | igual |
+| Bitola da emenda | a menor das duas (9.5.2.1: o traspasse é calculado pela barra de menor diâmetro; F4 p. 18) | igual |
 | Longitudinais | do piso do lance ao topo + l0; no último lance, até o topo − c, sem gancho | igual |
 | Estribos | em toda a altura do lance (18.4.3); ⌈L/s⌉ por lance, + 1 na base do primeiro; comprimento 2 (b − 2c) + 2 (h − 2c) + `ganchosEstribo6118`. O φt e o s vêm do `PilarResultado` e são conferidos com `estriboPilar` (18.4.3); se ficam abaixo dele, sai aviso | igual, com `ganchosEstriboNb178`; sem conferência (a regra de `pilarNb178` não é exportada) |
 | Estribo suplementar | o canto protege até 2 barras, sem contar a de canto, a ≤ 20 φt dela, eixo a eixo (18.2.4; Bastos, Pilares, item 15.1, Fig. 156, p. 154). Um grampo por barra desprotegida da face, atravessando a seção: lado − 2c + ganchos de estribo, com o φt e o s do estribo | mesma regra |

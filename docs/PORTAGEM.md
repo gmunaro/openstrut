@@ -3,14 +3,14 @@
 ## Contexto
 O OpenStrut V2 é um app web local (TypeScript, Bun, Vitest) que calcula lajes, vigas e pilares de concreto armado. Ele usa a NB-1/78 (norma de 1978, a do SISTRUT original) ou a NBR 6118:2023. Leia `CLAUDE.md` e `docs/SPEC.md` da raiz do projeto: são curtos e trazem as regras.
 
-A V1 é a reconstrução em QB64 do SISTRUT de 1991. O cálculo dela pela NB-1/78 está testado e é a referência:
-- bibliotecas de cálculo: `C:/Users/MunaroPC/Desktop/Projetos Pessoais/_Arquivo/Sistrust/dist/src-reconstructed/**/*.BM`;
-- testes com valores de referência calculados à mão: `.../dist/tests/T_*.BAS`;
-- formato e unidades dos dados: `.../dist/docs/formats/DADOS.md`.
+A V1 é a reconstrução em QB64 do SISTRUT de 1991. O cálculo dela pela NB-1/78 está testado e é a referência. Ela fica no repositório da V1 (privado); quem tiver acesso usa:
+- bibliotecas de cálculo: `src-reconstructed/**/*.BM`;
+- testes com valores de referência calculados à mão: `tests/T_*.BAS`;
+- formato e unidades dos dados: o documento DADOS.md da V1.
 
 Sua tarefa é portar uma parte desse cálculo para TypeScript no V2, com os testes. **Só leia a V1. Não edite nada lá.**
 
-Projeto V2 (diretório de trabalho): `C:/Users/MunaroPC/Desktop/Projetos Pessoais/sistrut-v2`.
+Diretório de trabalho: a raiz deste repositório.
 
 ## Contratos (não altere; se precisar, pare e explique no relatório)
 - `src/dominio/obra.ts`: modelo da obra (Bordo, Vinculo, Materiais...).

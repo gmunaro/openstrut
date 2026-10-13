@@ -4,7 +4,7 @@ App web para calcular a estrutura de concreto armado de edifícios simples. O us
 
 > OpenStrut é uma reconstrução independente, por engenharia reversa, do SISTRUT 4.0 (1991). Sem vínculo com os autores do original.
 
-A V2 sucede o SISTRUT 4.0 (MS-DOS, 1991). A OpenStrut V1, reconstrução do original em QB64, fica em repositório separado e serve de referência para a NB-1/78.
+A V2 sucede o SISTRUT 4.0 (MS-DOS, 1991). A OpenStrut V1, reconstrução do original em QB64, fica num repositório separado (privado) e serve de referência para a NB-1/78. A versão desktop, que traz a V1 junto, é distribuída à parte.
 
 > **Os resultados exigem conferência de engenheiro responsável.** As normas ABNT são pagas e não foram lidas diretamente. Os valores da NBR 6118:2023 vêm de apostilas universitárias públicas, citadas no código e em `docs/norma/`. Os pontos sem confirmação estão marcados `[VERIFICAR]`.
 
@@ -29,7 +29,10 @@ bun install
 bun run build && bun run preview   # abre em http://localhost:4173
 ```
 
-Desenvolvimento: `bun run dev`. Verificação completa: `bun run check` (typecheck, lint, formatação e testes).
+- Desenvolvimento: `bun run dev`.
+- Verificação: `bun run check` (typecheck, lint, formatação e testes Vitest).
+- Testes de tela: `bunx playwright test` (Playwright; sobe um servidor de preview sozinho).
+- Build: `bun run build` (saída em `dist/`).
 
 O app é servido na raiz (`/`) por padrão, que é o que o instalador desktop usa (`http://127.0.0.1:41780/`). Para servir em outra pasta, defina `OPENSTRUT_BASE` no build. O GitHub Pages usa `/openstrut/`:
 
@@ -75,7 +78,7 @@ O deploy no Pages é feito pelo workflow `.github/workflows/pages.yml` a cada pu
 - Pilares com λ > 140 não são dimensionados e o app avisa. O mesmo vale para concretos acima de C50.
 - Na faixa 90 < λ ≤ 140, o coeficiente de fluência é φ = 2,0 fixo [VERIFICAR], porque a Tabela 8.2 da norma não estava nas fontes. O único exemplo publicado achado (UFMT 2017) não pôde ser reproduzido: o app pede mais aço que o artigo, ou seja, fica a favor da segurança.
 - Ficam fora: vento e pórtico espacial. Os DXF não foram abertos em programa de CAD; só a estrutura e as coordenadas são testadas.
-- As telas não foram testadas no navegador por automação. O teste e2e (`bun run e2e`) sobe um servidor de preview e ainda não foi rodado.
+- Os testes de tela (`bunx playwright test`, em `e2e/`) cobrem só os fluxos principais: tela inicial, arquivos da obra e uma obra de ponta a ponta em cada norma.
 
 ## Estrutura
 
@@ -90,3 +93,9 @@ src/telas/ src/routes/  telas
 src/armazenamento/  arquivo .openstrut.json e rascunho
 docs/               SPEC, fontes de norma, exemplos
 ```
+
+## Licença
+
+Copyright (C) 2026 gmunaro.
+
+Este programa é software livre: você pode redistribuí-lo e modificá-lo nos termos da GNU General Public License, versão 3 ou (a seu critério) qualquer versão posterior, publicada pela Free Software Foundation. Ele é distribuído sem nenhuma garantia. O texto completo está em [`LICENSE`](LICENSE).

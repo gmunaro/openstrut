@@ -1,6 +1,6 @@
 // Importação da obra FLUXO da V1. Os arquivos em __fixtures__/v1 são os que a V1
-// gravou ao rodar tests/T_FLUXO.BAS (dist/roteiros/saida/lajcal_02_grav-*/ FLUXO.LAJ,
-// .VIG, .COL); FLUXO-semente.LAJ é o de dist/roteiros/semente, gravado por uma versão
+// gravou ao rodar o teste T_FLUXO.BAS (repositório da V1, privado): FLUXO.LAJ, .VIG
+// e .COL; FLUXO-semente.LAJ é o arquivo-semente dos roteiros da V1, gravado por uma versão
 // anterior da V1 com NUL nos bordos não preenchidos.
 import { describe, expect, it } from "vitest";
 import { calcularObra } from "../calculo/fluxo";
