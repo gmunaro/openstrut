@@ -56,12 +56,13 @@ export function pavimentoNovo(nome: string, peDireito = 3, repeticoes = 1): Pavi
   };
 }
 
-/** Obra nova com um pavimento vazio. */
+/** Obra nova com um pavimento vazio, no modo de cálculo "corrigido". */
 export function obraNova(nome: string, norma: NormaId): Obra {
   return {
     versao: 3,
     nome,
     norma,
+    modoCalculo: "corrigido",
     materiais: materiaisPadrao(norma),
     pavimentos: [pavimentoNovo("Pavimento 1")],
   };

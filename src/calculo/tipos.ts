@@ -1,7 +1,15 @@
 // Contrato do motor de cálculo. Unidades: m (vãos, comprimentos), cm (seções,
 // cobrimentos, flechas, espaçamentos), mm (bitolas), kN, kN/m, kN/m², kN·m,
 // kN·m/m (lajes), MPa (tensões), cm² e cm²/m (armaduras).
-import type { Aco, Bordo, ClasseAco, Materiais, NormaId, Vinculo } from "../dominio/obra";
+import type {
+  Aco,
+  Bordo,
+  ClasseAco,
+  Materiais,
+  ModoCalculo,
+  NormaId,
+  Vinculo,
+} from "../dominio/obra";
 
 /** Uma etapa da memória de cálculo. `ref` = item da norma ou fonte. */
 export interface Etapa {
@@ -35,6 +43,9 @@ export interface MateriaisCalc {
   /** Classe do aço longitudinal (NB-1/78: diagrama e x/d limite da classe B).
    *  Ausente = A. A NBR 6118:2023 não tem classes e ignora o campo. */
   classeAco?: ClasseAco;
+  /** Modo de cálculo da obra (Obra.modoCalculo), posto por calcularObra. Ausente =
+   *  "corrigido". Hoje só a As,min de viga da NB-1/78 depende dele. */
+  modoCalculo?: ModoCalculo;
 }
 
 export interface Barra {

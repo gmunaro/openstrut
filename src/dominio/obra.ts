@@ -97,10 +97,17 @@ export interface Pavimento {
   pilaresRemovidos: Ponto[];
 }
 
+/** Modo de cálculo da obra nos pontos em que o SISTRUT de 1991 erra (a V1 reproduz
+ *  o erro): "corrigido" (padrão) calcula certo; "original" reproduz o SISTRUT.
+ *  O que cada modo faz, item por item, está em docs/MODO-CALCULO.md. */
+export type ModoCalculo = "corrigido" | "original";
+
 export interface Obra {
   versao: 3;
   nome: string;
   norma: NormaId;
+  /** Arquivo sem o campo (obra anterior ao switch) é lido como "corrigido". */
+  modoCalculo: ModoCalculo;
   materiais: Materiais;
   /** Do topo (cobertura) para a base. */
   pavimentos: Pavimento[];

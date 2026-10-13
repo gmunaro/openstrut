@@ -9,6 +9,7 @@ import {
   type ClasseAco,
   type Laje,
   type Materiais,
+  type ModoCalculo,
   type NormaId,
   type Obra,
   type Pavimento,
@@ -105,6 +106,7 @@ const ehObjeto = (x: unknown): x is Dados =>
 const mostra = (x: unknown) => (x === undefined ? "nada" : JSON.stringify(x));
 
 const NORMAS: readonly [NormaId, ...NormaId[]] = ["nb1-78", "nbr6118-2023"];
+const MODOS: readonly [ModoCalculo, ...ModoCalculo[]] = ["corrigido", "original"];
 const ACOS: readonly [Aco, ...Aco[]] = ["CA-25", "CA-50", "CA-60"];
 const CAAS: readonly [Caa, ...Caa[]] = [1, 2, 3, 4];
 const CLASSES_ACO: readonly [ClasseAco, ...ClasseAco[]] = ["A", "B"];
@@ -186,6 +188,9 @@ class Validador {
       versao: 3,
       nome: this.texto(d, "nome", "obra"),
       norma: this.opcao(d, "norma", "obra", NORMAS),
+      // campo novo sem migração: obra antiga (sem ele) lê como "corrigido"
+      modoCalculo:
+        d.modoCalculo === undefined ? "corrigido" : this.opcao(d, "modoCalculo", "obra", MODOS),
       materiais: this.materiais(this.objeto(d.materiais, "obra.materiais")),
       pavimentos: this.lista(d.pavimentos, "obra.pavimentos").map((p, i) =>
         this.pavimento(this.objeto(p, `pavimentos[${i}]`), `pavimentos[${i}]`),

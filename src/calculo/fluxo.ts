@@ -145,7 +145,10 @@ function marcarFalha(rp: ResultadoPavimento, falha: string) {
 }
 
 export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
-  const mat = norma.materiais(obra.materiais);
+  const mat: MateriaisCalc = {
+    ...norma.materiais(obra.materiais),
+    modoCalculo: obra.modoCalculo ?? "corrigido",
+  };
   const avisos: string[] = [];
   const pavimentos = obra.pavimentos.map((p) => calcularPavimento(p, obra, norma, mat));
 
@@ -566,10 +569,26 @@ export function analisarViga(v: VigaMontada): AnaliseViga {
   };
 }
 
+/** Armadura longitudinal tracionada na extremidade do tramo, cm², que entra no τc
+ *  do cortante (ψ1 da NB-1/78), porte de V1 VcAsLong#: da positiva do vão chega ao
+ *  apoio 1/3 quando a extremidade não tem negativo e 1/4 quando tem; havendo
+ *  negativo, vale a menor entre essa parcela e a negativa (a favor da segurança).
+ *  A V1 marca a regra como RECONSTRUCAO (atribuída à NB-1/78 por fontes
+ *  secundárias). Área não finita (seção sem solução) conta como 0. Não é switch:
+ *  a V2 segue a V1 nos dois modos. */
+export function armaduraLongitudinalCortante(asPos: number, asNeg: number) {
+  const pos = Number.isFinite(asPos) ? asPos : 0;
+  const neg = Number.isFinite(asNeg) ? asNeg : 0;
+  let a = neg > 0 ? pos / 4 : pos / 3;
+  if (neg > 0 && (neg < a || a <= 0)) a = neg;
+  return Math.max(a, 0);
+}
+
 /** Dimensionamento dos tramos (V1 VcDimensiona): d = h − (c + 1,5); Md = γf·M
- *  da envoltória; As com mínima; para o τc a menor armadura longitudinal da
- *  extremidade (VcAsLong); barras numa camada com cobrimento lateral de 2 cm;
- *  estribo de 2 ramos com o espaçamento máximo da norma (CortanteResultado.sMax).
+ *  da envoltória; As com mínima; para o τc de cada extremidade, a parcela da
+ *  positiva que chega ao apoio ou a negativa (armaduraLongitudinalCortante);
+ *  barras numa camada com cobrimento lateral de 2 cm; estribo de 2 ramos com o
+ *  espaçamento máximo da norma (CortanteResultado.sMax).
  *  γf = maior entre γg e γq (a envoltória não separa g e q). */
 export function dimensionarViga(
   viga: VigaMontada,
@@ -590,12 +609,8 @@ export function dimensionarViga(
       : null;
     return { flexao, barras };
   };
-  const asLong = (pos: SecaoViga, neg: SecaoViga) => {
-    const a = pos.flexao?.as ?? 0;
-    const b = neg.flexao?.as ?? 0;
-    const r = b > 0 && (b < a || a <= 0) ? b : a;
-    return Number.isFinite(r) && r > 0 ? r : 0;
-  };
+  const asLong = (pos: SecaoViga, neg: SecaoViga) =>
+    armaduraLongitudinalCortante(pos.flexao?.as ?? 0, neg.flexao?.as ?? 0);
   const tramos = analise.tramos.map((t, i): ResultadoTramo => {
     const nome = `${viga.nome} tramo ${i + 1}`;
     const positivo = secao(t.mPos);
