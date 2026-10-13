@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "sistrut-v2",
+      "name": "openstrut",
       "dependencies": {
         "@tanstack/react-router": "^1.170.42",
         "class-variance-authority": "^0.7.1",

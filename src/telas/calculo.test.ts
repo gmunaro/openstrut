@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { lajeNova, obraNova } from "../dominio/criar";
 import { gerarEstrutura } from "../dominio/gerar";
 import type { Obra } from "../dominio/obra";
-import { nomeArquivoSugerido } from "./arquivoLocal";
+import { ACEITA_AO_ABRIR, nomeArquivoSugerido } from "./arquivoLocal";
 import { calcular, coletarAvisos, coletarFalhas, mensagemSemNorma, rotuloNivel } from "./calculo";
 
 /** Duas lajes lado a lado num pavimento-tipo repetido 2 vezes. */
@@ -76,9 +76,15 @@ describe("coletarAvisos", () => {
 
 describe("nomeArquivoSugerido", () => {
   it("tira caracteres proibidos no Windows e põe a extensão", () => {
-    expect(nomeArquivoSugerido("Casa: A/B")).toBe("Casa AB.sistrut.json");
-    expect(nomeArquivoSugerido("  ")).toBe("obra.sistrut.json");
-    expect(nomeArquivoSugerido("Residência   Silva")).toBe("Residência Silva.sistrut.json");
+    expect(nomeArquivoSugerido("Casa: A/B")).toBe("Casa AB.openstrut.json");
+    expect(nomeArquivoSugerido("  ")).toBe("obra.openstrut.json");
+    expect(nomeArquivoSugerido("Residência   Silva")).toBe("Residência Silva.openstrut.json");
+  });
+
+  it("abrir aceita o .openstrut.json e o .sistrut.json de antes do renome", () => {
+    const aceitas = ACEITA_AO_ABRIR.split(",");
+    expect(aceitas).toContain(".openstrut.json");
+    expect(aceitas).toContain(".sistrut.json");
   });
 });
 

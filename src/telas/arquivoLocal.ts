@@ -1,7 +1,9 @@
-// Abrir e salvar o arquivo .sistrut.json no disco do usuário. Usa a File System
+// Abrir e salvar o arquivo .openstrut.json no disco do usuário. Usa a File System
 // Access API quando o navegador tem (Chrome, Edge): o arquivo aberto pode ser
 // regravado no mesmo lugar. Sem ela, cai para <input type=file> e download.
-import { EXTENSAO } from "../armazenamento/arquivo";
+// Abrir aceita também o .sistrut.json de antes do renome (qualquer .json, na verdade:
+// quem decide se é uma obra é lerObra).
+import { EXTENSAO, EXTENSOES_ACEITAS } from "../armazenamento/arquivo";
 
 /** Partes da File System Access API que o lib.dom do TypeScript ainda não declara. */
 interface OpcoesSeletor {
@@ -18,8 +20,11 @@ interface JanelaComSeletores {
 }
 
 const TIPOS: NonNullable<OpcoesSeletor["types"]> = [
-  { description: "Obra do SISTRUT", accept: { "application/json": [".json"] } },
+  { description: "Obra do OpenStrut", accept: { "application/json": [".json"] } },
 ];
+
+/** `accept` do <input type=file> de abrir: as extensões da obra e qualquer JSON. */
+export const ACEITA_AO_ABRIR = [...EXTENSOES_ACEITAS, ".json", "application/json"].join(",");
 
 const janela = () => window as Window & JanelaComSeletores;
 
@@ -33,7 +38,7 @@ export interface ArquivoLido {
   handle: FileSystemFileHandle | null;
 }
 
-/** Nome de arquivo para a obra: o nome sem caracteres proibidos no Windows + ".sistrut.json". */
+/** Nome de arquivo para a obra: o nome sem caracteres proibidos no Windows + ".openstrut.json". */
 export function nomeArquivoSugerido(nomeObra: string) {
   const base = nomeObra
     .replace(/[<>:"/\\|?*]/g, "")
@@ -68,7 +73,7 @@ function escolherPorInput() {
   return new Promise<File | null>((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = `${EXTENSAO},.json,application/json`;
+    input.accept = ACEITA_AO_ABRIR;
     input.addEventListener("change", () => resolve(input.files?.[0] ?? null));
     input.addEventListener("cancel", () => resolve(null));
     input.click();

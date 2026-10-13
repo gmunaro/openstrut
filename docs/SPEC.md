@@ -1,8 +1,8 @@
-# SISTRUT V2: especificação
+# OpenStrut V2: especificação
 
 ## Problema
 
-O SISTRUT 4.0 (1991) calculava a estrutura de concreto armado de um edifício inteiro. A carga saía das lajes, passava pelas vigas e chegava aos pilares, andar por andar. Ele roda em MS-DOS, usa a norma NB-1/78 e tem interface de teclado com telas de 80×25. A V1 (`_Arquivo/Sistrust/dist`) reconstruiu esse programa em QB64 e o faz rodar no Windows atual, mas a interface e a norma continuam as de 1991.
+O SISTRUT 4.0 (1991) calculava a estrutura de concreto armado de um edifício inteiro. A carga saía das lajes, passava pelas vigas e chegava aos pilares, andar por andar. Ele roda em MS-DOS, usa a norma NB-1/78 e tem interface de teclado com telas de 80×25. A V1 (OpenStrut V1, em `_Arquivo/Sistrust/dist`) reconstruiu esse programa em QB64 e o faz rodar no Windows atual, mas a interface e a norma continuam as de 1991.
 
 A V2 leva o mesmo fluxo para uma ferramenta atual:
 - desenha a planta com o mouse;
@@ -19,7 +19,7 @@ Engenheiro civil que faz o pré-dimensionamento e o cálculo de edifícios simpl
 |---|---|
 | Norma | NB-1/78 e NBR 6118:2023, escolhida por obra; dá para recalcular a mesma obra nas duas e comparar |
 | Plataforma | App web local: abre no navegador, funciona offline (PWA), sem servidor e sem login |
-| Persistência | Obra em arquivo `.sistrut.json`, aberto e salvo pelo usuário, com salvamento automático no navegador (IndexedDB) |
+| Persistência | Obra em arquivo `.openstrut.json`, aberto e salvo pelo usuário, com salvamento automático no navegador (IndexedDB) |
 | MVP | Planta gráfica, com cálculo de lajes → vigas → pilares, memória de cálculo e relatório |
 | Pavimentos | Vários, com pé-direito; um pavimento pode ser "tipo" e se repetir N vezes; os pilares acumulam a carga de cima para baixo |
 | Unidades | Cálculo interno em SI (kN, m, MPa). A tela mostra kN, kN·m, MPa e cm², com chave para exibir tf, tf·m e kgf/cm² |
@@ -98,7 +98,7 @@ src/
     memoria.ts  registro das etapas (fórmula, valores, item da norma)
   planta/       editor SVG (grade, snap, ferramentas, seleção)
   telas/        rotas: obras, planta, resultados, relatório
-  armazenamento/ arquivo .sistrut.json (com versão de esquema) e rascunho no IndexedDB
+  armazenamento/ arquivo .openstrut.json (com versão de esquema) e rascunho no IndexedDB
 ```
 
 Regras:
@@ -126,7 +126,7 @@ Regras:
 | Fase | Entrega | Pronto quando |
 |---|---|---|
 | 0 | Scaffold, lint, format, typecheck, testes, PWA, CLAUDE.md | `bun run check` passa; app abre vazio |
-| 1 | Domínio + arquivo `.sistrut.json` + motor NB-1/78 portado da V1 | testes de paridade com a V1 passam (lajes, vigas, pilares, FLUXO) |
+| 1 | Domínio + arquivo `.openstrut.json` + motor NB-1/78 portado da V1 | testes de paridade com a V1 passam (lajes, vigas, pilares, FLUXO) |
 | 2 | Motor NBR 6118:2023 | exemplos resolvidos das apostilas passam; tabela de diferenças NB-1/78 × 6118 coberta por testes |
 | 3 | Editor de planta + pavimentos | e2e: desenhar a obra FLUXO pela tela e salvar/reabrir |
 | 4 | Fluxo integrado, resultados na planta, memória, relatório | e2e: obra de 3 pavimentos do desenho ao relatório; equilíbrio ok |

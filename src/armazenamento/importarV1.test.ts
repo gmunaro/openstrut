@@ -228,6 +228,24 @@ describe("importação: casos fora do esperado", () => {
     expect(r.avisos.some((a) => a.includes("pilar P5") && a.includes("seção circular"))).toBe(true);
   });
 
+  // A V2 não lê a configuração da V1 (.LAP, .DSP, .PIP, .FOP, .INI): os materiais saem
+  // dos padrões, com o aviso "Materiais". Com o renome da V1 para OpenStrut, esses
+  // arquivos passaram de SISTRUT.* para OPENSTRUT.*; os dois nomes têm o mesmo tratamento.
+  it.each(["OPENSTRUT", "SISTRUT"])(
+    "configuração da V1 (%s.LAP, .DSP...) escolhida junto é ignorada, com aviso",
+    (prefixo) => {
+      const config = ["LAP", "DSP", "PIP", "FOP", "INI"].map((ext) => ({
+        nome: `${prefixo}.${ext}`,
+        texto: "1\r\n",
+      }));
+      const r = importada(importarV1([LAJ, VIG, COL, ...config]));
+      for (const c of config)
+        expect(r.avisos).toContain(`${c.nome} ignorado: só .LAJ, .VIG e .COL são importados.`);
+      expect(r.obra.pavimentos[0]!.lajes.map((l) => l.nome)).toEqual(["L1", "L2"]);
+      expect(r.obra.pavimentos[0]!.pilares.every((p) => p.b === 20 && p.h === 30)).toBe(true);
+    },
+  );
+
   it(".VIG de outra obra é ignorado, com aviso", () => {
     const texto = fluxoVig.replace('"VIG",1,"FLUXO"', '"VIG",1,"OUTRA"');
     const r = importada(importarV1([LAJ, { nome: "FLUXO.VIG", texto }]));

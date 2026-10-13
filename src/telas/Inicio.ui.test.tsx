@@ -1,7 +1,7 @@
 // Tela inicial com o app inteiro (rotas reais em memória): criar obra nova,
 // rascunho automático no IndexedDB (fake-indexeddb), reabrir pela lista de recentes
-// e importar a obra FLUXO da V1.
-import { screen, waitFor, within } from "@testing-library/react";
+// e importar a obra FLUXO da V1. Também a seção Instalar e o aviso de origem.
+import { act, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import fluxoCol from "../armazenamento/__fixtures__/v1/FLUXO.COL?raw";
 import fluxoLaj from "../armazenamento/__fixtures__/v1/FLUXO.LAJ?raw";
@@ -10,11 +10,13 @@ import { listarRascunhos } from "../armazenamento/rascunho";
 import { useObra } from "../estado/obra";
 import { renderizarApp } from "../test-setup";
 import { AVISO_CONFERENCIA } from "./calculo";
+import { detectarPlataforma, INSTRUCAO_INSTALAR } from "./instalar";
+import { AVISO_RECONSTRUCAO } from "./marca";
 
 describe("tela inicial", () => {
   it("mostra o título, o aviso de conferência e nenhum rascunho", async () => {
     renderizarApp("/");
-    expect(await screen.findByRole("heading", { name: "SISTRUT V2" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "OpenStrut V2" })).toBeTruthy();
     expect(screen.getByText(AVISO_CONFERENCIA)).toBeTruthy();
     expect(await screen.findByText("Nenhum rascunho.")).toBeTruthy();
   });
@@ -128,6 +130,46 @@ describe("tela inicial", () => {
     ).toBeTruthy();
     expect(router.state.location.pathname).toBe("/");
     expect(useObra.getState().obra).toBeNull();
+  });
+
+  it("mostra o aviso de reconstrução independente no rodapé", async () => {
+    renderizarApp("/");
+    expect(await screen.findByText(AVISO_RECONSTRUCAO)).toBeTruthy();
+    expect(AVISO_RECONSTRUCAO).toMatch(/reconstrução independente.*Sem vínculo/);
+  });
+
+  it("sem o pedido nativo, a seção Instalar mostra a instrução do navegador detectado", async () => {
+    renderizarApp("/");
+    const secao = await screen.findByRole("region", { name: "Instalar" });
+    expect(within(secao).getByText(INSTRUCAO_INSTALAR[detectarPlataforma(navigator)])).toBeTruthy();
+    expect(within(secao).queryByRole("button")).toBeNull();
+  });
+
+  it("com beforeinstallprompt (Chrome, Edge), o botão abre o pedido nativo uma vez", async () => {
+    const { user } = renderizarApp("/");
+    await screen.findByRole("region", { name: "Instalar" });
+    const prompt = vi.fn(async () => {});
+    const evento = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), {
+      prompt,
+      userChoice: Promise.resolve({ outcome: "accepted" }),
+    });
+    act(() => {
+      window.dispatchEvent(evento);
+    });
+    expect(evento.defaultPrevented).toBe(true);
+    await user.click(await screen.findByRole("button", { name: /Instalar o OpenStrut/ }));
+    expect(prompt).toHaveBeenCalledOnce();
+    // o pedido só vale uma vez: volta a instrução manual
+    expect(screen.queryByRole("button", { name: /Instalar o OpenStrut/ })).toBeNull();
+  });
+
+  it("já instalado (display-mode standalone), a seção Instalar some", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (q) => ({ matches: q === "(display-mode: standalone)" }) as MediaQueryList,
+    );
+    renderizarApp("/");
+    expect(await screen.findByRole("heading", { name: "OpenStrut V2" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Instalar" })).toBeNull();
   });
 
   it("apaga um rascunho da lista depois de confirmar", async () => {

@@ -16,6 +16,7 @@ import {
   type Calculo,
 } from "../calculo";
 import { formatarGrandeza, formatarNumero, unidade } from "../formato";
+import { AVISO_RECONSTRUCAO, NOME_APP } from "../marca";
 import { ListaAvisos, ListaFalhas } from "../resultados/avisos";
 import { DetalhamentoContexto, detalharObra } from "../detalhamento";
 import { TabelaQuantitativos, TabelasAco } from "../resultados/quantitativos";
@@ -52,7 +53,7 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
 
         <header className="border-b pb-3">
           <p className="text-muted-foreground text-xs uppercase tracking-wide">
-            SISTRUT V2 · relatório de cálculo
+            {NOME_APP} · relatório de cálculo
           </p>
           <h1 className="text-xl font-semibold">{obra.nome || "(obra sem nome)"}</h1>
           <p className="text-muted-foreground text-xs">
@@ -196,9 +197,10 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
         <footer className="mt-8 border-t pt-2 text-xs">
           <p className="font-semibold">{AVISO_CONFERENCIA}</p>
           <p className="text-muted-foreground">
-            Gerado pelo SISTRUT V2. Valores característicos salvo indicação; armaduras com os
+            Gerado pelo {NOME_APP}. Valores característicos salvo indicação; armaduras com os
             coeficientes da norma indicada. O peso de aço do resumo é estimativa.
           </p>
+          <p className="text-muted-foreground">{AVISO_RECONSTRUCAO}</p>
         </footer>
       </article>
     </DetalhamentoContexto>

@@ -1,2 +1,4 @@
 * text=auto eol=lf
 *.png binary
+# arquivos da V1 (QB64) gravam CRLF e os testes cortam por "\r\n": byte a byte
+src/armazenamento/__fixtures__/v1/** -text

@@ -16,7 +16,7 @@ async function foto(page: Page, descricao: string) {
 }
 
 // Os seletores nativos do Chrome abrem janela do sistema, fora do alcance do Playwright.
-// Sem eles o SISTRUT cai no <input type=file> e no download, que é o caminho testado aqui.
+// Sem eles o OpenStrut cai no <input type=file> e no download, que é o caminho testado aqui.
 async function semFileSystemAccess(page: Page) {
   await page.addInitScript(() => {
     const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
@@ -54,7 +54,7 @@ test("fluxo NB-1/78 completo", async ({ page }) => {
 
   // 1. Início e criação da obra
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "SISTRUT V2" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "OpenStrut V2" })).toBeVisible();
   await foto(page, "inicio");
 
   await page.getByLabel("Nome", { exact: true }).fill(NOME_OBRA);

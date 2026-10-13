@@ -67,7 +67,7 @@ test("fluxo NBR 6118:2023 de ponta a ponta", async ({ page }) => {
 
   // 1. Tela inicial: criar obra NBR 6118:2023 ----------------------------------
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "SISTRUT V2" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "OpenStrut V2" })).toBeVisible();
   await page.getByLabel("Nome", { exact: true }).fill("Residência Teste 6118");
   await page.getByRole("combobox", { name: "Norma" }).click();
   await page.getByRole("option", { name: "NBR 6118:2023", exact: true }).click();
@@ -163,7 +163,7 @@ test("fluxo NBR 6118:2023 de ponta a ponta", async ({ page }) => {
     page.getByRole("button", { name: "Salvar", exact: true }).click(),
   ]);
   await dlSalvo.saveAs(`${PRINTS}/${dlSalvo.suggestedFilename()}`);
-  expect(dlSalvo.suggestedFilename()).toMatch(/\.sistrut\.json$/);
+  expect(dlSalvo.suggestedFilename()).toMatch(/\.openstrut\.json$/);
   const arquivo = JSON.parse(readFileSync(`${PRINTS}/${dlSalvo.suggestedFilename()}`, "utf8"));
   expect(arquivo.norma ?? arquivo.obra?.norma).toBe("nbr6118-2023");
   await foto("exportacoes-concluidas");

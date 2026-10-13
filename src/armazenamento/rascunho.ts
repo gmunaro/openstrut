@@ -1,7 +1,7 @@
 // Rascunho automático da obra aberta no IndexedDB (idb-keyval). Cada obra
 // aberta ganha um id de rascunho; a tela salva a cada edição com debounce e a
 // tela inicial lista os recentes. O conteúdo é o mesmo texto do arquivo
-// .sistrut.json, relido por lerObra: rascunho velho passa pela migração.
+// .openstrut.json, relido por lerObra: rascunho velho passa pela migração.
 import { createStore, del, entries, get, set, type UseStore } from "idb-keyval";
 import type { NormaId, Obra } from "../dominio/obra";
 import { lerObra, serializarObra, type LeituraObra } from "./arquivo";

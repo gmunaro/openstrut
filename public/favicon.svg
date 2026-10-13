@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- OpenStrut: pórtico de concreto (viga sobre dois pilares) com a armadura em destaque -->
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <g fill="#e2e8f0">
+    <rect x="96" y="128" width="320" height="64" rx="6"/>
+    <rect x="132" y="192" width="56" height="192"/>
+    <rect x="324" y="192" width="56" height="192"/>
+  </g>
+  <rect x="112" y="170" width="288" height="10" rx="5" fill="#38bdf8"/>
+  <rect x="80" y="384" width="352" height="20" rx="4" fill="#38bdf8"/>
+</svg>

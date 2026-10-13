@@ -40,7 +40,7 @@ const erros = (texto: string) => {
   return r.ok ? [] : r.erros;
 };
 
-describe("arquivo .sistrut.json", () => {
+describe("arquivo .openstrut.json", () => {
   it("ida e volta preserva a obra (versão 3, com pilares removidos, classe do aço e μ)", () => {
     const obra = obraExemplo();
     expect(obra.versao).toBe(3);
@@ -100,16 +100,16 @@ describe("arquivo .sistrut.json", () => {
   });
 
   it("JSON que não é objeto ou não tem versao", () => {
-    expect(erros("[1, 2]")).toEqual(["O arquivo não contém uma obra do SISTRUT."]);
+    expect(erros("[1, 2]")).toEqual(["O arquivo não contém uma obra do OpenStrut."]);
     expect(erros('{"nome": "x"}')).toEqual([
-      "O arquivo não tem o campo versao: não é uma obra do SISTRUT.",
+      "O arquivo não tem o campo versao: não é uma obra do OpenStrut.",
     ]);
     expect(erros('{"versao": "1"}')).toEqual(['versao: esperado um inteiro ≥ 1, veio "1".']);
   });
 
   it("versão mais nova que a suportada", () => {
     expect(erros(alterada((d) => (d.versao = VERSAO_ATUAL + 1)))).toEqual([
-      `O arquivo é da versão ${VERSAO_ATUAL + 1}, mais nova que a suportada (${VERSAO_ATUAL}). Atualize o SISTRUT.`,
+      `O arquivo é da versão ${VERSAO_ATUAL + 1}, mais nova que a suportada (${VERSAO_ATUAL}). Atualize o OpenStrut.`,
     ]);
   });
 

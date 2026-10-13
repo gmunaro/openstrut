@@ -1,4 +1,4 @@
-# Pendências [VERIFICAR] de norma: SISTRUT V2
+# Pendências [VERIFICAR] de norma: OpenStrut V2
 
 Data da pesquisa: 2026-10-12.
 
@@ -244,7 +244,7 @@ Confiança: média-alta para os valores. Três fontes reproduzem os mesmos núme
 ### Pendências
 
 - Obter o texto do item 17.4.1.1.1 da NBR 6118:2014 e de 2023, para confirmar a fórmula e o limite de fywk.
-- Decidir qual limite de fywk o SISTRUT aplica (500 MPa, 600 MPa ou outro) só depois dessa confirmação. Não alterar o código antes.
+- Decidir qual limite de fywk o OpenStrut aplica (500 MPa, 600 MPa ou outro) só depois dessa confirmação. Não alterar o código antes.
 
 ---
 
@@ -279,7 +279,7 @@ Resultado parcial. Só a taxa de flexão da NB-1 foi lida, em fonte secundária.
 ### Pendências
 
 - Obter o texto da NB-1/1978 (ABNT), ou material que a reproduza com itens, para confirmar o estribo, a taxa de 0,14%, a má aderência e o τwu1. A norma não é pública.
-- Verificar a Tabela 5.7 de Bastos (`Cortante.txt:5184–5202`) para inferir a tensão de estribo da NB-1. Só serve para comparação histórica, não para o SISTRUT.
+- Verificar a Tabela 5.7 de Bastos (`Cortante.txt:5184–5202`) para inferir a tensão de estribo da NB-1. Só serve para comparação histórica, não para o OpenStrut.
 - Até lá, não usar 435 MPa, 0,14%, má aderência ou τwu1 como valores da NB-1 no projeto.
 
 ---

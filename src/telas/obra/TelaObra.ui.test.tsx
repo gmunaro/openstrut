@@ -1,4 +1,4 @@
-// Cabeçalho da tela da obra: salvar e abrir arquivo .sistrut.json (File System
+// Cabeçalho da tela da obra: salvar e abrir arquivo .openstrut.json (File System
 // Access API simulada; sem ela, download), estado "salvo / não salvo" e o diálogo
 // de obra e materiais com desfazer.
 import { screen, waitFor, within } from "@testing-library/react";
@@ -48,15 +48,15 @@ describe("tela da obra: arquivo", () => {
     const { user } = await abrirTela();
     expect(screen.getByText(/sem arquivo · alterações não salvas em arquivo/)).toBeTruthy();
 
-    const disco = arquivoFalso("Casa.sistrut.json");
+    const disco = arquivoFalso("Casa.openstrut.json");
     const seletor = vi.fn(async (_o: { suggestedName?: string }) => disco.handle);
     instalar("showSaveFilePicker", seletor);
 
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    expect(await screen.findByText(/^Salvo em Casa\.sistrut\.json às/)).toBeTruthy();
+    expect(await screen.findByText(/^Salvo em Casa\.openstrut\.json às/)).toBeTruthy();
     expect(seletor).toHaveBeenCalledOnce();
-    expect(seletor.mock.calls[0]?.[0]?.suggestedName).toBe("Casa.sistrut.json");
-    expect(screen.getByText("Casa.sistrut.json · salvo")).toBeTruthy();
+    expect(seletor.mock.calls[0]?.[0]?.suggestedName).toBe("Casa.openstrut.json");
+    expect(screen.getByText("Casa.openstrut.json · salvo")).toBeTruthy();
     // o arquivo gravado reabre igual à obra da tela
     const lida = lerObra(disco.gravado[0] ?? "");
     expect(lida.ok && lida.obra).toEqual(useObra.getState().obra);
@@ -67,7 +67,7 @@ describe("tela da obra: arquivo", () => {
     await user.click(screen.getByRole("button", { name: "Salvar" }));
     await waitFor(() => expect(disco.gravado).toHaveLength(2));
     expect(seletor).toHaveBeenCalledOnce();
-    expect(screen.getByText("Casa.sistrut.json · salvo")).toBeTruthy();
+    expect(screen.getByText("Casa.openstrut.json · salvo")).toBeTruthy();
   });
 
   it("cancelar o seletor de salvar não muda nada nem mostra erro", async () => {
@@ -86,7 +86,7 @@ describe("tela da obra: arquivo", () => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     const clique = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    expect(await screen.findByText(/^Casa\.sistrut\.json baixado às/)).toBeTruthy();
+    expect(await screen.findByText(/^Casa\.openstrut\.json baixado às/)).toBeTruthy();
     expect(clique).toHaveBeenCalledOnce();
     const blob = criarUrl.mock.calls[0]?.[0];
     expect(blob instanceof Blob && (await blob.text())).toBe(
@@ -136,23 +136,27 @@ describe("tela da obra: arquivo", () => {
     expect(screen.getByText(/sem arquivo/)).toBeTruthy();
   });
 
-  it("abre um arquivo pela tela inicial e vai para a obra", async () => {
-    const obra = obraDuasLajes("nbr6118-2023", "Edifício lido");
-    const disco = arquivoFalso("lido.sistrut.json", serializarObra(obra));
-    instalar("showOpenFilePicker", async () => [disco.handle]);
-    const { user, router } = renderizarApp("/");
-    await user.click(await screen.findByRole("button", { name: /Abrir arquivo/ }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
-    expect(useObra.getState().obra).toEqual(obra);
-    expect(await screen.findByText("lido.sistrut.json · salvo")).toBeTruthy();
-  });
+  // o .sistrut.json é o nome de antes do renome para OpenStrut: abre igual
+  it.each(["lido.openstrut.json", "lido.sistrut.json"])(
+    "abre %s pela tela inicial e vai para a obra",
+    async (nome) => {
+      const obra = obraDuasLajes("nbr6118-2023", "Edifício lido");
+      const disco = arquivoFalso(nome, serializarObra(obra));
+      instalar("showOpenFilePicker", async () => [disco.handle]);
+      const { user, router } = renderizarApp("/");
+      await user.click(await screen.findByRole("button", { name: /Abrir arquivo/ }));
+      await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
+      expect(useObra.getState().obra).toEqual(obra);
+      expect(await screen.findByText(`${nome} · salvo`)).toBeTruthy();
+    },
+  );
 
   it("arquivo inválido mostra os erros e fica na tela inicial", async () => {
-    const disco = arquivoFalso("ruim.sistrut.json", '{"versao": 1, "nome": 3}');
+    const disco = arquivoFalso("ruim.openstrut.json", '{"versao": 1, "nome": 3}');
     instalar("showOpenFilePicker", async () => [disco.handle]);
     const { user, router } = renderizarApp("/");
     await user.click(await screen.findByRole("button", { name: /Abrir arquivo/ }));
-    expect(await screen.findByText(/Não foi possível abrir ruim\.sistrut\.json/)).toBeTruthy();
+    expect(await screen.findByText(/Não foi possível abrir ruim\.openstrut\.json/)).toBeTruthy();
     expect(router.state.location.pathname).toBe("/");
     expect(useObra.getState().obra).toBeNull();
   });

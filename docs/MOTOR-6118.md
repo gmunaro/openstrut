@@ -1,7 +1,7 @@
 # Brief comum: motor de cálculo pela NBR 6118:2023
 
 ## Contexto
-O SISTRUT V2 é um app web local (TypeScript strict, Bun, Vitest) que calcula lajes, vigas e pilares de concreto armado. Leia `CLAUDE.md` e `docs/SPEC.md`. O motor pela NB-1/78 já existe e está testado: `src/calculo/normas/nb1-78/*`, com a mecânica comum em `src/calculo/vigas/continua.ts`, `src/calculo/pilares/*` e `src/calculo/barras.ts`. Use-o como modelo de estilo, de memória de cálculo e de testes. Agora entra a NBR 6118:2023.
+O OpenStrut V2 é um app web local (TypeScript strict, Bun, Vitest) que calcula lajes, vigas e pilares de concreto armado. Leia `CLAUDE.md` e `docs/SPEC.md`. O motor pela NB-1/78 já existe e está testado: `src/calculo/normas/nb1-78/*`, com a mecânica comum em `src/calculo/vigas/continua.ts`, `src/calculo/pilares/*` e `src/calculo/barras.ts`. Use-o como modelo de estilo, de memória de cálculo e de testes. Agora entra a NBR 6118:2023.
 
 ## Fontes de engenharia
 Ficam em `docs/norma/`. O texto da norma é pago, então os valores vêm de apostilas públicas, com linha e página.
