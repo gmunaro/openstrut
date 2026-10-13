@@ -1,7 +1,8 @@
-// Tela inicial: nova obra (nome + norma), abrir arquivo .sistrut.json, importar
-// obra da V1 (.LAJ + .VIG + .COL) e a lista de rascunhos recentes do navegador.
+// Tela inicial: nova obra (nome + norma), abrir arquivo .openstrut.json, importar
+// obra da V1 (.LAJ + .VIG + .COL), a lista de rascunhos recentes do navegador,
+// a seção de instalar o app no aparelho e o aviso de origem do OpenStrut.
 import { useNavigate } from "@tanstack/react-router";
-import { FilePlus2, FolderOpen, Import, Trash2 } from "lucide-react";
+import { Download, FilePlus2, FolderOpen, Import, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,14 @@ import { abrirNaSessao, useAbrirObra } from "./acoes";
 import { NOME_NORMA } from "./calculo";
 import { Erros } from "./Erros";
 import { formatarData } from "./formato";
+import {
+  INSTRUCAO_INSTALAR,
+  detectarPlataforma,
+  estaInstalado,
+  pedirInstalacao,
+  useInstalacao,
+} from "./instalar";
+import { AVISO_RECONSTRUCAO, NOME_APP } from "./marca";
 
 const NORMAS: { id: NormaId; rotulo: string }[] = [
   { id: "nb1-78", rotulo: "NB-1/78 (NBR 6118:1978)" },
@@ -67,7 +76,7 @@ export function Inicio() {
     void navigate({ to: "/obra" });
   };
 
-  /** Abre a obra importada como uma obra nova (rascunho novo, sem arquivo .sistrut.json). */
+  /** Abre a obra importada como uma obra nova (rascunho novo, sem arquivo .openstrut.json). */
   const abrirImportada = (obra: Obra) => {
     abrirNaSessao(obra, novoIdRascunho());
     void navigate({ to: "/obra" });
@@ -107,7 +116,7 @@ export function Inicio() {
   return (
     <main className="mx-auto grid w-full max-w-4xl gap-8 p-8">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">SISTRUT V2</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{NOME_APP}</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Cálculo de estruturas de concreto armado: lajes, vigas e pilares, pavimento por pavimento.
         </p>
@@ -183,8 +192,13 @@ export function Inicio() {
 
         <section className="bg-card rounded-lg border p-5">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide">Abrir</h2>
-          <Button variant="outline" onClick={() => void abrirArquivo()} className="w-full">
-            <FolderOpen /> Abrir arquivo .sistrut.json
+          <Button
+            variant="outline"
+            onClick={() => void abrirArquivo()}
+            className="w-full"
+            title="Abre também os arquivos .sistrut.json de antes do renome"
+          >
+            <FolderOpen /> Abrir arquivo .openstrut.json
           </Button>
           <Button
             variant="outline"
@@ -244,6 +258,34 @@ export function Inicio() {
           )}
         </section>
       </div>
+
+      <Instalar />
+
+      <p className="text-muted-foreground border-t pt-3 text-xs">{AVISO_RECONSTRUCAO}</p>
     </main>
+  );
+}
+
+/** Seção "Instalar": botão com o pedido nativo quando o navegador oferece
+ *  (Chrome, Edge), senão o caminho manual do navegador detectado. Some quando o
+ *  app já roda instalado. */
+function Instalar() {
+  const { pedido, instalado } = useInstalacao();
+  if (instalado || estaInstalado(window)) return null;
+  return (
+    <section aria-label="Instalar" className="bg-card rounded-lg border p-5">
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">Instalar</h2>
+      <p className="text-muted-foreground mb-3 text-sm">
+        Instalado no computador, celular ou tablet, o OpenStrut abre como um app e funciona sem
+        internet.
+      </p>
+      {pedido ? (
+        <Button onClick={() => void pedirInstalacao()}>
+          <Download /> Instalar o OpenStrut
+        </Button>
+      ) : (
+        <p className="text-sm">{INSTRUCAO_INSTALAR[detectarPlataforma(navigator)]}</p>
+      )}
+    </section>
   );
 }

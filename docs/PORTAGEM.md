@@ -1,7 +1,7 @@
 # Brief comum: portagem do motor NB-1/78 da V1 para TypeScript
 
 ## Contexto
-O SISTRUT V2 é um app web local (TypeScript, Bun, Vitest) que calcula lajes, vigas e pilares de concreto armado. Ele usa a NB-1/78 (norma de 1978, a do SISTRUT original) ou a NBR 6118:2023. Leia `CLAUDE.md` e `docs/SPEC.md` da raiz do projeto: são curtos e trazem as regras.
+O OpenStrut V2 é um app web local (TypeScript, Bun, Vitest) que calcula lajes, vigas e pilares de concreto armado. Ele usa a NB-1/78 (norma de 1978, a do SISTRUT original) ou a NBR 6118:2023. Leia `CLAUDE.md` e `docs/SPEC.md` da raiz do projeto: são curtos e trazem as regras.
 
 A V1 é a reconstrução em QB64 do SISTRUT de 1991. O cálculo dela pela NB-1/78 está testado e é a referência:
 - bibliotecas de cálculo: `C:/Users/MunaroPC/Desktop/Projetos Pessoais/_Arquivo/Sistrust/dist/src-reconstructed/**/*.BM`;

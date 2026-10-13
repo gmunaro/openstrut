@@ -1,6 +1,7 @@
-// Arquivo da obra (.sistrut.json): gravação, leitura com validação e migração
+// Arquivo da obra (.openstrut.json): gravação, leitura com validação e migração
 // por versão. Sem dependência externa: a validação monta uma Obra nova só com
-// os campos conhecidos e junta as mensagens de erro em português.
+// os campos conhecidos e junta as mensagens de erro em português. O conteúdo
+// não depende do nome: os .sistrut.json de antes do renome abrem igual.
 import {
   BORDOS,
   type Aco,
@@ -19,7 +20,10 @@ import {
 } from "../dominio/obra";
 
 export const VERSAO_ATUAL = 3;
-export const EXTENSAO = ".sistrut.json";
+/** Extensão com que a obra é salva. */
+export const EXTENSAO = ".openstrut.json";
+/** Extensões que abrir aceita: a atual e a de antes do renome para OpenStrut. */
+export const EXTENSOES_ACEITAS = [EXTENSAO, ".sistrut.json"] as const;
 
 /** Obra → texto JSON do arquivo. */
 export function serializarObra(obra: Obra) {
@@ -75,17 +79,18 @@ export function lerObra(texto: string): LeituraObra {
     const detalhe = e instanceof Error ? e.message : String(e);
     return { ok: false, erros: [`O arquivo não é um JSON válido (${detalhe}).`] };
   }
-  if (!ehObjeto(dados)) return { ok: false, erros: ["O arquivo não contém uma obra do SISTRUT."] };
+  if (!ehObjeto(dados))
+    return { ok: false, erros: ["O arquivo não contém uma obra do OpenStrut."] };
   const versao = dados.versao;
   if (versao === undefined)
-    return { ok: false, erros: ["O arquivo não tem o campo versao: não é uma obra do SISTRUT."] };
+    return { ok: false, erros: ["O arquivo não tem o campo versao: não é uma obra do OpenStrut."] };
   if (typeof versao !== "number" || !Number.isInteger(versao) || versao < 1)
     return { ok: false, erros: [`versao: esperado um inteiro ≥ 1, veio ${mostra(versao)}.`] };
   if (versao > VERSAO_ATUAL)
     return {
       ok: false,
       erros: [
-        `O arquivo é da versão ${versao}, mais nova que a suportada (${VERSAO_ATUAL}). Atualize o SISTRUT.`,
+        `O arquivo é da versão ${versao}, mais nova que a suportada (${VERSAO_ATUAL}). Atualize o OpenStrut.`,
       ],
     };
   let migrados: Dados;

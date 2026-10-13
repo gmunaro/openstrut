@@ -2,9 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
-// Arquivos e rascunhos: salvar e reabrir .sistrut.json, importar a V1 (FLUXO),
-// rejeitar arquivo inválido ou de versão futura, e manter o rascunho após recarregar.
-// Os prints e o .sistrut.json baixado saem em e2e/prints/arquivos.
+// Arquivos e rascunhos: salvar e reabrir .openstrut.json (e o .sistrut.json antigo),
+// importar a V1 (FLUXO), rejeitar arquivo inválido ou de versão futura, e manter o
+// rascunho após recarregar.
+// Os prints e o .openstrut.json baixado saem em e2e/prints/arquivos.
 
 const PASTA = path.resolve(process.cwd(), "e2e/prints/arquivos");
 const PASTA_V1 = path.resolve(process.cwd(), "src/armazenamento/__fixtures__/v1");
@@ -14,7 +15,7 @@ async function foto(page: Page, nome: string) {
 }
 
 // Os seletores nativos do Chrome abrem janela do sistema, fora do alcance do Playwright.
-// Sem eles o SISTRUT cai no <input type=file> e no download, que é o caminho testado aqui.
+// Sem eles o OpenStrut cai no <input type=file> e no download, que é o caminho testado aqui.
 async function semFileSystemAccess(page: Page) {
   await page.addInitScript(() => {
     const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
@@ -58,7 +59,7 @@ async function abrirArquivoNoInicio(
 ) {
   const [escolha] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: /Abrir arquivo \.sistrut\.json/ }).click(),
+    page.getByRole("button", { name: /Abrir arquivo \.openstrut\.json/ }).click(),
   ]);
   await escolha.setFiles(arquivo);
 }
@@ -67,7 +68,7 @@ test.beforeAll(() => {
   fs.mkdirSync(PASTA, { recursive: true });
 });
 
-test("salva .sistrut.json e reabre com os mesmos dados", async ({ page }) => {
+test("salva .openstrut.json e reabre com os mesmos dados", async ({ page }) => {
   test.setTimeout(180_000);
   await semFileSystemAccess(page);
 
@@ -83,7 +84,7 @@ test("salva .sistrut.json e reabre com os mesmos dados", async ({ page }) => {
   await preencher(page, /^Espessura h/, "12");
   await foto(page, "01-obra-com-laje-h12");
 
-  // Salvar sem API de arquivo: baixa o .sistrut.json pela pasta de downloads
+  // Salvar sem API de arquivo: baixa o .openstrut.json pela pasta de downloads
   const [baixado] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Salvar", exact: true }).click(),
@@ -98,7 +99,7 @@ test("salva .sistrut.json e reabre com os mesmos dados", async ({ page }) => {
     nome: string;
     pavimentos: { lajes: { nome: string; h: number }[] }[];
   };
-  expect(baixado.suggestedFilename()).toBe("Arquivo Teste.sistrut.json");
+  expect(baixado.suggestedFilename()).toBe("Arquivo Teste.openstrut.json");
   expect(dados.versao).toBe(3);
   expect(dados.nome).toBe("Arquivo Teste");
   expect(dados.pavimentos[0]?.lajes).toEqual([expect.objectContaining({ nome: "L1", h: 12 })]);
@@ -112,6 +113,16 @@ test("salva .sistrut.json e reabre com os mesmos dados", async ({ page }) => {
   await selecionarLaje(page, 0.25, 0.35, "L1");
   await expect(page.getByLabel(/^Espessura h/)).toHaveValue(/^12([,.]0+)?$/);
   await foto(page, "04-reaberto-laje-h12");
+
+  // o mesmo conteúdo com o nome de antes do renome (.sistrut.json) abre igual
+  await page.goto("/");
+  await abrirArquivoNoInicio(page, {
+    name: "Arquivo Teste.sistrut.json",
+    mimeType: "application/json",
+    buffer: fs.readFileSync(caminho),
+  });
+  await expect(page.getByRole("heading", { name: "Arquivo Teste" })).toBeVisible();
+  await expect(page.getByText("Arquivo Teste.sistrut.json · salvo")).toBeVisible();
 });
 
 test("importa a obra FLUXO da V1 com avisos", async ({ page }) => {
@@ -150,12 +161,12 @@ test("recusa arquivo inválido e de versão futura", async ({ page }) => {
 
   await page.goto("/");
   await abrirArquivoNoInicio(page, {
-    name: "ruim.sistrut.json",
+    name: "ruim.openstrut.json",
     mimeType: "application/json",
     buffer: Buffer.from("{isto nao e json"),
   });
   const erro = page.getByRole("alert");
-  await expect(erro).toContainText("Não foi possível abrir ruim.sistrut.json:");
+  await expect(erro).toContainText("Não foi possível abrir ruim.openstrut.json:");
   await expect(erro).toContainText("O arquivo não é um JSON válido");
   await foto(page, "08-arquivo-invalido");
 
@@ -166,7 +177,7 @@ test("recusa arquivo inválido e de versão futura", async ({ page }) => {
   });
   await expect(erro).toContainText("Não foi possível abrir futuro.sistrut.json:");
   await expect(erro).toContainText(
-    "O arquivo é da versão 99, mais nova que a suportada (3). Atualize o SISTRUT.",
+    "O arquivo é da versão 99, mais nova que a suportada (3). Atualize o OpenStrut.",
   );
   await expect(page.getByRole("heading", { name: "Futura" })).toBeHidden();
   await foto(page, "09-versao-futura");

@@ -1,5 +1,5 @@
 // Modelo da obra: o que o usuário desenha e edita, e o que vai para o
-// arquivo .sistrut.json. Geometria da planta em metros; seções em cm;
+// arquivo .openstrut.json. Geometria da planta em metros; seções em cm;
 // cargas em kN/m² (lajes) e kN/m (vigas).
 
 export type NormaId = "nb1-78" | "nbr6118-2023";

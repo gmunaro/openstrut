@@ -1,5 +1,5 @@
 {
-  "name": "sistrut-v2",
+  "name": "openstrut",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsr generate && tsc -b && vite build",
+    "build:pages": "OPENSTRUT_BASE=/openstrut/ bun run build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
+    "preview:pages": "OPENSTRUT_BASE=/openstrut/ vite preview",
     "typecheck": "tsr generate && tsc -b --noEmit",
     "lint": "oxlint src",
     "fmt": "oxfmt src",

@@ -26,7 +26,7 @@ import { GAMA_F } from "./materiais";
 const V1 = "V1 LAJCALC.BM";
 const V1_CA = "V1 CALCCA.BM";
 
-// Parâmetros do SISTRUT.LAP padrão da V1 (build/SISTRUT.LAP).
+// Parâmetros do OPENSTRUT.LAP padrão da V1 (build/OPENSTRUT.LAP).
 /** i = Mneg/Mpos dos bordos engastados: o .LAP manda começar pelo máximo (2,00). */
 export const COEF_ENGASTE = 2;
 /** Fator (1 + φ) da flecha permanente. O .LAP padrão liga a deformação lenta
@@ -421,7 +421,7 @@ export function lajeEsforcosNb178(e: LajeEntrada, mat: MateriaisCalc, mu = 1): L
       formula: `l / ${REL_FLECHA_TOTAL}`,
       valor: flechaLimite,
       unidade: "cm",
-      ref: "V1 SISTRUT.LAP",
+      ref: "V1 OPENSTRUT.LAP",
     },
   );
   if (flecha > flechaLimite) {

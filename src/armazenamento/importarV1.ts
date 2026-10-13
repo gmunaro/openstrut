@@ -1,4 +1,4 @@
-// Importação de uma obra da V1 (SISTRUT 4.0 reconstruído em QB64): o .LAJ do
+// Importação de uma obra da V1 (OpenStrut V1, o SISTRUT 4.0 reconstruído em QB64): o .LAJ do
 // pavimento e, se vierem, o .VIG e o .COL da mesma obra viram uma Obra da V2.
 // Formato: _Arquivo/Sistrust/dist/docs/formats/DADOS.md; leitura de referência:
 // src-reconstructed/common/SISDADOS.BM (DadAbreLeitura%, LajLe%, VigLe%, ColLe%).

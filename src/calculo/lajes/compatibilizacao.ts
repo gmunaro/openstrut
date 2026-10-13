@@ -6,7 +6,7 @@ import type { Etapa, LajeEsforcos } from "../tipos";
 import { contatos, TOL, type GeometriaLaje } from "./vinculacao";
 
 const REF = "V1 LAJCALC.BM (LcCalculaTodas)";
-const REF_ALIVIO = "prática de projeto (revisão do SISTRUT V2) [VERIFICAR]";
+const REF_ALIVIO = "prática de projeto (revisão do OpenStrut V2) [VERIFICAR]";
 
 /** Abaixo desta fração do negativo próprio o bordo é tratado como apoiado (com
  *  `recalcular`). [VERIFICAR] 50 % é critério de prática, sem item de norma nas

@@ -1,27 +1,50 @@
-# SISTRUT V2
+# OpenStrut V2
 
-App web local para calcular a estrutura de concreto armado de edifícios simples. O usuário desenha a planta de cada pavimento, e o app calcula lajes, vigas e pilares pela **NBR 6118:2023** ou pela **NB-1/78**, com memória de cálculo de cada elemento. A carga passa das lajes às vigas e chega aos pilares, acumulada andar por andar.
+App web para calcular a estrutura de concreto armado de edifícios simples. O usuário desenha a planta de cada pavimento, e o app calcula lajes, vigas e pilares pela **NBR 6118:2023** ou pela **NB-1/78**, com memória de cálculo de cada elemento. A carga passa das lajes às vigas e chega aos pilares, acumulada andar por andar. Roda no navegador, sem servidor: a obra fica em arquivo no aparelho do usuário.
 
-É o sucessor do SISTRUT 4.0 (MS-DOS, 1991). A reconstrução do original fica em `../_Arquivo/Sistrust/dist` (V1) e serve de referência para a NB-1/78.
+> OpenStrut é uma reconstrução independente, por engenharia reversa, do SISTRUT 4.0 (1991). Sem vínculo com os autores do original.
+
+A V2 sucede o SISTRUT 4.0 (MS-DOS, 1991). A OpenStrut V1, reconstrução do original em QB64, fica em repositório separado e serve de referência para a NB-1/78.
 
 > **Os resultados exigem conferência de engenheiro responsável.** As normas ABNT são pagas e não foram lidas diretamente. Os valores da NBR 6118:2023 vêm de apostilas universitárias públicas, citadas no código e em `docs/norma/`. Os pontos sem confirmação estão marcados `[VERIFICAR]`.
 
-## Rodar
+## Usar
+
+Abra **https://gmunaro.github.io/openstrut/** em qualquer navegador atual (Windows, Mac, Linux, Android, iPhone, iPad). Depois da primeira visita, o app funciona sem internet.
+
+Para instalar como app, use a seção **Instalar** da tela inicial. Ela mostra o botão de instalar quando o navegador oferece (Chrome, Edge) e, nos outros, o caminho:
+
+- **iPhone e iPad (Safari):** Compartilhar → Adicionar à Tela de Início.
+- **Android (Chrome):** menu ⋮ → Instalar app.
+- **Computador (Chrome, Edge):** ícone de instalar na barra de endereço.
+- **Mac (Safari, macOS 14 ou mais novo):** Arquivo → Adicionar ao Dock.
+- **Firefox no computador:** não instala apps da web; use pelo navegador.
+
+## Rodar localmente
 
 Requer [Bun](https://bun.sh).
 
 ```sh
 bun install
-bun run build && bun run preview   # abre em http://localhost:4173 (funciona offline depois de instalado como PWA)
+bun run build && bun run preview   # abre em http://localhost:4173
 ```
 
 Desenvolvimento: `bun run dev`. Verificação completa: `bun run check` (typecheck, lint, formatação e testes).
+
+O app é servido na raiz (`/`) por padrão, que é o que o instalador desktop usa (`http://127.0.0.1:41780/`). Para servir em outra pasta, defina `OPENSTRUT_BASE` no build. O GitHub Pages usa `/openstrut/`:
+
+```sh
+bun run build:pages     # base /openstrut/ e 404.html (recarregar uma rota interna abre o app)
+bun run preview:pages   # abre em http://localhost:4173/openstrut/
+```
+
+O deploy no Pages é feito pelo workflow `.github/workflows/pages.yml` a cada push na `main`: ele roda `bun run check`, `bun run build:pages` e publica `dist/`.
 
 ## O que faz
 
 - **Obra:** nome, norma, materiais (fck, aço, classe do aço A/B na NB-1/78, classe de agressividade e cobrimentos) e unidades (SI ou tf).
   - Dá para importar uma obra da V1 a partir dos arquivos `.LAJ`, `.VIG` e `.COL`. O que não tem correspondência entra com aviso.
-  - A obra é salva em arquivo `.sistrut.json`.
+  - A obra é salva em arquivo `.openstrut.json`. Os arquivos `.sistrut.json`, de antes do renome, abrem igual.
   - O rascunho é guardado automaticamente no navegador.
 - **Pavimentos:** pé-direito e repetições (pavimento-tipo). Dá para copiar a planta de um pavimento para outro.
 - **Planta:** lajes retangulares desenhadas na grade. As vigas são geradas nos bordos e os pilares nos cruzamentos. Tudo é editável: seções, cargas, vínculos e balanços. Há desfazer e refazer.
@@ -64,6 +87,6 @@ src/calculo/        motor (TypeScript puro, sem React)
   lajes/ vigas/ pilares/ montagem.ts fluxo.ts
 src/planta/         editor gráfico (SVG)
 src/telas/ src/routes/  telas
-src/armazenamento/  arquivo .sistrut.json e rascunho
+src/armazenamento/  arquivo .openstrut.json e rascunho
 docs/               SPEC, fontes de norma, exemplos
 ```

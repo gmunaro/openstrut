@@ -54,7 +54,7 @@ describe("fluxo da obra FLUXO pela NB-1/78 (paridade com a V1)", () => {
     expect(tf(l1.mx)).toBeCloseTo(0.2993489, 5);
     expect(tf(l1.my)).toBeCloseTo(0.2758809, 5);
     expect(tf(l1.negativos.direito)).toBeCloseTo(0.5048257, 5);
-    // FLUXO.LAJ foi calculado sem fluência; a V2 (como o SISTRUT.LAP padrão) usa
+    // FLUXO.LAJ foi calculado sem fluência; a V2 (como o OPENSTRUT.LAP padrão) usa
     // fator 3 na parcela permanente: f = f_V1 · (3·0,35 + 0,15) / 0,5
     const fluencia = (3 * 0.35 + 0.15) / 0.5;
     expect(l1.flecha).toBeCloseTo(0.2659355 * fluencia, 4);

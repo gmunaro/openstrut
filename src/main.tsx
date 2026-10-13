@@ -3,11 +3,16 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
+import { ouvirInstalacao } from "./telas/instalar";
 
 // tema escuro do shadcn/ui (index.css); a impressão volta para papel branco
 document.documentElement.classList.add("dark");
 
-const router = createRouter({ routeTree });
+// o pedido de instalação (Chrome, Edge) pode chegar antes da tela inicial montar
+ouvirInstalacao();
+
+// BASE_URL é o `base` do Vite: "/" no instalador desktop, "/openstrut/" no GitHub Pages
+const router = createRouter({ routeTree, basepath: import.meta.env.BASE_URL });
 
 declare module "@tanstack/react-router" {
   interface Register {
