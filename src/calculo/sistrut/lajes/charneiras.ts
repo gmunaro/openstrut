@@ -81,6 +81,9 @@ export class Matriz {
  *  - V_133a, V_133e: tolerâncias de comprimento e de ângulo; V_0e68_pi = π. */
 export class EstadoLajecalc {
   readonly s: (x: number) => number;
+  /** O LAJECALC trunca o i do bordo em 2 casas na bissetriz (LAJECALC.BAS:3425);
+   *  o LAJEMONT, que calcula as reações, não (LAJEMONT.BAS:1505c). */
+  truncaIDaBissetriz = true;
   V_0e50 = 1;
   V_0e68_pi = 4 * Math.atan(1);
   V_0ee8 = 0;
@@ -448,6 +451,7 @@ export function padraoPorCodigos(
   parametros: ParametrosLaje,
   modo: ModoSistrut,
   tipo = 0,
+  comoLajemont = false,
 ): PadraoCharneirasSistrut {
   if (areaLajegeom(vertices) <= 0) {
     // o LAJEGEOM não cria laje com área ≤ 0 (LAJEGEOM.BAS:3113); no sentido
@@ -455,6 +459,7 @@ export function padraoPorCodigos(
     throw new Error("Polígono de laje no sentido anti-horário: o original só aceita o horário");
   }
   const g = new EstadoLajecalc(parametros, modo);
+  g.truncaIDaBissetriz = !comoLajemont;
   g.carregaPoligono(vertices, codigos, tipo);
   S_4019b(g);
   return padraoDoEstado(g, codigos, tipo);
@@ -491,6 +496,19 @@ export function padraoDoEstado(
  *  área Σ(x_k + x_k+1)(y_k − y_k+1)/2 > 0, LAJEGEOM.BAS:3110-3115). */
 export const padraoDeCharneiras: PadraoDeCharneiras = (vertices, i, livres, parametros, modo) =>
   padraoPorCodigos(vertices, codigosDeI(i, livres), parametros, modo);
+
+/** O mesmo padrão como o LAJEMONT o traça para as reações (coordenadas reais, i do
+ *  bordo sem o truncamento em 2 casas da bissetriz do LAJECALC; LAJEMONT.BAS:14b11-
+ *  1505c). Difere do `padraoDeCharneiras` só quando i não tem 2 casas exatas em
+ *  SINGLE: v2par_laje_otim L1 com código 5 (i 0,3 → 0,29 no LAJECALC) dá a região do
+ *  lado 3 com 10,22 m² (impresso) contra 10,18. É o que a montagem (T6) deve usar. */
+export const padraoDeCharneirasLajemont: PadraoDeCharneiras = (
+  vertices,
+  i,
+  livres,
+  parametros,
+  modo,
+) => padraoPorCodigos(vertices, codigosDeI(i, livres), parametros, modo, 0, true);
 
 // ===== TRADUÇÃO MECÂNICA de LAJECALC.BAS (gerada por traduz.py; não editar à mão) =====
 
@@ -7475,7 +7493,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
                 pot(g.A_15de.get(qbCint(L_BP16)) - g.A_15de.get(qbCint(L_BP1a)), 2.0),
             ),
         ); // 3424
-        L_BP22 = g.s(qbInt(L_BP22 * 100.0) / 100.0); // 3425
+        L_BP22 = g.truncaIDaBissetriz ? g.s(qbInt(L_BP22 * 100.0) / 100.0) : L_BP22; // 3425
         pc = pilha.pop() ?? 0;
         continue; // 3426
       case 56:

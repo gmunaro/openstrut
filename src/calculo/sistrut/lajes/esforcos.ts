@@ -31,6 +31,14 @@ export type OtimizacaoInjetada = (
   recalcula: (laje: LajeSistrut) => MomentosDeLaje,
 ) => EsforcosLajes;
 
+/** A otimização injetada recalculou a mesma laje vezes demais: no original é o laço
+ *  sem fim do defeito R3 (LAJECALC.BAS:2113, 2123, 2145; v2par_laje_r3, piso 0,35). */
+export class ErroNaoConverge extends Error {}
+
+/** Recálculos por laje antes de declarar que a otimização não converge. No
+ *  v2par_laje_otim a L1 converge em 4 (código 22 → 7 → 6 → 5). */
+export const LIMITE_RECALCULOS = 100;
+
 /** O que não depende de H: preparação, padrão e coeficiente de carga, na mesma
  *  máquina e na ordem do original (S_50187, S_4019b, S_578ad; LAJECALC.BAS:616-620). */
 function calculaSemH(
@@ -152,7 +160,16 @@ export function esforcosDoPainelCom(otimiza?: OtimizacaoInjetada): EsforcosDoPai
       memoria,
     };
     if (!otimiza) return resultado;
+    const recalculos = new Map<string, number>();
     const recalcula = (laje: LajeSistrut) => {
+      const n = (recalculos.get(laje.nome) ?? 0) + 1;
+      recalculos.set(laje.nome, n);
+      if (n > LIMITE_RECALCULOS) {
+        throw new ErroNaoConverge(
+          `${laje.nome}: a otimização dos negativos não converge (${LIMITE_RECALCULOS} recálculos; ` +
+            `códigos ${laje.codigos.join(", ")}). No original o laço não termina (defeito R3).`,
+        );
+      }
       const { preparada, coeficiente } = calculaSemH(laje, painel, parametros, modo);
       const m = momentosDe(laje, preparada, coeficiente);
       if (!m) throw new Error(`${laje.nome}: recálculo sem H`);

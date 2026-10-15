@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import { CASOS_ORACULO, type CasoOraculo, bateComImpresso, valorOraculo } from "../__oraculo__";
 import { PARAMETROS_LAJE, emSingle } from "../base/parametros";
 import type { Ponto } from "../base/tipos";
-import { iDoBordo, padraoDeCharneiras, padraoPorCodigos } from "./charneiras";
+import {
+  iDoBordo,
+  padraoDeCharneiras,
+  padraoDeCharneirasLajemont,
+  padraoPorCodigos,
+} from "./charneiras";
 
 const P = emSingle(PARAMETROS_LAJE);
 const CASO_A = CASOS_ORACULO.caso_a_laje as CasoOraculo;
@@ -145,5 +150,33 @@ describe("iDoBordo (LAJECALC.BAS:6999-7043)", () => {
     const i = iDoBordo(retangulo(4, 5), [0, 0, 15.3, 22], PARAMETROS_LAJE, "corrigido");
     expect(i[2]).toBeCloseTo(1.33, 12);
     expect(i[3]).toBe(2);
+  });
+});
+
+describe("LAJECALC × LAJEMONT: i da bissetriz com e sem truncamento", () => {
+  // 6 × 6 com o lado x = 6 em i 0,3 (código 5; v2par_laje_otim L1 depois da otimização).
+  // Sem truncar (LAJEMONT): os cantos do lado x = 6 dividem com razão √1,3; o nó de cima
+  // fica em x = 6/(1 + √1,3) = 2,8034 e a região de x = 6 é ((6 + 0,3932)/2)·3,1966.
+  // O LAJECALC trunca i em SINGLE: 1,8/6 = 0,29999998 → INT(29,999998)/100 = 0,29.
+  const v = retangulo(6, 6);
+  const x = 6 / (1 + Math.sqrt(1.3));
+  const area = ((6 + (6 - 2 * x)) / 2) * (6 - x);
+  it("LAJEMONT: região do lado x = 6 = 10,218 (impresso 10,22)", () => {
+    const p = padraoDeCharneirasLajemont(
+      v,
+      [0, 0, 0.3, 0],
+      [false, false, false, false],
+      P,
+      "original",
+    );
+    expect(p.regioes.find((r) => r.bordo === 2)?.area).toBeCloseTo(area, 3);
+  });
+  it("LAJECALC: com i 0,29 a região fica menor", () => {
+    const p = padraoPorCodigos(v, [0, 0, 5, 0], P, "original");
+    const x29 = 6 / (1 + Math.sqrt(1.29));
+    expect(p.regioes.find((r) => r.bordo === 2)?.area).toBeCloseTo(
+      ((6 + (6 - 2 * x29)) / 2) * (6 - x29),
+      3,
+    );
   });
 });
