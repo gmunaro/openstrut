@@ -1,0 +1,1079 @@
+{
+  "caso": "retrad_arm_param",
+  "run": "C:/tmp/oraculo/runs/retrad_arm_param-20261014-202844",
+  "programa": "ARMADURA",
+  "descricao": "Módulo ARMADURA com unidades e parâmetros fora do padrão (Fck em kgf/cm2, forças em kN, medidas em cm, x/d lim 0.45, @1 2 %, gamas 1.5/1.6/1.2): tabela de capacidade da seção 20x50 (Mk por número de barras e bitola, dc+10fi/50fi, Vk por espaçamento de estribo, Twu) impressa pelo item 4 e pelo item 3, e dimensionamento do item 6 para Mk 500 kNcm, Vk 100 kN e Tk 100 kNcm.",
+  "entrada": {
+    "obra de partida": "nenhuma (o ARMADURA não lê obra; nada gravado em C:)",
+    "item 1 (materiais)": "Fck 150, unidade kgf/cm2, multiplicador 0.001; Fyk 5000; tipo de aço B (padrão)",
+    "item 7 (parâmetros)": "1 x/d(lim) 0.45; 2 @1 0.02; 3 forças 1.5; 4 concreto 1.6; 5 aço 1.2; 6 unidade de força kN; 7 multiplicador 0.1; 8 unidade de medida cm; 9 multiplicador 0.01",
+    "item 4 (uma seção)": "Fck 150, Fyk 5000 (padrão), tipo B; seção Retangular B,H = 20,50; Bf vazio; bitolas de flexão e de cisalhamento padrão (ENTER); imprime S",
+    "item 2 (arquivar)": "posição 1: Retangular 20,50, Bf vazio, bitolas padrão; F encerra na posição 2",
+    "item 3 (processar)": "seção 1, imprime S",
+    "item 6 (dimensionamento)": "Fck/Fyk/tipo padrão; Retangular 20,50; 2 flexão Mk 500 kNcm; 3 cortante Vk 100 kN; 4 torção, cobrimento + fi/2 = 3 cm, Tk 100 kNcm; 5 volta"
+  },
+  "valores": [
+    {
+      "id": "param.fck.padrao",
+      "grandeza": "Fck proposto ao abrir o item 1",
+      "unidade": "t/cm2",
+      "impresso": ".15",
+      "fonte": "telas/001_m01.txt:6",
+      "obs": "impresso \"*.15*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "param.fyk.padrao",
+      "grandeza": "Fyk proposto ao abrir o item 1",
+      "unidade": "t/cm2",
+      "impresso": "5",
+      "fonte": "telas/001_m01.txt:7",
+      "obs": "impresso \"*5*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "param.tipoAco.padrao",
+      "grandeza": "tipo de aço proposto",
+      "unidade": "",
+      "impresso": "B",
+      "fonte": "telas/001_m01.txt:7",
+      "obs": "impresso \"*B*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "param.unidade.padrao",
+      "grandeza": "unidade de Fck/Fyk proposta",
+      "unidade": "",
+      "impresso": "t/cm2",
+      "fonte": "telas/001_m01.txt:10",
+      "obs": "impresso \"*t/cm2*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "param.multiplicador.padrao",
+      "grandeza": "multiplicador kgf/cm2 -> t/cm2 proposto",
+      "unidade": "",
+      "impresso": "1",
+      "fonte": "telas/001_m01.txt:13",
+      "obs": "impresso \"*1*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "param.xdLim",
+      "grandeza": "x/d(lim) (eco na impressão)",
+      "unidade": "adimensional",
+      "impresso": ".45",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "param.taxaArmLong",
+      "grandeza": "@1, taxa de armadura longitudinal (eco na impressão)",
+      "unidade": "%",
+      "impresso": "2",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "param.gamaF",
+      "grandeza": "coeficiente de segurança das forças",
+      "unidade": "adimensional",
+      "impresso": "1.5",
+      "fonte": "impressora.prn:49"
+    },
+    {
+      "id": "param.gamaC",
+      "grandeza": "coeficiente de segurança do concreto",
+      "unidade": "adimensional",
+      "impresso": "1.6",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "param.gamaS",
+      "grandeza": "coeficiente de segurança do aço",
+      "unidade": "adimensional",
+      "impresso": "1.2",
+      "fonte": "impressora.prn:51"
+    },
+    {
+      "id": "param.unidadeForca",
+      "grandeza": "unidade de força",
+      "unidade": "",
+      "impresso": "kN",
+      "fonte": "telas/002_p01.txt:17"
+    },
+    {
+      "id": "param.multForca",
+      "grandeza": "multiplicador da força para toneladas",
+      "unidade": "",
+      "impresso": ".1",
+      "fonte": "telas/002_p01.txt:18"
+    },
+    {
+      "id": "param.unidadeMedida",
+      "grandeza": "unidade de medida",
+      "unidade": "",
+      "impresso": "cm",
+      "fonte": "telas/002_p01.txt:19"
+    },
+    {
+      "id": "param.multMedida",
+      "grandeza": "multiplicador da medida para metros",
+      "unidade": "",
+      "impresso": ".01",
+      "fonte": "telas/002_p01.txt:20"
+    },
+    {
+      "id": "param.bitolaFlexao.1",
+      "grandeza": "bitola de flexão 1 (coluna da tabela de Mk)",
+      "unidade": "mm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "param.bitolaFlexao.2",
+      "grandeza": "bitola de flexão 2",
+      "unidade": "mm",
+      "impresso": "12.5",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "param.bitolaFlexao.3",
+      "grandeza": "bitola de flexão 3",
+      "unidade": "mm",
+      "impresso": "16.0",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "param.bitolaEstribo.1",
+      "grandeza": "bitola de estribo 1 (coluna da tabela de Vk)",
+      "unidade": "mm",
+      "impresso": "5.0",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "param.bitolaEstribo.2",
+      "grandeza": "bitola de estribo 2",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "param.bitolaEstribo.3",
+      "grandeza": "bitola de estribo 3",
+      "unidade": "mm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "item4.fck.proposto",
+      "grandeza": "Fck proposto no item 4 depois de definir 150 kgf/cm2 no item 1",
+      "unidade": "kgf/cm2",
+      "impresso": ".15",
+      "fonte": "telas/003_u01.txt:5",
+      "obs": "impresso \"*.15*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "item6.fck.proposto",
+      "grandeza": "Fck proposto no item 6",
+      "unidade": "kgf/cm2",
+      "impresso": "150",
+      "fonte": "telas/007_d01.txt:7",
+      "obs": "impresso \"*150*\"; valor proposto (entre asteriscos)"
+    },
+    {
+      "id": "item4.d",
+      "grandeza": "item 4 (cálculo de uma seção): altura útil d da seção 20x50",
+      "unidade": "cm",
+      "impresso": "46.0",
+      "fonte": "impressora.prn:7"
+    },
+    {
+      "id": "item4.MkRet",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente da seção retangular (x/d lim)",
+      "unidade": "kNcm",
+      "impresso": "6636.83",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "item4.MkMin",
+      "grandeza": "item 4 (cálculo de uma seção): Mk correspondente à armadura mínima",
+      "unidade": "kNcm",
+      "impresso": "1957.30",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "item4.xd34",
+      "grandeza": "item 4 (cálculo de uma seção): x/d na fronteira dos domínios 3-4",
+      "unidade": "adimensional",
+      "impresso": ".467",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "item4.flexao.nMax",
+      "grandeza": "item 4 (cálculo de uma seção): maior número de barras da tabela de Mk",
+      "unidade": "",
+      "impresso": "4",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "item4.Mk.n2.phi10",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 2 barras de 10 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "2081.59",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "item4.Mk.n2.phi12.5",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 2 barras de 12.5 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "3165.34",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "item4.Mk.n2.phi16",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 2 barras de 16 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "4832.15",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "item4.Mk.n3.phi10",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 3 barras de 10 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "3048.02",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "item4.Mk.n3.phi12.5",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 3 barras de 12.5 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "4566.45",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "item4.Mk.n3.phi16",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 3 barras de 16 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "6783.44",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "item4.Mk.n4.phi10",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 4 barras de 10 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "3964.87",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "item4.Mk.n4.phi12.5",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 4 barras de 12.5 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "5846.53",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "item4.Mk.n4.phi16",
+      "grandeza": "item 4 (cálculo de uma seção): Mk resistente com 4 barras de 16 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:25",
+      "obs": "impresso \"0.00#\"; # = fora do limite (não atende)"
+    },
+    {
+      "id": "item4.dc10.phi10",
+      "grandeza": "item 4 (cálculo de uma seção): dc+10fi, bitola 10",
+      "unidade": "cm",
+      "impresso": "44",
+      "fonte": "impressora.prn:27",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 10φ)"
+    },
+    {
+      "id": "item4.dc50.phi10",
+      "grandeza": "item 4 (cálculo de uma seção): dc+50fi, bitola 10",
+      "unidade": "cm",
+      "impresso": "84",
+      "fonte": "impressora.prn:28",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 50φ)"
+    },
+    {
+      "id": "item4.dc10.phi12.5",
+      "grandeza": "item 4 (cálculo de uma seção): dc+10fi, bitola 12.5",
+      "unidade": "cm",
+      "impresso": "47",
+      "fonte": "impressora.prn:27",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 10φ)"
+    },
+    {
+      "id": "item4.dc50.phi12.5",
+      "grandeza": "item 4 (cálculo de uma seção): dc+50fi, bitola 12.5",
+      "unidade": "cm",
+      "impresso": "97",
+      "fonte": "impressora.prn:28",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 50φ)"
+    },
+    {
+      "id": "item4.dc10.phi16",
+      "grandeza": "item 4 (cálculo de uma seção): dc+10fi, bitola 16",
+      "unidade": "cm",
+      "impresso": "50",
+      "fonte": "impressora.prn:27",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 10φ)"
+    },
+    {
+      "id": "item4.dc50.phi16",
+      "grandeza": "item 4 (cálculo de uma seção): dc+50fi, bitola 16",
+      "unidade": "cm",
+      "impresso": "114",
+      "fonte": "impressora.prn:28",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 50φ)"
+    },
+    {
+      "id": "item4.VkMin",
+      "grandeza": "item 4 (cálculo de uma seção): Vk correspondente ao estribo mínimo",
+      "unidade": "kN",
+      "impresso": "60.50",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "item4.VkMax",
+      "grandeza": "item 4 (cálculo de uma seção): Vk máximo (esmagamento da biela)",
+      "unidade": "kN",
+      "impresso": "143.75",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "item4.estribo.ramos",
+      "grandeza": "item 4 (cálculo de uma seção): número de ramos do estribo",
+      "unidade": "",
+      "impresso": "2",
+      "fonte": "impressora.prn:36",
+      "obs": "impresso \"2 Ramos\""
+    },
+    {
+      "id": "item4.Vk.s7.5",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 1 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "item4.Vk.s7.5.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/7.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "88.65",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "item4.Vk.s7.5.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/7.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "122.73",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "item4.Vk.s7.5.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/7.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "177.54",
+      "fonte": "impressora.prn:38",
+      "obs": "impresso \"177.54#\"; # = fora do limite (não atende)"
+    },
+    {
+      "id": "item4.Vk.s10.0",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 2 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "item4.Vk.s10.0.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/10.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "73.84",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "item4.Vk.s10.0.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/10.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "99.39",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "item4.Vk.s10.0.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/10.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "140.50",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "item4.Vk.s12.5",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 3 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "12.5",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "item4.Vk.s12.5.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/12.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "64.95",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "item4.Vk.s12.5.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/12.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "85.39",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "item4.Vk.s12.5.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/12.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "118.28",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "item4.Vk.s15.0",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 4 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "15.0",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "item4.Vk.s15.0.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/15.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "59.02",
+      "fonte": "impressora.prn:41",
+      "obs": "impresso \"59.02@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item4.Vk.s15.0.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/15.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "76.06",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "item4.Vk.s15.0.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/15.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "103.47",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "item4.Vk.s17.5",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 5 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "17.5",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "item4.Vk.s17.5.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/17.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "54.79",
+      "fonte": "impressora.prn:42",
+      "obs": "impresso \"54.79@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item4.Vk.s17.5.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/17.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "69.39",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "item4.Vk.s17.5.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/17.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "92.89",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "item4.Vk.s20.0",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 6 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "20.0",
+      "fonte": "impressora.prn:43"
+    },
+    {
+      "id": "item4.Vk.s20.0.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/20.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "51.62",
+      "fonte": "impressora.prn:43",
+      "obs": "impresso \"51.62@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item4.Vk.s20.0.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/20.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "64.39",
+      "fonte": "impressora.prn:43"
+    },
+    {
+      "id": "item4.Vk.s20.0.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/20.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "84.95",
+      "fonte": "impressora.prn:43"
+    },
+    {
+      "id": "item4.Vk.s22.5",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 7 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "22.5",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "item4.Vk.s22.5.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/22.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "49.15",
+      "fonte": "impressora.prn:44",
+      "obs": "impresso \"49.15@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item4.Vk.s22.5.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/22.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "60.50",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "item4.Vk.s22.5.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/22.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "78.78",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "item4.Vk.s25.0",
+      "grandeza": "item 4 (cálculo de uma seção): espaçamento da linha 8 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "25.0",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "item4.Vk.s25.0.phi5",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 5 mm c/25.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "47.17",
+      "fonte": "impressora.prn:45",
+      "obs": "impresso \"47.17@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item4.Vk.s25.0.phi6.3",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 6.3 mm c/25.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "57.39",
+      "fonte": "impressora.prn:45",
+      "obs": "impresso \"57.39@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item4.Vk.s25.0.phi8",
+      "grandeza": "item 4 (cálculo de uma seção): Vk resistente, estribo 8 mm c/25.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "73.84",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "item4.Twu",
+      "grandeza": "item 4 (cálculo de uma seção): tensão última de cisalhamento Twu",
+      "unidade": "kgf/cm2",
+      "impresso": "23.44",
+      "fonte": "impressora.prn:47"
+    },
+    {
+      "id": "item3.d",
+      "grandeza": "item 3 (processar seções arquivadas): altura útil d da seção 20x50",
+      "unidade": "cm",
+      "impresso": "46.0",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "item3.MkRet",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente da seção retangular (x/d lim)",
+      "unidade": "kNcm",
+      "impresso": "6636.83",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "item3.MkMin",
+      "grandeza": "item 3 (processar seções arquivadas): Mk correspondente à armadura mínima",
+      "unidade": "kNcm",
+      "impresso": "1957.30",
+      "fonte": "impressora.prn:63"
+    },
+    {
+      "id": "item3.xd34",
+      "grandeza": "item 3 (processar seções arquivadas): x/d na fronteira dos domínios 3-4",
+      "unidade": "adimensional",
+      "impresso": ".467",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "item3.flexao.nMax",
+      "grandeza": "item 3 (processar seções arquivadas): maior número de barras da tabela de Mk",
+      "unidade": "",
+      "impresso": "4",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "item3.Mk.n2.phi10",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 2 barras de 10 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "2081.59",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "item3.Mk.n2.phi12.5",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 2 barras de 12.5 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "3165.34",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "item3.Mk.n2.phi16",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 2 barras de 16 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "4832.15",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "item3.Mk.n3.phi10",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 3 barras de 10 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "3048.02",
+      "fonte": "impressora.prn:74"
+    },
+    {
+      "id": "item3.Mk.n3.phi12.5",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 3 barras de 12.5 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "4566.45",
+      "fonte": "impressora.prn:74"
+    },
+    {
+      "id": "item3.Mk.n3.phi16",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 3 barras de 16 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "6783.44",
+      "fonte": "impressora.prn:74"
+    },
+    {
+      "id": "item3.Mk.n4.phi10",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 4 barras de 10 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "3964.87",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "item3.Mk.n4.phi12.5",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 4 barras de 12.5 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "5846.53",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "item3.Mk.n4.phi16",
+      "grandeza": "item 3 (processar seções arquivadas): Mk resistente com 4 barras de 16 mm (# = não atende)",
+      "unidade": "kNcm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:76",
+      "obs": "impresso \"0.00#\"; # = fora do limite (não atende)"
+    },
+    {
+      "id": "item3.dc10.phi10",
+      "grandeza": "item 3 (processar seções arquivadas): dc+10fi, bitola 10",
+      "unidade": "cm",
+      "impresso": "44",
+      "fonte": "impressora.prn:78",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 10φ)"
+    },
+    {
+      "id": "item3.dc50.phi10",
+      "grandeza": "item 3 (processar seções arquivadas): dc+50fi, bitola 10",
+      "unidade": "cm",
+      "impresso": "84",
+      "fonte": "impressora.prn:79",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 50φ)"
+    },
+    {
+      "id": "item3.dc10.phi12.5",
+      "grandeza": "item 3 (processar seções arquivadas): dc+10fi, bitola 12.5",
+      "unidade": "cm",
+      "impresso": "47",
+      "fonte": "impressora.prn:78",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 10φ)"
+    },
+    {
+      "id": "item3.dc50.phi12.5",
+      "grandeza": "item 3 (processar seções arquivadas): dc+50fi, bitola 12.5",
+      "unidade": "cm",
+      "impresso": "97",
+      "fonte": "impressora.prn:79",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 50φ)"
+    },
+    {
+      "id": "item3.dc10.phi16",
+      "grandeza": "item 3 (processar seções arquivadas): dc+10fi, bitola 16",
+      "unidade": "cm",
+      "impresso": "50",
+      "fonte": "impressora.prn:78",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 10φ)"
+    },
+    {
+      "id": "item3.dc50.phi16",
+      "grandeza": "item 3 (processar seções arquivadas): dc+50fi, bitola 16",
+      "unidade": "cm",
+      "impresso": "114",
+      "fonte": "impressora.prn:79",
+      "casas": 0,
+      "trunca": true,
+      "obs": "INT(0,75d + 50φ)"
+    },
+    {
+      "id": "item3.VkMin",
+      "grandeza": "item 3 (processar seções arquivadas): Vk correspondente ao estribo mínimo",
+      "unidade": "kN",
+      "impresso": "60.50",
+      "fonte": "impressora.prn:81"
+    },
+    {
+      "id": "item3.VkMax",
+      "grandeza": "item 3 (processar seções arquivadas): Vk máximo (esmagamento da biela)",
+      "unidade": "kN",
+      "impresso": "143.75",
+      "fonte": "impressora.prn:82"
+    },
+    {
+      "id": "item3.estribo.ramos",
+      "grandeza": "item 3 (processar seções arquivadas): número de ramos do estribo",
+      "unidade": "",
+      "impresso": "2",
+      "fonte": "impressora.prn:87",
+      "obs": "impresso \"2 Ramos\""
+    },
+    {
+      "id": "item3.Vk.s7.5",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 1 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:89"
+    },
+    {
+      "id": "item3.Vk.s7.5.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/7.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "88.65",
+      "fonte": "impressora.prn:89"
+    },
+    {
+      "id": "item3.Vk.s7.5.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/7.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "122.73",
+      "fonte": "impressora.prn:89"
+    },
+    {
+      "id": "item3.Vk.s7.5.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/7.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "177.54",
+      "fonte": "impressora.prn:89",
+      "obs": "impresso \"177.54#\"; # = fora do limite (não atende)"
+    },
+    {
+      "id": "item3.Vk.s10.0",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 2 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:90"
+    },
+    {
+      "id": "item3.Vk.s10.0.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/10.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "73.84",
+      "fonte": "impressora.prn:90"
+    },
+    {
+      "id": "item3.Vk.s10.0.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/10.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "99.39",
+      "fonte": "impressora.prn:90"
+    },
+    {
+      "id": "item3.Vk.s10.0.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/10.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "140.50",
+      "fonte": "impressora.prn:90"
+    },
+    {
+      "id": "item3.Vk.s12.5",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 3 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "12.5",
+      "fonte": "impressora.prn:91"
+    },
+    {
+      "id": "item3.Vk.s12.5.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/12.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "64.95",
+      "fonte": "impressora.prn:91"
+    },
+    {
+      "id": "item3.Vk.s12.5.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/12.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "85.39",
+      "fonte": "impressora.prn:91"
+    },
+    {
+      "id": "item3.Vk.s12.5.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/12.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "118.28",
+      "fonte": "impressora.prn:91"
+    },
+    {
+      "id": "item3.Vk.s15.0",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 4 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "15.0",
+      "fonte": "impressora.prn:92"
+    },
+    {
+      "id": "item3.Vk.s15.0.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/15.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "59.02",
+      "fonte": "impressora.prn:92",
+      "obs": "impresso \"59.02@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item3.Vk.s15.0.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/15.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "76.06",
+      "fonte": "impressora.prn:92"
+    },
+    {
+      "id": "item3.Vk.s15.0.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/15.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "103.47",
+      "fonte": "impressora.prn:92"
+    },
+    {
+      "id": "item3.Vk.s17.5",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 5 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "17.5",
+      "fonte": "impressora.prn:93"
+    },
+    {
+      "id": "item3.Vk.s17.5.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/17.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "54.79",
+      "fonte": "impressora.prn:93",
+      "obs": "impresso \"54.79@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item3.Vk.s17.5.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/17.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "69.39",
+      "fonte": "impressora.prn:93"
+    },
+    {
+      "id": "item3.Vk.s17.5.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/17.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "92.89",
+      "fonte": "impressora.prn:93"
+    },
+    {
+      "id": "item3.Vk.s20.0",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 6 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "20.0",
+      "fonte": "impressora.prn:94"
+    },
+    {
+      "id": "item3.Vk.s20.0.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/20.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "51.62",
+      "fonte": "impressora.prn:94",
+      "obs": "impresso \"51.62@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item3.Vk.s20.0.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/20.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "64.39",
+      "fonte": "impressora.prn:94"
+    },
+    {
+      "id": "item3.Vk.s20.0.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/20.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "84.95",
+      "fonte": "impressora.prn:94"
+    },
+    {
+      "id": "item3.Vk.s22.5",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 7 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "22.5",
+      "fonte": "impressora.prn:95"
+    },
+    {
+      "id": "item3.Vk.s22.5.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/22.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "49.15",
+      "fonte": "impressora.prn:95",
+      "obs": "impresso \"49.15@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item3.Vk.s22.5.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/22.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "60.50",
+      "fonte": "impressora.prn:95"
+    },
+    {
+      "id": "item3.Vk.s22.5.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/22.5 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "78.78",
+      "fonte": "impressora.prn:95"
+    },
+    {
+      "id": "item3.Vk.s25.0",
+      "grandeza": "item 3 (processar seções arquivadas): espaçamento da linha 8 da tabela de Vk",
+      "unidade": "cm",
+      "impresso": "25.0",
+      "fonte": "impressora.prn:96"
+    },
+    {
+      "id": "item3.Vk.s25.0.phi5",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 5 mm c/25.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "47.17",
+      "fonte": "impressora.prn:96",
+      "obs": "impresso \"47.17@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item3.Vk.s25.0.phi6.3",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 6.3 mm c/25.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "57.39",
+      "fonte": "impressora.prn:96",
+      "obs": "impresso \"57.39@\"; @ = abaixo do Vk mínimo"
+    },
+    {
+      "id": "item3.Vk.s25.0.phi8",
+      "grandeza": "item 3 (processar seções arquivadas): Vk resistente, estribo 8 mm c/25.0 (# acima do máximo, @ abaixo do mínimo)",
+      "unidade": "kN",
+      "impresso": "73.84",
+      "fonte": "impressora.prn:96"
+    },
+    {
+      "id": "item3.Twu",
+      "grandeza": "item 3 (processar seções arquivadas): tensão última de cisalhamento Twu",
+      "unidade": "kgf/cm2",
+      "impresso": "23.44",
+      "fonte": "impressora.prn:98"
+    },
+    {
+      "id": "item6.flexao.Ast",
+      "grandeza": "item 6, Mk 500 kNcm: armadura tracionada",
+      "unidade": "cm2",
+      "impresso": "0.40",
+      "fonte": "telas/009_d03.txt:18"
+    },
+    {
+      "id": "item6.flexao.x/d",
+      "grandeza": "item 6, Mk 500 kNcm: x/d",
+      "unidade": "adimensional",
+      "impresso": "0.028",
+      "fonte": "telas/009_d03.txt:18"
+    },
+    {
+      "id": "item6.cortante.Ase",
+      "grandeza": "item 6, Vk 100 kN: estribo",
+      "unidade": "cm2/m",
+      "impresso": "6.35",
+      "fonte": "telas/010_d04.txt:17"
+    },
+    {
+      "id": "item6.cortante.Twd",
+      "grandeza": "item 6, Vk 100 kN: tensão de cisalhamento de cálculo",
+      "unidade": "kgf/cm2",
+      "impresso": "16.30",
+      "fonte": "telas/010_d04.txt:17"
+    },
+    {
+      "id": "item6.torcao.TkLim",
+      "grandeza": "item 6, torção: Tk limite",
+      "unidade": "kNcm",
+      "impresso": "474.32",
+      "fonte": "telas/011_d05.txt:10"
+    },
+    {
+      "id": "item6.torcao.Twu",
+      "grandeza": "item 6, torção: Twu",
+      "unidade": "kgf/cm2",
+      "impresso": "20.63",
+      "fonte": "telas/011_d05.txt:11"
+    },
+    {
+      "id": "item6.torcao.Asl",
+      "grandeza": "item 6, Tk 100 kNcm: armadura longitudinal de torção",
+      "unidade": "cm2",
+      "impresso": "0.34",
+      "fonte": "telas/011_d05.txt:17"
+    },
+    {
+      "id": "item6.torcao.Ase",
+      "grandeza": "item 6, Tk 100 kNcm: estribo de torção",
+      "unidade": "cm2/m",
+      "impresso": "0.29",
+      "fonte": "telas/011_d05.txt:18"
+    },
+    {
+      "id": "item6.torcao.Ttd",
+      "grandeza": "item 6, Tk 100 kNcm: tensão de torção de cálculo",
+      "unidade": "kgf/cm2",
+      "impresso": "4.35",
+      "fonte": "telas/011_d05.txt:19"
+    }
+  ]
+}

@@ -1,0 +1,610 @@
+{
+  "caso": "retrad_laje_calc2",
+  "run": "C:/tmp/oraculo/runs/retrad_laje_calc2-20261015-082441",
+  "programa": "LAJECALC",
+  "descricao": "LAJECALC sobre a obra E2E (4 lajes 4x5, h 10) com outras condicoes de contorno e direcoes: toda a continuidade eliminada, so o primeiro trecho da L1 engastado, L1 com direcao principal a 90 graus e L2 com relacao entre esforcos 1.5. Imprime espessuras minimas e momentos/armaduras.",
+  "entrada": {
+    "obra de partida": "casos/retrad_laje_calc2.dados (E2E.LAJ/.VIG/.RLP/.BAK gravados por um run anterior do caso_a_laje; mesmo conteudo do obra/ do caso_a, so muda o carimbo de data/hora)",
+    "geometria": "eixos x 0/4/8 m, y 0/5/10 m; lajes macicas L1 (0..4, 5..10), L2 (4..8, 5..10), L3 (0..4, 0..5), L4 (4..8, 0..5), 4 x 5 m; vigas V1..V6 nos eixos; pilares P1..P9",
+    "cargas": "permanente 0.1 t/m2, acidental 0.15 t/m2 (ocupacao 0.15 total), peso proprio gravado 0.25 t/m2",
+    "H gravado na obra": "10 cm em L1..L4 (imposto no caso_a)",
+    "materiais/parametros": "padrao do LAJE: Fck .15 t/cm2, Fyk 5 t/cm2 tipo B, cobrimento 1.5 cm, CSE 1.4, CSC 1.4, CSA 1.15",
+    "leitura": "LAJE 6 -> 4 (leitura), obra E2E",
+    "LAJECALC 1 continuidade": "E + T: elimina toda a continuidade; I na laje 1: S (engasta) no primeiro trecho oferecido, depois ENTER x3 (proximo trecho / fim)",
+    "LAJECALC 2 direcoes": "D: laje 1, nova direcao principal 90; R: laje 2, nova relacao entre esforcos 1.5",
+    "LAJECALC 3 espessuras minimas": "todas as lajes, com impressao e com visualizacao do painel (grafico)",
+    "LAJECALC 5 momentos e armaduras (1a vez)": "todas as lajes, com impressao, sem visualizacao",
+    "LAJECALC 5 momentos e armaduras (2a vez)": "todas as lajes, sem impressao, visualizacao de todas as lajes, opcao 3 (armaduras): tabela na tela e painel grafico",
+    "observacao": "nao ha imposicao de espessuras neste caso; o H 10.0 dos relatorios de momentos/armaduras vem da obra lida"
+  },
+  "valores": [
+    {
+      "id": "L1.Hmin",
+      "grandeza": "L1 espessura mínima",
+      "unidade": "cm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.x/d",
+      "grandeza": "L1 x/d com H mínimo",
+      "unidade": "",
+      "impresso": "0.351",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.L/f",
+      "grandeza": "L1 L/f com H mínimo (variável nunca calculada no original, sai 0)",
+      "unidade": "",
+      "impresso": "0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.As.phi",
+      "grandeza": "L1 bitola da armadura com H mínimo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.As.s",
+      "grandeza": "L1 espaçamento da armadura com H mínimo",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.perm",
+      "grandeza": "L1 carga permanente com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.acid",
+      "grandeza": "L1 carga acidental com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.pp",
+      "grandeza": "L1 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.p",
+      "grandeza": "L1 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L2.Hmin",
+      "grandeza": "L2 espessura mínima",
+      "unidade": "cm",
+      "impresso": "7.0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.x/d",
+      "grandeza": "L2 x/d com H mínimo",
+      "unidade": "",
+      "impresso": "0.453",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.L/f",
+      "grandeza": "L2 L/f com H mínimo (variável nunca calculada no original, sai 0)",
+      "unidade": "",
+      "impresso": "0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.As.phi",
+      "grandeza": "L2 bitola da armadura com H mínimo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.As.s",
+      "grandeza": "L2 espaçamento da armadura com H mínimo",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.perm",
+      "grandeza": "L2 carga permanente com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.acid",
+      "grandeza": "L2 carga acidental com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.pp",
+      "grandeza": "L2 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.17",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.p",
+      "grandeza": "L2 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.43",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L3.Hmin",
+      "grandeza": "L3 espessura mínima",
+      "unidade": "cm",
+      "impresso": "7.0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.x/d",
+      "grandeza": "L3 x/d com H mínimo",
+      "unidade": "",
+      "impresso": "0.378",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.L/f",
+      "grandeza": "L3 L/f com H mínimo (variável nunca calculada no original, sai 0)",
+      "unidade": "",
+      "impresso": "0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.As.phi",
+      "grandeza": "L3 bitola da armadura com H mínimo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.As.s",
+      "grandeza": "L3 espaçamento da armadura com H mínimo",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.perm",
+      "grandeza": "L3 carga permanente com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.acid",
+      "grandeza": "L3 carga acidental com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.pp",
+      "grandeza": "L3 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.17",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.p",
+      "grandeza": "L3 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.43",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L4.Hmin",
+      "grandeza": "L4 espessura mínima",
+      "unidade": "cm",
+      "impresso": "7.0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.x/d",
+      "grandeza": "L4 x/d com H mínimo",
+      "unidade": "",
+      "impresso": "0.378",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.L/f",
+      "grandeza": "L4 L/f com H mínimo (variável nunca calculada no original, sai 0)",
+      "unidade": "",
+      "impresso": "0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.As.phi",
+      "grandeza": "L4 bitola da armadura com H mínimo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.As.s",
+      "grandeza": "L4 espaçamento da armadura com H mínimo",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.perm",
+      "grandeza": "L4 carga permanente com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.acid",
+      "grandeza": "L4 carga acidental com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.pp",
+      "grandeza": "L4 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.17",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.p",
+      "grandeza": "L4 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.43",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L1.H.mom",
+      "grandeza": "L1 espessura H (tabela de momentos)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "L1.M+princ",
+      "grandeza": "L1 M+ principal",
+      "unidade": "tm/m",
+      "impresso": "0.31",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "L1.M+sec",
+      "grandeza": "L1 M+ secundário",
+      "unidade": "tm/m",
+      "impresso": "0.29",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "L1.M-maior",
+      "grandeza": "L1 M− maior",
+      "unidade": "tm/m",
+      "impresso": "0.63",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "L1.M-menor",
+      "grandeza": "L1 M− menor",
+      "unidade": "tm/m",
+      "impresso": "0.63",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "L2.H.mom",
+      "grandeza": "L2 espessura H (tabela de momentos)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "L2.M+princ",
+      "grandeza": "L2 M+ principal",
+      "unidade": "tm/m",
+      "impresso": "0.57",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "L2.M+sec",
+      "grandeza": "L2 M+ secundário",
+      "unidade": "tm/m",
+      "impresso": "0.38",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "L2.M-maior",
+      "grandeza": "L2 M− maior",
+      "unidade": "tm/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "L2.M-menor",
+      "grandeza": "L2 M− menor",
+      "unidade": "tm/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "L3.H.mom",
+      "grandeza": "L3 espessura H (tabela de momentos)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "L3.M+princ",
+      "grandeza": "L3 M+ principal",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "L3.M+sec",
+      "grandeza": "L3 M+ secundário",
+      "unidade": "tm/m",
+      "impresso": "0.39",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "L3.M-maior",
+      "grandeza": "L3 M− maior",
+      "unidade": "tm/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "L3.M-menor",
+      "grandeza": "L3 M− menor",
+      "unidade": "tm/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "L4.H.mom",
+      "grandeza": "L4 espessura H (tabela de momentos)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "L4.M+princ",
+      "grandeza": "L4 M+ principal",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "L4.M+sec",
+      "grandeza": "L4 M+ secundário",
+      "unidade": "tm/m",
+      "impresso": "0.39",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "L4.M-maior",
+      "grandeza": "L4 M− maior",
+      "unidade": "tm/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "L4.M-menor",
+      "grandeza": "L4 M− menor",
+      "unidade": "tm/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "L1.H.arm",
+      "grandeza": "L1 espessura H (tabela de armaduras)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "L1.As+princ",
+      "grandeza": "L1 As+ principal",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "L1.As+sec",
+      "grandeza": "L1 As+ secundário",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "L1.As-maior",
+      "grandeza": "L1 As− maior",
+      "unidade": "cm2/m",
+      "impresso": "2.75",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "L1.As-menor",
+      "grandeza": "L1 As− menor",
+      "unidade": "cm2/m",
+      "impresso": "2.75",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "L2.H.arm",
+      "grandeza": "L2 espessura H (tabela de armaduras)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "L2.As+princ",
+      "grandeza": "L2 As+ principal",
+      "unidade": "cm2/m",
+      "impresso": "2.46",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "L2.As+sec",
+      "grandeza": "L2 As+ secundário",
+      "unidade": "cm2/m",
+      "impresso": "1.60",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "L2.As-maior",
+      "grandeza": "L2 As− maior",
+      "unidade": "cm2/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "L2.As-menor",
+      "grandeza": "L2 As− menor",
+      "unidade": "cm2/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "L3.H.arm",
+      "grandeza": "L3 espessura H (tabela de armaduras)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "L3.As+princ",
+      "grandeza": "L3 As+ principal",
+      "unidade": "cm2/m",
+      "impresso": "2.11",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "L3.As+sec",
+      "grandeza": "L3 As+ secundário",
+      "unidade": "cm2/m",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "L3.As-maior",
+      "grandeza": "L3 As− maior",
+      "unidade": "cm2/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "L3.As-menor",
+      "grandeza": "L3 As− menor",
+      "unidade": "cm2/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "L4.H.arm",
+      "grandeza": "L4 espessura H (tabela de armaduras)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "L4.As+princ",
+      "grandeza": "L4 As+ principal",
+      "unidade": "cm2/m",
+      "impresso": "2.11",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "L4.As+sec",
+      "grandeza": "L4 As+ secundário",
+      "unidade": "cm2/m",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "L4.As-maior",
+      "grandeza": "L4 As− maior",
+      "unidade": "cm2/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "L4.As-menor",
+      "grandeza": "L4 As− menor",
+      "unidade": "cm2/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "param.fck",
+      "grandeza": "Fck do concreto (rodapé)",
+      "unidade": "t/cm2",
+      "impresso": ".15",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.fyk",
+      "grandeza": "Fyk do aço tipo B (rodapé)",
+      "unidade": "t/cm2",
+      "impresso": "5",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.cobrimento",
+      "grandeza": "cobrimento (rodapé)",
+      "unidade": "cm",
+      "impresso": "1.5",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.cse",
+      "grandeza": "coeficiente de segurança CSE (rodapé)",
+      "unidade": "",
+      "impresso": "1.4",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "param.csc",
+      "grandeza": "coeficiente de segurança CSC (rodapé)",
+      "unidade": "",
+      "impresso": "1.4",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "param.csa",
+      "grandeza": "coeficiente de segurança CSA (rodapé)",
+      "unidade": "",
+      "impresso": "1.15",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "L1.direcao.vigente",
+      "grandeza": "L1 direção principal da armadura vigente (lida da obra), oferecida como padrão antes da alteração",
+      "unidade": "graus",
+      "impresso": "0",
+      "fonte": "telas/012_k11.txt:25"
+    },
+    {
+      "id": "L2.relacao.vigente",
+      "grandeza": "L2 relação entre esforços vigente (lida da obra, lx/ly), oferecida como padrão antes da alteração",
+      "unidade": "",
+      "impresso": ".8",
+      "fonte": "telas/015_k14.txt:25"
+    }
+  ]
+}

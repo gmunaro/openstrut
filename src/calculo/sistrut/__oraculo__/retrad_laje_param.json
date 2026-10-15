@@ -1,0 +1,714 @@
+{
+  "caso": "retrad_laje_param",
+  "run": "C:/tmp/oraculo/runs/retrad_laje_param-20261015-082447",
+  "programa": "LAJECALC",
+  "descricao": "Obra E2E calculada com parametros e materiais alterados: gama f 1.5, Fck 0.2 t/cm2, aco tipo A e eficiencia da negativa 90 %. Exercita as telas de parametrizacao do LAJE e do LAJECALC (valores recusados e restaurados) e imprime espessuras minimas, momentos e armaduras; o LAJEPROC so imprime o desenho (grafico).",
+  "entrada": {
+    "obra de partida": "E2E (C:\\E2E.LAJ, copia de C:/tmp/oraculo/casos/retrad_lajeproc.dados/ = retrad_laje_param.dados/, arquivos identicos), gravada pelo original no caso caso_a_laje",
+    "geometria": "painel 2x2 de lajes macicas L1..L4 de 4 x 5 m; eixos verticais x = 0/4/8 m, horizontais y = 0/5/10 m; vigas em todos os eixos; pilares P1..P9 nos cruzamentos",
+    "vinculacao": "cada laje com dois bordos continuos (canto do painel) e dois apoiados; continuidade padrao, direcao principal padrao",
+    "cargas": "permanente 0.10 t/m2; ocupacao total 0.15 t/m2 (parcela acidental 0.15); peso proprio imposto 0.25 t/m2",
+    "h": "10 cm imposto em L1..L4 (gravado no .LAJ)",
+    "estado gravado": "momentos e armaduras ja calculados e negativos otimizados no caso_a_laje (coef. 2.017982 no .LAJ)",
+    "LAJE 7 (parametrizacao)": "P + XYZ (arquivo .LAP inexistente: NAO EXISTE ESTE ARQUIVO), ENTER; P + D + \\NAOHA (diretorio inexistente), ENTER; '1,1.5' (Forcas 1.4 -> 1.5); '5,0' (coef. toneladas 0); '5,25t' (vira 25); '4,5' (unidade de forca 5); '5,1' e '4,t' (volta ao padrao); ENTER",
+    "LAJE 1 (materiais)": "Fck 0 (recusado) e 0.2 t/cm2; unidade '5' (recusada, fica t/cm2); multiplicador ENTER (1); Fyk -1 (recusado, fica 5 t/cm2); tipo de aco A",
+    "LAJECALC 7 (parametros)": "1 eficiencia da armadura negativa 90 %; 5 maxima relacao Mneg/Mpos 0.1 (abaixo da minima 0.30, fica 2.00) e ENTER; 8 retorno",
+    "materiais finais": "Fck .2 t/cm2, Fyk 5 t/cm2 tipo A, CSE 1.5, CSC 1.4, CSA 1.15, cobrimento 1.5 cm, densidade 2.5 t/m3",
+    "sequencia": "Gerenciador L; LAJE 6 > 4 le E2E; LAJE 7; LAJE 1; LAJE 3 (LAJECALC): 7 (parametros); 3 espessuras minimas de todas com impressao; 5 momentos e armaduras de todas com impressao (h 10 gravado); 8; LAJE 4 (LAJEPROC): 1 escolha automatica (S); 5 impressao do desenho, todas, ambas juntas; 6"
+  },
+  "valores": [
+    {
+      "id": "L1.Hmin",
+      "grandeza": "espessura minima da L1",
+      "unidade": "cm",
+      "impresso": "6.0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.x/d",
+      "grandeza": "x/d da L1 na espessura minima",
+      "unidade": "adimensional",
+      "impresso": "0.472",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.L/f",
+      "grandeza": "coluna L/f da L1 (relacao vao/flecha; impresso 0)",
+      "unidade": "adimensional",
+      "impresso": "0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.As.phi",
+      "grandeza": "bitola da armadura na espessura minima da L1",
+      "unidade": "mm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.As.s",
+      "grandeza": "espacamento da armadura na espessura minima da L1",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.perm",
+      "grandeza": "carga permanente da L1",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.acid",
+      "grandeza": "carga acidental da L1",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.pp",
+      "grandeza": "peso proprio da L1 com H min (6 cm x 2.5)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.p",
+      "grandeza": "carga total da L1 com H min",
+      "unidade": "t/m2",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L2.Hmin",
+      "grandeza": "espessura minima da L2",
+      "unidade": "cm",
+      "impresso": "6.0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.x/d",
+      "grandeza": "x/d da L2 na espessura minima",
+      "unidade": "adimensional",
+      "impresso": "0.472",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.L/f",
+      "grandeza": "coluna L/f da L2 (relacao vao/flecha; impresso 0)",
+      "unidade": "adimensional",
+      "impresso": "0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.As.phi",
+      "grandeza": "bitola da armadura na espessura minima da L2",
+      "unidade": "mm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.As.s",
+      "grandeza": "espacamento da armadura na espessura minima da L2",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.perm",
+      "grandeza": "carga permanente da L2",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.acid",
+      "grandeza": "carga acidental da L2",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.pp",
+      "grandeza": "peso proprio da L2 com H min (6 cm x 2.5)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.p",
+      "grandeza": "carga total da L2 com H min",
+      "unidade": "t/m2",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L3.Hmin",
+      "grandeza": "espessura minima da L3",
+      "unidade": "cm",
+      "impresso": "6.0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.x/d",
+      "grandeza": "x/d da L3 na espessura minima",
+      "unidade": "adimensional",
+      "impresso": "0.472",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.L/f",
+      "grandeza": "coluna L/f da L3 (relacao vao/flecha; impresso 0)",
+      "unidade": "adimensional",
+      "impresso": "0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.As.phi",
+      "grandeza": "bitola da armadura na espessura minima da L3",
+      "unidade": "mm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.As.s",
+      "grandeza": "espacamento da armadura na espessura minima da L3",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.perm",
+      "grandeza": "carga permanente da L3",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.acid",
+      "grandeza": "carga acidental da L3",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.pp",
+      "grandeza": "peso proprio da L3 com H min (6 cm x 2.5)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L3.Hmin.p",
+      "grandeza": "carga total da L3 com H min",
+      "unidade": "t/m2",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "L4.Hmin",
+      "grandeza": "espessura minima da L4",
+      "unidade": "cm",
+      "impresso": "6.0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.x/d",
+      "grandeza": "x/d da L4 na espessura minima",
+      "unidade": "adimensional",
+      "impresso": "0.472",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.L/f",
+      "grandeza": "coluna L/f da L4 (relacao vao/flecha; impresso 0)",
+      "unidade": "adimensional",
+      "impresso": "0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.As.phi",
+      "grandeza": "bitola da armadura na espessura minima da L4",
+      "unidade": "mm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.As.s",
+      "grandeza": "espacamento da armadura na espessura minima da L4",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.perm",
+      "grandeza": "carga permanente da L4",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.acid",
+      "grandeza": "carga acidental da L4",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.pp",
+      "grandeza": "peso proprio da L4 com H min (6 cm x 2.5)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L4.Hmin.p",
+      "grandeza": "carga total da L4 com H min",
+      "unidade": "t/m2",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "L1.H",
+      "grandeza": "espessura da L1 no relatorio de momentos",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "L1.M+princ",
+      "grandeza": "momento positivo principal da L1",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "L1.M+sec",
+      "grandeza": "momento positivo secundario da L1",
+      "unidade": "tm/m",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "L1.M-maior",
+      "grandeza": "momento negativo maior da L1",
+      "unidade": "tm/m",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "L1.M-menor",
+      "grandeza": "momento negativo menor da L1",
+      "unidade": "tm/m",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "L2.H",
+      "grandeza": "espessura da L2 no relatorio de momentos",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "L2.M+princ",
+      "grandeza": "momento positivo principal da L2",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "L2.M+sec",
+      "grandeza": "momento positivo secundario da L2",
+      "unidade": "tm/m",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "L2.M-maior",
+      "grandeza": "momento negativo maior da L2",
+      "unidade": "tm/m",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "L2.M-menor",
+      "grandeza": "momento negativo menor da L2",
+      "unidade": "tm/m",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "L3.H",
+      "grandeza": "espessura da L3 no relatorio de momentos",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "L3.M+princ",
+      "grandeza": "momento positivo principal da L3",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "L3.M+sec",
+      "grandeza": "momento positivo secundario da L3",
+      "unidade": "tm/m",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "L3.M-maior",
+      "grandeza": "momento negativo maior da L3",
+      "unidade": "tm/m",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "L3.M-menor",
+      "grandeza": "momento negativo menor da L3",
+      "unidade": "tm/m",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "L4.H",
+      "grandeza": "espessura da L4 no relatorio de momentos",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "L4.M+princ",
+      "grandeza": "momento positivo principal da L4",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "L4.M+sec",
+      "grandeza": "momento positivo secundario da L4",
+      "unidade": "tm/m",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "L4.M-maior",
+      "grandeza": "momento negativo maior da L4",
+      "unidade": "tm/m",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "L4.M-menor",
+      "grandeza": "momento negativo menor da L4",
+      "unidade": "tm/m",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "L1.H.arm",
+      "grandeza": "espessura da L1 no relatorio de armaduras",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "L1.As+princ",
+      "grandeza": "armadura positiva principal da L1",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "L1.As+sec",
+      "grandeza": "armadura positiva secundaria da L1",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "L1.As-maior",
+      "grandeza": "armadura negativa maior da L1 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "L1.As-menor",
+      "grandeza": "armadura negativa menor da L1 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "1.98",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "L2.H.arm",
+      "grandeza": "espessura da L2 no relatorio de armaduras",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "L2.As+princ",
+      "grandeza": "armadura positiva principal da L2",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "L2.As+sec",
+      "grandeza": "armadura positiva secundaria da L2",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "L2.As-maior",
+      "grandeza": "armadura negativa maior da L2 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "L2.As-menor",
+      "grandeza": "armadura negativa menor da L2 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "1.98",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "L3.H.arm",
+      "grandeza": "espessura da L3 no relatorio de armaduras",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "L3.As+princ",
+      "grandeza": "armadura positiva principal da L3",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "L3.As+sec",
+      "grandeza": "armadura positiva secundaria da L3",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "L3.As-maior",
+      "grandeza": "armadura negativa maior da L3 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "L3.As-menor",
+      "grandeza": "armadura negativa menor da L3 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "1.98",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "L4.H.arm",
+      "grandeza": "espessura da L4 no relatorio de armaduras",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:47"
+    },
+    {
+      "id": "L4.As+princ",
+      "grandeza": "armadura positiva principal da L4",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:47"
+    },
+    {
+      "id": "L4.As+sec",
+      "grandeza": "armadura positiva secundaria da L4",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:47"
+    },
+    {
+      "id": "L4.As-maior",
+      "grandeza": "armadura negativa maior da L4 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:47"
+    },
+    {
+      "id": "L4.As-menor",
+      "grandeza": "armadura negativa menor da L4 (eficiencia 90 %)",
+      "unidade": "cm2/m",
+      "impresso": "1.98",
+      "fonte": "impressora.prn:47"
+    },
+    {
+      "id": "param.fck",
+      "grandeza": "Fck do concreto usado no calculo",
+      "unidade": "t/cm2",
+      "impresso": ".2",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.fyk",
+      "grandeza": "Fyk do aco",
+      "unidade": "t/cm2",
+      "impresso": "5",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.tipoAco",
+      "grandeza": "tipo do aco (A = patamar)",
+      "unidade": "",
+      "impresso": "A",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.cobrimento",
+      "grandeza": "cobrimento da armadura da laje",
+      "unidade": "cm",
+      "impresso": "1.5",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "param.cse",
+      "grandeza": "coeficiente de seguranca das forcas (gama f) usado",
+      "unidade": "adimensional",
+      "impresso": "1.5",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "param.csc",
+      "grandeza": "coeficiente de seguranca do concreto (gama c)",
+      "unidade": "adimensional",
+      "impresso": "1.4",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "param.csa",
+      "grandeza": "coeficiente de seguranca do aco (gama s)",
+      "unidade": "adimensional",
+      "impresso": "1.15",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "param.cse.padrao",
+      "grandeza": "coeficiente de seguranca das forcas de fabrica (antes da alteracao)",
+      "unidade": "adimensional",
+      "impresso": "1.4",
+      "fonte": "telas/003_r01.txt:9"
+    },
+    {
+      "id": "param.unidadeForca",
+      "grandeza": "unidade de forca dos esforcos (padrao)",
+      "unidade": "",
+      "impresso": "t",
+      "fonte": "telas/003_r01.txt:14"
+    },
+    {
+      "id": "param.coefToneladas",
+      "grandeza": "multiplicador para transformar a forca em toneladas (padrao)",
+      "unidade": "adimensional",
+      "impresso": "1",
+      "fonte": "telas/003_r01.txt:15"
+    },
+    {
+      "id": "param.unidadeMedida",
+      "grandeza": "unidade de medida (padrao)",
+      "unidade": "",
+      "impresso": "m",
+      "fonte": "telas/003_r01.txt:16"
+    },
+    {
+      "id": "param.coefMetros",
+      "grandeza": "multiplicador para transformar a medida em metros (padrao)",
+      "unidade": "adimensional",
+      "impresso": "1",
+      "fonte": "telas/003_r01.txt:17"
+    },
+    {
+      "id": "param.coefToneladas.apos_25t",
+      "grandeza": "multiplicador de toneladas gravado ao digitar '5,25t' (o texto '25t' vira 25)",
+      "unidade": "adimensional",
+      "impresso": "25",
+      "fonte": "telas/014_r12.txt:15"
+    },
+    {
+      "id": "param.fck.padrao",
+      "grandeza": "Fck de fabrica proposto antes da alteracao",
+      "unidade": "t/cm2",
+      "impresso": ".15",
+      "fonte": "telas/018_m00.txt:6"
+    },
+    {
+      "id": "param.unidadeMateriais",
+      "grandeza": "unidade dos valores caracteristicos de concreto e aco (padrao)",
+      "unidade": "",
+      "impresso": "t/cm2",
+      "fonte": "telas/019_m01.txt:10"
+    },
+    {
+      "id": "param.multiplicadorMateriais",
+      "grandeza": "multiplicador de t/cm2 para t/cm2 (padrao)",
+      "unidade": "adimensional",
+      "impresso": "1",
+      "fonte": "telas/021_m02.txt:13"
+    },
+    {
+      "id": "param.eficienciaNeg.padrao",
+      "grandeza": "eficiencia da armadura negativa de fabrica",
+      "unidade": "%",
+      "impresso": "100",
+      "fonte": "telas/025_c02.txt:5"
+    },
+    {
+      "id": "param.eficienciaNeg",
+      "grandeza": "eficiencia da armadura negativa usada (apos alteracao)",
+      "unidade": "%",
+      "impresso": "90",
+      "fonte": "telas/026_c03.txt:5"
+    },
+    {
+      "id": "param.limitaLN",
+      "grandeza": "limite da linha neutra (dominio 3/4)",
+      "unidade": "%",
+      "impresso": "100",
+      "fonte": "telas/025_c02.txt:9"
+    },
+    {
+      "id": "param.densidade",
+      "grandeza": "densidade do concreto (a tela escreve t/m2)",
+      "unidade": "t/m3",
+      "impresso": "2.5",
+      "fonte": "telas/025_c02.txt:11"
+    },
+    {
+      "id": "param.relMaxNegPos",
+      "grandeza": "maxima relacao Mneg/Mpos em lados engastados (mantida apos digitar 0.1, abaixo da minima)",
+      "unidade": "adimensional",
+      "impresso": "2.00",
+      "fonte": "telas/028_c05.txt:15"
+    },
+    {
+      "id": "param.relMinNegPos",
+      "grandeza": "minima relacao Mneg/Mpos",
+      "unidade": "adimensional",
+      "impresso": "0.30",
+      "fonte": "telas/025_c02.txt:17"
+    },
+    {
+      "id": "param.relCantosReentrantes",
+      "grandeza": "relacao Mneg/Mpos em cantos reentrantes",
+      "unidade": "adimensional",
+      "impresso": "1.00",
+      "fonte": "telas/025_c02.txt:19"
+    }
+  ]
+}

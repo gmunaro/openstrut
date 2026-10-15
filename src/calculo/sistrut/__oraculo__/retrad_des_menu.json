@@ -1,0 +1,482 @@
+{
+  "caso": "retrad_des_menu",
+  "run": "C:/tmp/oraculo/runs/retrad_des_menu-20261015-082520",
+  "programa": "DESENHO",
+  "descricao": "Menu do DESENHO sobre a obra E2E já detalhada no caso det: tecla inválida, F1 e Esc; item 5 (parâmetros, sem alterar); item 6 (diretórios); item 3 (listagem impressa da V1); item 4 (resumo geral de consumo impresso: metros por bitola, volume, fôrma e pesos); item 2 sem obra; Esc no item 1; F2 sai.",
+  "entrada": {
+    "obra de partida": "E2E (C:/tmp/oraculo/casos/retrad_des_menu.dados: E2E.BAK, .FOR, .LAJ, .RLP, .SEC, .TAB, .VIG; .SEC/.FOR/.TAB gravados pelo original no caso retrad_des_det); E2E.VIG com 6 vigas gravadas, só a V1 detalhada",
+    ".TAB": "registro ~V1: rept 0, volume 76 (centésimos de m3), fôrma 912 (centésimos de m2), fck .15, fyk 5; comprimentos (cm) phi5 8448, phi6.3 1153, phi10 2612",
+    "roteiro": "x (inválida); F1+ENTER; Esc+ENTER; 5 (parâmetros, ENTER = não altera); 6 (ENTER nos 4 diretórios: .VIG C:\\, .EDV C:\\, .DSP C:\\SISTRUT\\EXEC40\\, .DXF C:\\); 3 obra E2E, todas as vigas S, seção S, forma S, não para no monitor, salta formulário S, dados corretos; 4 obra E2E, nenhum registro anulado, imprime S, ENTER (avança formulário); 2 sem nome; 1 com Esc; F2",
+    "listagem impressa (eco dos dados gravados)": "V1 registro 1: tramos 1 e 2 Bw 20 Hw 50 Bf 0 Hf 0, apoio 1 Bw 20 Hw 50; apoios 0/1/2 tipo P, P1/P2/P3, LPi 20, LPs 20, Dis 0; tramos 1 e 2 vão livre 380, alinhamento 0, pe 0, Hle 0, pd 0, Hld 0",
+    "data DOS": "10-14-2026 12:00:00 (congelada)"
+  },
+  "valores": [
+    {
+      "id": "param.parametrizacao",
+      "grandeza": "parametrização utilizada",
+      "unidade": "",
+      "impresso": "SISTRUT",
+      "fonte": "telas/005_p01.txt:10"
+    },
+    {
+      "id": "param.reducaoNegativos",
+      "grandeza": "redução dos negativos",
+      "unidade": "%",
+      "impresso": "100",
+      "fonte": "telas/005_p01.txt:11"
+    },
+    {
+      "id": "param.concreto",
+      "grandeza": "Fck do concreto",
+      "unidade": "t/cm2",
+      "impresso": ".15",
+      "fonte": "telas/005_p01.txt:12"
+    },
+    {
+      "id": "param.aco",
+      "grandeza": "Fyk do aço",
+      "unidade": "t/cm2",
+      "impresso": "5",
+      "fonte": "telas/005_p01.txt:13"
+    },
+    {
+      "id": "param.tipoAco",
+      "grandeza": "tipo de aço (A/B)",
+      "unidade": "",
+      "impresso": "B",
+      "fonte": "telas/005_p01.txt:14"
+    },
+    {
+      "id": "param.cobrimento",
+      "grandeza": "cobrimento da armadura",
+      "unidade": "cm",
+      "impresso": "2",
+      "fonte": "telas/005_p01.txt:15"
+    },
+    {
+      "id": "param.alivioCortante",
+      "grandeza": "alívio dos esforços cortantes no apoio",
+      "unidade": "",
+      "impresso": "S",
+      "fonte": "telas/005_p01.txt:16"
+    },
+    {
+      "id": "param.cargasAcidentais",
+      "grandeza": "cargas acidentais",
+      "unidade": "",
+      "impresso": "N",
+      "fonte": "telas/005_p01.txt:17"
+    },
+    {
+      "id": "param.momentosExternos",
+      "grandeza": "momentos externos",
+      "unidade": "",
+      "impresso": "N",
+      "fonte": "telas/005_p01.txt:18"
+    },
+    {
+      "id": "param.desenhoDefinitivo",
+      "grandeza": "desenho definitivo da armadura",
+      "unidade": "",
+      "impresso": "S",
+      "fonte": "telas/005_p01.txt:19"
+    },
+    {
+      "id": "V1.t1.eixo",
+      "grandeza": "listagem: distância da face do apoio ao eixo, tramo 1",
+      "unidade": "cm",
+      "impresso": "10",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "V1.t2.eixo",
+      "grandeza": "listagem: distância da face do apoio ao eixo, tramo 2",
+      "unidade": "cm",
+      "impresso": "10",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "param.resumo.bitola.1",
+      "grandeza": "resumo: bitola da coluna 1",
+      "unidade": "mm",
+      "impresso": "4",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.2",
+      "grandeza": "resumo: bitola da coluna 2",
+      "unidade": "mm",
+      "impresso": "5",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.3",
+      "grandeza": "resumo: bitola da coluna 3",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.4",
+      "grandeza": "resumo: bitola da coluna 4",
+      "unidade": "mm",
+      "impresso": "8",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.5",
+      "grandeza": "resumo: bitola da coluna 5",
+      "unidade": "mm",
+      "impresso": "10",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.6",
+      "grandeza": "resumo: bitola da coluna 6",
+      "unidade": "mm",
+      "impresso": "12.5",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.7",
+      "grandeza": "resumo: bitola da coluna 7",
+      "unidade": "mm",
+      "impresso": "16",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.8",
+      "grandeza": "resumo: bitola da coluna 8",
+      "unidade": "mm",
+      "impresso": "20",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.9",
+      "grandeza": "resumo: bitola da coluna 9",
+      "unidade": "mm",
+      "impresso": "25",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "param.resumo.bitola.10",
+      "grandeza": "resumo: bitola da coluna 10",
+      "unidade": "mm",
+      "impresso": "32",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "V1.resumo.rept",
+      "grandeza": "resumo: repetições da V1 (MAX(1, rept do .TAB = 0))",
+      "unidade": "",
+      "impresso": "1",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "V1.resumo.phi4.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 4",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi5.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 5",
+      "unidade": "m",
+      "impresso": "84",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi6.3.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 6.3",
+      "unidade": "m",
+      "impresso": "12",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi8.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 8",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi10.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 10",
+      "unidade": "m",
+      "impresso": "26",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi12.5.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 12.5",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi16.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 16",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi20.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 20",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi25.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 25",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.phi32.comprimento",
+      "grandeza": "resumo, V1: comprimento da bitola 32",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:21",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "V1.resumo.volume",
+      "grandeza": "resumo, V1: volume de concreto",
+      "unidade": "m3",
+      "impresso": ".8",
+      "fonte": "impressora.prn:21",
+      "casas": 1,
+      "obs": "CINT(x/10)/10 sobre o .TAB em centésimos (vol 76, fôrma 912), impresso por STR$ (zeros cortados)"
+    },
+    {
+      "id": "V1.resumo.forma",
+      "grandeza": "resumo, V1: área de fôrma",
+      "unidade": "m2",
+      "impresso": "9.1",
+      "fonte": "impressora.prn:21",
+      "casas": 1,
+      "obs": "CINT(x/10)/10 sobre o .TAB em centésimos (vol 76, fôrma 912), impresso por STR$ (zeros cortados)"
+    },
+    {
+      "id": "resumo.phi4.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 4",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi5.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 5",
+      "unidade": "m",
+      "impresso": "84",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi6.3.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 6.3",
+      "unidade": "m",
+      "impresso": "12",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi8.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 8",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi10.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 10",
+      "unidade": "m",
+      "impresso": "26",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi12.5.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 12.5",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi16.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 16",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi20.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 20",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi25.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 25",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.phi32.comprimento",
+      "grandeza": "resumo, totais: comprimento da bitola 32",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:24",
+      "casas": 0,
+      "obs": "metros, CINT(cm/100) do comprimento do .TAB (φ5 8448, φ6.3 1153, φ10 2612 cm)"
+    },
+    {
+      "id": "resumo.volume",
+      "grandeza": "resumo, totais: volume de concreto",
+      "unidade": "m3",
+      "impresso": ".8",
+      "fonte": "impressora.prn:24",
+      "casas": 1,
+      "obs": "CINT(x/10)/10 sobre o .TAB em centésimos (vol 76, fôrma 912), impresso por STR$ (zeros cortados)"
+    },
+    {
+      "id": "resumo.forma",
+      "grandeza": "resumo, totais: área de fôrma",
+      "unidade": "m2",
+      "impresso": "9.1",
+      "fonte": "impressora.prn:24",
+      "casas": 1,
+      "obs": "CINT(x/10)/10 sobre o .TAB em centésimos (vol 76, fôrma 912), impresso por STR$ (zeros cortados)"
+    },
+    {
+      "id": "resumo.phi4.peso",
+      "grandeza": "resumo, pesos totais: bitola 4",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi5.peso",
+      "grandeza": "resumo, pesos totais: bitola 5",
+      "unidade": "kg",
+      "impresso": "14",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi6.3.peso",
+      "grandeza": "resumo, pesos totais: bitola 6.3",
+      "unidade": "kg",
+      "impresso": "3",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi8.peso",
+      "grandeza": "resumo, pesos totais: bitola 8",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi10.peso",
+      "grandeza": "resumo, pesos totais: bitola 10",
+      "unidade": "kg",
+      "impresso": "16",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi12.5.peso",
+      "grandeza": "resumo, pesos totais: bitola 12.5",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi16.peso",
+      "grandeza": "resumo, pesos totais: bitola 16",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi20.peso",
+      "grandeza": "resumo, pesos totais: bitola 20",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi25.peso",
+      "grandeza": "resumo, pesos totais: bitola 25",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    },
+    {
+      "id": "resumo.phi32.peso",
+      "grandeza": "resumo, pesos totais: bitola 32",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:26",
+      "casas": 0,
+      "obs": "CINT(compr_cm·kg/m/100), kg/m da tabela do .DSP"
+    }
+  ]
+}

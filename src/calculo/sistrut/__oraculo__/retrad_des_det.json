@@ -1,0 +1,916 @@
+{
+  "caso": "retrad_des_det",
+  "run": "C:/tmp/oraculo/runs/retrad_des_det-20261015-082506",
+  "programa": "DESENHO",
+  "descricao": "Detalhamento completo da viga V1 (20x50, 2 tramos) da obra E2E pelo DESENHO -> DESDIM -> DESINIT: impressão dos esforços (M-, reações, M+, MEP) e da armação (x/d, As, barras, estribos alívio do cortante, flecha), desenho definitivo 1/50 na impressora (bit-image) e arquivo CAD R1__E2E.DXF com rótulos das barras, estribos, corte A e quadro de ferros/aço. O .TAB gravado (binário) guarda volume 76 e fôrma 912.",
+  "entrada": {
+    "obra de partida": "E2E (C:/tmp/oraculo/casos/retrad_des_det.dados: E2E.LAJ, E2E.VIG, E2E.RLP, E2E.BAK gravados pelo original); E2E.VIG com 6 vigas gravadas",
+    "parametrização": "padrão SISTRUT do DESENHO (.DSP de fábrica em C:\\SISTRUT\\EXEC40): Fck .15 t/cm2, aço B Fyk 5 t/cm2, cobrimento 2 cm, redução dos negativos 100 %, alívio do cortante S, acidentais N, momentos externos N, desenho definitivo S",
+    "roteiro": "gerenciador V (Viga) -> DESENHO; item 1 (Detalhamento e Desenho); obra E2E; não lista as vigas; continua; todas as vigas N; registro 1",
+    "viga": "V1 (registro 1), 2 tramos de L = 4.000 m, J = 1.00, P = 0.486 t/m em D = 4.00 m, F = 0.00 (ecoados na impressora, linhas 9-12)",
+    "seção": "predominante Bw,Hw,Bf,Hf = 20,50,0,0; 0 tramos com seção diferente; apoios com seção retangular (S)",
+    "apoios": "apoio 0 largura 20 cm tipo P título P1; apoio 1 largura 20 tipo P título P2; apoio 2 largura 20 tipo P título P3; todos 'Continua Constante' (padrão)",
+    "tramos": "vão livre 380 cm nos dois tramos (proposto <400> de cálculo); face superior alinhada S; centraliza eixos na forma S; sem dados de lajes no corte (N); pe=Hle=pd=Hld=0",
+    "saídas pedidas": "não altera seções; imprime dados da viga e esforços S; imprime armação S; desenha só diagramas S; diagramas e armação S em escala VIDEO; não altera a armadura da parametrização; desenho definitivo na impressora S, escala 1/50; não edita a armação; gera CAD S, tipo padrão (Autocad DXF); imprime medidas de forma e seções S (padrão); dobramento S (padrão)",
+    "cabeçalhos e notas": "CAB 1 'OBRA E2E', CAB 2 'VIGA V1', CAB 3 'SISTRUT', NOT 1 'NOTA UM', NOT 2 'NOTA DOIS' (ecoados na impressora, linhas 193-197)",
+    "repetições": "nenhuma (*FIM*)",
+    "data DOS": "10-14-2026 12:00 (congelada)"
+  },
+  "valores": [
+    {
+      "id": "V1.t1.P",
+      "grandeza": "V1 tramo 1 carga distribuída P (lida do .VIG)",
+      "unidade": "t/m",
+      "impresso": "0.486",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "V1.t2.P",
+      "grandeza": "V1 tramo 2 carga distribuída P (lida do .VIG)",
+      "unidade": "t/m",
+      "impresso": "0.486",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "V1.a0.M-",
+      "grandeza": "momento no apoio 0",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "V1.a0.R",
+      "grandeza": "reação no apoio 0",
+      "unidade": "t",
+      "impresso": "0.73",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "V1.a1.M-",
+      "grandeza": "momento negativo no apoio 1",
+      "unidade": "tm",
+      "impresso": "-0.97",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "V1.a1.R",
+      "grandeza": "reação no apoio 1",
+      "unidade": "t",
+      "impresso": "2.43",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "V1.a2.M-",
+      "grandeza": "momento no apoio 2",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "V1.a2.R",
+      "grandeza": "reação no apoio 2",
+      "unidade": "t",
+      "impresso": "0.73",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "V1.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "3.89",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "V1.MEP0",
+      "grandeza": "momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-.65",
+      "fonte": "impressora.prn:24",
+      "casas": 2
+    },
+    {
+      "id": "V1.t1.Ve",
+      "grandeza": "cortante à esquerda do tramo 1",
+      "unidade": "t",
+      "impresso": "0.73",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "V1.t1.x",
+      "grandeza": "abscissa do M+ máximo no tramo 1",
+      "unidade": "m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "V1.t1.M+",
+      "grandeza": "momento positivo máximo no tramo 1",
+      "unidade": "tm",
+      "impresso": "0.55",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "V1.t1.Vd",
+      "grandeza": "cortante à direita do tramo 1",
+      "unidade": "t",
+      "impresso": "1.22",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "V1.t2.Ve",
+      "grandeza": "cortante à esquerda do tramo 2",
+      "unidade": "t",
+      "impresso": "1.22",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "V1.t2.x",
+      "grandeza": "abscissa do M+ máximo no tramo 2",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "V1.t2.M+",
+      "grandeza": "momento positivo máximo no tramo 2",
+      "unidade": "tm",
+      "impresso": "0.55",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "V1.t2.Vd",
+      "grandeza": "cortante à direita do tramo 2",
+      "unidade": "t",
+      "impresso": "0.73",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "V1.MEP2",
+      "grandeza": "momento de engastamento perfeito no apoio 2",
+      "unidade": "tm",
+      "impresso": "-.65",
+      "fonte": "impressora.prn:27",
+      "casas": 2
+    },
+    {
+      "id": "param.fck",
+      "grandeza": "Fck do concreto (parametrização DESENHO)",
+      "unidade": "t/cm2",
+      "impresso": ".15",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "param.fyk",
+      "grandeza": "Fyk do aço (parametrização DESENHO)",
+      "unidade": "t/cm2",
+      "impresso": "5",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "param.aco.tipo",
+      "grandeza": "tipo do aço",
+      "unidade": "",
+      "impresso": "B",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "param.cobrimento",
+      "grandeza": "cobrimento da armadura",
+      "unidade": "cm",
+      "impresso": "2",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "V1.a1.x/d",
+      "grandeza": "x/d no apoio 1",
+      "unidade": "adimensional",
+      "impresso": "0.045",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "V1.a1.Mk-",
+      "grandeza": "momento característico no apoio 1",
+      "unidade": "tm",
+      "impresso": "0.97",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "V1.a1.As-",
+      "grandeza": "armadura tracionada no apoio 1",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "V1.a1.Asc",
+      "grandeza": "armadura comprimida no apoio 1",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "V1.a1.barras-",
+      "grandeza": "barras da armadura tracionada no apoio 1",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:43"
+    },
+    {
+      "id": "V1.t1.x/d",
+      "grandeza": "x/d no tramo 1",
+      "unidade": "adimensional",
+      "impresso": "0.025",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.Mk+",
+      "grandeza": "momento característico no tramo 1",
+      "unidade": "tm",
+      "impresso": "0.55",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.As+",
+      "grandeza": "armadura tracionada no tramo 1",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.Asc",
+      "grandeza": "armadura comprimida no tramo 1",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.Vke",
+      "grandeza": "cortante característico à esquerda do tramo 1 (com alívio)",
+      "unidade": "t",
+      "impresso": "0.61",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.Asw.e",
+      "grandeza": "estribo à esquerda do tramo 1",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.Vkd",
+      "grandeza": "cortante característico à direita do tramo 1 (com alívio)",
+      "unidade": "t",
+      "impresso": "1.09",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.Asw.d",
+      "grandeza": "estribo à direita do tramo 1",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "V1.t1.flecha",
+      "grandeza": "flecha do tramo 1",
+      "unidade": "cm",
+      "impresso": ".01",
+      "fonte": "impressora.prn:49",
+      "casas": 2
+    },
+    {
+      "id": "V1.t1.barras+",
+      "grandeza": "barras da armadura positiva do tramo 1",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:49"
+    },
+    {
+      "id": "V1.t1.estribo.e",
+      "grandeza": "bitola#/espaçamento (cm) do estribo à esquerda do tramo 1",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:49"
+    },
+    {
+      "id": "V1.t1.estribo.d",
+      "grandeza": "bitola#/espaçamento (cm) do estribo à direita do tramo 1",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:49"
+    },
+    {
+      "id": "V1.t2.x/d",
+      "grandeza": "x/d no tramo 2",
+      "unidade": "adimensional",
+      "impresso": "0.025",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.Mk+",
+      "grandeza": "momento característico no tramo 2",
+      "unidade": "tm",
+      "impresso": "0.55",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.As+",
+      "grandeza": "armadura tracionada no tramo 2",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.Asc",
+      "grandeza": "armadura comprimida no tramo 2",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.Vke",
+      "grandeza": "cortante característico à esquerda do tramo 2 (com alívio)",
+      "unidade": "t",
+      "impresso": "1.09",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.Asw.e",
+      "grandeza": "estribo à esquerda do tramo 2",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.Vkd",
+      "grandeza": "cortante característico à direita do tramo 2 (com alívio)",
+      "unidade": "t",
+      "impresso": "0.61",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.Asw.d",
+      "grandeza": "estribo à direita do tramo 2",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.t2.flecha",
+      "grandeza": "flecha do tramo 2",
+      "unidade": "cm",
+      "impresso": ".01",
+      "fonte": "impressora.prn:51",
+      "casas": 2
+    },
+    {
+      "id": "V1.t2.barras+",
+      "grandeza": "barras da armadura positiva do tramo 2",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:51"
+    },
+    {
+      "id": "V1.t2.estribo.e",
+      "grandeza": "bitola#/espaçamento (cm) do estribo à esquerda do tramo 2",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:51"
+    },
+    {
+      "id": "V1.t2.estribo.d",
+      "grandeza": "bitola#/espaçamento (cm) do estribo à direita do tramo 2",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:51"
+    },
+    {
+      "id": "V1.t1.vaoCalculo",
+      "grandeza": "vão de cálculo proposto do tramo 1",
+      "unidade": "cm",
+      "impresso": "400",
+      "fonte": "telas/023_d23.txt:16",
+      "obs": "impresso \"<400>\""
+    },
+    {
+      "id": "V1.t2.vaoCalculo",
+      "grandeza": "vão de cálculo proposto do tramo 2",
+      "unidade": "cm",
+      "impresso": "400",
+      "fonte": "telas/024_d24.txt:16",
+      "obs": "impresso \"<400>\""
+    },
+    {
+      "id": "V1.t1.eixo",
+      "grandeza": "distância da face do apoio ao eixo, tramo 1",
+      "unidade": "cm",
+      "impresso": "10",
+      "fonte": "telas/028_d28.txt:8"
+    },
+    {
+      "id": "V1.t2.eixo",
+      "grandeza": "distância da face do apoio ao eixo, tramo 2",
+      "unidade": "cm",
+      "impresso": "10",
+      "fonte": "telas/028_d28.txt:9"
+    },
+    {
+      "id": "V1.N4.barras",
+      "grandeza": "N4 (negativa sobre P2): quantidade#bitola",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "obra/R1__E2E.DXF:280"
+    },
+    {
+      "id": "V1.N4.C",
+      "grandeza": "N4: comprimento da barra",
+      "unidade": "cm",
+      "impresso": "866",
+      "fonte": "obra/R1__E2E.DXF:280"
+    },
+    {
+      "id": "V1.N4.dobra.e",
+      "grandeza": "N4: dobra/gancho na ponta esquerda",
+      "unidade": "cm",
+      "impresso": "25",
+      "fonte": "obra/R1__E2E.DXF:292"
+    },
+    {
+      "id": "V1.N4.dobra.d",
+      "grandeza": "N4: dobra/gancho na ponta direita",
+      "unidade": "cm",
+      "impresso": "25",
+      "fonte": "obra/R1__E2E.DXF:304"
+    },
+    {
+      "id": "V1.N5.barras",
+      "grandeza": "N5 (porta-estribo, tramo 1): quantidade#bitola",
+      "unidade": "",
+      "impresso": "2#6.3",
+      "fonte": "obra/R1__E2E.DXF:628"
+    },
+    {
+      "id": "V1.N5.C",
+      "grandeza": "N5: comprimento da barra",
+      "unidade": "cm",
+      "impresso": "138",
+      "fonte": "obra/R1__E2E.DXF:628"
+    },
+    {
+      "id": "V1.N6.barras",
+      "grandeza": "N6 (porta-estribo, tramo 2): quantidade#bitola",
+      "unidade": "",
+      "impresso": "2#6.3",
+      "fonte": "obra/R1__E2E.DXF:652"
+    },
+    {
+      "id": "V1.N6.C",
+      "grandeza": "N6: comprimento da barra",
+      "unidade": "cm",
+      "impresso": "137",
+      "fonte": "obra/R1__E2E.DXF:652"
+    },
+    {
+      "id": "V1.N1.barras",
+      "grandeza": "N1 (positiva): quantidade#bitola",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "obra/R1__E2E.DXF:676"
+    },
+    {
+      "id": "V1.N1.C",
+      "grandeza": "N1: comprimento da barra",
+      "unidade": "cm",
+      "impresso": "440",
+      "fonte": "obra/R1__E2E.DXF:676"
+    },
+    {
+      "id": "V1.N1.cota",
+      "grandeza": "cota de posição sob N1 (camada COTAS)",
+      "unidade": "cm",
+      "impresso": "210",
+      "fonte": "obra/R1__E2E.DXF:688"
+    },
+    {
+      "id": "V1.N2.barras",
+      "grandeza": "N2 (apoio P1): quantidade#bitola",
+      "unidade": "",
+      "impresso": "3#6.3",
+      "fonte": "obra/R1__E2E.DXF:796"
+    },
+    {
+      "id": "V1.N2.C",
+      "grandeza": "N2: comprimento da barra",
+      "unidade": "cm",
+      "impresso": "100",
+      "fonte": "obra/R1__E2E.DXF:796"
+    },
+    {
+      "id": "V1.N2.dobra",
+      "grandeza": "N2: dobra/gancho na ponta",
+      "unidade": "cm",
+      "impresso": "20",
+      "fonte": "obra/R1__E2E.DXF:808"
+    },
+    {
+      "id": "V1.N3.barras",
+      "grandeza": "N3 (apoio P3): quantidade#bitola",
+      "unidade": "",
+      "impresso": "3#6.3",
+      "fonte": "obra/R1__E2E.DXF:844"
+    },
+    {
+      "id": "V1.N3.C",
+      "grandeza": "N3: comprimento da barra",
+      "unidade": "cm",
+      "impresso": "101",
+      "fonte": "obra/R1__E2E.DXF:844"
+    },
+    {
+      "id": "V1.N3.dobra",
+      "grandeza": "N3: dobra/gancho na ponta",
+      "unidade": "cm",
+      "impresso": "20",
+      "fonte": "obra/R1__E2E.DXF:856"
+    },
+    {
+      "id": "V1.t1.estribo.n",
+      "grandeza": "tramo 1: número de estribos N7",
+      "unidade": "",
+      "impresso": "32",
+      "fonte": "obra/R1__E2E.DXF:1768",
+      "obs": "impresso \"32 N7\""
+    },
+    {
+      "id": "V1.t1.estribo.s",
+      "grandeza": "tramo 1: espaçamento dos estribos",
+      "unidade": "cm",
+      "impresso": "12",
+      "fonte": "obra/R1__E2E.DXF:1780",
+      "obs": "impresso \"c/12\""
+    },
+    {
+      "id": "V1.t1.estribo.trecho",
+      "grandeza": "tramo 1: comprimento do trecho com estribos",
+      "unidade": "cm",
+      "impresso": "380",
+      "fonte": "obra/R1__E2E.DXF:1792"
+    },
+    {
+      "id": "V1.t2.estribo.n",
+      "grandeza": "tramo 2: número de estribos N7",
+      "unidade": "",
+      "impresso": "32",
+      "fonte": "obra/R1__E2E.DXF:1840",
+      "obs": "impresso \"32 N7\""
+    },
+    {
+      "id": "V1.t2.estribo.s",
+      "grandeza": "tramo 2: espaçamento dos estribos",
+      "unidade": "cm",
+      "impresso": "12",
+      "fonte": "obra/R1__E2E.DXF:1852",
+      "obs": "impresso \"c/12\""
+    },
+    {
+      "id": "V1.t2.estribo.trecho",
+      "grandeza": "tramo 2: comprimento do trecho com estribos",
+      "unidade": "cm",
+      "impresso": "380",
+      "fonte": "obra/R1__E2E.DXF:1864"
+    },
+    {
+      "id": "V1.forma.a0.barras",
+      "grandeza": "rótulo de barras na fôrma junto a P1",
+      "unidade": "",
+      "impresso": "3#6.3",
+      "fonte": "obra/R1__E2E.DXF:1996"
+    },
+    {
+      "id": "V1.forma.a1.barras",
+      "grandeza": "rótulo de barras na fôrma junto a P2",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "obra/R1__E2E.DXF:2008"
+    },
+    {
+      "id": "V1.forma.a2.barras",
+      "grandeza": "rótulo de barras na fôrma junto a P3",
+      "unidade": "",
+      "impresso": "3#6.3",
+      "fonte": "obra/R1__E2E.DXF:2020"
+    },
+    {
+      "id": "V1.forma.t1.barras",
+      "grandeza": "rótulo de barras na fôrma no tramo 1",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "obra/R1__E2E.DXF:2032"
+    },
+    {
+      "id": "V1.forma.t2.barras",
+      "grandeza": "rótulo de barras na fôrma no tramo 2",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "obra/R1__E2E.DXF:2044"
+    },
+    {
+      "id": "V1.corteA.estribo.b",
+      "grandeza": "corte A: largura interna do estribo",
+      "unidade": "cm",
+      "impresso": "16",
+      "fonte": "obra/R1__E2E.DXF:2524"
+    },
+    {
+      "id": "V1.corteA.estribo.h",
+      "grandeza": "corte A: altura interna do estribo",
+      "unidade": "cm",
+      "impresso": "46",
+      "fonte": "obra/R1__E2E.DXF:2536"
+    },
+    {
+      "id": "V1.corteA.N7.n",
+      "grandeza": "corte A: total de estribos N7 na viga",
+      "unidade": "",
+      "impresso": "64",
+      "fonte": "obra/R1__E2E.DXF:2548",
+      "obs": "impresso \"64 N7 #5 C:132\""
+    },
+    {
+      "id": "V1.corteA.N7.bitola",
+      "grandeza": "corte A: bitola do estribo N7",
+      "unidade": "mm",
+      "impresso": "5",
+      "fonte": "obra/R1__E2E.DXF:2548",
+      "obs": "impresso \"64 N7 #5 C:132\""
+    },
+    {
+      "id": "V1.corteA.N7.C",
+      "grandeza": "corte A: comprimento do estribo N7",
+      "unidade": "cm",
+      "impresso": "132",
+      "fonte": "obra/R1__E2E.DXF:2548",
+      "obs": "impresso \"64 N7 #5 C:132\""
+    },
+    {
+      "id": "V1.tabela.N1.bitola",
+      "grandeza": "quadro de ferros, N1: bitola",
+      "unidade": "mm",
+      "impresso": "10",
+      "fonte": "obra/R1__E2E.DXF:2656"
+    },
+    {
+      "id": "V1.tabela.N1.Q",
+      "grandeza": "quadro de ferros, N1: quantidade",
+      "unidade": "",
+      "impresso": "2",
+      "fonte": "obra/R1__E2E.DXF:2668"
+    },
+    {
+      "id": "V1.tabela.N1.UNI",
+      "grandeza": "quadro de ferros, N1: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "440",
+      "fonte": "obra/R1__E2E.DXF:2680"
+    },
+    {
+      "id": "V1.tabela.N1.TOTAL",
+      "grandeza": "quadro de ferros, N1: comprimento total",
+      "unidade": "cm",
+      "impresso": "880",
+      "fonte": "obra/R1__E2E.DXF:2692"
+    },
+    {
+      "id": "V1.tabela.N2.bitola",
+      "grandeza": "quadro de ferros, N2: bitola",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "obra/R1__E2E.DXF:2716"
+    },
+    {
+      "id": "V1.tabela.N2.Q",
+      "grandeza": "quadro de ferros, N2: quantidade",
+      "unidade": "",
+      "impresso": "3",
+      "fonte": "obra/R1__E2E.DXF:2728"
+    },
+    {
+      "id": "V1.tabela.N2.UNI",
+      "grandeza": "quadro de ferros, N2: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "100",
+      "fonte": "obra/R1__E2E.DXF:2740"
+    },
+    {
+      "id": "V1.tabela.N2.TOTAL",
+      "grandeza": "quadro de ferros, N2: comprimento total",
+      "unidade": "cm",
+      "impresso": "300",
+      "fonte": "obra/R1__E2E.DXF:2752"
+    },
+    {
+      "id": "V1.tabela.N3.bitola",
+      "grandeza": "quadro de ferros, N3: bitola",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "obra/R1__E2E.DXF:2776"
+    },
+    {
+      "id": "V1.tabela.N3.Q",
+      "grandeza": "quadro de ferros, N3: quantidade",
+      "unidade": "",
+      "impresso": "3",
+      "fonte": "obra/R1__E2E.DXF:2788"
+    },
+    {
+      "id": "V1.tabela.N3.UNI",
+      "grandeza": "quadro de ferros, N3: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "101",
+      "fonte": "obra/R1__E2E.DXF:2800"
+    },
+    {
+      "id": "V1.tabela.N3.TOTAL",
+      "grandeza": "quadro de ferros, N3: comprimento total",
+      "unidade": "cm",
+      "impresso": "303",
+      "fonte": "obra/R1__E2E.DXF:2812"
+    },
+    {
+      "id": "V1.tabela.N4.bitola",
+      "grandeza": "quadro de ferros, N4: bitola",
+      "unidade": "mm",
+      "impresso": "10",
+      "fonte": "obra/R1__E2E.DXF:2836"
+    },
+    {
+      "id": "V1.tabela.N4.Q",
+      "grandeza": "quadro de ferros, N4: quantidade",
+      "unidade": "",
+      "impresso": "2",
+      "fonte": "obra/R1__E2E.DXF:2848"
+    },
+    {
+      "id": "V1.tabela.N4.UNI",
+      "grandeza": "quadro de ferros, N4: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "866",
+      "fonte": "obra/R1__E2E.DXF:2860"
+    },
+    {
+      "id": "V1.tabela.N4.TOTAL",
+      "grandeza": "quadro de ferros, N4: comprimento total",
+      "unidade": "cm",
+      "impresso": "1732",
+      "fonte": "obra/R1__E2E.DXF:2872"
+    },
+    {
+      "id": "V1.tabela.N5.bitola",
+      "grandeza": "quadro de ferros, N5: bitola",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "obra/R1__E2E.DXF:2896"
+    },
+    {
+      "id": "V1.tabela.N5.Q",
+      "grandeza": "quadro de ferros, N5: quantidade",
+      "unidade": "",
+      "impresso": "2",
+      "fonte": "obra/R1__E2E.DXF:2908"
+    },
+    {
+      "id": "V1.tabela.N5.UNI",
+      "grandeza": "quadro de ferros, N5: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "138",
+      "fonte": "obra/R1__E2E.DXF:2920"
+    },
+    {
+      "id": "V1.tabela.N5.TOTAL",
+      "grandeza": "quadro de ferros, N5: comprimento total",
+      "unidade": "cm",
+      "impresso": "276",
+      "fonte": "obra/R1__E2E.DXF:2932"
+    },
+    {
+      "id": "V1.tabela.N6.bitola",
+      "grandeza": "quadro de ferros, N6: bitola",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "obra/R1__E2E.DXF:2956"
+    },
+    {
+      "id": "V1.tabela.N6.Q",
+      "grandeza": "quadro de ferros, N6: quantidade",
+      "unidade": "",
+      "impresso": "2",
+      "fonte": "obra/R1__E2E.DXF:2968"
+    },
+    {
+      "id": "V1.tabela.N6.UNI",
+      "grandeza": "quadro de ferros, N6: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "137",
+      "fonte": "obra/R1__E2E.DXF:2980"
+    },
+    {
+      "id": "V1.tabela.N6.TOTAL",
+      "grandeza": "quadro de ferros, N6: comprimento total",
+      "unidade": "cm",
+      "impresso": "274",
+      "fonte": "obra/R1__E2E.DXF:2992"
+    },
+    {
+      "id": "V1.tabela.N7.bitola",
+      "grandeza": "quadro de ferros, N7: bitola",
+      "unidade": "mm",
+      "impresso": "5",
+      "fonte": "obra/R1__E2E.DXF:3016"
+    },
+    {
+      "id": "V1.tabela.N7.Q",
+      "grandeza": "quadro de ferros, N7: quantidade",
+      "unidade": "",
+      "impresso": "64",
+      "fonte": "obra/R1__E2E.DXF:3028"
+    },
+    {
+      "id": "V1.tabela.N7.UNI",
+      "grandeza": "quadro de ferros, N7: comprimento unitário",
+      "unidade": "cm",
+      "impresso": "132",
+      "fonte": "obra/R1__E2E.DXF:3040"
+    },
+    {
+      "id": "V1.tabela.N7.TOTAL",
+      "grandeza": "quadro de ferros, N7: comprimento total",
+      "unidade": "cm",
+      "impresso": "8448",
+      "fonte": "obra/R1__E2E.DXF:3052"
+    },
+    {
+      "id": "V1.quadro.phi5.aco",
+      "grandeza": "quadro de aço, bitola 5: categoria do aço",
+      "unidade": "",
+      "impresso": "60B",
+      "fonte": "obra/R1__E2E.DXF:3076"
+    },
+    {
+      "id": "V1.quadro.phi5.comprimento",
+      "grandeza": "quadro de aço, bitola 5: comprimento total",
+      "unidade": "cm",
+      "impresso": "8448",
+      "fonte": "obra/R1__E2E.DXF:3100"
+    },
+    {
+      "id": "V1.quadro.phi5.peso",
+      "grandeza": "quadro de aço, bitola 5: peso",
+      "unidade": "kg",
+      "impresso": "14",
+      "fonte": "obra/R1__E2E.DXF:3112"
+    },
+    {
+      "id": "V1.quadro.phi6.3.aco",
+      "grandeza": "quadro de aço, bitola 6.3: categoria do aço",
+      "unidade": "",
+      "impresso": "50B",
+      "fonte": "obra/R1__E2E.DXF:3124"
+    },
+    {
+      "id": "V1.quadro.phi6.3.comprimento",
+      "grandeza": "quadro de aço, bitola 6.3: comprimento total",
+      "unidade": "cm",
+      "impresso": "1153",
+      "fonte": "obra/R1__E2E.DXF:3148"
+    },
+    {
+      "id": "V1.quadro.phi6.3.peso",
+      "grandeza": "quadro de aço, bitola 6.3: peso",
+      "unidade": "kg",
+      "impresso": "3",
+      "fonte": "obra/R1__E2E.DXF:3160"
+    },
+    {
+      "id": "V1.quadro.phi10.aco",
+      "grandeza": "quadro de aço, bitola 10: categoria do aço",
+      "unidade": "",
+      "impresso": "50B",
+      "fonte": "obra/R1__E2E.DXF:3172"
+    },
+    {
+      "id": "V1.quadro.phi10.comprimento",
+      "grandeza": "quadro de aço, bitola 10: comprimento total",
+      "unidade": "cm",
+      "impresso": "2612",
+      "fonte": "obra/R1__E2E.DXF:3196"
+    },
+    {
+      "id": "V1.quadro.phi10.peso",
+      "grandeza": "quadro de aço, bitola 10: peso",
+      "unidade": "kg",
+      "impresso": "17",
+      "fonte": "obra/R1__E2E.DXF:3208"
+    }
+  ]
+}

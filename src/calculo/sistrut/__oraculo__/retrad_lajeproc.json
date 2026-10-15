@@ -1,0 +1,150 @@
+{
+  "caso": "retrad_lajeproc",
+  "run": "C:/tmp/oraculo/runs/retrad_lajeproc-20261015-082452",
+  "programa": "LAJEPROC",
+  "descricao": "LAJEPROC sobre a obra E2E (4 lajes 4x5 m, h 10): escolha automatica das armaduras de todas as lajes, modificacao da laje L1 aceitando as propostas (positivas principal e secundaria e negativas com L2 e L3), desenho das positivas na tela e impressao do desenho das armaduras. A impressora sai so em grafico; os numeros vem da tela de modificacao da L1.",
+  "entrada": {
+    "obra de partida": "E2E (C:\\E2E.LAJ, copia de C:/tmp/oraculo/casos/retrad_lajeproc.dados/ = retrad_laje_param.dados/, arquivos identicos), gravada pelo original no caso caso_a_laje",
+    "geometria": "painel 2x2 de lajes macicas L1..L4 de 4 x 5 m; eixos verticais x = 0/4/8 m, horizontais y = 0/5/10 m; vigas em todos os eixos; pilares P1..P9 nos cruzamentos",
+    "vinculacao": "cada laje com dois bordos continuos (canto do painel) e dois apoiados; continuidade padrao, direcao principal padrao",
+    "cargas": "permanente 0.10 t/m2; ocupacao total 0.15 t/m2 (parcela acidental 0.15); peso proprio imposto 0.25 t/m2",
+    "h": "10 cm imposto em L1..L4 (gravado no .LAJ)",
+    "estado gravado": "momentos e armaduras ja calculados e negativos otimizados no caso_a_laje (coef. 2.017982 no .LAJ)",
+    "materiais": "padrao da instalacao: Fck .15 t/cm2, Fyk 5 t/cm2 (CA-50 classe B), CSE 1.4, CSC 1.4, CSA 1.15, cobrimento 1.5 cm, eficiencia da negativa 100 %",
+    "sequencia": "Gerenciador L; LAJE 6 > 4 le E2E (Continuo S); LAJE 4 (LAJEPROC): 1 escolhe automaticamente todas (S); 4 modifica armadura da laje 1: ENTER em bitola e espacamento da positiva principal, positiva secundaria, negativa com L2 e negativa com L3, Alteracao Correta S, ENTER (fim); 2 desenho das positivas, todas as lajes, visualiza todas; 5 impressao do desenho, todas, visualiza todas, <3> ambas juntas; 6 retorno ao LAJE",
+    "impressora": "somente bit-image (desenho das armaduras positivas e negativas); nenhum numero em texto"
+  },
+  "valores": [
+    {
+      "id": "L1.H",
+      "grandeza": "espessura da laje L1 (tela de modificacao)",
+      "unidade": "cm",
+      "impresso": "10",
+      "fonte": "telas/011_m01.txt:9"
+    },
+    {
+      "id": "L1.M+princ",
+      "grandeza": "momento positivo principal da L1",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "telas/011_m01.txt:12"
+    },
+    {
+      "id": "L1.As+princ",
+      "grandeza": "armadura positiva principal necessaria da L1",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "telas/011_m01.txt:12"
+    },
+    {
+      "id": "L1.As+princ.phi",
+      "grandeza": "bitola escolhida da positiva principal da L1",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "telas/011_m01.txt:12"
+    },
+    {
+      "id": "L1.As+princ.s",
+      "grandeza": "espacamento escolhido da positiva principal da L1",
+      "unidade": "cm",
+      "impresso": "20",
+      "fonte": "telas/011_m01.txt:12",
+      "casas": 1,
+      "obs": "espacamento impresso por STR$ (12.5, 17.5, 20)"
+    },
+    {
+      "id": "L1.M+sec",
+      "grandeza": "momento positivo secundario da L1",
+      "unidade": "tm/m",
+      "impresso": "0.20",
+      "fonte": "telas/011_m01.txt:15"
+    },
+    {
+      "id": "L1.As+sec",
+      "grandeza": "armadura positiva secundaria necessaria da L1",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "telas/011_m01.txt:15"
+    },
+    {
+      "id": "L1.As+sec.phi",
+      "grandeza": "bitola escolhida da positiva secundaria da L1",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "telas/011_m01.txt:15"
+    },
+    {
+      "id": "L1.As+sec.s",
+      "grandeza": "espacamento escolhido da positiva secundaria da L1",
+      "unidade": "cm",
+      "impresso": "20",
+      "fonte": "telas/011_m01.txt:15",
+      "casas": 1,
+      "obs": "espacamento impresso por STR$ (12.5, 17.5, 20)"
+    },
+    {
+      "id": "L1.M-maior",
+      "grandeza": "momento negativo na continuidade L1-L2 (maior)",
+      "unidade": "tm/m",
+      "impresso": "0.50",
+      "fonte": "telas/015_m05.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L2 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.As-maior",
+      "grandeza": "armadura negativa necessaria na continuidade L1-L2",
+      "unidade": "cm2/m",
+      "impresso": "2.13",
+      "fonte": "telas/015_m05.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L2 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.As-maior.phi",
+      "grandeza": "bitola escolhida da negativa L1-L2",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "telas/015_m05.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L2 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.As-maior.s",
+      "grandeza": "espacamento escolhido da negativa L1-L2",
+      "unidade": "cm",
+      "impresso": "12.5",
+      "fonte": "telas/015_m05.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L2 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.M-menor",
+      "grandeza": "momento negativo na continuidade L1-L3 (menor)",
+      "unidade": "tm/m",
+      "impresso": "0.40",
+      "fonte": "telas/017_m07.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L3 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.As-menor",
+      "grandeza": "armadura negativa necessaria na continuidade L1-L3",
+      "unidade": "cm2/m",
+      "impresso": "1.68",
+      "fonte": "telas/017_m07.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L3 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.As-menor.phi",
+      "grandeza": "bitola escolhida da negativa L1-L3",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "telas/017_m07.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L3 (a maior dos dois lados)"
+    },
+    {
+      "id": "L1.As-menor.s",
+      "grandeza": "espacamento escolhido da negativa L1-L3",
+      "unidade": "cm",
+      "impresso": "17.5",
+      "fonte": "telas/017_m07.txt:18",
+      "obs": "LAJEPROC: negativa da continuidade L1-L3 (a maior dos dois lados)"
+    }
+  ]
+}
