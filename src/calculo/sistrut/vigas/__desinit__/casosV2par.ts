@@ -162,19 +162,6 @@ export function casoV2par(nome: NomeCaso) {
   );
   const entrada: EntradaDesdim = {
     viga,
-    // o detalhamento refaz a análise (DESCALC); esta só cumpre o contrato
-    analise: {
-      nome: v.nome,
-      apoios: [],
-      tramos: [],
-      somaReacoes: 0,
-      mepEsquerdo: 0,
-      mepDireito: 0,
-      momentosPilar: [0, 0],
-      engastamentoPerfeito: [],
-      avisos: [],
-      memoria: [],
-    },
     secoes: {
       tramos: Array.from({ length: n }, (_, i) => secao(e.sec.tramos[i + 1]!)),
       apoios: Array.from({ length: n + 1 }, (_, k) => {

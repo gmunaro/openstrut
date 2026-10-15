@@ -5,12 +5,152 @@
 // ao apoio (L_5602E, U05-007). Grava no COMMON os arrays que o DESAUXDI e o DESINIT leem
 // (A_16DE, A_170C, A_1654, A_1796, A_17C4, A_1768, A_1626, A_1540, A_11A8/A_11D6/A_1204).
 //
-// O DESDIM analisa a viga de novo a partir do .VIG (a impressão do caso traz os dois
-// conjuntos de esforços): o detalhamento usa estes valores, em SINGLE, e não a
-// `AnaliseViga` do contrato (que não tem a envoltória por apoio e por tramo).
+// O DESDIM analisa a viga de novo a partir do .VIG (DESDIM.BAS:795, CALL S_50141 antes
+// de CALL S_113F7): o dimensionamento (`desdim.ts`) e o detalhamento (`desinit.ts`)
+// usam estes valores, em SINGLE. `analisaDescalc` carrega o COMMON e roda o DESCALC.
 // Porte linha a linha; nomes = endereços do original (ver `desinitComum.ts`).
-import { qbCint, qbInt } from "../base/f32";
-import { type Comum, M1, M2, qb } from "./desinitComum";
+import { AREAS_DSP_CORRIGIDAS } from "../base/parametros";
+import { qbCint, qbInt, qbStr } from "../base/f32";
+import type { EntradaDesdim, ModoSistrut } from "../base/tipos";
+import { Comum, M1, M2, qb } from "./desinitComum";
+
+/** COMMON da viga depois do DESCALC, como o DESDIM o tem ao entrar no dimensionamento
+ *  (S_113F7): .VIG, .SEC e .DSP carregados (DESDIM.BAS:4622-4932, DESENHO.BAS:
+ *  4773-5035), DESCALC rodado e a seção do balanço sem seção própria completada com a
+ *  do apoio vizinho (DESDIM.BAS:2917-2929; o DESCALC roda antes e vê a do .SEC). A
+ *  forma (.FOR) e o dimensionamento entram depois, no detalhamento (`montaComum`). */
+export function analisaDescalc(entrada: EntradaDesdim, modo: ModoSistrut) {
+  const c = new Comum(modo);
+  const { viga, secoes, materiais, parametros: p } = entrada;
+  const n = viga.tramos.length;
+  c.v0ddc = n;
+  c.v0de0 = viga.balancoEsquerdo ? 1 : 0;
+  c.v0de4 = viga.balancoDireito ? 1 : 0;
+  c.v0de8 = viga.engasteEsquerdo ? 1 : 0;
+  c.v0dec = viga.engasteDireito ? 1 : 0;
+  c.v0e70 = p.acidentaisEnvoltoria ? "S" : "N";
+  c.v0e74 = p.momentosExternos ? "S" : "N";
+  c.a1148.p(0, viga.momentosExternos[0]);
+  c.a1148.p(1, viga.momentosExternos[1]);
+
+  // tramos do original 0..n+1 (0 e n+1 = balanços)
+  const tramoDoOriginal = (t: number) =>
+    t === 0 ? viga.balancoEsquerdo : t === n + 1 ? viga.balancoDireito : viga.tramos[t - 1];
+  let div = 0;
+  for (let t = 0; t <= n + 1; t++) {
+    const tr = tramoDoOriginal(t);
+    const lista = tr?.divisoes ?? [];
+    c.a0faa.p(t, lista.length);
+    for (const d of lista) {
+      div += 1;
+      c.a1062.p(div, d.p);
+      c.a1090.p(div, d.pAcidental);
+      c.a10be.p(div, d.d);
+      c.a10ec.p(div, d.f);
+      c.a111a.p(div, d.fAcidental);
+    }
+    c.a0fd8.p(t, div);
+    c.a1006.p(t, tr?.vao ?? 0);
+  }
+
+  for (let t = 0; t <= n + 1; t++) c.a1034.p(t, tramoDoOriginal(t)?.inercia ?? 0);
+
+  // seções (.SEC)
+  for (let k = 0; k <= n; k++) {
+    c.a1260.p(k, 0, secoes.apoios[k]?.bw ?? 0);
+    c.a1260.p(k, 1, secoes.apoios[k]?.hw ?? 0);
+  }
+  for (let t = 0; t <= n + 1; t++) {
+    const sec =
+      t === 0 ? secoes.balancoEsquerdo : t === n + 1 ? secoes.balancoDireito : secoes.tramos[t - 1];
+    if (!sec) continue;
+    c.a1232.p(t, 0, sec.bw);
+    c.a1232.p(t, 1, sec.hw);
+    c.a1232.p(t, 2, sec.bf);
+    c.a1232.p(t, 3, sec.hf);
+  }
+
+  // .DSP e materiais (DESENHO.BAS:4773-5035)
+  c.v0eba = c.s(materiais.fck);
+  c.v0ebe = c.s(materiais.fyk);
+  c.v0ec2 = materiais.classeAco;
+  c.v0ec6 = c.s(p.multiplicadorUnidade);
+  c.v0f5e = c.s(materiais.gamaC);
+  c.v0f62 = c.s(materiais.gamaF);
+  c.v0f66 = c.s(materiais.gamaS);
+  c.v0eaa = c.s(p.cobrimento);
+  c.v0ea6 = c.s(c.v0eaa + c.s(p.acrescimo));
+  for (const [i, b] of p.bitolas.entries()) {
+    c.bitola.p(i, b.bitola);
+    let area = b.area;
+    // R9 (dado do .DSP): as áreas 0,00 de φ4 e φ32 valem também no detalhamento
+    if (modo === "corrigido" && area === 0) {
+      area =
+        b.bitola === 4 ? AREAS_DSP_CORRIGIDAS[4] : b.bitola === 32 ? AREAS_DSP_CORRIGIDAS[32] : 0;
+    }
+    c.area.p(i, area);
+    c.a1488.p(i, b.kgPorM);
+  }
+  c.v0f46 = p.gruposBitolas;
+  [c.v0f4a, c.v0f4e, c.v0f52, c.v0f56, c.v0f5a] = p.limitesIntervalos.map((x) => c.s(x)) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  for (const [g, linha] of p.grupoDeCorte.entries()) {
+    for (const [i, v] of linha.entries()) c.a14e4.p(i, g, v);
+  }
+  c.v0f3e = c.s(p.larguraEstriboSimples);
+  c.v0f42 = c.s(p.larguraEstriboDuplo);
+  for (const [i, b] of p.bitolasEstribo.entries()) {
+    c.a142c.p(i, 0, b.minima);
+    c.a142c.p(i, 1, b.maxima);
+  }
+  for (const [i, linha] of p.dobrasPorBitola.entries()) {
+    for (const [j, v] of linha.entries()) c.a1c62.p(i, j, v);
+  }
+  for (const [i, v] of p.tabelaBitola1.entries()) c.a1d1a.p(i, v);
+  for (const [i, v] of p.tabelaBitola2.entries()) c.a1d48.p(i, v);
+  c.v18a2 = c.s(p.taxaArmaduraMinima);
+  c.v18a6 = c.s(p.decalagem);
+  c.v18aa = c.s(p.ancoragemPositiva);
+  c.v18ae = c.s(p.ancoragemNegativa);
+  c.v188a = p.ancoragemMinimo10Diametros ? "S" : "N";
+  c.v189e = c.s(p.taxaEstriboMinima);
+  c.v18be = c.s(p.espacamentoEstriboMinimo);
+  c.v18c2 = c.s(p.espacamentoEstriboMaximo);
+  c.v18c6 = p.comparaEspacamentoMaximo === "d/2" ? 0 : 1;
+  c.v1906 = p.espacamentosEstribo.map((x) => `${qbStr(x).trim()}/`).join(" ");
+  c.v190a = p.portaEstribosAutomaticos ? "S" : "N";
+  c.v18da = c.s(p.ordemMinimaPortaEstribo);
+  c.v18de = c.s(p.traspassePortaEstribo);
+  c.v190e = p.comprimentoDesenvolvido ? "S" : "N";
+  c.v18ca = c.s(p.raioDobramento);
+  c.v18b2 = c.s(p.taxaMinimaNegativa);
+  c.v18ce = c.s(p.alturaArmaduraPele);
+  c.v18b6 = c.s(p.taxaArmaduraPele);
+  c.v18e2 = c.s(p.traspassePele);
+  c.v18ee = c.s(p.distanciaMinimaEstribosExtremidade);
+  c.v18d2 = c.s(p.entradaMinimaApoio);
+  c.v1912 = p.verificaGrampos ? "S" : "N";
+  c.v1916 = p.reduzAncoragemPositiva ? "S" : "N";
+  c.v18d6 = c.s(p.ordemMaximaCA60);
+  c.v187e = c.s(p.comprimentoMaximoBarra);
+
+  c.v0df4 = c.s(p.reducaoNegativos);
+  c.v182e = p.alivioCortante ? "S" : "N";
+
+  descalc(c);
+  for (let t = 1 - c.v0de0; t <= n + c.v0de4; t++) {
+    if ((c.a1232.g(t, 1) <= 0 || c.a1232.g(t, 0) <= 0) && (t === n + 1 || t === 0)) {
+      c.a1232.p(t, 0, c.a1260.g(Math.max(0, t - 1), 0));
+      c.a1232.p(t, 1, c.a1260.g(Math.max(0, t - 1), 1));
+    }
+  }
+  return c;
+}
 
 /** Arrays locais do DESCALC que a impressão usa: reação (L_BP4A), reação máxima e mínima
  *  (L_BP60) e momentos de engastamento perfeito dos apoios extremos (L_BP38). */

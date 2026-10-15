@@ -212,11 +212,6 @@ describe("defeito R11 (U18-015): ramo 'barra longa demais' do lado direito", () 
         ],
         pilares: ["P1", "P2"],
       },
-      analise: {
-        ...ENTRADA_V1.analise,
-        apoios: [ENTRADA_V1.analise.apoios[0]!, ENTRADA_V1.analise.apoios[2]!],
-        tramos: [{ ve: 8, vd: 8, x: 6.1, mPositivo: 1, fEJ: 0 }],
-      },
       secoes: { tramos: [secao], apoios: [secao, secao] },
       forma: { tramos: [{ larguraApoio: 20, vaoLivre: 1200, pe: 0, hle: 0, pd: 0, hld: 0 }] },
       parametros: emSingle(PARAMETROS_DSP),
@@ -283,15 +278,6 @@ describe("balanço esquerdo (V_0DE0 = 1): diagrama e cortante a partir da ponta"
           divisoes: [{ p: pb, d: 1.5, f: 0, pAcidental: 0, fAcidental: 0 }],
         },
         pilares: ["P1", "P2"],
-      },
-      analise: {
-        ...ENTRADA_V1.analise,
-        apoios: [
-          { m: sng(-6.75), r: 0, rMax: 0, rMin: 0, mMax: sng(-6.75) },
-          { m: 0, r: 0, rMax: 0, rMin: 0, mMax: 0 },
-        ],
-        tramos: [{ ve: sng(-0.7155), vd: sng(2.6595), x: 0, mPositivo: 0, fEJ: 0 }],
-        balancoEsquerdo: { mApoio: sng(-6.75), carga: 9 },
       },
       secoes: {
         tramos: [{ bw: 20, hw: 50, bf: 0, hf: 0 }],

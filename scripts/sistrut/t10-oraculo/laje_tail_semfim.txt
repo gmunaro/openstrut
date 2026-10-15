@@ -1,0 +1,19 @@
+3{ESPERA Calculo e Detalhamento}{ESPERA escolha opcao}{PAUSA 2}{TELA c01_menu}1{ESPERA C O N T I N U I D A D E}{PAUSA 2}{TELA c02_continuidade}F{ESPERA escolha opcao}{PAUSA 2}
+2{ESPERA Predominante}{PAUSA 1}{TELA c03_direcao}{ENTER}{ESPERA <F>im}{PAUSA 2}{TELA c04_direcao}F{ESPERA escolha opcao}{PAUSA 2}
+3{ESPERA TODAS}{PAUSA 1}{ENTER}{ESPERA Imprimo Relatorio}{PAUSA 1}S{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{TELA c05_esp}{ENTER}{ESPERA para seguir}{PAUSA 1}{ENTER}{ESPERA escolha opcao}{PAUSA 2}
+4{ESPERA H em cm}{PAUSA 1}@H@{ENTER}{ESPERA RETORNA}{PAUSA 1}@LAJES@{ENTER}{ESPERA H em cm}{PAUSA 1}{TELA c06_imp}{ENTER}{ESPERA Imprimo Relatorio}{PAUSA 1}S{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{ENTER}{ESPERA para seguir}{PAUSA 1}{TELA c07_imp}{ENTER}{ESPERA escolha opcao}{PAUSA 2}
+5{ESPERA Momentos/Armaduras}{ESPERA TODAS}{PAUSA 1}{ENTER}{ESPERA Imprimo Relatorio}{PAUSA 1}S{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Deseja Visualizar}{PAUSA 1}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{ENTER}{ESPERA para seguir}{PAUSA 1}{TELA c08_mom}{ENTER}{ESPERA escolha opcao|180}{PAUSA 2}
+6{ESPERA odas serao equilibradas}{PAUSA 1}{TELA c09_otim}{ENTER}{ESPERA escolha opcao|180}{PAUSA 2}{TELA c10_menu}
+5{ESPERA Momentos/Armaduras}{ESPERA TODAS}{PAUSA 1}{ENTER}{ESPERA Imprimo Relatorio}{PAUSA 1}S{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Deseja Visualizar}{PAUSA 1}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{ENTER}{ESPERA para seguir}{PAUSA 1}{TELA c11_mom}{ENTER}{ESPERA escolha opcao|180}{PAUSA 2}
+8{ESPERA LAJES EM REGIME}{ESPERA escolha opcao}{PAUSA 2}{TELA l03}
+2{ESPERA Posicionadas}{PAUSA 2}7{ESPERA <G>eracao}{PAUSA 1}{TELA v01_vigas}G{ESPERA Confirme prosseguir}{PAUSA 1}{ENTER}{ESPERA PREDOMINANTE}{PAUSA 1}0.15{ENTER}{ESPERA NENHUMA}{PAUSA 1}{TELA v02_pesos}{ENTER}{ESPERA Carregamento das Vigas}{PAUSA 1}{TELA v03_vigas}S{ENTER}{PAUSA 3}{TELA v04_apos_imprimo}
+{ESPERA Posicionadas}{PAUSA 2}{TELA g30_menu}
+9{ESPERA LAJES EM REGIME}{ESPERA escolha opcao}{PAUSA 2}{TELA l04}
+6{ESPERA Gravacao e Leitura}{ESPERA escolha opcao}{PAUSA 2}1{ESPERA NAO CRIAR}{PAUSA 1}@OBRA@{ENTER}{ESPERA escolha opcao}{PAUSA 2}2{ESPERA Nome da Obra}{PAUSA 1}{ENTER}{ESPERA Continuo}{PAUSA 1}{ENTER}{ESPERA escolha opcao}{PAUSA 2}{TELA w01_gravado}
+7{ESPERA LAJES EM REGIME}{ESPERA escolha opcao}{PAUSA 2}{TELA l05}
+4{ESPERA Escolha de Armaduras}{ESPERA escolha opcao}{PAUSA 2}{TELA p01}
+1{ESPERA N/*S*}{PAUSA 1}{TELA p02}{ENTER}{ESPERA Escolha de Armaduras}{ESPERA escolha opcao}{PAUSA 2}
+2{ESPERA *TODAS*}{PAUSA 1}{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{TELA p03}{ENTER}{PAUSA 10}{TELA p04_desenho}{ENTER}{ESPERA escolha opcao}{PAUSA 2}{TELA p05}
+3{ESPERA *TODAS*}{PAUSA 1}{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{TELA p05n}{ENTER}{PAUSA 10}{TELA p05n_desenho}{ENTER}{ESPERA escolha opcao}{PAUSA 2}{TELA p05n_menu}
+5{ESPERA *TODAS*}{PAUSA 1}{ENTER}{ESPERA Visualizo}{PAUSA 1}{ENTER}{ESPERA Ambas}{PAUSA 1}{TELA p06}{ENTER}{ESPERA Dados Corretos}{PAUSA 1}{ENTER}{ESPERA escolha opcao|400}{PAUSA 2}{TELA p07}
+6{ESPERA LAJES EM REGIME}{ESPERA escolha opcao}{PAUSA 2}{TELA l06}

@@ -1,0 +1,4 @@
+# saídas de lote.sh / lote2.sh e comparações de v1.sh
+run_*.log
+lote.log
+cmp_*.txt

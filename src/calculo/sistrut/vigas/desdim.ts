@@ -1,7 +1,7 @@
 // Dimensionamento de viga do SISTRUT 4.0 (DESDIM, FUN_1000_13f7): flexão por apoio e
 // por tramo (seção T, armadura dupla, As,mín), cisalhamento com ψ = 0,225 + 15ρ,
-// estribos, flecha e fissuração; e o adaptador que monta os esforços do DESDIM a
-// partir da análise (DESCALC: cortantes com alívio junto ao apoio).
+// estribos, flecha e fissuração. Os esforços saem do DESCALC (`desinitDescalc.ts`),
+// que o DESDIM roda a partir do .VIG antes de dimensionar (DESDIM.BAS:795-797).
 // Fonte: V1 nova, `_Arquivo/Sistrust/dist/src-original/desenho/DESDIM.BAS`;
 // livros_arm_forma_des.md 1 e 4.3 (U03, U04-005, U05-007/010); PLANO D1-D6, R8, R9, H.
 // Unidades do original: m e t nos esforços, cm e t/cm² nas seções, M em t·cm dentro
@@ -13,7 +13,6 @@ import type {
   DimensionamentoViga,
   DivisaoCarga,
   EntradaDesdim,
-  EnvoltoriaTramo,
   FlexaoViga,
   ModoSistrut,
   SecaoViga,
@@ -36,73 +35,45 @@ import {
 } from "./desdim-cisalhamento";
 import { type SecaoCalculo, flexaoSecao, taxaArmaduraMinima, xiLimite } from "./desdim-flexao";
 import { type Fissuracao, fissuracao, flechaEJ, flechaTramo, moduloEc } from "./desdim-flecha";
+import { analisaDescalc } from "./desinitDescalc";
 
 /** Coeficientes de medida e de força do DESENHO.INI (V_0fa2, V_0fa6; DESENHO.BAS:680-681,
  *  754-756). O INI de fábrica dá 1 e 1; o .DSP não os tem. */
 const COEFICIENTE_MEDIDA = 1;
 const COEFICIENTE_FORCA = 1;
 
-// ---------------------------------------------------------------- adaptador análise → DESDIM
+// ---------------------------------------------------------------- esforços do DESCALC
 
-/** Esforços de um tramo como o DESDIM os usa. Índice do original: 0 = balanço esquerdo,
- *  1..n = tramos, n + 1 = balanço direito. */
+/** Esforços de um tramo como o DESDIM os lê do COMMON depois do DESCALC. Índice do
+ *  original: 0 = balanço esquerdo, 1..n = tramos, n + 1 = balanço direito. */
 export interface EsforcosTramoDesdim {
   indice: number;
-  /** Vão, m. */
+  /** Vão, m (A_1006). */
   vao: number;
-  /** M+ (tm) e a sua abscissa x (m); 0 nos balanços. */
+  /** M+ (tm): o da envoltória (A_1768) ou o de engastamento perfeito (A_11A8), o maior
+   *  (DESDIM.BAS:2934-2953); 0 nos balanços. */
   mPositivo: number;
+  /** Abscissa do M+ da envoltória (A_173A), m: a da flecha. */
   x: number;
-  /** Cortantes nas extremidades sem alívio (A_1796), t, em módulo. */
+  /** Cortantes nas extremidades sem alívio (A_1796(t, 0..1)), t, com o sinal do
+   *  original: os da verificação τwd ≥ 0,25·fcd (DESDIM.BAS:2984-2988). */
   ve: number;
   vd: number;
-  /** Cortantes característicos com alívio (A_1540), t, em módulo. */
+  /** Cortantes característicos com alívio (A_1540), t. */
   vkEsquerda: number;
   vkDireita: number;
-  /** Cortante à esquerda e momento no apoio esquerdo do carregamento do M+ (A_17c4(t,0)
-   *  e A_17c4(t,1)), t e tm: os da flecha. Sem envoltória, os da análise estática. */
+  /** Cortante à esquerda e momento no apoio esquerdo do carregamento do M+ (A_17C4(t,0)
+   *  e A_17C4(t,1)), t e tm: os da flecha (DESDIM.BAS:2716-2720). */
   veFlecha: number;
   mEsquerdo: number;
   divisoes: readonly DivisaoCarga[];
 }
 
-/** Envoltória com o carregamento do M+ máximo (xadrez por paridade, DESDIM.BAS:
- *  6262-6265), que o contrato `EnvoltoriaTramo` não tem. Se a análise trouxer estes
- *  campos, a flecha os usa; senão eles são reconstruídos de x e M+. */
-export interface EnvoltoriaComCarregamento extends EnvoltoriaTramo {
-  veCarregamento?: number;
-  mEsquerdoCarregamento?: number;
-}
-
-/** Ve e M esquerdo do carregamento que dá o M+ (x, m) da envoltória, com as cargas
- *  TOTAIS do tramo (L_55a83 recalcula x e M+ com elas, DESDIM.BAS:6270-6276): Ve é a
- *  carga até x (o cortante zera em x) e Me = M+ − Ve·x + momento das cargas até x.
- *  Não há solução única quando o zero cai sob uma concentrada (x = d): devolve
- *  undefined. */
-export function carregamentoDoMaximo(divisoes: readonly DivisaoCarga[], x: number, m: number) {
-  let ve = 0;
-  let momento = 0;
-  let anterior = 0;
-  for (const d of divisoes) {
-    if (x < d.d) {
-      ve += (x - anterior) * d.p;
-      momento += ((x - anterior) ** 2 * d.p) / 2;
-      return { ve, mEsquerdo: m - ve * x + momento };
-    }
-    if (x === d.d) return undefined;
-    ve += (d.d - anterior) * d.p + d.f;
-    momento += (d.d - anterior) * d.p * (x - (d.d + anterior) / 2) + d.f * (x - d.d);
-    anterior = d.d;
-  }
-  return undefined;
-}
-
 export interface EsforcosDesdim {
-  /** M de cada apoio 0..n, tm (negativo = tração em cima). */
+  /** M de cada apoio 0..n (A_16DE, o da envoltória), tm (negativo = tração em cima). */
   momentosApoio: number[];
   /** Tramos na ordem 1 − balE .. n + balD. */
   tramos: EsforcosTramoDesdim[];
-  avisos: string[];
 }
 
 /** Seção de cálculo de um índice de tramo do original. Balanço sem seção própria
@@ -123,134 +94,45 @@ export function secaoDoTramo(entrada: EntradaDesdim, indice: number): SecaoViga 
   return { bw: apoio.bw, hw: apoio.hw, bf: propria?.bf ?? 0, hf: propria?.hf ?? 0 };
 }
 
-/** Alívio do cortante junto aos apoios (L_5602e, DESDIM.BAS:6503-6564; U05-007): tira a
- *  carga distribuída até h/2 da face do apoio (h do tramo, em cm: h/200 em m) e reduz a
- *  concentrada a menos de 2h por (a/2h − 1). No balanço esquerdo as divisões são
- *  percorridas de trás para a frente, com d medido a partir do apoio (DESDIM.BAS:5880). */
-function aliviaCortantes(t: EsforcosTramoDesdim, h: number, n: number, modo: ModoSistrut) {
-  const s = atribuicao(modo);
-  const meio = h / 200;
-  const duasH = h / 50;
-  let { vkEsquerda: ve, vkDireita: vd } = t;
-  const L = t.vao;
-  let anterior = 0;
-  if (t.indice === 0) {
-    for (const dv of [...t.divisoes].reverse()) {
-      if (dv.d <= meio) vd = s(vd - (dv.d - anterior) * dv.p);
-      if (meio > anterior && dv.d > meio) vd = s(vd - (meio - anterior) * dv.p);
-      if (dv.d < duasH) vd = s(((dv.d / h) * 50 - 1) * dv.f + vd);
-      anterior = dv.d;
-    }
-    return { vkEsquerda: ve, vkDireita: vd };
-  }
-  for (const dv of t.divisoes) {
-    const { d, p: q, f } = dv;
-    if (d <= meio) ve = s(ve - (d - anterior) * q);
-    if (meio > anterior && d > meio) ve = s(ve - (meio - anterior) * q);
-    if (d < duasH) ve = s((((n + 1 > t.indice ? -d : 0) + L) * f * ((d / h) * 50 - 1)) / L + ve);
-    if (t.indice <= n) {
-      if (L - anterior <= meio) vd = s(vd - (d - anterior) * q);
-      if (L - d < meio && L - anterior > meio) vd = s(vd - (meio - (L - d)) * q);
-      if (L - d < duasH) vd = s((f * d * (((L - d) / h) * 50 - 1)) / L + vd);
-    }
-    anterior = d;
-  }
-  return { vkEsquerda: ve, vkDireita: vd };
-}
-
-/** Adaptador análise → DESDIM: M dos apoios, M+ e x, cortantes com e sem alívio por
- *  tramo, a partir da `AnaliseViga` (DESCALC, DESDIM.BAS:6020-6035) e das cargas do
- *  .VIG. Com a envoltória de acidentais usa o M−, o M+, o x e o maior cortante dela
- *  (DESDIM.BAS:6270-6276, 6503-6510) e, na flecha, o carregamento do M+ máximo.
- *  Engastamento perfeito: o M+ vira o maior dos dois (DESDIM.BAS:2940-2952). */
+/** Esforços do DESDIM: o DESCALC refaz a análise a partir do .VIG (`analisaDescalc`,
+ *  DESDIM.BAS:795, 5777-6582: focos, redução dos negativos, engastamento perfeito,
+ *  envoltória das acidentais e alívio do cortante) e o dimensionamento lê do COMMON o
+ *  M− (A_16DE), o M+ (A_1768 ou A_11A8), x e o carregamento do M+ (A_173A, A_17C4) e
+ *  os cortantes (A_1796, A_1540), como FUN_1000_13F7 (DESDIM.BAS:2707-3057). */
 export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): EsforcosDesdim {
-  const s = atribuicao(modo);
-  const { viga, analise, parametros } = entrada;
+  const c = analisaDescalc(entrada, modo);
+  const { viga } = entrada;
   const n = viga.tramos.length;
-  const momentosApoio = analise.apoios.map((a) => a.mMax);
+  const momentosApoio = Array.from({ length: n + 1 }, (_, k) => c.a16de.g(k));
   const tramos: EsforcosTramoDesdim[] = [];
-  const avisosAdaptador: string[] = [];
-  const balE = viga.balancoEsquerdo;
-  if (balE) {
-    const carga = Math.abs(analise.balancoEsquerdo?.carga ?? 0);
-    tramos.push({
-      indice: 0,
-      vao: balE.vao,
-      mPositivo: 0,
-      x: 0,
-      ve: 0,
-      vd: carga,
-      vkEsquerda: 0,
-      vkDireita: carga,
-      veFlecha: 0,
-      mEsquerdo: 0,
-      divisoes: balE.divisoes,
-    });
-  }
-  viga.tramos.forEach((tramo, i) => {
-    const a = analise.tramos[i];
-    if (!a) throw new Error(`Viga ${viga.nome}: análise sem o tramo ${i + 1}`);
-    const env = a.envoltoria;
-    const ep = analise.engastamentoPerfeito.find((e) => e.tramo === i + 1);
-    let mPositivo = env ? env.mPositivo : a.mPositivo;
-    if (ep && ep.mPositivo > mPositivo) mPositivo = ep.mPositivo;
-    const ve = s(Math.max(Math.abs(a.ve), Math.abs(env?.ve ?? 0)));
-    const vd = s(Math.max(Math.abs(a.vd), Math.abs(env?.vd ?? 0)));
-    let veFlecha = a.ve;
-    let mEsquerdo = analise.apoios[i]?.m ?? 0;
-    if (env && env.x > 0) {
-      const c: EnvoltoriaComCarregamento = env;
-      const carregamento =
-        c.veCarregamento !== undefined && c.mEsquerdoCarregamento !== undefined
-          ? { ve: c.veCarregamento, mEsquerdo: c.mEsquerdoCarregamento }
-          : carregamentoDoMaximo(tramo.divisoes, env.x, env.mPositivo);
-      if (carregamento) {
-        veFlecha = s(carregamento.ve);
-        mEsquerdo = s(carregamento.mEsquerdo);
-      } else {
-        avisosAdaptador.push(
-          `${viga.nome} tramo ${i + 1}: o M+ da envoltória cai sob uma concentrada; a flecha usou o Ve e o M da análise estática.`,
-        );
-      }
+  const balE = viga.balancoEsquerdo ? 1 : 0;
+  const balD = viga.balancoDireito ? 1 : 0;
+  for (let t = 1 - balE; t <= n + balD; t++) {
+    const tramo =
+      t === 0 ? viga.balancoEsquerdo : t === n + 1 ? viga.balancoDireito : viga.tramos[t - 1];
+    if (!tramo) throw new Error(`Viga ${viga.nome}: sem o tramo ${t}`);
+    const interno = t >= 1 && t <= n;
+    let mPositivo = interno ? c.a1768.g(t) : 0;
+    for (let i = 1; interno && i <= c.v1176; i++) {
+      if (c.a11d6.g(i) !== t) continue;
+      if (c.a11a8.g(i) > mPositivo) mPositivo = c.a11a8.g(i);
+      break;
     }
     tramos.push({
-      indice: i + 1,
-      vao: tramo.vao,
+      indice: t,
+      vao: c.a1006.g(t),
       mPositivo,
-      x: env ? env.x : a.x,
-      ve,
-      vd,
-      vkEsquerda: ve,
-      vkDireita: vd,
-      veFlecha,
-      mEsquerdo,
+      x: interno ? c.a173a.g(t) : 0,
+      ve: c.a1796.g(t, 0),
+      vd: c.a1796.g(t, 1),
+      vkEsquerda: c.a1540.g(t, 0),
+      vkDireita: c.a1540.g(t, 1),
+      veFlecha: c.a17c4.g(t, 0),
+      mEsquerdo: c.a17c4.g(t, 1),
       divisoes: tramo.divisoes,
     });
-  });
-  const balD = viga.balancoDireito;
-  if (balD) {
-    const carga = Math.abs(analise.balancoDireito?.carga ?? 0);
-    tramos.push({
-      indice: n + 1,
-      vao: balD.vao,
-      mPositivo: 0,
-      x: 0,
-      ve: carga,
-      vd: 0,
-      vkEsquerda: carga,
-      vkDireita: 0,
-      veFlecha: carga,
-      mEsquerdo: analise.apoios[n]?.m ?? 0,
-      divisoes: balD.divisoes,
-    });
   }
-  if (parametros.alivioCortante) {
-    for (const t of tramos) {
-      const h = secaoDoTramo(entrada, t.indice).hw;
-      Object.assign(t, aliviaCortantes(t, h, n, modo));
-    }
-  }
-  return { momentosApoio, tramos, avisos: avisosAdaptador };
+  return { momentosApoio, tramos };
 }
 
 // ---------------------------------------------------------------- dimensionamento
@@ -350,7 +232,6 @@ export function dimensionaVigaDesdim(
     d: s(sec.hw - cobrimentoTotal),
   });
   const esforcos = esforcosDesdim(entrada, modo);
-  avisos.push(...esforcos.avisos);
   const ec = moduloEc(materiais, p, modo);
   const xiLim = xiLimite(materiais, mult, modo);
   const taxaMin = taxaArmaduraMinima(p.taxaArmaduraMinima, materiais, modo);

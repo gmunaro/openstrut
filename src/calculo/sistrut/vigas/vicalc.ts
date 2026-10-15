@@ -816,6 +816,9 @@ function envoltoria(
 export interface AnaliseDeVigas {
   analises: AnaliseVigaSistrut[];
   naoProcessadas: string[];
+  /** As vigas da entrada, na mesma ordem, com as cargas indexadas resolvidas (F e Fac
+   *  gravados, sem `indexada`): o .VIG que o DESDIM lê depois do VIGA. */
+  vigas: DadosViga[];
 }
 
 /** Processa as vigas como a opção 2 do VIGA (VIGA.BAS:1610-1669): em passadas sobre a
@@ -866,7 +869,7 @@ export function analisaVigasComPendencias(
     }
   }
   const naoProcessadas = trabalho.filter((_, i) => !feitas.has(i)).map((v) => v.nome);
-  return { analises, naoProcessadas };
+  return { analises, naoProcessadas, vigas: trabalho };
 }
 
 /** Contrato T3: analisa todas as vigas resolvendo as cargas indexadas na ordem de

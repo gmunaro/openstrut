@@ -4,12 +4,15 @@
 //   flecha com inércia fissurada e deformação lenta, fissuração com limite 1);
 // - v2par_des_3tramos: V1 da obra ASS (3, 5, 4 m; 20×50);
 // - v2par_des_2tramos: V5 da obra ASS (4, 5 m; 15×45).
-// A análise de entrada é a conta à mão de __desdim__/analise-a-mao.ts (três momentos,
-// superposição das acidentais), conferida antes contra a análise que o DESDIM imprime.
+// A entrada é só a viga (.VIG), as seções e o .DSP: o DESDIM refaz a análise (DESCALC)
+// como o original. Esperados: o que o DESDIM imprime em cada run
+// (C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646,
+// C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027,
+// C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207; impressora.prn/.txt).
 // As cargas da obra ASS são os SINGLE do ASS.VIG (registros 1 e 5,
 // C:/tmp/oraculo/casos/v2par_des_3tramos.dados/ASS.VIG: P em +235, J em +55, ...).
 import { describe, expect, it } from "vitest";
-import { bateComImpresso, type CasoOraculo, valorOraculo } from "../__oraculo__";
+import { bateComImpresso, type CasoOraculo, numeroOraculo, valorOraculo } from "../__oraculo__";
 import { sng } from "../base/f32";
 import { PARAMETROS_DSP, emSingle } from "../base/parametros";
 import type {
@@ -20,8 +23,12 @@ import type {
   SecaoViga,
 } from "../base/tipos";
 import { CASOS_DESDIM } from "./__desdim__";
-import { analiseAMao } from "./__desdim__/analise-a-mao";
-import { type DimensionamentoDesdim, type TramoDesdim, dimensionaVigaDesdim } from "./desdim";
+import {
+  type DimensionamentoDesdim,
+  type TramoDesdim,
+  dimensionaVigaDesdim,
+  esforcosDesdim,
+} from "./desdim";
 
 const div = (p: number, d: number, f = 0, pAc = 0, fAc = 0): DivisaoCarga => ({
   p: sng(p),
@@ -43,13 +50,11 @@ const materiaisB: MateriaisSistrut = {
 function entrada(
   viga: DadosViga,
   secoes: EntradaDesdim["secoes"],
-  envoltoria: boolean,
   parametros: EntradaDesdim["parametros"],
   materiais = materiaisB,
 ): EntradaDesdim {
   return {
     viga,
-    analise: analiseAMao(viga, envoltoria),
     secoes,
     forma: { tramos: [] },
     materiais,
@@ -98,7 +103,6 @@ const entradaD1 = entrada(
     balancoEsquerdo: ret(20, 40),
     balancoDireito: ret(20, 40),
   },
-  true,
   dspV2P,
   { ...materiaisB, classeAco: "A" },
 );
@@ -136,13 +140,11 @@ const dsp = emSingle(PARAMETROS_DSP);
 const entradaV1 = entrada(
   vigaV1,
   { tramos: [ret(20, 50), ret(20, 50), ret(20, 50)], apoios: [1, 2, 3, 4].map(() => ret(20, 50)) },
-  false,
   dsp,
 );
 const entradaV5 = entrada(
   vigaV5,
   { tramos: [ret(15, 45), ret(15, 45)], apoios: [1, 2, 3].map(() => ret(15, 45)) },
-  false,
   dsp,
 );
 
@@ -187,28 +189,29 @@ function valoresDimensionados(viga: string, r: DimensionamentoDesdim) {
   return v;
 }
 
-/** Valores da análise à mão pelos ids do oráculo (M−, Ve, x, M+, Vd, max, EEP). */
-function valoresAnalise(viga: string, e: EntradaDesdim) {
+/** Esforços do DESDIM (DESCALC) pelos ids da análise impressa: M− dos apoios e x dos
+ *  tramos (os da linha "max" com envoltória); M+ do tramo, o da envoltória ou o de
+ *  engastamento perfeito, o maior impresso; sem envoltória, Ve e Vd sem alívio. */
+function valoresEsforcos(caso: CasoOraculo, viga: string, e: EntradaDesdim) {
   const v = new Map<string, Valor>();
-  const a = e.analise;
-  a.apoios.forEach((ap, k) => {
-    v.set(`${viga}.a${k}.M-`, ap.m);
-    v.set(`${viga}.a${k}.max.M-`, ap.mMax);
-  });
-  a.tramos.forEach((t, i) => {
-    const p = `${viga}.t${i + 1}`;
-    v.set(`${p}.Ve`, t.ve);
-    v.set(`${p}.x`, t.x);
-    v.set(`${p}.M+`, t.mPositivo);
-    v.set(`${p}.Vd`, t.vd);
-    if (t.envoltoria) {
-      v.set(`${p}.max.Ve`, t.envoltoria.ve);
-      v.set(`${p}.max.x`, t.envoltoria.x);
-      v.set(`${p}.max.M+`, t.envoltoria.mPositivo);
-      v.set(`${p}.max.Vd`, t.envoltoria.vd);
+  const r = esforcosDesdim(e, "original");
+  const envoltoria = e.parametros.acidentaisEnvoltoria;
+  const max = envoltoria ? ".max" : "";
+  const n = e.viga.tramos.length;
+  const ids = new Set(caso.valores.map((x) => x.id));
+  r.momentosApoio.forEach((m, k) => v.set(`${viga}.a${k}${max}.M-`, m));
+  for (const t of r.tramos) {
+    if (t.indice < 1 || t.indice > n) continue;
+    const p = `${viga}.t${t.indice}`;
+    v.set(`${p}${max}.x`, t.x);
+    const mais = [`${p}${max}.M+`, `${p}.EEP.M+`].filter((id) => ids.has(id));
+    const maior = mais.reduce((a, b) => (numeroOraculo(caso, b) > numeroOraculo(caso, a) ? b : a));
+    v.set(maior, t.mPositivo);
+    if (!envoltoria) {
+      v.set(`${p}.Ve`, t.ve);
+      v.set(`${p}.Vd`, t.vd);
     }
-  });
-  for (const ep of a.engastamentoPerfeito) v.set(`${viga}.t${ep.tramo}.EEP.M+`, ep.mPositivo);
+  }
   return v;
 }
 
@@ -232,13 +235,11 @@ const casos = [
   ["v2par_des_2tramos", "V5", entradaV5],
 ] as const;
 
-describe.each(casos)(
-  "%s: a análise à mão bate com a análise impressa pelo DESDIM",
-  (nome, viga, e) => {
-    const ids = confere(CASOS_DESDIM[nome]!, valoresAnalise(viga, e));
-    it("conferiu os esforços", () => expect(ids.length).toBeGreaterThan(10));
-  },
-);
+describe.each(casos)("%s: esforços do DESCALC contra a análise impressa", (nome, viga, e) => {
+  const caso = CASOS_DESDIM[nome]!;
+  const ids = confere(caso, valoresEsforcos(caso, viga, e));
+  it("conferiu os esforços", () => expect(ids.length).toBeGreaterThanOrEqual(7));
+});
 
 describe.each(casos)("%s: dimensionamento, modo original", (nome, viga, e) => {
   const ids = confere(

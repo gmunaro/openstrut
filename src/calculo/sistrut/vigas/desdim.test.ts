@@ -1,9 +1,11 @@
 /// <reference types="node" />
 // Dimensionamento da V1 da obra E2E (20×50, 2 tramos de 4 m, q = 0,486 t/m) contra o
-// que o original imprime: retrad_des_det (impressora.prn:42-51) e a sonda p6 (tela
-// g14 e impressão da 2ª passada). A análise de entrada é a conta à mão da viga
-// contínua de dois vãos iguais com carga uniforme (M = −qL²/8, Ve = 3qL/8, Vd = 5qL/8,
-// x = 3L/8, M+ = 9qL²/128), conferida contra os esforços que o original imprime.
+// que o original imprime: retrad_des_det (C:/tmp/oraculo/runs/retrad_des_det-20261015-082506,
+// impressora.prn:16-51) e a sonda p6 (C:/tmp/oraculo/runs/retrad_des_p6-20261015-082952,
+// tela g14 e impressão da 2ª passada). A entrada é só a viga do .VIG: o DESDIM refaz a
+// análise (DESCALC) como o original. Os esforços do DESCALC são conferidos contra os que
+// o original imprime e contra a conta à mão da viga contínua de dois vãos iguais com
+// carga uniforme (M = −qL²/8, Ve = 3qL/8, Vd = 5qL/8, x = 3L/8, M+ = 9qL²/128).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -17,7 +19,6 @@ import {
 import { sng } from "../base/f32";
 import { PARAMETROS_DSP, emSingle } from "../base/parametros";
 import type {
-  AnaliseViga,
   DadosViga,
   EntradaDesdim,
   MateriaisSistrut,
@@ -48,26 +49,6 @@ function entradaV1(modo: ModoSistrut): EntradaDesdim {
     momentosExternos: [0, 0],
     pilares: ["P1", "P2", "P3"],
   };
-  const m1 = s((-q * L * L) / 8);
-  const ve = s((3 * q * L) / 8);
-  const vd = s((5 * q * L) / 8);
-  const mp = s((9 * q * L * L) / 128);
-  const apoio = (m: number, r: number) => ({ m, r, rMax: r, rMin: r, mMax: m });
-  const analise: AnaliseViga = {
-    nome: "V1",
-    apoios: [apoio(0, ve), apoio(m1, 2 * vd), apoio(0, ve)],
-    tramos: [
-      { ve, vd, x: s((3 * L) / 8), mPositivo: mp, fEJ: 0 },
-      { ve: vd, vd: ve, x: s((5 * L) / 8), mPositivo: mp, fEJ: 0 },
-    ],
-    somaReacoes: s(2 * q * L),
-    mepEsquerdo: 0,
-    mepDireito: 0,
-    momentosPilar: [0, 0],
-    engastamentoPerfeito: [],
-    avisos: [],
-    memoria: [],
-  };
   const secao: SecaoViga = { bw: 20, hw: 50, bf: 0, hf: 0 };
   const forma = { larguraApoio: 20, vaoLivre: 380, pe: 0, hle: 0, pd: 0, hld: 0 };
   const materiais: MateriaisSistrut = {
@@ -80,7 +61,6 @@ function entradaV1(modo: ModoSistrut): EntradaDesdim {
   };
   return {
     viga,
-    analise,
     secoes: { tramos: [secao, secao], apoios: [secao, secao, secao] },
     forma: { tramos: [forma, forma] },
     materiais,
@@ -97,20 +77,39 @@ function bate(caso: CasoOraculo, id: string, calculado: number) {
   ).toBe(true);
 }
 
-describe("entrada da V1: a análise à mão bate com os esforços impressos (retrad_des_det)", () => {
-  const { analise } = entradaV1("original");
+describe("esforços do DESCALC da V1 contra o impresso (retrad_des_det, impressora.prn:16-26)", () => {
+  const e = esforcosDesdim(entradaV1("original"), "original");
+  const [t1, t2] = e.tramos;
   it.each([
-    ["V1.a1.M-", analise.apoios[1]!.m],
-    ["V1.t1.Ve", analise.tramos[0]!.ve],
-    ["V1.t1.x", analise.tramos[0]!.x],
-    ["V1.t1.M+", analise.tramos[0]!.mPositivo],
-    ["V1.t1.Vd", analise.tramos[0]!.vd],
-    ["V1.t2.x", analise.tramos[1]!.x],
-    ["V1.t2.Vd", analise.tramos[1]!.vd],
+    ["V1.a0.M-", e.momentosApoio[0]!],
+    ["V1.a1.M-", e.momentosApoio[1]!],
+    ["V1.a2.M-", e.momentosApoio[2]!],
+    ["V1.t1.Ve", t1!.ve],
+    ["V1.t1.x", t1!.x],
+    ["V1.t1.M+", t1!.mPositivo],
+    ["V1.t1.Vd", t1!.vd],
+    ["V1.t2.Ve", t2!.ve],
+    ["V1.t2.x", t2!.x],
+    ["V1.t2.M+", t2!.mPositivo],
+    ["V1.t2.Vd", t2!.vd],
   ])("%s", (id, valor) => bate(det, id, valor));
+
+  it("conta à mão: M1 = −qL²/8, Ve = 3qL/8, Vd = 5qL/8, x = 3L/8, M+ = 9qL²/128", () => {
+    const q = 0.486;
+    expect(e.momentosApoio[1]).toBeCloseTo((-q * 16) / 8, 5);
+    expect(t1!.ve).toBeCloseTo((3 * q * 4) / 8, 5);
+    expect(t1!.vd).toBeCloseTo((5 * q * 4) / 8, 5);
+    expect(t1!.x).toBeCloseTo(1.5, 5);
+    expect(t1!.mPositivo).toBeCloseTo((9 * q * 16) / 128, 5);
+    // carregamento do M+ (sem envoltória, o estático): Ve e M do apoio esquerdo
+    expect(t1!.veFlecha).toBeCloseTo((3 * q * 4) / 8, 5);
+    expect(t1!.mEsquerdo).toBe(0);
+    expect(t2!.veFlecha).toBeCloseTo((5 * q * 4) / 8, 5);
+    expect(t2!.mEsquerdo).toBeCloseTo((-q * 16) / 8, 5);
+  });
 });
 
-describe("adaptador análise → DESDIM: alívio do cortante (DESDIM.BAS:6509)", () => {
+describe("alívio do cortante no DESCALC (L_5602E, DESDIM.BAS:6511-6582)", () => {
   it("q até h/2 = 0,25 m de cada apoio: 0,729 − 0,1215 e 1,215 − 0,1215", () => {
     const e = esforcosDesdim(entradaV1("original"), "original");
     const [t1, t2] = e.tramos;
@@ -123,28 +122,26 @@ describe("adaptador análise → DESDIM: alívio do cortante (DESDIM.BAS:6509)",
     bate(det, "V1.t2.Vkd", t2!.vkDireita);
   });
 
-  it("sem alívio no .DSP os cortantes ficam os da análise", () => {
+  it("sem alívio no .DSP o Vk fica o cortante da análise (3qL/8 = 0,729, impresso 0.73)", () => {
     const entrada = entradaV1("original");
     const e = esforcosDesdim(
       { ...entrada, parametros: { ...entrada.parametros, alivioCortante: false } },
       "original",
     );
-    expect(e.tramos[0]!.vkEsquerda).toBe(entrada.analise.tramos[0]!.ve);
+    expect(e.tramos[0]!.vkEsquerda).toBeCloseTo((3 * 0.486 * 4) / 8, 5);
+    bate(det, "V1.t1.Ve", e.tramos[0]!.vkEsquerda);
   });
 });
 
-/** Viga de um tramo de 4 m, 20×50, com as divisões dadas e a análise isostática à mão;
- *  balanço direito opcional (vão, carga q uniforme). */
+/** Viga de um tramo de 4 m, 20×50, com as divisões dadas; balanço direito opcional
+ *  (vão, carga q uniforme e, se dada, seção própria). */
 function entradaUmTramo(
   divisoes: { p: number; d: number; f: number }[],
-  ve: number,
-  vd: number,
-  balanco?: { vao: number; q: number },
+  balanco?: { vao: number; q: number; secao?: SecaoViga },
 ): EntradaDesdim {
   const base = entradaV1("corrigido");
   const div = divisoes.map((d) => ({ ...d, pAcidental: 0, fAcidental: 0 }));
   const secao = base.secoes.tramos[0]!;
-  const mBal = balanco ? (-balanco.q * balanco.vao ** 2) / 2 : 0;
   return {
     ...base,
     viga: {
@@ -161,73 +158,70 @@ function entradaUmTramo(
         : {}),
       pilares: ["P1", "P2"],
     },
-    analise: {
-      ...base.analise,
-      apoios: [
-        { m: 0, r: ve, rMax: ve, rMin: ve, mMax: 0 },
-        { m: mBal, r: vd, rMax: vd, rMin: vd, mMax: mBal },
-      ],
-      tramos: [{ ve, vd, x: 2, mPositivo: 1, fEJ: 0 }],
-      ...(balanco ? { balancoDireito: { mApoio: mBal, carga: balanco.q * balanco.vao } } : {}),
+    secoes: {
+      tramos: [secao],
+      apoios: [secao, secao],
+      ...(balanco?.secao ? { balancoDireito: balanco.secao } : {}),
     },
-    secoes: { tramos: [secao], apoios: [secao, secao] },
     forma: { tramos: [base.forma.tramos[0]!] },
   };
 }
 
-describe("adaptador: alívio com divisões e concentradas (L_5602e)", () => {
-  it("q em duas divisões (0,1 e 4 m): tira q·h/2 = 0,25 dos dois lados", () => {
+describe("alívio com divisões e concentradas (L_5602E), tramo biapoiado de 4 m", () => {
+  it("q = 1 em duas divisões (0,1 e 4 m): Ve = Vd = 2; tira q·h/2 = 0,25 dos dois lados", () => {
     const e = esforcosDesdim(
-      entradaUmTramo(
-        [
-          { p: 1, d: 0.1, f: 0 },
-          { p: 1, d: 4, f: 0 },
-        ],
-        2,
-        2,
-      ),
+      entradaUmTramo([
+        { p: 1, d: 0.1, f: 0 },
+        { p: 1, d: 4, f: 0 },
+      ]),
       "corrigido",
     );
+    expect(e.tramos[0]!.ve).toBeCloseTo(2, 12);
     expect(e.tramos[0]!.vkEsquerda).toBeCloseTo(2 - 0.25, 12);
     expect(e.tramos[0]!.vkDireita).toBeCloseTo(2 - 0.25, 12);
   });
-  it("P = 2 t a 0,6 m (< 2h = 1 m) do apoio esquerdo: Ve 1,7 − P·(L − a)/L·(1 − a/2h) = 1,02", () => {
+  it("P = 2 t a 0,6 m (< 2h = 1 m) do apoio esquerdo: Ve = 2·3,4/4 = 1,7; Vke = 1,7 − P·(L − a)/L·(1 − a/2h) = 1,02", () => {
     const e = esforcosDesdim(
-      entradaUmTramo(
-        [
-          { p: 0, d: 0.6, f: 2 },
-          { p: 0, d: 4, f: 0 },
-        ],
-        1.7,
-        0.3,
-      ),
+      entradaUmTramo([
+        { p: 0, d: 0.6, f: 2 },
+        { p: 0, d: 4, f: 0 },
+      ]),
       "corrigido",
     );
+    expect(e.tramos[0]!.ve).toBeCloseTo(1.7, 12);
     expect(e.tramos[0]!.vkEsquerda).toBeCloseTo(1.7 - ((2 * 3.4) / 4) * (1 - 0.6 / 1), 12);
     expect(e.tramos[0]!.vkDireita).toBeCloseTo(0.3, 12);
   });
-  it("P = 2 t a 0,6 m do apoio direito: Vd 1,7 − P·a'/L·(1 − 0,6/1)", () => {
+  it("P = 2 t a 0,6 m do apoio direito: Vd = 1,7; Vkd = 1,7 − P·a'/L·(1 − 0,6/1)", () => {
     const e = esforcosDesdim(
-      entradaUmTramo(
-        [
-          { p: 0, d: 3.4, f: 2 },
-          { p: 0, d: 4, f: 0 },
-        ],
-        0.3,
-        1.7,
-      ),
+      entradaUmTramo([
+        { p: 0, d: 3.4, f: 2 },
+        { p: 0, d: 4, f: 0 },
+      ]),
       "corrigido",
     );
+    expect(e.tramos[0]!.vd).toBeCloseTo(1.7, 12);
     expect(e.tramos[0]!.vkDireita).toBeCloseTo(1.7 - ((2 * 3.4) / 4) * (1 - 0.6 / 1), 12);
   });
 });
 
-describe("balanço direito (1,5 m, q = 1 t/m): apoio 1 dimensionado e só o cortante do lado do apoio", () => {
-  const e = entradaUmTramo([{ p: 1, d: 4, f: 0 }], 2, 2, { vao: 1.5, q: 1 });
-  const r = dimensionaVigaDesdim(e, "corrigido");
-  it("apoios dimensionados: só o 1 (o do balanço)", () => {
+describe("balanço direito (1,5 m, q = 1 t/m) com seção própria 20×50", () => {
+  const r = dimensionaVigaDesdim(
+    entradaUmTramo([{ p: 1, d: 4, f: 0 }], {
+      vao: 1.5,
+      q: 1,
+      secao: { bw: 20, hw: 50, bf: 0, hf: 0 },
+    }),
+    "corrigido",
+  );
+  it("apoios dimensionados: só o 1 (o do balanço), M = −q·1,5²/2 = −1,125", () => {
     expect(r.apoios.map((a) => a.dimensionado)).toEqual([false, true]);
     expect(r.apoios[1]!.mk).toBeCloseTo(1.125, 12);
+  });
+  it("tramo: Ve = 2 − 1,125/4 e Vd = 2 + 1,125/4 (M do balanço no apoio 1)", () => {
+    const t = r.esforcos.tramos[0]!;
+    expect(t.ve).toBeCloseTo(2 - 1.125 / 4, 12);
+    expect(t.vd).toBeCloseTo(2 + 1.125 / 4, 12);
   });
   it("cortante do balanço: carga 1,5 − q·h/2 = 1,25; lado livre em branco; sem flexão nem flecha", () => {
     const b = r.balancoDireito!;
@@ -239,7 +233,17 @@ describe("balanço direito (1,5 m, q = 1 t/m): apoio 1 dimensionado e só o cort
     expect(b.flecha).toBe(0);
     expect(b.flexao.as).toBe(0);
   });
-  it("balanço sem seção própria herda a do apoio vizinho (DESDIM.BAS:2919)", () => {
+});
+
+describe("balanço direito sem seção própria", () => {
+  const r = dimensionaVigaDesdim(
+    entradaUmTramo([{ p: 1, d: 4, f: 0 }], { vao: 1.5, q: 1 }),
+    "corrigido",
+  );
+  it("o DESCALC vê o h 0 do .SEC e não alivia: Vk = carga 1,5 (DESDIM.BAS:6511-6582)", () => {
+    expect(r.balancoDireito!.cisalhamento.vkEsquerda).toBeCloseTo(1.5, 12);
+  });
+  it("o Asw usa a seção do apoio vizinho (DESDIM.BAS:2919): o mínimo 0,14·20 = 2,8", () => {
     expect(r.balancoDireito!.cisalhamento.aswEsquerda).toBeCloseTo(2.8, 12);
   });
 });

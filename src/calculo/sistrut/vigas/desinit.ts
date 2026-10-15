@@ -7,9 +7,10 @@
 // `detalhaViga` implementa o contrato `DetalhaViga`. O contrato não traz tudo o que o
 // DESINIT lê do .FOR e do DESDIM; `detalhaVigaDesinit` aceita esses dados a mais
 // (`ExtrasDesinit`) e `detalhaViga` usa os padrões da tela do DESENHO para eles.
-// Os esforços vêm do DESCALC portado (`desinitDescalc.ts`), refeito a partir de
-// `entrada.viga` como o DESDIM faz, com a envoltória das acidentais: `entrada.analise`
-// não é usada, e o Mk dos tramos e o Vk com alívio do dimensionamento também saem daí.
+// Os esforços vêm do DESCALC portado (`analisaDescalc`, `desinitDescalc.ts`), refeito a
+// partir de `entrada.viga` como o DESDIM faz, com a envoltória das acidentais; é o
+// mesmo DESCALC que o dimensionamento (`desdim.ts`) usa. O Mk dos tramos e o Vk com
+// alívio gravados no COMMON também saem dele.
 import type {
   DetalhaViga,
   DetalhamentoViga,
@@ -21,11 +22,10 @@ import type {
   TramoDimensionado,
 } from "../base/tipos";
 import type { Etapa } from "../../tipos";
-import { AREAS_DSP_CORRIGIDAS } from "../base/parametros";
 import { ErroQB, qbCint, qbStr } from "../base/f32";
-import { Comum, qb } from "./desinitComum";
+import { type Comum, qb } from "./desinitComum";
 import { apoiosComNegativo, cortaBarras } from "./desinitCorte";
-import { descalc } from "./desinitDescalc";
+import { analisaDescalc } from "./desinitDescalc";
 import { detalhaLongitudinal, estribos, faces, portaEstribos, qbVal } from "./desinitBarras";
 
 /** Um apoio como o .FOR o grava (A_1926(k,0), A_1954$, A_1982; DESDIM.BAS:4457-4621).
@@ -163,63 +163,18 @@ function espacamentoMinimo(c: Comum, bw: number, h: number) {
   }
 }
 
-/** Monta o COMMON (`Comum`) com a viga, a análise, o dimensionamento, a forma e o .DSP,
- *  como o DESDIM o deixa para o DESAUXDI e o DESINIT. */
+/** Monta o COMMON (`Comum`) como o DESDIM o deixa para o DESAUXDI e o DESINIT: a
+ *  viga, as seções e o .DSP com o DESCALC rodado (`analisaDescalc`, o mesmo que o
+ *  dimensionamento usa), a forma (.FOR) e o dimensionamento. */
 export function montaComum(
   entrada: EntradaDesdim,
   dim: DimensionamentoViga,
   modo: ModoSistrut,
   extras: ExtrasDesinit = {},
 ) {
-  const c = new Comum(modo);
-  const { viga, secoes, forma, materiais, parametros: p } = entrada;
-  const n = viga.tramos.length;
-  c.v0ddc = n;
-  c.v0de0 = viga.balancoEsquerdo ? 1 : 0;
-  c.v0de4 = viga.balancoDireito ? 1 : 0;
-  c.v0de8 = viga.engasteEsquerdo ? 1 : 0;
-  c.v0dec = viga.engasteDireito ? 1 : 0;
-  c.v0e70 = p.acidentaisEnvoltoria ? "S" : "N";
-  c.v0e74 = p.momentosExternos ? "S" : "N";
-  c.a1148.p(0, viga.momentosExternos[0]);
-  c.a1148.p(1, viga.momentosExternos[1]);
-
-  // tramos do original 0..n+1 (0 e n+1 = balanços)
-  const tramoDoOriginal = (t: number) =>
-    t === 0 ? viga.balancoEsquerdo : t === n + 1 ? viga.balancoDireito : viga.tramos[t - 1];
-  let div = 0;
-  for (let t = 0; t <= n + 1; t++) {
-    const tr = tramoDoOriginal(t);
-    const lista = tr?.divisoes ?? [];
-    c.a0faa.p(t, lista.length);
-    for (const d of lista) {
-      div += 1;
-      c.a1062.p(div, d.p);
-      c.a1090.p(div, d.pAcidental);
-      c.a10be.p(div, d.d);
-      c.a10ec.p(div, d.f);
-      c.a111a.p(div, d.fAcidental);
-    }
-    c.a0fd8.p(t, div);
-    c.a1006.p(t, tr?.vao ?? 0);
-  }
-
-  for (let t = 0; t <= n + 1; t++) c.a1034.p(t, tramoDoOriginal(t)?.inercia ?? 0);
-
-  // seções (.SEC) e o balanço sem seção, que herda a do apoio (DESDIM.BAS:2919-2929)
-  for (let k = 0; k <= n; k++) {
-    c.a1260.p(k, 0, secoes.apoios[k]?.bw ?? 0);
-    c.a1260.p(k, 1, secoes.apoios[k]?.hw ?? 0);
-  }
-  for (let t = 0; t <= n + 1; t++) {
-    const sec =
-      t === 0 ? secoes.balancoEsquerdo : t === n + 1 ? secoes.balancoDireito : secoes.tramos[t - 1];
-    if (!sec) continue;
-    c.a1232.p(t, 0, sec.bw);
-    c.a1232.p(t, 1, sec.hw);
-    c.a1232.p(t, 2, sec.bf);
-    c.a1232.p(t, 3, sec.hf);
-  }
+  const c = analisaDescalc(entrada, modo);
+  const { forma } = entrada;
+  const n = c.v0ddc;
 
   // forma (.FOR)
   const formaT = (t: number) =>
@@ -246,87 +201,7 @@ export function montaComum(
     c.a19de.p(t, e?.eixo ?? (existe ? c.a1926.g(Math.max(0, t - 1), 0) / 2 : 0));
   }
 
-  // .DSP e materiais (DESENHO.BAS:4773-5035)
-  c.v0eba = c.s(materiais.fck);
-  c.v0ebe = c.s(materiais.fyk);
-  c.v0ec2 = materiais.classeAco;
-  c.v0ec6 = c.s(p.multiplicadorUnidade);
-  c.v0f5e = c.s(materiais.gamaC);
-  c.v0f62 = c.s(materiais.gamaF);
-  c.v0f66 = c.s(materiais.gamaS);
-  c.v0eaa = c.s(p.cobrimento);
-  c.v0ea6 = c.s(c.v0eaa + c.s(p.acrescimo));
-  for (const [i, b] of p.bitolas.entries()) {
-    c.bitola.p(i, b.bitola);
-    let area = b.area;
-    // R9 (dado do .DSP): as áreas 0,00 de φ4 e φ32 valem também no detalhamento
-    if (modo === "corrigido" && area === 0) {
-      area =
-        b.bitola === 4 ? AREAS_DSP_CORRIGIDAS[4] : b.bitola === 32 ? AREAS_DSP_CORRIGIDAS[32] : 0;
-    }
-    c.area.p(i, area);
-    c.a1488.p(i, b.kgPorM);
-  }
-  c.v0f46 = p.gruposBitolas;
-  [c.v0f4a, c.v0f4e, c.v0f52, c.v0f56, c.v0f5a] = p.limitesIntervalos.map((x) => c.s(x)) as [
-    number,
-    number,
-    number,
-    number,
-    number,
-  ];
-  for (const [g, linha] of p.grupoDeCorte.entries()) {
-    for (const [i, v] of linha.entries()) c.a14e4.p(i, g, v);
-  }
-  c.v0f3e = c.s(p.larguraEstriboSimples);
-  c.v0f42 = c.s(p.larguraEstriboDuplo);
-  for (const [i, b] of p.bitolasEstribo.entries()) {
-    c.a142c.p(i, 0, b.minima);
-    c.a142c.p(i, 1, b.maxima);
-  }
-  for (const [i, linha] of p.dobrasPorBitola.entries()) {
-    for (const [j, v] of linha.entries()) c.a1c62.p(i, j, v);
-  }
-  for (const [i, v] of p.tabelaBitola1.entries()) c.a1d1a.p(i, v);
-  for (const [i, v] of p.tabelaBitola2.entries()) c.a1d48.p(i, v);
-  c.v18a2 = c.s(p.taxaArmaduraMinima);
-  c.v18a6 = c.s(p.decalagem);
-  c.v18aa = c.s(p.ancoragemPositiva);
-  c.v18ae = c.s(p.ancoragemNegativa);
-  c.v188a = p.ancoragemMinimo10Diametros ? "S" : "N";
-  c.v189e = c.s(p.taxaEstriboMinima);
-  c.v18be = c.s(p.espacamentoEstriboMinimo);
-  c.v18c2 = c.s(p.espacamentoEstriboMaximo);
-  c.v18c6 = p.comparaEspacamentoMaximo === "d/2" ? 0 : 1;
-  c.v1906 = p.espacamentosEstribo.map((x) => `${qbStr(x).trim()}/`).join(" ");
-  c.v190a = p.portaEstribosAutomaticos ? "S" : "N";
-  c.v18da = c.s(p.ordemMinimaPortaEstribo);
-  c.v18de = c.s(p.traspassePortaEstribo);
-  c.v190e = p.comprimentoDesenvolvido ? "S" : "N";
-  c.v18ca = c.s(p.raioDobramento);
-  c.v18b2 = c.s(p.taxaMinimaNegativa);
-  c.v18ce = c.s(p.alturaArmaduraPele);
-  c.v18b6 = c.s(p.taxaArmaduraPele);
-  c.v18e2 = c.s(p.traspassePele);
-  c.v18ee = c.s(p.distanciaMinimaEstribosExtremidade);
-  c.v18d2 = c.s(p.entradaMinimaApoio);
-  c.v1912 = p.verificaGrampos ? "S" : "N";
-  c.v1916 = p.reduzAncoragemPositiva ? "S" : "N";
-  c.v18d6 = c.s(p.ordemMaximaCA60);
-  c.v187e = c.s(p.comprimentoMaximoBarra);
-
-  c.v0df4 = c.s(p.reducaoNegativos);
-  c.v182e = p.alivioCortante ? "S" : "N";
-
-  // o DESDIM analisa a viga de novo (DESCALC) antes de completar a seção do balanço
-  descalc(c);
-  for (let t = 1 - c.v0de0; t <= n + c.v0de4; t++) {
-    if ((c.a1232.g(t, 1) <= 0 || c.a1232.g(t, 0) <= 0) && (t === n + 1 || t === 0)) {
-      c.a1232.p(t, 0, c.a1260.g(Math.max(0, t - 1), 0));
-      c.a1232.p(t, 1, c.a1260.g(Math.max(0, t - 1), 1));
-    }
-  }
-  montaDimensionamento(c, entrada, dim, extras);
+  montaDimensionamento(c, dim, extras);
   return c;
 }
 
@@ -345,12 +220,7 @@ export function apoiosPadrao(entrada: EntradaDesdim): ApoioFormaViga[] {
 /** Grava no COMMON o que o DESDIM (S_113F7) deixa para o DESAUXDI/DESINIT: barras de
  *  tramos e apoios (A_128E, A_12BC), comprimidas, cortantes com alívio (A_1540) e
  *  estribos (A_1374, V_0ECE, V_0ED2). */
-function montaDimensionamento(
-  c: Comum,
-  entrada: EntradaDesdim,
-  dim: DimensionamentoViga,
-  extras: ExtrasDesinit,
-) {
+function montaDimensionamento(c: Comum, dim: DimensionamentoViga, extras: ExtrasDesinit) {
   const n = c.v0ddc;
   const grava = (m: Comum["a128e"], i: number, f: FlexaoViga) => {
     const [n1, f1, n2, f2] = leArranjo(f.arranjo);

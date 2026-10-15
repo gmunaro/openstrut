@@ -159,6 +159,74 @@ function apoiaEm(a: VigaEixo, b: VigaEixo, sa: number, sb: number) {
   return !a.eixo.horizontal;
 }
 
+/** Uma viga do pavimento com o eixo, os nós e o apoio de cada nó (sem cargas). */
+export interface GeometriaViga extends VigaEixo {
+  /** Posição de cada nó ao longo do eixo, m, em ordem crescente. */
+  nos: number[];
+  /** Um apoio por nó; "livre" só nas extremidades. */
+  apoios: ApoioMontado[];
+}
+
+/** Nós e apoios das vigas do pavimento (regra da V2): pilares sobre o eixo e as
+ *  vigas em que ela se apoia nos cruzamentos sem pilar (`apoiaEm`); ponta sem apoio
+ *  vira extremidade livre (balanço). Viga que não é horizontal nem vertical fica de
+ *  fora, com aviso. A montagem da V2 e o caminho do SISTRUT (`sistrut/obra.ts`) usam
+ *  esta função, para que os dois vejam os mesmos apoios. */
+export function geometriaDasVigas(pavimento: Pavimento): {
+  vigas: GeometriaViga[];
+  avisos: string[];
+} {
+  const avisos: string[] = [];
+  const vigasEixo: VigaEixo[] = [];
+  for (const viga of pavimento.vigas) {
+    const eixo = eixoDaViga(viga);
+    if (eixo) vigasEixo.push({ viga, eixo });
+    else avisos.push(`Viga ${viga.nome} não é horizontal nem vertical: ignorada.`);
+  }
+
+  // apoios de cada viga: pilares sobre o eixo e vigas em que ela se apoia
+  const apoiosPorViga = vigasEixo.map((ve) => {
+    const apoios: { s: number; apoio: ApoioMontado }[] = [];
+    for (const p of pavimento.pilares) {
+      const s = posicaoNoEixo(ve.eixo, p.x, p.y);
+      if (s !== undefined) apoios.push({ s, apoio: { tipo: "pilar", id: p.id, nome: p.nome } });
+    }
+    for (const outra of vigasEixo) {
+      if (outra.eixo.horizontal === ve.eixo.horizontal) continue;
+      const ponto = ve.eixo.horizontal
+        ? cruzamento(ve.eixo, outra.eixo)
+        : cruzamento(outra.eixo, ve.eixo);
+      if (!ponto || pilarEm(pavimento.pilares, ponto.x, ponto.y)) continue;
+      const s = ve.eixo.horizontal ? ponto.x : ponto.y;
+      const so = outra.eixo.horizontal ? ponto.x : ponto.y;
+      if (apoiaEm(ve, outra, s, so))
+        apoios.push({ s, apoio: { tipo: "viga", id: outra.viga.id, nome: outra.viga.nome } });
+    }
+    return apoios.sort((a, b) => a.s - b.s);
+  });
+
+  const vigas = vigasEixo.map(({ viga, eixo }, iv): GeometriaViga => {
+    const nos: number[] = [];
+    const apoios: ApoioMontado[] = [];
+    const apoiosViga = apoiosPorViga[iv] ?? [];
+    if (!apoiosViga.some((a) => Math.abs(a.s - eixo.s1) <= TOL)) {
+      nos.push(eixo.s1);
+      apoios.push({ tipo: "livre" });
+    }
+    for (const a of apoiosViga) {
+      if (nos.length > 0 && Math.abs(a.s - (nos.at(-1) ?? 0)) <= TOL) continue;
+      nos.push(a.s);
+      apoios.push(a.apoio);
+    }
+    if (Math.abs((nos.at(-1) ?? eixo.s1) - eixo.s2) > TOL) {
+      nos.push(eixo.s2);
+      apoios.push({ tipo: "livre" });
+    }
+    return { viga, eixo, nos, apoios };
+  });
+  return { vigas, avisos };
+}
+
 /** Monta as vigas do pavimento (apoios, tramos, cargas distribuídas), analisa cada
  *  uma com `analisar` na ordem certa (a viga apoiada antes da viga de apoio, que
  *  recebe a reação como carga concentrada) e soma as reações nos pilares.
@@ -192,52 +260,9 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
     return { vigas: [], naoCalculadas: [], pilares: pilaresVazios(), avisos, memoria };
   }
 
-  const vigasEixo: VigaEixo[] = [];
-  for (const viga of pavimento.vigas) {
-    const eixo = eixoDaViga(viga);
-    if (eixo) vigasEixo.push({ viga, eixo });
-    else avisos.push(`Viga ${viga.nome} não é horizontal nem vertical: ignorada.`);
-  }
-
-  // apoios de cada viga: pilares sobre o eixo e vigas em que ela se apoia
-  const apoiosPorViga = vigasEixo.map((ve) => {
-    const apoios: { s: number; apoio: ApoioMontado }[] = [];
-    for (const p of pavimento.pilares) {
-      const s = posicaoNoEixo(ve.eixo, p.x, p.y);
-      if (s !== undefined) apoios.push({ s, apoio: { tipo: "pilar", id: p.id, nome: p.nome } });
-    }
-    for (const outra of vigasEixo) {
-      if (outra.eixo.horizontal === ve.eixo.horizontal) continue;
-      const ponto = ve.eixo.horizontal
-        ? cruzamento(ve.eixo, outra.eixo)
-        : cruzamento(outra.eixo, ve.eixo);
-      if (!ponto || pilarEm(pavimento.pilares, ponto.x, ponto.y)) continue;
-      const s = ve.eixo.horizontal ? ponto.x : ponto.y;
-      const so = outra.eixo.horizontal ? ponto.x : ponto.y;
-      if (apoiaEm(ve, outra, s, so))
-        apoios.push({ s, apoio: { tipo: "viga", id: outra.viga.id, nome: outra.viga.nome } });
-    }
-    return apoios.sort((a, b) => a.s - b.s);
-  });
-
-  // nós, tramos e cargas distribuídas
-  const montadas = vigasEixo.map(({ viga, eixo }, iv): VigaMontada => {
-    const nos: number[] = [];
-    const apoios: ApoioMontado[] = [];
-    const apoiosViga = apoiosPorViga[iv] ?? [];
-    if (!apoiosViga.some((a) => Math.abs(a.s - eixo.s1) <= TOL)) {
-      nos.push(eixo.s1);
-      apoios.push({ tipo: "livre" });
-    }
-    for (const a of apoiosViga) {
-      if (nos.length > 0 && Math.abs(a.s - (nos.at(-1) ?? 0)) <= TOL) continue;
-      nos.push(a.s);
-      apoios.push(a.apoio);
-    }
-    if (Math.abs((nos.at(-1) ?? eixo.s1) - eixo.s2) > TOL) {
-      nos.push(eixo.s2);
-      apoios.push({ tipo: "livre" });
-    }
+  const geometria = geometriaDasVigas(pavimento);
+  avisos.push(...geometria.avisos);
+  const montadas = geometria.vigas.map(({ viga, eixo, nos, apoios }): VigaMontada => {
     const pesoProprio = ((viga.bw * viga.h) / 10_000) * pesoConcreto;
     const tramos = nos.slice(1).map((fim, k): TramoMontado => {
       const inicio = nos[k] ?? eixo.s1;
@@ -254,6 +279,7 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
     });
     return { id: viga.id, nome: viga.nome, bw: viga.bw, h: viga.h, eixo, nos, apoios, tramos };
   });
+  const vigasEixo = geometria.vigas;
 
   /** Reações das lajes sobre [s1, s2] do eixo, média no trecho (V1 LmMonta passo 4). */
   function cargaDasLajesNoTramo(eixo: Eixo, s1: number, s2: number): CargaGQ {
@@ -275,7 +301,6 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
     }
     return c;
   }
-
   // bordos com reação que não caem (inteiros) sobre vigas (V1: "bordo com reação e sem viga de apoio")
   for (const l of pavimento.lajes) {
     for (const b of BORDOS) {

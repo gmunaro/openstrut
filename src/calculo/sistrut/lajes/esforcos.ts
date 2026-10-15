@@ -65,8 +65,9 @@ function calculaSemH(
 const calculavel = (l: LajeSistrut) => l.tipo === 0 || l.tipo === 3;
 
 /** Esforços do painel com a otimização dos negativos injetada (ou sem ela).
- *  1. Continuidade (opção 1): automática se `painel.continuidades` vier vazio;
- *     senão valem os códigos e as continuidades do painel (já confirmados).
+ *  1. Continuidade (opção 1): automática se `painel.continuidades` vier vazio e
+ *     não confirmado (`continuidadesConfirmadas`); senão valem os códigos e as
+ *     continuidades do painel.
  *  2. Direção (opção 2): μ pelas cordas (`direcaoMu`) nas lajes do tipo 0 com
  *     μ ≤ 0 (não informado); μ > 0 é o informado pelo usuário e fica.
  *  3. Por laje calculável: preparação, coeficiente de carga e fatores por bordo;
@@ -79,7 +80,7 @@ export function esforcosDoPainelCom(otimiza?: OtimizacaoInjetada): EsforcosDoPai
     const memoria: Etapa[] = [];
     let lajes = painel.lajes.map((l) => ({ ...l, codigos: [...l.codigos] }));
     let continuidades = painel.continuidades;
-    if (continuidades.length === 0) {
+    if (continuidades.length === 0 && !painel.continuidadesConfirmadas) {
       const auto = continuidadeAutomatica(lajes, parametros);
       lajes = auto.lajes;
       continuidades = auto.continuidades;

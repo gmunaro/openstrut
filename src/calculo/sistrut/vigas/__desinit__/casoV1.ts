@@ -2,16 +2,17 @@
 // p = 0,486 t/m; __oraculo__/retrad_des_det.json, campo `entrada`) para os testes do
 // detalhamento e dos quantitativos.
 //
-// Os esforços NÃO vêm da saída de outra função: são a conta à mão da viga contínua de
-// dois vãos iguais com carga uniforme (M1 = −qL²/8; Ve = qL/2 − |M1|/L; M+ = Ve²/2q,
-// x = Ve/q), em SINGLE, e o teste confere que arredondam para o que o original imprime
-// (M− −0.97, Ve 0.73, Vd 1.22, x 1.50, M+ 0.55). O dimensionamento é o que o original
+// A entrada é só a viga do .VIG: o detalhamento refaz a análise (DESCALC). Os esforços
+// de `ESFORCOS_V1` são a conta à mão da viga contínua de dois vãos iguais com carga
+// uniforme (M1 = −qL²/8; Ve = qL/2 − |M1|/L; M+ = Ve²/2q, x = Ve/q), em SINGLE, e o
+// teste confere que arredondam para o que o original imprime (M− −0.97, Ve 0.73, Vd
+// 1.22, x 1.50, M+ 0.55; C:/tmp/oraculo/runs/retrad_des_det-20261015-082506,
+// impressora.prn:16-26). O dimensionamento é o que o original
 // imprime (2#10 nos tramos e no apoio 1, As 1,50, estribo #5/12, Aee 2,80, Vk com alívio
 // 0,61/1,09 = Ve − q·h/2).
 import { sng } from "../../base/f32";
 import { emSingle, PARAMETROS_DSP } from "../../base/parametros";
 import type {
-  AnaliseViga,
   DimensionamentoViga,
   EntradaDesdim,
   FlexaoViga,
@@ -28,26 +29,6 @@ const xPos = sng(0.729 / 0.486);
 
 /** Esforços à mão (ver o cabeçalho). */
 export const ESFORCOS_V1 = { q, m1, ve, vd, mPos, xPos };
-
-export const ANALISE_V1: AnaliseViga = {
-  nome: "V1",
-  apoios: [
-    { m: 0, r: ve, rMax: ve, rMin: ve, mMax: 0 },
-    { m: m1, r: sng(vd + vd), rMax: sng(vd + vd), rMin: sng(vd + vd), mMax: m1 },
-    { m: 0, r: ve, rMax: ve, rMin: ve, mMax: 0 },
-  ],
-  tramos: [
-    { ve, vd, x: xPos, mPositivo: mPos, fEJ: 0 },
-    { ve: vd, vd: ve, x: sng(L - 0.729 / 0.486), mPositivo: mPos, fEJ: 0 },
-  ],
-  somaReacoes: sng(2 * ve + 2 * vd),
-  mepEsquerdo: sng(-(0.486 * L * L) / 12),
-  mepDireito: sng(-(0.486 * L * L) / 12),
-  momentosPilar: [0, 0],
-  engastamentoPerfeito: [],
-  avisos: [],
-  memoria: [],
-};
 
 const flexao = (mk: number): FlexaoViga => ({
   xd: sng(0.025),
@@ -97,7 +78,6 @@ export const ENTRADA_V1: EntradaDesdim = {
     momentosExternos: [0, 0],
     pilares: ["P1", "P2", "P3"],
   },
-  analise: ANALISE_V1,
   secoes: { tramos: [secao, secao], apoios: [secao, secao, secao] },
   forma: { tramos: [formaTramo, formaTramo] },
   materiais: {

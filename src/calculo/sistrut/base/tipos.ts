@@ -151,6 +151,10 @@ export interface PainelLajes {
   cargasPorArea: CargaPorArea[];
   alvenarias: Alvenaria[];
   continuidades: Continuidade[];
+  /** true: `continuidades` e os códigos já vêm confirmados (o assistente trecho a
+   *  trecho da opção 1, LAJECALC.BAS:3543) e a continuidade automática não roda, mesmo
+   *  com a lista vazia. Ausente/false: automática quando a lista vem vazia. */
+  continuidadesConfirmadas?: boolean;
 }
 
 // ============================================================== T1 LAJE: esforços
@@ -723,14 +727,11 @@ export interface FormaViga {
 }
 
 export interface EntradaDesdim {
+  /** O .VIG da viga (com as cargas indexadas já resolvidas pelo VIGA). O DESDIM refaz
+   *  a análise a partir dele (DESCALC, DESDIM.BAS:5777-6582, `analisaDescalc` em
+   *  vigas/desinitDescalc.ts), como o original: o dimensionamento e o detalhamento usam
+   *  os mesmos esforços, com os parâmetros do .DSP. */
   viga: DadosViga;
-  /** Análise da viga. O DESCALC é o método dos focos da T3 com os parâmetros do .DSP:
-   *  a T7 chama o `AnalisaViga` com `parametrosVicalcDoDsp(dsp)` (parametros.ts); o
-   *  alívio do cortante junto ao apoio é do DESDIM (DESDIM.BAS:6509). Os testes da T4
-   *  montam esta análise com os esforços impressos no caso retrad_des_det
-   *  (__oraculo__/retrad_des_det.json: V1.a1.M-, V1.t1.M+, V1.t1.x, V1.a1.R...) e não
-   *  dependem da T3. */
-  analise: AnaliseViga;
   secoes: SecoesViga;
   forma: FormaViga;
   materiais: MateriaisSistrut;
