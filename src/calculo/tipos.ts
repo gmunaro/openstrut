@@ -152,6 +152,10 @@ export interface PilarResultado extends ComMemoria {
   /** Momentos totais de cálculo na seção crítica (1ª + mínimos + 2ª ordem), kN·m. */
   mdX: number;
   mdY: number;
+  /** NB-1/78 pelo SISTRUT: o maior momento CARACTERÍSTICO atuante dos casos do PILAREDI
+   *  (Mk com ea, o "Mx/My" impresso), kN·m; mdX/mdY = γf × estes. Ausente na 6118. */
+  mkX?: number;
+  mkY?: number;
   /** Armadura longitudinal total necessária e adotada. */
   asNecessaria: number;
   barras: BarrasPilar;

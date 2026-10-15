@@ -696,6 +696,8 @@ function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavim
       lambdaY: d?.lambdaY ?? 0,
       mdX: tmParaKnm(gf * mx),
       mdY: tmParaKnm(gf * my),
+      mkX: tmParaKnm(mx),
+      mkY: tmParaKnm(my),
       asNecessaria: d?.as ?? 0,
       barras: d
         ? barrasDoPilar(d, r.parametros.pip)

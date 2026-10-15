@@ -63,6 +63,10 @@ export interface Viga {
   h: number;
   /** Carga linear adicional (parede etc.), kN/m. */
   cargaLinear: number;
+  /** Peso próprio digitado, kN/m. Ausente = bw·h·peso específico do concreto. O
+   *  SISTRUT usa o peso que o usuário digita no LAJEGEOM (predominante e exceções,
+   *  LAJEMONT.BAS:4110-4160), não o da seção. */
+  pesoProprio?: number;
 }
 
 /** Ponto da planta, m. */
@@ -108,6 +112,9 @@ export interface Obra {
   norma: NormaId;
   /** Arquivo sem o campo (obra anterior ao switch) é lido como "corrigido". */
   modoCalculo: ModoCalculo;
+  /** NB-1/78: roda a otimização dos negativos das lajes (LAJECALC opção 6, um passo
+   *  que o usuário do original escolhe rodar). Ausente = roda. */
+  otimizaNegativos?: boolean;
   materiais: Materiais;
   /** Do topo (cobertura) para a base. */
   pavimentos: Pavimento[];

@@ -190,6 +190,8 @@ export interface PavimentoSistrut {
   /** Esforços depois da otimização (LAJECALC 6 + 5); iguais aos de antes se ela não
    *  convergiu (aviso). */
   esforcos: EsforcosLajes;
+  /** Armaduras da opção 5 antes e depois da otimização. */
+  armadurasAntesOtimizacao: Record<string, ArmadurasDeLaje>;
   armaduras: Record<string, ArmadurasDeLaje>;
   lajeproc: ResultadoLajeproc;
   eixos: EixoViga[];
@@ -483,7 +485,10 @@ function eixosDasVigas(geometria: readonly GeometriaViga[], modo: ModoSistrut): 
 function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
   const s = atribuicao(modo);
   const dens = densidadeSistrut(modo);
-  const kg = new Map(pav.vigas.map((v) => [v.nome, pesoKgPorM(s(((v.bw * v.h) / 10_000) * dens))]));
+  // o peso digitado (kN/m → t/m) ou o da seção
+  const tPorM = (v: (typeof pav.vigas)[number]) =>
+    v.pesoProprio !== undefined ? knPorMParaTPorM(v.pesoProprio) : ((v.bw * v.h) / 10_000) * dens;
+  const kg = new Map(pav.vigas.map((v) => [v.nome, pesoKgPorM(s(tPorM(v)))]));
   const contagem = new Map<number, number>();
   for (const k of kg.values()) contagem.set(k, (contagem.get(k) ?? 0) + 1);
   let predominante = 0;
@@ -506,6 +511,7 @@ function calcularPavimentoSistrut(
   mat: MateriaisSistrut,
   par: ParametrosSistrut,
   modo: ModoSistrut,
+  otimiza: boolean,
 ): PavimentoSistrut {
   const s = atribuicao(modo);
   const avisos: string[] = [];
@@ -561,20 +567,26 @@ function calcularPavimentoSistrut(
     }
   }
 
-  // LAJECALC 6: otimização dos negativos (no original roda sempre, decisão 4 do dono)
+  // LAJECALC 6: otimização dos negativos. No original é um passo que o usuário roda;
+  // aqui roda por padrão (decisão 4 do dono) e `Obra.otimizaNegativos = false` o pula.
   let esforcos = esforcosAntesOtimizacao;
-  try {
-    esforcos = esforcosDoPainelCom((e, recalcula) =>
-      otimizaNegativos(e, recalcula, mat, par.laje, modo),
-    )(painel, par.laje, modo);
-  } catch (e) {
-    avisos.push(
-      `Otimização dos negativos não feita: ${mensagem(e)} Valem os momentos antes da otimização.`,
-    );
+  if (otimiza) {
+    try {
+      esforcos = esforcosDoPainelCom((e, recalcula) =>
+        otimizaNegativos(e, recalcula, mat, par.laje, modo),
+      )(painel, par.laje, modo);
+    } catch (e) {
+      avisos.push(
+        `Otimização dos negativos não feita: ${mensagem(e)} Valem os momentos antes da otimização.`,
+      );
+    }
   }
-  const armaduras: Record<string, ArmadurasDeLaje> = {};
-  for (const [nome, m] of Object.entries(esforcos.momentos))
-    armaduras[nome] = armadurasLaje(m, mat, par.laje, modo);
+  const armadurasDe = (e: EsforcosLajes) =>
+    Object.fromEntries(
+      Object.entries(e.momentos).map(([nome, m]) => [nome, armadurasLaje(m, mat, par.laje, modo)]),
+    );
+  const armadurasAntesOtimizacao = armadurasDe(esforcosAntesOtimizacao);
+  const armaduras = armadurasDe(esforcos);
   const proc = lajeproc(esforcos, mat, par.laje, modo);
 
   // LAJEMONT: reações das lajes e .VIG
@@ -603,6 +615,9 @@ function calcularPavimentoSistrut(
       `Vigas não processadas pelo VIGA (carga indexada sem origem): ${naoProcessadas.join(", ")}.`,
     );
   const processadas = new Set(analises.map((a) => a.nome));
+  for (const v of pav.vigas)
+    if (!processadas.has(v.nome) && !naoProcessadas.includes(v.nome))
+      avisos.push(`Viga ${v.nome} sem apoios suficientes no LAJEMONT: não calculada.`);
   const vigasAnalisadas = vigasVig.filter((v) => processadas.has(v.nome));
   const rep = somaReacoesPilares(
     analises,
@@ -647,6 +662,7 @@ function calcularPavimentoSistrut(
     espessuras,
     esforcosAntesOtimizacao,
     esforcos,
+    armadurasAntesOtimizacao,
     armaduras,
     lajeproc: proc,
     eixos,
@@ -797,7 +813,10 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
   const avisos: string[] = [];
   if (obra.materiais.aco === "CA-25" && obra.materiais.classeAco === "B")
     avisos.push("Aço CA-25 é sempre classe A; a classe B informada foi ignorada.");
-  const pavimentos = obra.pavimentos.map((p) => calcularPavimentoSistrut(p, mat, par, modo));
+  const otimiza = obra.otimizaNegativos ?? true;
+  const pavimentos = obra.pavimentos.map((p) =>
+    calcularPavimentoSistrut(p, mat, par, modo, otimiza),
+  );
   const { colunas, lances } = calcularPilaresSistrut(obra, pavimentos, mat, par, modo, avisos);
   const quadros = pavimentos.flatMap((p) => p.vigas.flatMap((v) => (v.quadro ? [v.quadro] : [])));
   return {

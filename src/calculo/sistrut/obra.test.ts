@@ -5,20 +5,26 @@
 // - caso b (VIGA opção 7 sobre o E2E.VIG do caso a): C:/tmp/oraculo/runs/caso_b_viga-20261014-182718
 // - caso c (PILAREDI, P5): C:/tmp/oraculo/runs/caso_c_pilaredi-20261015-041842
 // - LAJEPROC sobre a mesma obra (tela da L1): C:/tmp/oraculo/runs/retrad_lajeproc-20261015-082452
+// E a obra VBX (`__e2e__/obraVBX.ts`) do caso v2par_viga_fluxo (viga sobre as pontas de
+// dois balanços, carga indexada, .REP com parcelas truncadas):
+// C:/tmp/oraculo/runs/v2par_viga_fluxo-20261015-164332
 // Esperado = texto impresso (meia unidade da última casa, ou FIX onde o original trunca).
 // Os ids que o motor não produz estão em NAO_PRODUZIDOS, com o motivo.
 import { describe, expect, it } from "vitest";
 import { bateComImpresso, CASOS_ORACULO, type CasoOraculo } from "./__oraculo__/index";
 import { obraE2E } from "./__e2e__/obraE2E";
+import { obraVBX } from "./__e2e__/obraVBX";
+import vigaFluxo from "./lajes/__casos_t2__/v2par_viga_fluxo.json";
 import { calcularObraSistrut, type ResultadoSistrut } from "./obra";
 import { textoMep } from "./vigas/vicalc";
 
 const original = calcularObraSistrut(obraE2E("original"), { modo: "original" });
 const corrigido = calcularObraSistrut(obraE2E("corrigido"), { modo: "corrigido" });
+const vbx = calcularObraSistrut(obraVBX("original"), { modo: "original" });
+const casoVigaFluxo: CasoOraculo = vigaFluxo;
 
 /** Ids do oráculo que o motor não calcula, e por quê. */
 const NAO_PRODUZIDOS: [RegExp, string][] = [
-  [/^L\d\.As[+-](princ|sec|maior|menor)\.preOtim$/, "armaduras só depois da otimização"],
   [/^L\d\.H\.(mom|arm)(\.preOtim)?$/, "eco do H impresso no cabeçalho da opção 5"],
   [/^P5\.pre\./, "predimensionamento (PILAREDI 3.1) não roda no motor"],
 ];
@@ -30,11 +36,11 @@ function laje(r: ResultadoSistrut, id: string): Valor {
   const m = /^(L\d)\.(.+)$/.exec(id);
   if (!m) return undefined;
   const [, nome = "", resto = ""] = m;
-  const pre = resto.endsWith(".preOtim");
-  const campo = resto.replace(/\.preOtim$/, "");
+  const pre = /\.(preOtim|antesOtim)$/.test(resto);
+  const campo = resto.replace(/\.(preOtim|antesOtim)$/, "");
   const esf = pre ? p.esforcosAntesOtimizacao : p.esforcos;
   const mom = esf.momentos[nome];
-  const arm = p.armaduras[nome];
+  const arm = (pre ? p.armadurasAntesOtimizacao : p.armaduras)[nome];
   const esp = p.espessuras[nome];
   const lajeS = esf.lajes.find((l) => l.nome === nome);
   const prep = esf.preparadas[nome];
@@ -68,6 +74,7 @@ function laje(r: ResultadoSistrut, id: string): Valor {
     "Hmin.L/f": espOk ? (espOk.flecha?.flecha ?? 0) : undefined,
     "Hmin.perm": lajeS?.cargaPermanente,
     "Hmin.acid": prep && prep.cargaArea / prep.area,
+    mu: lajeS?.mu,
   };
   return mapa[campo];
 }
@@ -92,6 +99,58 @@ function barrasLajeproc(r: ResultadoSistrut, id: string): Valor {
   const b = posicao?.barra;
   if (!b?.ok) return undefined;
   return campo === "phi" ? b.bitola : b.espacamento;
+}
+
+/** Texto curto da barra ("#6.3c/20") como o JSON do v2par_viga_fluxo anota. */
+const textoCurto = (b: { ok: boolean } & Partial<{ bitola: number; espacamento: number }>) =>
+  // bitola e espaçamento em SINGLE no original: 1 casa, como impresso
+  b.ok ? `#${Number(b.bitola?.toFixed(1))}c/${Number(b.espacamento?.toFixed(1))}` : "NAO";
+
+/** Barras do LAJEPROC em texto (`L1.proc.posPrinc`, `L1-L2.proc.neg`). */
+function textoLajeproc(r: ResultadoSistrut, id: string): Valor {
+  const proc = r.pavimentos[0]!.lajeproc;
+  const pos = /^(L\d)\.proc\.pos(Princ|Sec)$/.exec(id);
+  if (pos) {
+    const p = proc.positivas[pos[1] ?? ""];
+    const b = pos[2] === "Princ" ? p?.principal.barra : p?.secundaria.barra;
+    return b && textoCurto(b);
+  }
+  const neg = /^(L\d)-(L\d)\.proc\.neg$/.exec(id);
+  if (!neg) return undefined;
+  const n = proc.negativas.find(
+    (x) =>
+      (x.continuidade.lajeA === neg[1] && x.continuidade.lajeB === neg[2]) ||
+      (x.continuidade.lajeA === neg[2] && x.continuidade.lajeB === neg[1]),
+  );
+  return n && textoCurto(n.barra);
+}
+
+/** Código do lado k do original (`L1.lado3.codigo`): o lado é achado pela geometria
+ *  gravada pelo original (entrada do caso), porque o polígono da V2 pode começar em
+ *  outro vértice. */
+function codigoDoLado(r: ResultadoSistrut, caso: CasoOraculo, id: string): Valor {
+  const m = /^(L\d)\.lado(\d+)\.codigo$/.exec(id);
+  if (!m) return undefined;
+  const obra = (
+    caso.entrada as {
+      obra?: {
+        obra_gravada_pelo_original?: {
+          lajes?: Record<string, { lados: { lado: number; de: number[]; para: number[] }[] }>;
+        };
+      };
+    }
+  ).obra;
+  const lado = obra?.obra_gravada_pelo_original?.lajes?.[m[1] ?? ""]?.lados.find(
+    (l) => l.lado === Number(m[2]),
+  );
+  const laje = r.pavimentos[0]!.esforcos.lajes.find((l) => l.nome === m[1]);
+  if (!lado || !laje) return undefined;
+  const igual = (p: { x: number; y: number }, q: number[]) => p.x === q[0] && p.y === q[1];
+  const k = laje.vertices.findIndex((v, i) => {
+    const w = laje.vertices[(i + 1) % laje.vertices.length]!;
+    return (igual(v, lado.de) && igual(w, lado.para)) || (igual(w, lado.de) && igual(v, lado.para));
+  });
+  return k < 0 ? undefined : laje.codigos[k];
 }
 
 function reacao(r: ResultadoSistrut, id: string): Valor {
@@ -152,11 +211,26 @@ function viga(r: ResultadoSistrut, id: string): Valor {
     const apoio = a.apoios[Number(ap[1])];
     return ap[2] === "R" ? apoio?.r : apoio?.m;
   }
+  const ep = /^t(\d+)\.EEP\.(\w+\+?)$/.exec(resto);
+  if (ep) {
+    const linha = a.engastamentoPerfeito.find((e) => e.tramo === Number(ep[1]));
+    const mapa: Record<string, Valor> = {
+      Ve: linha?.ve,
+      x: linha?.x,
+      "M+": linha?.mPositivo,
+      Vd: linha?.vd,
+    };
+    return mapa[ep[2] ?? ""];
+  }
   const tr = /^t(\d+)\.(\w+\+?)$/.exec(resto);
   if (!tr) return undefined;
   const k = Number(tr[1]);
+  // balanços: o VIGA imprime o direito como tramo n + 1 e o esquerdo como 0
+  const n = a.tramos.length;
+  if (k === n + 1 && tr[2] === "Ve") return a.balancoDireito?.carga;
+  if (k === 0 && tr[2] === "Vd") return a.balancoEsquerdo?.carga;
   const t = a.tramos[k - 1];
-  const td = dados.tramos[k - 1];
+  const td = k === n + 1 ? dados.balancoDireito : dados.tramos[k - 1];
   const div = td?.divisoes[0];
   const alv = mont.alvenariasSobreViga.find((x) => x.tramo === k);
   const mapa: Record<string, Valor> = {
@@ -171,6 +245,7 @@ function viga(r: ResultadoSistrut, id: string): Valor {
     D: div?.d,
     F: div?.f,
     pp: alv?.peso,
+    ppViga: alv?.peso,
     alv: alv?.alvenaria,
   };
   return mapa[tr[2] ?? ""];
@@ -235,7 +310,9 @@ function pilaredi(r: ResultadoSistrut, id: string): Valor {
   return mapa[resto];
 }
 
-const calculado = (r: ResultadoSistrut, id: string) =>
+const calculado = (r: ResultadoSistrut, id: string, caso: CasoOraculo) =>
+  textoLajeproc(r, id) ??
+  codigoDoLado(r, caso, id) ??
   barrasLajeproc(r, id) ??
   laje(r, id) ??
   reacao(r, id) ??
@@ -251,7 +328,7 @@ function confereCaso(caso: CasoOraculo, r: ResultadoSistrut) {
   for (const v of caso.valores) {
     const motivo = NAO_PRODUZIDOS.find(([re]) => re.test(v.id));
     if (motivo) continue;
-    const c = calculado(r, v.id);
+    const c = calculado(r, v.id, caso);
     if (c === undefined) {
       faltando.push(v.id);
       continue;
@@ -286,10 +363,39 @@ describe("calcularObraSistrut, modo original, obra E2E", () => {
   );
 });
 
+describe("calcularObraSistrut, modo original, obra VBX (v2par_viga_fluxo)", () => {
+  it("sem avisos; a V5 se apoia nas pontas dos balanços de V1 e V2", () => {
+    expect(vbx.avisos).toEqual([]);
+    const p = vbx.pavimentos[0]!;
+    expect(p.avisos).toEqual([]);
+    expect(p.naoProcessadas).toEqual([]);
+    expect(p.eixos.find((e) => e.nome === "V5")?.apoios).toEqual([{ viga: "V2" }, { viga: "V1" }]);
+  });
+
+  it("todos os números impressos", () => {
+    const { faltando, difere, conferidos } = confereCaso(casoVigaFluxo, vbx);
+    expect(faltando, "ids sem cálculo no motor").toEqual([]);
+    expect(difere).toEqual([]);
+    expect(conferidos).toBeGreaterThan(200);
+  });
+});
+
 describe("calcularObraSistrut, modo corrigido, obra E2E", () => {
   it("roda o mesmo caminho sem avisos", () => {
     expect(corrigido.avisos).toEqual([]);
     expect(corrigido.pavimentos[0]!.avisos).toEqual([]);
     expect(corrigido.lances.flatMap((l) => l.avisos)).toEqual([]);
+  });
+});
+
+describe("Obra.otimizaNegativos (o passo opcional da opção 6 do LAJECALC)", () => {
+  it("false: os esforços finais são os de antes da otimização, e as armaduras também", () => {
+    const r = calcularObraSistrut(
+      { ...obraE2E("original"), otimizaNegativos: false },
+      { modo: "original" },
+    );
+    const p = r.pavimentos[0]!;
+    expect(p.esforcos).toBe(p.esforcosAntesOtimizacao);
+    expect(p.armaduras).toEqual(p.armadurasAntesOtimizacao);
   });
 });

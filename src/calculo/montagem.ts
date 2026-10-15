@@ -168,7 +168,8 @@ export interface GeometriaViga extends VigaEixo {
 }
 
 /** Nós e apoios das vigas do pavimento (regra da V2): pilares sobre o eixo e as
- *  vigas em que ela se apoia nos cruzamentos sem pilar (`apoiaEm`); ponta sem apoio
+ *  vigas em que ela se apoia nos cruzamentos sem pilar (`apoiaEm`, e a viga sem apoios
+ *  que termina na ponta de outra); ponta sem apoio
  *  vira extremidade livre (balanço). Viga que não é horizontal nem vertical fica de
  *  fora, com aviso. A montagem da V2 e o caminho do SISTRUT (`sistrut/obra.ts`) usam
  *  esta função, para que os dois vejam os mesmos apoios. */
@@ -203,6 +204,31 @@ export function geometriaDasVigas(pavimento: Pavimento): {
         apoios.push({ s, apoio: { tipo: "viga", id: outra.viga.id, nome: outra.viga.nome } });
     }
     return apoios.sort((a, b) => a.s - b.s);
+  });
+
+  // Duas vigas que terminam no mesmo ponto sem pilar: nenhuma se apoia na outra, a
+  // menos que uma delas fique sem os 2 apoios de que precisa e a outra os tenha. Então
+  // a primeira se apoia na segunda (viga sobre as pontas de balanços; no SISTRUT é a
+  // escolha "Vx apoia em Vy" do LAJEMONT, caso v2par_viga_fluxo).
+  const reais = (i: number) => apoiosPorViga[i]?.length ?? 0;
+  const precisa = vigasEixo.map((_, i) => reais(i) < 2);
+  vigasEixo.forEach((ve, i) => {
+    if (!precisa[i]) return;
+    for (const [j, outra] of vigasEixo.entries()) {
+      if (outra.eixo.horizontal === ve.eixo.horizontal || precisa[j]) continue;
+      const ponto = ve.eixo.horizontal
+        ? cruzamento(ve.eixo, outra.eixo)
+        : cruzamento(outra.eixo, ve.eixo);
+      if (!ponto || pilarEm(pavimento.pilares, ponto.x, ponto.y)) continue;
+      const s = ve.eixo.horizontal ? ponto.x : ponto.y;
+      const so = outra.eixo.horizontal ? ponto.x : ponto.y;
+      if (!extremidade(ve.eixo, s) || !extremidade(outra.eixo, so)) continue;
+      apoiosPorViga[i]!.push({
+        s,
+        apoio: { tipo: "viga", id: outra.viga.id, nome: outra.viga.nome },
+      });
+    }
+    apoiosPorViga[i]!.sort((a, b) => a.s - b.s);
   });
 
   const vigas = vigasEixo.map(({ viga, eixo }, iv): GeometriaViga => {
@@ -263,7 +289,7 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
   const geometria = geometriaDasVigas(pavimento);
   avisos.push(...geometria.avisos);
   const montadas = geometria.vigas.map(({ viga, eixo, nos, apoios }): VigaMontada => {
-    const pesoProprio = ((viga.bw * viga.h) / 10_000) * pesoConcreto;
+    const pesoProprio = viga.pesoProprio ?? ((viga.bw * viga.h) / 10_000) * pesoConcreto;
     const tramos = nos.slice(1).map((fim, k): TramoMontado => {
       const inicio = nos[k] ?? eixo.s1;
       const lajes = cargaDasLajesNoTramo(eixo, inicio, fim);

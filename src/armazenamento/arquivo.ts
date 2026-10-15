@@ -188,6 +188,13 @@ class Validador {
     return opcoes[0];
   }
 
+  private booleano(d: Dados, campo: string, c: string): boolean {
+    const x = d[campo];
+    if (typeof x === "boolean") return x;
+    this.erros.push(`${c}.${campo}: esperado verdadeiro ou falso, veio ${JSON.stringify(x)}.`);
+    return true;
+  }
+
   obra(d: Dados): Obra {
     return {
       versao: 3,
@@ -196,6 +203,10 @@ class Validador {
       // campo novo sem migração: obra antiga (sem ele) lê como "corrigido"
       modoCalculo:
         d.modoCalculo === undefined ? "corrigido" : this.opcao(d, "modoCalculo", "obra", MODOS),
+      // campo opcional novo: ausente = roda a otimização (NB-1/78)
+      ...(d.otimizaNegativos === undefined
+        ? {}
+        : { otimizaNegativos: this.booleano(d, "otimizaNegativos", "obra") }),
       materiais: this.materiais(this.objeto(d.materiais, "obra.materiais")),
       pavimentos: this.lista(d.pavimentos, "obra.pavimentos").map((p, i) =>
         this.pavimento(this.objeto(p, `pavimentos[${i}]`), `pavimentos[${i}]`),
@@ -278,6 +289,9 @@ class Validador {
       bw: this.numero(d, "bw", c, "positivo"),
       h: this.numero(d, "h", c, "positivo"),
       cargaLinear: this.numero(d, "cargaLinear", c, "naoNegativo"),
+      ...(d.pesoProprio === undefined
+        ? {}
+        : { pesoProprio: this.numero(d, "pesoProprio", c, "naoNegativo") }),
     };
     const horizontal = v.y1 === v.y2;
     const vertical = v.x1 === v.x2;
