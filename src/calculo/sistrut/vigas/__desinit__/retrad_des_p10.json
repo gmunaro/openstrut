@@ -1,0 +1,109 @@
+{
+  "caso": "retrad_des_p10",
+  "run": "C:/tmp/oraculo/runs/retrad_des_p10-20261015-082955",
+  "programa": "DESENHO",
+  "descricao": "Sonda p10: itens 3, 4 e 2 do DESENHO com a obra E2E já detalhada (E2E.SEC/.FOR/.TAB gravados pelo original no caso det). O item 4 mostra na tela o resumo geral de ferragem lido do .TAB.",
+  "entrada": {
+    "obra": "E2E com .TAB do caso retrad_des_det: ~V1, rept 0, volume 76, fôrma 912, φ5 8448, φ6.3 1153, φ10 2612 cm",
+    "roteiro": "dist/tests/retraducao/desenho/p10.sufixo.txt: 3 (Enter), 4 obra E2E (Enter), 2"
+  },
+  "valores": [
+    {
+      "id": "V1.resumo.phi5.comprimento",
+      "grandeza": "resumo na tela, V1: comprimento da bitola 5",
+      "unidade": "m",
+      "impresso": "84",
+      "fonte": "telas/017_r04.txt:11",
+      "obs": "CINT(cm/100) do .TAB"
+    },
+    {
+      "id": "V1.resumo.phi6.3.comprimento",
+      "grandeza": "resumo na tela, V1: comprimento da bitola 6.3",
+      "unidade": "m",
+      "impresso": "12",
+      "fonte": "telas/017_r04.txt:11",
+      "obs": "CINT(cm/100) do .TAB"
+    },
+    {
+      "id": "V1.resumo.phi10.comprimento",
+      "grandeza": "resumo na tela, V1: comprimento da bitola 10",
+      "unidade": "m",
+      "impresso": "26",
+      "fonte": "telas/017_r04.txt:11",
+      "obs": "CINT(cm/100) do .TAB"
+    },
+    {
+      "id": "V1.resumo.volume",
+      "grandeza": "resumo na tela, V1: volume de concreto",
+      "unidade": "m3",
+      "impresso": ".8",
+      "fonte": "telas/017_r04.txt:11"
+    },
+    {
+      "id": "V1.resumo.forma",
+      "grandeza": "resumo na tela, V1: área de fôrma",
+      "unidade": "m2",
+      "impresso": "9.1",
+      "fonte": "telas/017_r04.txt:11"
+    },
+    {
+      "id": "resumo.phi5.comprimento",
+      "grandeza": "resumo na tela, totais: comprimento da bitola 5",
+      "unidade": "m",
+      "impresso": "84",
+      "fonte": "telas/017_r04.txt:13"
+    },
+    {
+      "id": "resumo.phi6.3.comprimento",
+      "grandeza": "resumo na tela, totais: comprimento da bitola 6.3",
+      "unidade": "m",
+      "impresso": "12",
+      "fonte": "telas/017_r04.txt:13"
+    },
+    {
+      "id": "resumo.phi10.comprimento",
+      "grandeza": "resumo na tela, totais: comprimento da bitola 10",
+      "unidade": "m",
+      "impresso": "26",
+      "fonte": "telas/017_r04.txt:13"
+    },
+    {
+      "id": "resumo.volume",
+      "grandeza": "resumo na tela, totais: volume",
+      "unidade": "m3",
+      "impresso": ".8",
+      "fonte": "telas/017_r04.txt:13"
+    },
+    {
+      "id": "resumo.forma",
+      "grandeza": "resumo na tela, totais: fôrma",
+      "unidade": "m2",
+      "impresso": "9.1",
+      "fonte": "telas/017_r04.txt:13"
+    },
+    {
+      "id": "resumo.phi5.peso",
+      "grandeza": "resumo na tela, pesos totais: bitola 5",
+      "unidade": "kg",
+      "impresso": "14",
+      "fonte": "telas/017_r04.txt:14",
+      "obs": "CINT(cm·kg/m/100)"
+    },
+    {
+      "id": "resumo.phi6.3.peso",
+      "grandeza": "resumo na tela, pesos totais: bitola 6.3",
+      "unidade": "kg",
+      "impresso": "3",
+      "fonte": "telas/017_r04.txt:14",
+      "obs": "CINT(cm·kg/m/100)"
+    },
+    {
+      "id": "resumo.phi10.peso",
+      "grandeza": "resumo na tela, pesos totais: bitola 10",
+      "unidade": "kg",
+      "impresso": "16",
+      "fonte": "telas/017_r04.txt:14",
+      "obs": "CINT(cm·kg/m/100)"
+    }
+  ]
+}
