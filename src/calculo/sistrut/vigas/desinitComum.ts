@@ -118,6 +118,11 @@ export class Comum {
     this.a1796 = new M2(s, 14, 4);
     this.a17c4 = new M2(s, 14, 2);
     this.a1540 = new M2(s, 14, 2);
+    this.a1034 = new M1(s, 14);
+    this.a15ca = new M1(s, 14);
+    this.a15f8 = new M1(s, 14);
+    this.a173a = new M1(s, 14);
+    this.a117a = new M1(s, 9);
     this.a1512 = new M1(s, 9);
     this.a1204 = new M2(s, 9, 2);
     this.a11a8 = new M1(s, 9);
@@ -176,6 +181,20 @@ export class Comum {
   readonly a111a: M1;
   /** Momentos externos nos apoios extremos, tm (A_1148). */
   readonly a1148: M1;
+  /** Inércia relativa J do tramo t (A_1034). */
+  readonly a1034: M1;
+  /** Redução dos negativos (V_0DF4) e alívio do cortante "S"/"N" (V_182E$). */
+  v0df4 = 1;
+  v182e = "S";
+  /** Momentos nos apoios da análise estática, abscissa e x do M+ (A_15CA, A_15F8, A_173A)
+   *  e x do M+ de engastamento perfeito (A_117A). */
+  readonly a15ca: M1;
+  readonly a15f8: M1;
+  readonly a173a: M1;
+  readonly a117a: M1;
+  /** Locais do DESCALC que a impressão usa: reação (L_BP4A), reações máxima e mínima da
+   *  envoltória (L_BP60) e momentos de engastamento perfeito dos apoios extremos (L_BP38). */
+  impressaoDescalc: { reacao: M1; reacaoEnvoltoria: M2; mep: M1 } | undefined;
   /** "S"/"N": acidentais com envoltória (V_0E70) e momentos externos (V_0E74). */
   v0e70 = "N";
   v0e74 = "N";

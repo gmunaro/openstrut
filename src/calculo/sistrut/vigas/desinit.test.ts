@@ -203,7 +203,13 @@ describe("defeito R11 (U18-015): ramo 'barra longa demais' do lado direito", () 
       ...ENTRADA_V1,
       viga: {
         ...ENTRADA_V1.viga,
-        tramos: [{ vao: 12.2, inercia: 1, divisoes: [] }],
+        tramos: [
+          {
+            vao: 12.2,
+            inercia: 1,
+            divisoes: [{ p: sng(16 / 12.2), d: 12.2, f: 0, pAcidental: 0, fAcidental: 0 }],
+          },
+        ],
         pilares: ["P1", "P2"],
       },
       analise: {
@@ -334,18 +340,16 @@ describe("balanço esquerdo (V_0DE0 = 1): diagrama e cortante a partir da ponta"
 });
 
 describe("troca do engastamento perfeito em L_403D9 (DESDIM.BAS:5011-5032)", () => {
-  // Tramo 1 da V1 com M+ de engastamento perfeito 0,60 > 1,01·0,547: o original troca o M
-  // do apoio 0 por A_1512(1) = 0 e o Ve pelo do engastamento e desfaz a troca se o M
-  // guardado for ≠ 100 (o sentinela).
+  // Tramo 1 da V1 com um M+ de engastamento perfeito 0,60 > 1,01·0,547 e Ve 0,9 gravados
+  // no COMMON: o original troca o M do apoio 0 por A_1512(1) = 0 e o Ve pelo do
+  // engastamento e só desfaz a troca se o M guardado for ≠ 100 (o sentinela).
   const comApoio0 = (m0: number) => {
-    const analise = {
-      ...ENTRADA_V1.analise,
-      apoios: [{ ...ENTRADA_V1.analise.apoios[0]!, m: m0 }, ...ENTRADA_V1.analise.apoios.slice(1)],
-      engastamentoPerfeito: [
-        { tramo: 1, mPositivo: sng(0.6), mEsquerdo: sng(-0.648), mDireito: sng(-0.648) },
-      ],
-    };
-    const c = montaComum({ ...ENTRADA_V1, analise }, DIMENSIONAMENTO_V1, "original");
+    const c = montaComum(ENTRADA_V1, DIMENSIONAMENTO_V1, "original");
+    c.v1176 = 1;
+    c.a11d6.p(1, 1);
+    c.a11a8.p(1, 0.6);
+    c.a1204.p(1, 0, 0.9);
+    c.a16de.p(0, m0);
     cortaBarras(c);
     return c;
   };
@@ -356,11 +360,10 @@ describe("troca do engastamento perfeito em L_403D9 (DESDIM.BAS:5011-5032)", () 
     expect(c.a1796.g(1, 0)).toBe(ESFORCOS_V1.ve);
   });
 
-  it("M do apoio 100 tm (= sentinela): fica 0 e o Ve do engastamento (Ve isostático 0,972 + 0)", () => {
+  it("M do apoio 100 tm (= sentinela): fica 0 e o Ve do engastamento (0,9)", () => {
     const c = comApoio0(100);
     expect(c.a16de.g(0)).toBe(0);
-    // Ve isostático = Ve − (M1 − M0)/L = 0,729 − (−0,972 − 100)/4; + (mD − mE)/L = 0
-    expect(c.a1796.g(1, 0)).toBeCloseTo(0.729 + (0.972 + 100) / 4, 3);
+    expect(c.a1796.g(1, 0)).toBe(sng(0.9));
   });
 });
 

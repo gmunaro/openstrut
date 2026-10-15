@@ -7,6 +7,9 @@
 // `detalhaViga` implementa o contrato `DetalhaViga`. O contrato não traz tudo o que o
 // DESINIT lê do .FOR e do DESDIM; `detalhaVigaDesinit` aceita esses dados a mais
 // (`ExtrasDesinit`) e `detalhaViga` usa os padrões da tela do DESENHO para eles.
+// Os esforços vêm do DESCALC portado (`desinitDescalc.ts`), refeito a partir de
+// `entrada.viga` como o DESDIM faz, com a envoltória das acidentais: `entrada.analise`
+// não é usada, e o Mk dos tramos e o Vk com alívio do dimensionamento também saem daí.
 import type {
   DetalhaViga,
   DetalhamentoViga,
@@ -22,6 +25,7 @@ import { AREAS_DSP_CORRIGIDAS } from "../base/parametros";
 import { ErroQB, qbCint, qbStr } from "../base/f32";
 import { Comum, qb } from "./desinitComum";
 import { apoiosComNegativo, cortaBarras } from "./desinitCorte";
+import { descalc } from "./desinitDescalc";
 import { detalhaLongitudinal, estribos, faces, portaEstribos, qbVal } from "./desinitBarras";
 
 /** Um apoio como o .FOR o grava (A_1926(k,0), A_1954$, A_1982; DESDIM.BAS:4457-4621).
@@ -168,7 +172,7 @@ export function montaComum(
   extras: ExtrasDesinit = {},
 ) {
   const c = new Comum(modo);
-  const { viga, analise, secoes, forma, materiais, parametros: p } = entrada;
+  const { viga, secoes, forma, materiais, parametros: p } = entrada;
   const n = viga.tramos.length;
   c.v0ddc = n;
   c.v0de0 = viga.balancoEsquerdo ? 1 : 0;
@@ -200,49 +204,7 @@ export function montaComum(
     c.a1006.p(t, tr?.vao ?? 0);
   }
 
-  // análise (DESCALC, DESDIM.BAS:6014-6035)
-  for (let k = 0; k <= n; k++) {
-    const m = analise.apoios[k]?.m ?? 0;
-    c.a16de.p(k, m);
-    c.a170c.p(k, m);
-  }
-  for (let t = 1; t <= n; t++) {
-    const tr = analise.tramos[t - 1];
-    c.a1654.p(t, 0, tr?.ve ?? 0);
-    c.a1654.p(t, 1, tr?.vd ?? 0);
-    c.a1768.p(t, tr?.mPositivo ?? 0);
-    c.a1626.p(t, tr?.mPositivo ?? 0);
-    c.a17c4.p(t, 0, tr?.ve ?? 0);
-    c.a17c4.p(t, 1, c.a16de.g(t - 1));
-  }
-  // engastamento perfeito (A_11D6, A_11A8, A_1204(i,0); DESDIM.BAS:5965-6006): Ve =
-  // Ve isostático + (M dir. − M esq.)/L, com os M de engastamento perfeito, mais o termo
-  // dos momentos externos com acidentais "N"
-  c.v1176 = Math.min(9, analise.engastamentoPerfeito.length);
-  for (let i = 1; i <= c.v1176; i++) {
-    const ep = analise.engastamentoPerfeito[i - 1]!;
-    const t = ep.tramo;
-    const vao = c.a1006.g(t);
-    const tr = analise.tramos[t - 1];
-    const veIso = (tr?.ve ?? 0) - (c.a16de.g(t) - c.a16de.g(t - 1)) / vao;
-    let ve = veIso + (ep.mDireito - ep.mEsquerdo) / vao;
-    if (c.v0e74 === "S" && c.v0e70 === "N") {
-      const e = c.v0de8 === 0 && c.v0de0 === 0 && t === 1 ? 0 : 1;
-      const d = c.v0dec === 0 && c.v0de4 === 0 && t === n ? 0 : 1;
-      if (t === 1) ve = ((qb(d === 0) + (qb(d === 1) * 3) / 2) * c.a1148.g(0)) / vao + ve;
-      if (t === n) ve = ve - ((qb(e === 0) + (qb(e === 1) * 3) / 2) * c.a1148.g(1)) / vao;
-    }
-    c.a11d6.p(i, t);
-    c.a11a8.p(i, ep.mPositivo);
-    c.a1204.p(i, 0, ve);
-  }
-  if (analise.balancoEsquerdo) c.a1654.p(0, 1, analise.balancoEsquerdo.carga);
-  if (analise.balancoDireito) c.a1654.p(n + 1, 0, analise.balancoDireito.carga);
-  for (let t = 0; t <= n + 1; t++) {
-    const ve = c.a1654.g(t, 0);
-    const vd = c.a1654.g(t, 1);
-    for (const [j, v] of [ve, vd, ve, ve, vd].entries()) c.a1796.p(t, j, v);
-  }
+  for (let t = 0; t <= n + 1; t++) c.a1034.p(t, tramoDoOriginal(t)?.inercia ?? 0);
 
   // seções (.SEC) e o balanço sem seção, que herda a do apoio (DESDIM.BAS:2919-2929)
   for (let k = 0; k <= n; k++) {
@@ -257,12 +219,6 @@ export function montaComum(
     c.a1232.p(t, 1, sec.hw);
     c.a1232.p(t, 2, sec.bf);
     c.a1232.p(t, 3, sec.hf);
-  }
-  for (let t = 1 - c.v0de0; t <= n + c.v0de4; t++) {
-    if ((c.a1232.g(t, 1) <= 0 || c.a1232.g(t, 0) <= 0) && (t === n + 1 || t === 0)) {
-      c.a1232.p(t, 0, c.a1260.g(Math.max(0, t - 1), 0));
-      c.a1232.p(t, 1, c.a1260.g(Math.max(0, t - 1), 1));
-    }
   }
 
   // forma (.FOR)
@@ -359,6 +315,17 @@ export function montaComum(
   c.v18d6 = c.s(p.ordemMaximaCA60);
   c.v187e = c.s(p.comprimentoMaximoBarra);
 
+  c.v0df4 = c.s(p.reducaoNegativos);
+  c.v182e = p.alivioCortante ? "S" : "N";
+
+  // o DESDIM analisa a viga de novo (DESCALC) antes de completar a seção do balanço
+  descalc(c);
+  for (let t = 1 - c.v0de0; t <= n + c.v0de4; t++) {
+    if ((c.a1232.g(t, 1) <= 0 || c.a1232.g(t, 0) <= 0) && (t === n + 1 || t === 0)) {
+      c.a1232.p(t, 0, c.a1260.g(Math.max(0, t - 1), 0));
+      c.a1232.p(t, 1, c.a1260.g(Math.max(0, t - 1), 1));
+    }
+  }
   montaDimensionamento(c, entrada, dim, extras);
   return c;
 }
@@ -400,7 +367,17 @@ function montaDimensionamento(
     const f = dim.tramos[t - 1]?.flexao;
     if (!f) continue;
     grava(c.a128e, t, f);
-    c.a128e.p(t, 4, f.mk);
+    // M+ do detalhamento: o da envoltória ou o de engastamento perfeito, o maior
+    // (DESDIM.BAS:2934-2953); `f.mk` deve ser o mesmo número
+    let m = c.s(c.a1768.g(t) * 100);
+    for (let i = 1; i <= c.v1176; i++) {
+      if (c.a11d6.g(i) === t) {
+        m = c.s(Math.max(m, c.s(c.a11a8.g(i) * 100)));
+        break;
+      }
+    }
+    m = c.s(m * c.v0fa2 * c.v0fa6);
+    c.a128e.p(t, 4, m / 100);
     c.a13a2[t] = comprimida(extras.comprimidaTramos?.[t - 1], f, c.a1232.g(t, 0));
   }
   const { ini, fim } = apoiosComNegativo(c);
@@ -441,8 +418,6 @@ function montaDimensionamento(
   for (let t = 1 - c.v0de0; t <= fimT; t++) {
     const cis = dimT(t)?.cisalhamento;
     if (!cis) continue;
-    c.a1540.p(t, 0, cis.vkEsquerda);
-    c.a1540.p(t, 1, cis.vkDireita);
     const e = cis.estribo;
     if (t !== 0) {
       c.a1374.p(t, 0, e.bitola);
@@ -641,11 +616,6 @@ export function detalhaVigaDesinit(
 ): DetalhamentoDesinit {
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
-  if (entrada.parametros.acidentaisEnvoltoria) {
-    avisos.push(
-      "Envoltória de acidentais: o detalhamento usa os esforços estáticos da análise; o original usa a envoltória (não portada).",
-    );
-  }
   const c = montaComum(entrada, dimensionamento, modo, extras);
   cortaBarras(c);
   for (let t = 1; t <= c.v0ddc; t++) {
