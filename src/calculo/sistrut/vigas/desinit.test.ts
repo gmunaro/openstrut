@@ -20,7 +20,8 @@ import {
   montaComum,
   type PosicaoDesinit,
 } from "./desinit";
-import { faces, gramposPositivos, qbVal } from "./desinitBarras";
+import { faces, gramposPositivos, indiceDobra, qbVal, somaArea } from "./desinitBarras";
+import { cortaBarras, momentoNegativoNoTramo, momentoNoTramo } from "./desinitCorte";
 
 const det = CASOS_ORACULO.retrad_des_det!;
 const num = (id: string) => numeroOraculo(det, id);
@@ -196,7 +197,7 @@ describe("defeito R11 (U18-015): ramo 'barra longa demais' do lado direito", () 
   // modos sai um grampo à esquerda (lb·0,515 − φ = 22 cm > 18 cm de apoio útil).
   const gramposDoLado = (c: ReturnType<typeof montaComum>, lado: number) =>
     Array.from({ length: c.v1876 }, (_, i) => c.a1baa.g(i + 1, 4)).filter((l) => l === lado).length;
-  const montaTramoLongo = (modo: "original" | "corrigido") => {
+  const montaTramoLongo = (modo: "original" | "corrigido", semAreaDeGrampo = false) => {
     const secao = { bw: 20, hw: 60, bf: 0, hf: 0 };
     const entrada: EntradaDesdim = {
       ...ENTRADA_V1,
@@ -233,9 +234,14 @@ describe("defeito R11 (U18-015): ramo 'barra longa demais' do lado direito", () 
     ];
     for (const [i, b] of barras.entries()) for (const [j, v] of b.entries()) c.a1ac4.p(i + 1, j, v);
     c.v1866 = 3;
+    if (semAreaDeGrampo) for (const i of [1, 2, 3]) c.area.p(i, 0);
     gramposPositivos(c, modo);
     return c;
   };
+
+  it("grampo sem área (φ5, φ6.3 e φ8 com área 0): o original dá erro 11", () => {
+    expect(() => montaTramoLongo("original", true)).toThrow(/erro 11/);
+  });
 
   it("faces do tramo: 20 e 1220; Vd exige 1,288 cm²", () => {
     const c = montaTramoLongo("original");
@@ -252,5 +258,136 @@ describe("defeito R11 (U18-015): ramo 'barra longa demais' do lado direito", () 
     const c = montaTramoLongo("corrigido");
     expect([c.a1ac4.g(2, 2), c.a1ac4.g(2, 3), c.a1b20.g(2, 1)]).toEqual([400, 1238, 30]);
     expect([gramposDoLado(c, 0), gramposDoLado(c, 1)]).toEqual([1, 0]);
+  });
+});
+
+describe("balanço esquerdo (V_0DE0 = 1): diagrama e cortante a partir da ponta", () => {
+  // Balanço de 1,50 m com p = 6 t/m antes de um tramo de 4,00 m. Conta à mão, x da ponta:
+  // −M(x) = p·x²/2 (S_2303D e S_22581) e V(x) = p·x (L_46F40), uma divisão só.
+  const montaBalanco = () => {
+    const pb = sng(6);
+    const entrada: EntradaDesdim = {
+      ...ENTRADA_V1,
+      viga: {
+        ...ENTRADA_V1.viga,
+        tramos: [ENTRADA_V1.viga.tramos[0]!],
+        balancoEsquerdo: {
+          vao: 1.5,
+          inercia: 1,
+          divisoes: [{ p: pb, d: 1.5, f: 0, pAcidental: 0, fAcidental: 0 }],
+        },
+        pilares: ["P1", "P2"],
+      },
+      analise: {
+        ...ENTRADA_V1.analise,
+        apoios: [
+          { m: sng(-6.75), r: 0, rMax: 0, rMin: 0, mMax: sng(-6.75) },
+          { m: 0, r: 0, rMax: 0, rMin: 0, mMax: 0 },
+        ],
+        tramos: [{ ve: sng(-0.7155), vd: sng(2.6595), x: 0, mPositivo: 0, fEJ: 0 }],
+        balancoEsquerdo: { mApoio: sng(-6.75), carga: 9 },
+      },
+      secoes: {
+        tramos: [{ bw: 20, hw: 50, bf: 0, hf: 0 }],
+        apoios: [0, 1].map(() => ({ bw: 20, hw: 50, bf: 0, hf: 0 })),
+      },
+      forma: {
+        tramos: [{ larguraApoio: 20, vaoLivre: 380, pe: 0, hle: 0, pd: 0, hld: 0 }],
+        balancoEsquerdo: { larguraApoio: 0, vaoLivre: 140, pe: 0, hle: 0, pd: 0, hld: 0 },
+      },
+    };
+    const tramo = DIMENSIONAMENTO_V1.tramos[0]!;
+    const dim = {
+      ...DIMENSIONAMENTO_V1,
+      tramos: [tramo],
+      apoios: [
+        { ...DIMENSIONAMENTO_V1.apoios[1]!, as: sng(4.6), arranjo: "4#12.5" },
+        DIMENSIONAMENTO_V1.apoios[2]!,
+      ],
+      balancoEsquerdo: {
+        ...tramo,
+        cisalhamento: { ...tramo.cisalhamento, vkEsquerda: 0, vkDireita: 9 },
+      },
+    };
+    return montaComum(entrada, dim, "original");
+  };
+
+  it("−M(x) = p·x²/2 no balanço, nos dois diagramas", () => {
+    const c = montaBalanco();
+    c.v0e14 = 0;
+    for (const x of [0.5, 1, 1.5]) {
+      c.v0e30 = x;
+      momentoNoTramo(c);
+      momentoNegativoNoTramo(c);
+      expect(c.v1886).toBeCloseTo((6 * x * x) / 2, 5);
+      expect(c.v1882).toBeCloseTo((6 * x * x) / 2, 5);
+    }
+  });
+
+  it("zona de estribo do balanço: V = 6x ≤ Vk do estribo mínimo (5,82 t) até x = 0,95 → início 1,0 m", () => {
+    const c = montaBalanco();
+    cortaBarras(c);
+    expect(c.a1374.g(0, 8)).toBeCloseTo(5.8204, 3);
+    // A_1374(0,4) = L − INT((L − x)·10)/10 com o último x de V ≤ Vk: 1,5 − 0,5
+    expect(c.a1374.g(0, 4)).toBeCloseTo(1, 6);
+  });
+});
+
+describe("troca do engastamento perfeito em L_403D9 (DESDIM.BAS:5011-5032)", () => {
+  // Tramo 1 da V1 com M+ de engastamento perfeito 0,60 > 1,01·0,547: o original troca o M
+  // do apoio 0 por A_1512(1) = 0 e o Ve pelo do engastamento e desfaz a troca se o M
+  // guardado for ≠ 100 (o sentinela).
+  const comApoio0 = (m0: number) => {
+    const analise = {
+      ...ENTRADA_V1.analise,
+      apoios: [{ ...ENTRADA_V1.analise.apoios[0]!, m: m0 }, ...ENTRADA_V1.analise.apoios.slice(1)],
+      engastamentoPerfeito: [
+        { tramo: 1, mPositivo: sng(0.6), mEsquerdo: sng(-0.648), mDireito: sng(-0.648) },
+      ],
+    };
+    const c = montaComum({ ...ENTRADA_V1, analise }, DIMENSIONAMENTO_V1, "original");
+    cortaBarras(c);
+    return c;
+  };
+
+  it("M do apoio 50 tm: restaurado", () => {
+    const c = comApoio0(50);
+    expect(c.a16de.g(0)).toBe(50);
+    expect(c.a1796.g(1, 0)).toBe(ESFORCOS_V1.ve);
+  });
+
+  it("M do apoio 100 tm (= sentinela): fica 0 e o Ve do engastamento (Ve isostático 0,972 + 0)", () => {
+    const c = comApoio0(100);
+    expect(c.a16de.g(0)).toBe(0);
+    // Ve isostático = Ve − (M1 − M0)/L = 0,729 − (−0,972 − 100)/4; + (mD − mE)/L = 0
+    expect(c.a1796.g(1, 0)).toBeCloseTo(0.729 + (0.972 + 100) / 4, 3);
+  });
+});
+
+describe("erros que o original dá", () => {
+  it("espaçamento mínimo fora da lista do .DSP (h 20: s = INT(16/2) = 8 < 10): erro 5", () => {
+    const sec = { bw: 20, hw: 20, bf: 0, hf: 0 };
+    const entrada = { ...ENTRADA_V1, secoes: { tramos: [sec, sec], apoios: [sec, sec, sec] } };
+    expect(() => montaComum(entrada, DIMENSIONAMENTO_V1, "original")).toThrow(/erro 5/);
+  });
+
+  it("Asw 0 na escolha da bitola do estribo: erro 11", () => {
+    const t = DIMENSIONAMENTO_V1.tramos[0]!;
+    const dim = {
+      ...DIMENSIONAMENTO_V1,
+      tramos: [{ ...t, cisalhamento: { ...t.cisalhamento, aswEsquerda: 0, aswDireita: 0 } }, t],
+    };
+    expect(() => montaComum(ENTRADA_V1, dim, "original")).toThrow(/erro 11/);
+  });
+});
+
+describe("somas por bitola iguais do original", () => {
+  it("índice da dobra soma os índices das bitolas repetidas; área em duas atribuições SINGLE", () => {
+    const c = montaComum(ENTRADA_V1, DIMENSIONAMENTO_V1, "original");
+    expect(indiceDobra(c, 10)).toBe(4);
+    c.bitola.p(3, 10);
+    expect(indiceDobra(c, 10)).toBe(7);
+    // 3·(0,5 + 0,8) em φ0..φ4 e nada em φ5..φ9
+    expect(somaArea(c, 10, 3, 0)).toBe(sng(sng(0.5) * 3 + sng(0.8) * 3));
   });
 });

@@ -38,16 +38,24 @@ interface Locais {
 }
 
 /** Índice 1..9 da bitola na tabela A_1C62 (0 para 4 mm ou bitola fora da tabela). */
-function indiceDobra(c: Comum, b: number) {
-  for (let i = 9; i >= 1; i--) if (b === c.bitola.g(i)) return i;
-  return 0;
+export function indiceDobra(c: Comum, b: number) {
+  // −((b = φ9)·9 + ... + (b = φ1)): soma os índices de todas as bitolas iguais
+  // (DESINIT.BAS:2000, 2238, 2320, 2403)
+  let i = 0;
+  for (let j = 9; j >= 1; j--) if (b === c.bitola.g(j)) i += j;
+  return i;
 }
 
-/** Soma das áreas das bitolas iguais a `b` (a expressão −(b = φ0)·a0 − ... do original). */
-function areaSoma(c: Comum, b: number) {
-  let a = 0;
-  for (let i = 0; i <= 9; i++) if (b === c.bitola.g(i)) a += c.area.g(i);
-  return a;
+/** L_BP12 + n·(área das bitolas iguais a `b`), em duas atribuições SINGLE como o original:
+ *  φ0..φ4 e depois φ5..φ9 (a expressão −(b = φ0)·a0 − ...; DESINIT.BAS:2123-2124). */
+export function somaArea(c: Comum, b: number, n: number, acumulado: number) {
+  const parcial = (de: number, ate: number) => {
+    let a = 0;
+    for (let i = de; i <= ate; i++) if (b === c.bitola.g(i)) a += c.area.g(i);
+    return a;
+  };
+  const meio = c.s(parcial(0, 4) * n + acumulado);
+  return c.s(parcial(5, 9) * n + meio);
 }
 
 /** Nº de estribos lado a lado / mínimo de barras pela largura (2, 4 ou 6). */
@@ -887,7 +895,7 @@ function asNaFace(c: Comum, l: Locais, lado: 0 | 1) {
       continue;
     }
     c.v0e20 = a.g(p, 1);
-    l.bp12 = s(areaSoma(c, c.v0e20) * a.g(p, 0) + l.bp12);
+    l.bp12 = somaArea(c, c.v0e20, a.g(p, 0), l.bp12);
     l.bp0e = maior(l.bp0e, a.g(p, 1));
   }
 }
@@ -973,7 +981,7 @@ function corpoGrampoEsquerda(c: Comum, l: Locais) {
   ) {
     return false;
   }
-  const inicioApoio = c.a1a0c.g(t, 0) - c.a1926.g(t - 1, 0) + c.v0eaa;
+  const inicioApoio = c.s(c.a1a0c.g(t, 0) - c.a1926.g(t - 1, 0) + c.v0eaa);
   if (a.g(p, 3) - inicioApoio + c.a1b20.g(p, 0) + c.a1b20.g(p, 1) > c.v187e && umTerco)
     return false;
   a.p(p, 2, inicioApoio);
@@ -986,7 +994,7 @@ function corpoGrampoEsquerda(c: Comum, l: Locais) {
     a.p(p, 2, maior(inicioApoio, c.s(c.a1a0c.g(t, 0) - qbCint((a.g(p, 1) * c.v18d2) / 10))));
   }
   c.v0e20 = a.g(p, 1);
-  l.bp12 = c.s(areaSoma(c, c.v0e20) * a.g(p, 0) + l.bp12);
+  l.bp12 = somaArea(c, c.v0e20, a.g(p, 0), l.bp12);
   return l.bp12 >= c.v0e44;
 }
 
@@ -1028,7 +1036,7 @@ function grampoPositivoDireita(c: Comum, l: Locais, modo: ModoSistrut) {
     ) {
       continue;
     }
-    const fimApoio = c.a1926.g(t, 0) - c.v0eaa + c.a1a0c.g(t, 1);
+    const fimApoio = c.s(c.a1926.g(t, 0) - c.v0eaa + c.a1a0c.g(t, 1));
     if (fimApoio - a.g(p, 2) + c.a1b20.g(p, 0) + c.a1b20.g(p, 1) > c.v187e && umTerco) {
       if (modo === "corrigido") continue;
       // R11: GOTO L_4656F (NEXT V_0E18 de L_4634E) e RETURN no fim daquele laço
@@ -1047,7 +1055,7 @@ function grampoPositivoDireita(c: Comum, l: Locais, modo: ModoSistrut) {
       a.p(p, 3, menor(fimApoio, s(qbCint((a.g(p, 1) * c.v18d2) / 10) + c.a1a0c.g(t, 1))));
     }
     c.v0e20 = a.g(p, 1);
-    l.bp12 = s(areaSoma(c, c.v0e20) * a.g(p, 0) + l.bp12);
+    l.bp12 = somaArea(c, c.v0e20, a.g(p, 0), l.bp12);
     if (l.bp12 >= c.v0e44) return;
   }
 }
@@ -1101,6 +1109,7 @@ function novoGrampo(
       qb(c.v0e20 === c.bitola.g(2)) * c.area.g(2) -
       qb(c.v0e20 === c.bitola.g(3)) * c.area.g(3),
   );
+  if (c.v0e20 === 0) throw new ErroQB(11, "Division by zero (área do grampo 0)");
   l.bp16 = s(
     (l.bp0e / (((c.v0ec6 * c.v0eba * 1000) / c.v0f5e) ** c.k(2 / 3) * 40 * c.v0f66 * c.k(0.9))) *
       c.v0ec6 *
@@ -1246,7 +1255,7 @@ function somaNegativasNaFace(c: Comum, l: Locais, lado: 0 | 1) {
       continue;
     }
     c.v0e20 = a.g(p, 1);
-    l.bp12 = s(areaSoma(c, c.v0e20) * a.g(p, 0) + l.bp12);
+    l.bp12 = somaArea(c, c.v0e20, a.g(p, 0), l.bp12);
     l.bp0e = maior(l.bp0e, a.g(p, 1));
   }
 }

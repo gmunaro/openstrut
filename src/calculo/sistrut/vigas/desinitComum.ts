@@ -118,6 +118,10 @@ export class Comum {
     this.a1796 = new M2(s, 14, 4);
     this.a17c4 = new M2(s, 14, 2);
     this.a1540 = new M2(s, 14, 2);
+    this.a1512 = new M1(s, 9);
+    this.a1204 = new M2(s, 9, 2);
+    this.a11a8 = new M1(s, 9);
+    this.a11d6 = new M1(s, 9);
     this.a128e = new M2(s, 14, 8);
     this.a12bc = new M2(s, 14, 8);
     this.a1374 = new M2(s, 14, 9);
@@ -197,6 +201,14 @@ export class Comum {
   readonly a17c4: M2;
   /** Cortantes com o alívio junto ao apoio, t (A_1540; DESDIM.BAS:6509). */
   readonly a1540: M2;
+  /** Engastamento perfeito dos tramos com M+ > 1,01·M+ contínuo (DESDIM.BAS:5959-6006):
+   *  nº (V_1176), tramo (A_11D6), M+ (A_11A8), Ve (A_1204(i,0)); A_1512 só tem 0 (o
+   *  REDIM do DESENHO) e A_1512(0) guarda o M trocado em L_403D9 (sentinela 100). */
+  v1176 = 0;
+  readonly a11d6: M1;
+  readonly a11a8: M1;
+  readonly a1204: M2;
+  readonly a1512: M1;
 
   // ------------------------------------------------------------ dimensionamento (DESDIM.BAS:2839-3340)
   /** Armadura do tramo t (A_128E): 0 n1, 1 φ1, 2 n2, 3 φ2, 4 M+ (tm; o DESAUXDI usa),

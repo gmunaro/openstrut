@@ -19,7 +19,7 @@ import type {
 } from "../base/tipos";
 import type { Etapa } from "../../tipos";
 import { AREAS_DSP_CORRIGIDAS } from "../base/parametros";
-import { qbCint, qbStr } from "../base/f32";
+import { ErroQB, qbCint, qbStr } from "../base/f32";
 import { Comum, qb } from "./desinitComum";
 import { apoiosComNegativo, cortaBarras } from "./desinitCorte";
 import { detalhaLongitudinal, estribos, faces, portaEstribos, qbVal } from "./desinitBarras";
@@ -143,11 +143,20 @@ function espacamentoMinimo(c: Comum, bw: number, h: number) {
     if (sMin <= s0) s0 = Math.max(c.int(sMin), c.v18be);
   }
   if (s0 === c.v18c2) return c.s(s0);
-  const lista = c.v1906.split(" ").map((x) => qbVal(x));
-  for (let i = 0; i + 1 < lista.length; i++) {
-    if (s0 >= lista[i]! && s0 < lista[i + 1]!) return c.s(lista[i]!);
+  // Busca na lista "10/ 12/ ... 30/" como o original (DESDIM.BAS:3451-3468): sem o
+  // próximo espaço, INSTR dá 0 e MID$(lista, 0) é erro 5. O .DSP de fábrica e o embutido
+  // (DESENHO.BAS:4951) não terminam com espaço: s fora de [10, 30) quebra o original.
+  const lista = c.v1906;
+  const instr = (de: number) => lista.indexOf(" ", de) + 1;
+  let pos = 1;
+  let atual = qbVal(lista);
+  for (;;) {
+    const k = instr(pos);
+    if (k === 0) throw new ErroQB(5, "Illegal function call (MID$ da lista de espaçamentos)");
+    if (s0 < qbVal(lista.slice(k - 1)) && s0 >= atual) return c.s(atual);
+    pos = k;
+    atual = qbVal(lista.slice(pos - 1));
   }
-  return c.s(s0);
 }
 
 /** Monta o COMMON (`Comum`) com a viga, a análise, o dimensionamento, a forma e o .DSP,
@@ -205,6 +214,27 @@ export function montaComum(
     c.a1626.p(t, tr?.mPositivo ?? 0);
     c.a17c4.p(t, 0, tr?.ve ?? 0);
     c.a17c4.p(t, 1, c.a16de.g(t - 1));
+  }
+  // engastamento perfeito (A_11D6, A_11A8, A_1204(i,0); DESDIM.BAS:5965-6006): Ve =
+  // Ve isostático + (M dir. − M esq.)/L, com os M de engastamento perfeito, mais o termo
+  // dos momentos externos com acidentais "N"
+  c.v1176 = Math.min(9, analise.engastamentoPerfeito.length);
+  for (let i = 1; i <= c.v1176; i++) {
+    const ep = analise.engastamentoPerfeito[i - 1]!;
+    const t = ep.tramo;
+    const vao = c.a1006.g(t);
+    const tr = analise.tramos[t - 1];
+    const veIso = (tr?.ve ?? 0) - (c.a16de.g(t) - c.a16de.g(t - 1)) / vao;
+    let ve = veIso + (ep.mDireito - ep.mEsquerdo) / vao;
+    if (c.v0e74 === "S" && c.v0e70 === "N") {
+      const e = c.v0de8 === 0 && c.v0de0 === 0 && t === 1 ? 0 : 1;
+      const d = c.v0dec === 0 && c.v0de4 === 0 && t === n ? 0 : 1;
+      if (t === 1) ve = ((qb(d === 0) + (qb(d === 1) * 3) / 2) * c.a1148.g(0)) / vao + ve;
+      if (t === n) ve = ve - ((qb(e === 0) + (qb(e === 1) * 3) / 2) * c.a1148.g(1)) / vao;
+    }
+    c.a11d6.p(i, t);
+    c.a11a8.p(i, ep.mPositivo);
+    c.a1204.p(i, 0, ve);
   }
   if (analise.balancoEsquerdo) c.a1654.p(0, 1, analise.balancoEsquerdo.carga);
   if (analise.balancoDireito) c.a1654.p(n + 1, 0, analise.balancoDireito.carga);
@@ -388,12 +418,17 @@ function montaDimensionamento(
   const dimT = (t: number): TramoDimensionado | undefined =>
     t === 0 ? dim.balancoEsquerdo : t === n + 1 ? dim.balancoDireito : dim.tramos[t - 1];
   const fimT = n + c.v0de4;
+  // V_0E34 e V_0ED2 não são zerados no DESDIM (L_16976, L_1661C): ficam com o valor do
+  // COMMON. Na primeira viga de uma sessão o DESENHO (iniciado por RUN, sem COMMON) passa
+  // 0; numa viga seguinte do mesmo processamento vale o que DESINIT/DESIMP deixaram, que
+  // depende do caminho percorrido. O contrato detalha uma viga por vez: 0.
   let v0e34 = 0;
   c.v0ece = 0;
   for (let t = 1 - c.v0de0; t <= fimT; t++) {
     const cis = dimT(t)?.cisalhamento;
     if (!cis) continue;
     const asw = Math.max(cis.aswEsquerda, cis.aswDireita);
+    if (asw === 0) throw new ErroQB(11, "Division by zero (Asw 0 na escolha do estribo)");
     const bw = c.a1232.g(t, 0);
     const ramos = bw > c.v0f3e ? (bw > c.v0f42 ? 3 : 2) : 1;
     for (let i = 5; i >= 0; i--) {
@@ -401,7 +436,7 @@ function montaDimensionamento(
     }
     if (v0e34 > c.v0ece) c.v0ece = v0e34;
   }
-  c.v0ed2 = c.v0ece;
+  c.v0ed2 = 0;
   for (let r = 5; r >= 0; r--) if (c.a142c.g(r, 1) === c.v0ece) c.v0ed2 = c.a142c.g(r, 0);
   for (let t = 1 - c.v0de0; t <= fimT; t++) {
     const cis = dimT(t)?.cisalhamento;

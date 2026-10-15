@@ -30,6 +30,10 @@ export function apoiosComNegativo(c: Comum) {
   return { ini, fim };
 }
 
+// Balanço esquerdo (t = 0): o original aplica a parcial e sai quando A_1006(0) − D(i+1)
+// ≥ x (`IF NOT (A_1006(0) − L_BP0E < V_0E30) THEN GOTO <parcial>`, DESDIM.BAS:4430,
+// 4353, 5719), com x medido da ponta: M = p·x²/2 + F·x e V = p·x numa divisão só.
+
 /** −M(x) no tramo V_0E14 com o M do apoio esquerdo e o Ve do início do tramo (A_17C4) e
  *  as cargas do tramo; no balanço esquerdo, só as cargas. Grava V_1886 (S_2303D,
  *  DESDIM.BAS:4410-4456). */
@@ -48,7 +52,7 @@ export function momentoNoTramo(c: Comum) {
       const p = c.a1062.g(i);
       const f = c.a10ec.g(i);
       const lb = c.a1006.g(0);
-      if (lb - l0 < x) {
+      if (!(lb - l0 < x)) {
         c.v1886 = s(((d - (lb - x)) ** 2 * p) / 2 + c.v1886 + (d - (lb - x)) * f);
         return;
       }
@@ -92,7 +96,7 @@ export function momentoNegativoNoTramo(c: Comum) {
       const p = c.a1062.g(i);
       const f = c.a10ec.g(i);
       const lb = c.a1006.g(0);
-      if (lb - l0 < x) {
+      if (!(lb - l0 < x)) {
         c.v1882 = s(((d - (lb - x)) ** 2 * p) / 2 + c.v1882 + (d - (lb - x)) * f);
         return;
       }
@@ -249,7 +253,9 @@ function momentoLimite(c: Comum, bw: number, hw: number, bf: number, hf: number)
 
 /** Corte das barras positivas de cada tramo (L_403D9, DESDIM.BAS:4998-5049). A troca do
  *  M do apoio e do Ve pelo engastamento perfeito (DESDIM.BAS:5011-5032) não muda o
- *  resultado: o diagrama usa A_17C4, que a troca não toca; por isso não foi portada. */
+ *  diagrama (que usa A_17C4), mas o original só desfaz a troca se o M guardado em
+ *  A_1512(0) for diferente do sentinela 100: com M do apoio = 100,0 tm o M fica 0 e o Ve o
+ *  do engastamento, e isso chega ao corte das negativas. */
 function cortaPositivas(c: Comum) {
   const s = c.s;
   const nT = c.v0ddc;
@@ -259,9 +265,23 @@ function cortaPositivas(c: Comum) {
     if (c.a128e.g(t, 3) > 0) {
       c.a128e.p(t, 5, c.a128e.g(t, 2) * c.areaDaBitola(c.a128e.g(t, 3)) + c.a128e.g(t, 5));
     }
+    c.a1512.p(0, 100);
+    for (let i = 1; i <= c.v1176; i++) {
+      if (c.a11a8.g(i) > c.a1768.g(t) * c.k(1.01) && c.a11d6.g(i) === t) {
+        c.a1512.p(0, c.a16de.g(t - 1));
+        c.a1204.p(0, 0, c.a1796.g(t, 0));
+        c.a16de.p(t - 1, c.a1512.g(i));
+        c.a1796.p(t, 0, c.a1204.g(i, 0));
+        break;
+      }
+    }
     diagrama(c, false);
     gruposPositivos(c);
     ajustaPositivos(c);
+    if (c.a1512.g(0) !== 100) {
+      c.a16de.p(t - 1, c.a1512.g(0));
+      c.a1796.p(t, 0, c.a1204.g(0, 0));
+    }
     if (c.a13a2[t]!.length > 0) {
       c.v0e2c = momentoLimite(
         c,
@@ -588,7 +608,7 @@ function cortanteNoTramo(c: Comum) {
       let l0 = 0;
       if (c.a0faa.g(0) > i) l0 = c.a10be.g(i + 1);
       const lb = c.a1006.g(0);
-      if (lb - l0 < x) {
+      if (!(lb - l0 < x)) {
         c.v0e38 = s((c.a10be.g(i) - (lb - x)) * c.a1062.g(i) + c.v0e38);
         if (c.a10be.g(i) !== lb - x) c.v0e38 = s(c.a10ec.g(i) + c.v0e38);
         return;
