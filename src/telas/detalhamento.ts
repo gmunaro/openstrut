@@ -227,7 +227,8 @@ const asEfetiva = (b: Barra) => (areaBarra(b.phi) * 100) / b.espacamento;
  *   - contato parcial, ou barra que não atende: as duas detalham (sobra aço no
  *     trecho comum, mas não falta).
  *   A laje com o bordo oposto livre (balanço) nunca é marcada: a negativa dela
- *   vai até a ponta, e a da vizinha não.
+ *   vai até a ponta, e a da vizinha não. Nos bordos que coincidem, o balanço
+ *   detalha (com a maior As das duas) e a vizinha é marcada, qualquer que seja o h.
  */
 export function entradasDetalhamentoLajes(
   lajes: readonly ResultadoLaje[],
@@ -287,9 +288,13 @@ export function entradasDetalhamentoLajes(
         if (cobreI && cobreJ) {
           // bordos coincidentes: cada par é visto duas vezes; decide na primeira
           if (j < i) continue;
-          const iDetalha = ni.h <= nj.h;
+          const bi = balanco(i, k);
+          const bj = balanco(j, c.bordoVizinha);
+          // dois balanços frente a frente: cada um leva a sua até a própria ponta
+          if (bi && bj) continue;
+          // o balanço detalha (a negativa dele vai até a ponta); senão, a de menor h
+          const iDetalha = bi || (!bj && ni.h <= nj.h);
           const [d, kd, o, ko] = iDetalha ? [i, k, j, c.bordoVizinha] : [j, c.bordoVizinha, i, k];
-          if (balanco(o, ko)) continue;
           const [nd, no] = iDetalha ? [ni, nj] : [nj, ni];
           naVizinha.add(`${o}|${ko}`);
           if (no.as > nd.as || asEfetiva(no.barra) > asEfetiva(nd.barra))
