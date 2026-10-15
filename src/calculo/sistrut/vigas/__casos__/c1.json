@@ -1,0 +1,1412 @@
+{
+  "caso": "c1",
+  "run": "C:/tmp/oraculo/runs/retrad_viga_c1-20261015-065711",
+  "entradaDe": "VA1: roteiro C:/tmp/oraculo/casos/retrad_viga_c1.txt (acidental gerada 25 %: Pac = 0,25·P, Fac = 0,25·F); opção 7: obra/E2E.VIG do run (V2 regravado com o apoio 0 desconsiderado)",
+  "descricao": "VIGA com redução 85 %, acidentais S geradas 25 %, momentos externos S, reação máxima. Opção 3 da VA1 (2 tramos + balanço à direita, Mext 0 e -1,5); opção 7 na E2E, registros 2/4 A 5, multiplicador 50 %.",
+  "parametros": {
+    "reducaoNegativos": 0.85,
+    "acidentais": true,
+    "acidentalGerada": true,
+    "porcentagemAcidentalGerada": 25,
+    "momentosExternos": true,
+    "reacaoNoPilar": "maxima",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 50
+  },
+  "vigas": [
+    {
+      "nome": "VA1",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 2,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.5,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1.5,
+              "d": 2,
+              "f": 1,
+              "pAcidental": 0.375,
+              "fAcidental": 0.25
+            },
+            {
+              "p": 1.5,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.375,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "balancoDireito": {
+        "vao": 1.2,
+        "inercia": 1,
+        "divisoes": [
+          {
+            "p": 1,
+            "d": 1.2,
+            "f": 0.5,
+            "pAcidental": 0.25,
+            "fAcidental": 0.125
+          }
+        ]
+      },
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, -1.5],
+      "pilares": [null, null, null]
+    }
+  ],
+  "vigasRep": [
+    {
+      "nome": "V2",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 1.3879493474960327,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.38038480281829834,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 1.3879491090774536,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.38038474321365356,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": [null, "P5", "P4"]
+    },
+    {
+      "nome": "V4",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.000059962272644,
+          "divisoes": [
+            {
+              "p": 0.589230477809906,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.13176915049552917,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.0000699758529663,
+          "divisoes": [
+            {
+              "p": 0.589230477809906,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.13176915049552917,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P1", "P6", "P7"]
+    },
+    {
+      "nome": "V5",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 1.671539068222046,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.45646172761917114,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.0000799894332886,
+          "divisoes": [
+            {
+              "p": 1.6715391874313354,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.45646175742149353,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P2", "P5", "P8"]
+    }
+  ],
+  "valores": [
+    {
+      "id": "VA1.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:24"
+    },
+    {
+      "id": "VA1.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "4.18",
+      "fonte": "impressora.prn:24"
+    },
+    {
+      "id": "VA1.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "VA1.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "4.31",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "VA1.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "3.06",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "VA1.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-4.12",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "VA1.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "10.02",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "VA1.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-4.18",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "VA1.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "10.13",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "VA1.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "6.88",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "VA1.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-1.32",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "VA1.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "4.50",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "VA1.a2.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-2.82",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "VA1.a2.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "5.14",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "VA1.a2.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "3.19",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "VA1.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "18.70",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "VA1.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-4.17",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "VA1.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "4.18",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "VA1.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.09",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "VA1.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "4.36",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "VA1.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "5.82",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "VA1.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "9.83",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "VA1.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "4.31",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VA1.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.16",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VA1.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "4.65",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VA1.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "5.84",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VA1.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "10.89",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VA1.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "4.20",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VA1.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.13",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VA1.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "1.29",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VA1.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VA1.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "0.95",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VA1.t2.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "4.30",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "VA1.t2.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.08",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "VA1.t2.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "1.79",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "VA1.t2.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "3.44",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "VA1.t2.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "1.93",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "VA1.b3.carga",
+      "grandeza": "carga total do balanço",
+      "unidade": "t",
+      "impresso": "1.70",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "VA1.MEP2",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-2.5",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "VA1.ep2.Ve",
+      "grandeza": "Ve no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "3.50",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "VA1.ep2.x",
+      "grandeza": "x no engastamento perfeito",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "VA1.ep2.M+",
+      "grandeza": "M+ no engastamento perfeito",
+      "unidade": "tm",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "VA1.ep2.Vd",
+      "grandeza": "Vd no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "3.50",
+      "fonte": "impressora.prn:46"
+    },
+    {
+      "id": "V2.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/030_r12_v2.txt:16"
+    },
+    {
+      "id": "V2.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.19",
+      "fonte": "telas/030_r12_v2.txt:16"
+    },
+    {
+      "id": "V2.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/030_r12_v2.txt:17"
+    },
+    {
+      "id": "V2.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.27",
+      "fonte": "telas/030_r12_v2.txt:17"
+    },
+    {
+      "id": "V2.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "1.51",
+      "fonte": "telas/030_r12_v2.txt:17"
+    },
+    {
+      "id": "V2.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-2.36",
+      "fonte": "telas/030_r12_v2.txt:18"
+    },
+    {
+      "id": "V2.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "6.73",
+      "fonte": "telas/030_r12_v2.txt:18"
+    },
+    {
+      "id": "V2.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-2.36",
+      "fonte": "telas/030_r12_v2.txt:19"
+    },
+    {
+      "id": "V2.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "6.73",
+      "fonte": "telas/030_r12_v2.txt:19"
+    },
+    {
+      "id": "V2.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "4.89",
+      "fonte": "telas/030_r12_v2.txt:19"
+    },
+    {
+      "id": "V2.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/030_r12_v2.txt:20"
+    },
+    {
+      "id": "V2.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.19",
+      "fonte": "telas/030_r12_v2.txt:20"
+    },
+    {
+      "id": "V2.a2.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/030_r12_v2.txt:21"
+    },
+    {
+      "id": "V2.a2.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.27",
+      "fonte": "telas/030_r12_v2.txt:21"
+    },
+    {
+      "id": "V2.a2.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "1.51",
+      "fonte": "telas/030_r12_v2.txt:21"
+    },
+    {
+      "id": "V2.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "11.10",
+      "fonte": "telas/031_r13_v2.txt:9"
+    },
+    {
+      "id": "V2.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.86",
+      "fonte": "telas/031_r13_v2.txt:14"
+    },
+    {
+      "id": "V2.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "2.19",
+      "fonte": "telas/031_r13_v2.txt:15"
+    },
+    {
+      "id": "V2.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "1.58",
+      "fonte": "telas/031_r13_v2.txt:15"
+    },
+    {
+      "id": "V2.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "1.72",
+      "fonte": "telas/031_r13_v2.txt:15"
+    },
+    {
+      "id": "V2.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "3.37",
+      "fonte": "telas/031_r13_v2.txt:15"
+    },
+    {
+      "id": "V2.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "2.28",
+      "fonte": "telas/031_r13_v2.txt:15"
+    },
+    {
+      "id": "V2.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.27",
+      "fonte": "telas/031_r13_v2.txt:16"
+    },
+    {
+      "id": "V2.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "1.63",
+      "fonte": "telas/031_r13_v2.txt:16"
+    },
+    {
+      "id": "V2.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "1.85",
+      "fonte": "telas/031_r13_v2.txt:16"
+    },
+    {
+      "id": "V2.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "3.37",
+      "fonte": "telas/031_r13_v2.txt:16"
+    },
+    {
+      "id": "V2.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "2.59",
+      "fonte": "telas/031_r13_v2.txt:16"
+    },
+    {
+      "id": "V2.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "3.37",
+      "fonte": "telas/031_r13_v2.txt:17"
+    },
+    {
+      "id": "V2.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.42",
+      "fonte": "telas/031_r13_v2.txt:17"
+    },
+    {
+      "id": "V2.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "1.72",
+      "fonte": "telas/031_r13_v2.txt:17"
+    },
+    {
+      "id": "V2.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.19",
+      "fonte": "telas/031_r13_v2.txt:17"
+    },
+    {
+      "id": "V2.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "2.28",
+      "fonte": "telas/031_r13_v2.txt:17"
+    },
+    {
+      "id": "V2.t2.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "3.37",
+      "fonte": "telas/031_r13_v2.txt:18"
+    },
+    {
+      "id": "V2.t2.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.37",
+      "fonte": "telas/031_r13_v2.txt:18"
+    },
+    {
+      "id": "V2.t2.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "1.85",
+      "fonte": "telas/031_r13_v2.txt:18"
+    },
+    {
+      "id": "V2.t2.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.27",
+      "fonte": "telas/031_r13_v2.txt:18"
+    },
+    {
+      "id": "V2.t2.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "2.59",
+      "fonte": "telas/031_r13_v2.txt:18"
+    },
+    {
+      "id": "V2.MEP2",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.86",
+      "fonte": "telas/031_r13_v2.txt:19"
+    },
+    {
+      "id": "V4.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/032_r14_v4.txt:16"
+    },
+    {
+      "id": "V4.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "1.16",
+      "fonte": "telas/032_r14_v4.txt:16"
+    },
+    {
+      "id": "V4.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/032_r14_v4.txt:17"
+    },
+    {
+      "id": "V4.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "1.20",
+      "fonte": "telas/032_r14_v4.txt:17"
+    },
+    {
+      "id": "V4.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "0.87",
+      "fonte": "telas/032_r14_v4.txt:17"
+    },
+    {
+      "id": "V4.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-1.57",
+      "fonte": "telas/032_r14_v4.txt:18"
+    },
+    {
+      "id": "V4.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "3.57",
+      "fonte": "telas/032_r14_v4.txt:18"
+    },
+    {
+      "id": "V4.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-1.57",
+      "fonte": "telas/032_r14_v4.txt:19"
+    },
+    {
+      "id": "V4.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "3.57",
+      "fonte": "telas/032_r14_v4.txt:19"
+    },
+    {
+      "id": "V4.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "2.77",
+      "fonte": "telas/032_r14_v4.txt:19"
+    },
+    {
+      "id": "V4.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/032_r14_v4.txt:20"
+    },
+    {
+      "id": "V4.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "1.16",
+      "fonte": "telas/032_r14_v4.txt:20"
+    },
+    {
+      "id": "V4.a2.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/032_r14_v4.txt:21"
+    },
+    {
+      "id": "V4.a2.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "1.20",
+      "fonte": "telas/032_r14_v4.txt:21"
+    },
+    {
+      "id": "V4.a2.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "0.87",
+      "fonte": "telas/032_r14_v4.txt:21"
+    },
+    {
+      "id": "V4.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "5.89",
+      "fonte": "telas/033_r15_v4.txt:9"
+    },
+    {
+      "id": "V4.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.23",
+      "fonte": "telas/033_r15_v4.txt:14"
+    },
+    {
+      "id": "V4.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "1.16",
+      "fonte": "telas/033_r15_v4.txt:15"
+    },
+    {
+      "id": "V4.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "1.97",
+      "fonte": "telas/033_r15_v4.txt:15"
+    },
+    {
+      "id": "V4.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "1.14",
+      "fonte": "telas/033_r15_v4.txt:15"
+    },
+    {
+      "id": "V4.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "1.79",
+      "fonte": "telas/033_r15_v4.txt:15"
+    },
+    {
+      "id": "V4.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "2.37",
+      "fonte": "telas/033_r15_v4.txt:15"
+    },
+    {
+      "id": "V4.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "1.20",
+      "fonte": "telas/033_r15_v4.txt:16"
+    },
+    {
+      "id": "V4.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.03",
+      "fonte": "telas/033_r15_v4.txt:16"
+    },
+    {
+      "id": "V4.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "1.21",
+      "fonte": "telas/033_r15_v4.txt:16"
+    },
+    {
+      "id": "V4.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "1.79",
+      "fonte": "telas/033_r15_v4.txt:16"
+    },
+    {
+      "id": "V4.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "2.63",
+      "fonte": "telas/033_r15_v4.txt:16"
+    },
+    {
+      "id": "V4.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "1.79",
+      "fonte": "telas/033_r15_v4.txt:17"
+    },
+    {
+      "id": "V4.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "3.03",
+      "fonte": "telas/033_r15_v4.txt:17"
+    },
+    {
+      "id": "V4.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "1.14",
+      "fonte": "telas/033_r15_v4.txt:17"
+    },
+    {
+      "id": "V4.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "1.16",
+      "fonte": "telas/033_r15_v4.txt:17"
+    },
+    {
+      "id": "V4.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "2.37",
+      "fonte": "telas/033_r15_v4.txt:17"
+    },
+    {
+      "id": "V4.t2.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "1.79",
+      "fonte": "telas/033_r15_v4.txt:18"
+    },
+    {
+      "id": "V4.t2.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.97",
+      "fonte": "telas/033_r15_v4.txt:18"
+    },
+    {
+      "id": "V4.t2.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "1.21",
+      "fonte": "telas/033_r15_v4.txt:18"
+    },
+    {
+      "id": "V4.t2.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "1.20",
+      "fonte": "telas/033_r15_v4.txt:18"
+    },
+    {
+      "id": "V4.t2.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "2.63",
+      "fonte": "telas/033_r15_v4.txt:18"
+    },
+    {
+      "id": "V4.MEP2",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.23",
+      "fonte": "telas/033_r15_v4.txt:19"
+    },
+    {
+      "id": "V5.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/034_r16_v5.txt:16"
+    },
+    {
+      "id": "V5.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "3.29",
+      "fonte": "telas/034_r16_v5.txt:16"
+    },
+    {
+      "id": "V5.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/034_r16_v5.txt:17"
+    },
+    {
+      "id": "V5.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "3.41",
+      "fonte": "telas/034_r16_v5.txt:17"
+    },
+    {
+      "id": "V5.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "2.27",
+      "fonte": "telas/034_r16_v5.txt:17"
+    },
+    {
+      "id": "V5.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-4.44",
+      "fonte": "telas/034_r16_v5.txt:18"
+    },
+    {
+      "id": "V5.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "10.13",
+      "fonte": "telas/034_r16_v5.txt:18"
+    },
+    {
+      "id": "V5.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-4.44",
+      "fonte": "telas/034_r16_v5.txt:19"
+    },
+    {
+      "id": "V5.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "10.13",
+      "fonte": "telas/034_r16_v5.txt:19"
+    },
+    {
+      "id": "V5.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "7.37",
+      "fonte": "telas/034_r16_v5.txt:19"
+    },
+    {
+      "id": "V5.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/034_r16_v5.txt:20"
+    },
+    {
+      "id": "V5.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "3.29",
+      "fonte": "telas/034_r16_v5.txt:20"
+    },
+    {
+      "id": "V5.a2.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/034_r16_v5.txt:21"
+    },
+    {
+      "id": "V5.a2.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "3.41",
+      "fonte": "telas/034_r16_v5.txt:21"
+    },
+    {
+      "id": "V5.a2.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "2.27",
+      "fonte": "telas/034_r16_v5.txt:21"
+    },
+    {
+      "id": "V5.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "16.72",
+      "fonte": "telas/035_r17_v5.txt:9"
+    },
+    {
+      "id": "V5.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-3.49",
+      "fonte": "telas/035_r17_v5.txt:14"
+    },
+    {
+      "id": "V5.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "3.29",
+      "fonte": "telas/035_r17_v5.txt:15"
+    },
+    {
+      "id": "V5.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "1.97",
+      "fonte": "telas/035_r17_v5.txt:15"
+    },
+    {
+      "id": "V5.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "3.24",
+      "fonte": "telas/035_r17_v5.txt:15"
+    },
+    {
+      "id": "V5.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "5.07",
+      "fonte": "telas/035_r17_v5.txt:15"
+    },
+    {
+      "id": "V5.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "6.72",
+      "fonte": "telas/035_r17_v5.txt:15"
+    },
+    {
+      "id": "V5.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "3.41",
+      "fonte": "telas/035_r17_v5.txt:16"
+    },
+    {
+      "id": "V5.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.04",
+      "fonte": "telas/035_r17_v5.txt:16"
+    },
+    {
+      "id": "V5.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "3.48",
+      "fonte": "telas/035_r17_v5.txt:16"
+    },
+    {
+      "id": "V5.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "5.07",
+      "fonte": "telas/035_r17_v5.txt:16"
+    },
+    {
+      "id": "V5.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "7.62",
+      "fonte": "telas/035_r17_v5.txt:16"
+    },
+    {
+      "id": "V5.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "5.07",
+      "fonte": "telas/035_r17_v5.txt:17"
+    },
+    {
+      "id": "V5.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "3.03",
+      "fonte": "telas/035_r17_v5.txt:17"
+    },
+    {
+      "id": "V5.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "3.24",
+      "fonte": "telas/035_r17_v5.txt:17"
+    },
+    {
+      "id": "V5.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "3.29",
+      "fonte": "telas/035_r17_v5.txt:17"
+    },
+    {
+      "id": "V5.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "6.72",
+      "fonte": "telas/035_r17_v5.txt:17"
+    },
+    {
+      "id": "V5.t2.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "5.07",
+      "fonte": "telas/035_r17_v5.txt:18"
+    },
+    {
+      "id": "V5.t2.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.96",
+      "fonte": "telas/035_r17_v5.txt:18"
+    },
+    {
+      "id": "V5.t2.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "3.48",
+      "fonte": "telas/035_r17_v5.txt:18"
+    },
+    {
+      "id": "V5.t2.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "3.41",
+      "fonte": "telas/035_r17_v5.txt:18"
+    },
+    {
+      "id": "V5.t2.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "7.62",
+      "fonte": "telas/035_r17_v5.txt:18"
+    },
+    {
+      "id": "V5.MEP2",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-3.49",
+      "fonte": "telas/035_r17_v5.txt:19"
+    }
+  ],
+  "rep": {
+    "cabecalho": {
+      "obra": "E2E",
+      "registros": "2/4 A 5",
+      "data": "10-14-2026",
+      "hora": "12:00"
+    },
+    "linhas": [
+      {
+        "texto": "SISTRUT Software e Tecnologia s/c Ltda",
+        "fonte": "obra/E2E.REP:1"
+      },
+      {
+        "texto": "Versao 4.0    Abril 1990",
+        "fonte": "obra/E2E.REP:2"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/E2E.REP:3"
+      },
+      {
+        "texto": " SOMATORIA DE REACOES EM PILARES",
+        "fonte": "obra/E2E.REP:4"
+      },
+      {
+        "texto": " OBRA E2E",
+        "fonte": "obra/E2E.REP:5"
+      },
+      {
+        "texto": " GERADO EM 10-14-2026   12:00",
+        "fonte": "obra/E2E.REP:6"
+      },
+      {
+        "texto": " REGISTROS 2/4 A 5",
+        "fonte": "obra/E2E.REP:7"
+      },
+      {
+        "texto": " Cargas Totais e Acidentais  Momentos Externos  Reacoes Maximas",
+        "fonte": "obra/E2E.REP:8"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/E2E.REP:9"
+      },
+      {
+        "texto": "P   5        16.86",
+        "fonte": "obra/E2E.REP:10"
+      },
+      {
+        "texto": "*6.73 (V2) + 10.13 (V5) + ",
+        "fonte": "obra/E2E.REP:11"
+      },
+      {
+        "texto": ">",
+        "fonte": "obra/E2E.REP:12"
+      },
+      {
+        "texto": "P   4         2.26",
+        "fonte": "obra/E2E.REP:13"
+      },
+      {
+        "texto": "*2.26 (V2) + ",
+        "fonte": "obra/E2E.REP:14"
+      },
+      {
+        "texto": ">-.92@2 [4]  (V2) > ",
+        "fonte": "obra/E2E.REP:15"
+      },
+      {
+        "texto": "P   1         1.19",
+        "fonte": "obra/E2E.REP:16"
+      },
+      {
+        "texto": "*1.19 (V4) + ",
+        "fonte": "obra/E2E.REP:17"
+      },
+      {
+        "texto": ">-.61@1 [5]  (V4) > ",
+        "fonte": "obra/E2E.REP:18"
+      },
+      {
+        "texto": "P   6         3.57",
+        "fonte": "obra/E2E.REP:19"
+      },
+      {
+        "texto": "*3.57 (V4) + ",
+        "fonte": "obra/E2E.REP:20"
+      },
+      {
+        "texto": ">",
+        "fonte": "obra/E2E.REP:21"
+      },
+      {
+        "texto": "P   7         1.19",
+        "fonte": "obra/E2E.REP:22"
+      },
+      {
+        "texto": "*1.19 (V4) + ",
+        "fonte": "obra/E2E.REP:23"
+      },
+      {
+        "texto": ">-.61@2 [5]  (V4) > ",
+        "fonte": "obra/E2E.REP:24"
+      },
+      {
+        "texto": "P   2         3.41",
+        "fonte": "obra/E2E.REP:25"
+      },
+      {
+        "texto": "*3.41 (V5) + ",
+        "fonte": "obra/E2E.REP:26"
+      },
+      {
+        "texto": ">-1.74@1 [5]  (V5) > ",
+        "fonte": "obra/E2E.REP:27"
+      },
+      {
+        "texto": "P   8         3.41",
+        "fonte": "obra/E2E.REP:28"
+      },
+      {
+        "texto": "*3.41 (V5) + ",
+        "fonte": "obra/E2E.REP:29"
+      },
+      {
+        "texto": ">-1.74@2 [5]  (V5) > ",
+        "fonte": "obra/E2E.REP:30"
+      }
+    ]
+  }
+}

@@ -1,0 +1,316 @@
+{
+  "caso": "a1",
+  "run": "C:/tmp/oraculo/runs/retrad_viga_a1-20261015-065711",
+  "entradaDe": "obra/NOVA.VIG do run (V10 e V11 digitadas na opção 1, roteiro C:/tmp/oraculo/casos/retrad_viga_a1.txt)",
+  "descricao": "VIGA opção 2 na tela: V10 (1 tramo de 6 m) e V11 (2 tramos engastados nas duas pontas, concentrada de 2 t); VIGA.INI de fábrica.",
+  "parametros": {
+    "reducaoNegativos": 1,
+    "acidentais": false,
+    "acidentalGerada": false,
+    "porcentagemAcidentalGerada": 30,
+    "momentosExternos": false,
+    "reacaoNoPilar": "estatica",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 100
+  },
+  "vigas": [
+    {
+      "nome": "V10",
+      "tramos": [
+        {
+          "vao": 6,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 2,
+              "d": 6,
+              "f": 0,
+              "pAcidental": 0,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": [null, null]
+    },
+    {
+      "nome": "V11",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1.5,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 2.5,
+              "f": 2,
+              "pAcidental": 0,
+              "fAcidental": 0
+            },
+            {
+              "p": 1,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": true,
+      "engasteDireito": true,
+      "momentosExternos": [0, 0],
+      "pilares": [null, null, null]
+    }
+  ],
+  "valores": [
+    {
+      "id": "V10.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/026_q04_v10.txt:10"
+    },
+    {
+      "id": "V10.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "telas/026_q04_v10.txt:10"
+    },
+    {
+      "id": "V10.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "telas/026_q04_v10.txt:11"
+    },
+    {
+      "id": "V10.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "telas/026_q04_v10.txt:11"
+    },
+    {
+      "id": "V10.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "12.00",
+      "fonte": "telas/026_q04_v10.txt:13"
+    },
+    {
+      "id": "V10.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-6",
+      "fonte": "telas/026_q04_v10.txt:17"
+    },
+    {
+      "id": "V10.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "telas/026_q04_v10.txt:18"
+    },
+    {
+      "id": "V10.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "3.00",
+      "fonte": "telas/026_q04_v10.txt:18"
+    },
+    {
+      "id": "V10.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "9.00",
+      "fonte": "telas/026_q04_v10.txt:18"
+    },
+    {
+      "id": "V10.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "telas/026_q04_v10.txt:18"
+    },
+    {
+      "id": "V10.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "33.75",
+      "fonte": "telas/026_q04_v10.txt:18"
+    },
+    {
+      "id": "V10.MEP1",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-6",
+      "fonte": "telas/026_q04_v10.txt:19"
+    },
+    {
+      "id": "V11.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-1.63",
+      "fonte": "telas/029_q07_v11.txt:7"
+    },
+    {
+      "id": "V11.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.72",
+      "fonte": "telas/029_q07_v11.txt:7"
+    },
+    {
+      "id": "V11.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-2.74",
+      "fonte": "telas/029_q07_v11.txt:8"
+    },
+    {
+      "id": "V11.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "6.60",
+      "fonte": "telas/029_q07_v11.txt:8"
+    },
+    {
+      "id": "V11.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-3.63",
+      "fonte": "telas/029_q07_v11.txt:9"
+    },
+    {
+      "id": "V11.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "3.68",
+      "fonte": "telas/029_q07_v11.txt:9"
+    },
+    {
+      "id": "V11.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "13.00",
+      "fonte": "telas/029_q07_v11.txt:11"
+    },
+    {
+      "id": "V11.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "2.72",
+      "fonte": "telas/029_q07_v11.txt:15"
+    },
+    {
+      "id": "V11.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "1.81",
+      "fonte": "telas/029_q07_v11.txt:15"
+    },
+    {
+      "id": "V11.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "0.84",
+      "fonte": "telas/029_q07_v11.txt:15"
+    },
+    {
+      "id": "V11.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "3.28",
+      "fonte": "telas/029_q07_v11.txt:15"
+    },
+    {
+      "id": "V11.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "0.65",
+      "fonte": "telas/029_q07_v11.txt:15"
+    },
+    {
+      "id": "V11.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "3.32",
+      "fonte": "telas/029_q07_v11.txt:16"
+    },
+    {
+      "id": "V11.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "telas/029_q07_v11.txt:16"
+    },
+    {
+      "id": "V11.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "2.44",
+      "fonte": "telas/029_q07_v11.txt:16"
+    },
+    {
+      "id": "V11.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "3.68",
+      "fonte": "telas/029_q07_v11.txt:16"
+    },
+    {
+      "id": "V11.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "3.39",
+      "fonte": "telas/029_q07_v11.txt:16"
+    },
+    {
+      "id": "V11.ep1.Ve",
+      "grandeza": "Ve no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "3.00",
+      "fonte": "telas/029_q07_v11.txt:20"
+    },
+    {
+      "id": "V11.ep1.x",
+      "grandeza": "x no engastamento perfeito",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "telas/029_q07_v11.txt:20"
+    },
+    {
+      "id": "V11.ep1.M+",
+      "grandeza": "M+ no engastamento perfeito",
+      "unidade": "tm",
+      "impresso": "1.00",
+      "fonte": "telas/029_q07_v11.txt:20"
+    },
+    {
+      "id": "V11.ep1.Vd",
+      "grandeza": "Vd no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "3.00",
+      "fonte": "telas/029_q07_v11.txt:20"
+    }
+  ]
+}
