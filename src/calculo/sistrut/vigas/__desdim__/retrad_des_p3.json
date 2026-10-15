@@ -1,0 +1,18 @@
+{
+  "caso": "retrad_des_p3",
+  "run": "C:/tmp/oraculo/runs/retrad_des_p3-20261015-082945",
+  "programa": "DESENHO",
+  "descricao": "Sonda p3: entrada da seção 20x50 da V1 e Enter na largura do apoio. Só dados de entrada; nenhum número do DESDIM.",
+  "entrada": {
+    "roteiro": "dist/tests/retraducao/desenho/p3.sufixo.txt"
+  },
+  "valores": [
+    {
+      "id": "V1.secao",
+      "grandeza": "seção predominante dos tramos Bw,Hw,Bf,Hf (cm)",
+      "unidade": "cm",
+      "impresso": "20,50,0,0",
+      "fonte": "telas/001_e01.txt:13"
+    }
+  ]
+}
