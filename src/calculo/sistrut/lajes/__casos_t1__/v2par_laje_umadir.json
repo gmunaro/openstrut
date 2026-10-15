@@ -1,0 +1,378 @@
+{
+  "caso": "v2par_laje_umadir",
+  "run": "C:/tmp/oraculo/runs/v2par_laje_umadir-20261015-162808",
+  "descricao": "Duas lajes 3 × 7,5 m (ly/lx = 2,5 > 2, 'armada em uma direção' no critério usual) contínuas no lado maior. O original não tem regra de uma direção: usa o mesmo padrão de charneiras com μ da tabela (0,55).",
+  "obra": "C:/tmp/oraculo/runs/v2par_laje_umadir-20261015-162808/obra/UMD.LAJ",
+  "parametros": {},
+  "lajes": [
+    {
+      "nome": "L1",
+      "vertices": [
+        [0, 0],
+        [0, 7.5],
+        [3, 7.5],
+        [3, 0]
+      ],
+      "indices": [1, 5, 6, 3],
+      "grupo": 0,
+      "codigosFinais": [0, 0, 22, 0],
+      "cargaPermanente": 0.1,
+      "pesoProprio": 0.25,
+      "h": 10,
+      "muGravado": 0.55
+    },
+    {
+      "nome": "L2",
+      "vertices": [
+        [6, 0],
+        [3, 0],
+        [3, 7.5],
+        [6, 7.5]
+      ],
+      "indices": [2, 3, 6, 4],
+      "grupo": 0,
+      "codigosFinais": [0, 22, 0, 0],
+      "cargaPermanente": 0.1,
+      "pesoProprio": 0.25,
+      "h": 10,
+      "muGravado": 0.55
+    }
+  ],
+  "cargasPorArea": [
+    {
+      "total": 0.15,
+      "acidental": 0.15,
+      "vertices": [
+        [0, 0],
+        [6, 0],
+        [6, 7.5],
+        [0, 7.5]
+      ]
+    }
+  ],
+  "alvenarias": [],
+  "continuidadesFinais": [
+    {
+      "lajeA": "L1",
+      "bordoA": 2,
+      "lajeB": "L2",
+      "bordoB": 1
+    }
+  ],
+  "valores": [
+    {
+      "id": "L1.Hmin",
+      "grandeza": "L1 espessura mínima",
+      "unidade": "cm",
+      "impresso": "7.0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.pp",
+      "grandeza": "L1 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.17",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.p",
+      "grandeza": "L1 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.43",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L2.Hmin",
+      "grandeza": "L2 espessura mínima",
+      "unidade": "cm",
+      "impresso": "7.0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.pp",
+      "grandeza": "L2 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.17",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.p",
+      "grandeza": "L2 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.43",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L1.H",
+      "grandeza": "L1 espessura imposta",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.acid",
+      "grandeza": "L1 coluna Acid. (ocupação total + alvenaria/área)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.pp",
+      "grandeza": "L1 peso próprio",
+      "unidade": "t/m2",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.p",
+      "grandeza": "L1 carga total p",
+      "unidade": "t/m2",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L2.H",
+      "grandeza": "L2 espessura imposta",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.acid",
+      "grandeza": "L2 coluna Acid. (ocupação total + alvenaria/área)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.pp",
+      "grandeza": "L2 peso próprio",
+      "unidade": "t/m2",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.p",
+      "grandeza": "L2 carga total p",
+      "unidade": "t/m2",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L1.M+princ.antesOtim",
+      "grandeza": "L1 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M+sec.antesOtim",
+      "grandeza": "L1 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.14",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-maior.antesOtim",
+      "grandeza": "L1 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-menor.antesOtim",
+      "grandeza": "L1 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+princ.antesOtim",
+      "grandeza": "L2 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+sec.antesOtim",
+      "grandeza": "L2 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.14",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-maior.antesOtim",
+      "grandeza": "L2 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-menor.antesOtim",
+      "grandeza": "L2 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M+princ",
+      "grandeza": "L1 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.M+sec",
+      "grandeza": "L1 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.14",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-maior",
+      "grandeza": "L1 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-menor",
+      "grandeza": "L1 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+princ",
+      "grandeza": "L2 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+sec",
+      "grandeza": "L2 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.14",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-maior",
+      "grandeza": "L2 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-menor",
+      "grandeza": "L2 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.49",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1>V3.area",
+      "grandeza": "L1 → V3 (sub-área 1 = lado 1 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "7.03",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "L1>V1.area",
+      "grandeza": "L1 → V1 (sub-área 2 = lado 2 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "1.65",
+      "fonte": "impressora.prn:115"
+    },
+    {
+      "id": "L1>V4.area",
+      "grandeza": "L1 → V4 (sub-área 3 = lado 3 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "12.18",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "L1>V2.area",
+      "grandeza": "L1 → V2 (sub-área 4 = lado 4 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "1.65",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "L2>V2.area",
+      "grandeza": "L2 → V2 (sub-área 1 = lado 1 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "1.65",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "L2>V4.area",
+      "grandeza": "L2 → V4 (sub-área 2 = lado 2 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "12.18",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "L2>V1.area",
+      "grandeza": "L2 → V1 (sub-área 3 = lado 3 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "1.65",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "L2>V5.area",
+      "grandeza": "L2 → V5 (sub-área 4 = lado 4 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "7.03",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "L1.mu",
+      "grandeza": "L1 μ (relação M+ secundário/principal) gravado pelo LAJECALC 2",
+      "unidade": "",
+      "impresso": "0.55",
+      "fonte": "obra/UMD.LAJ",
+      "obs": "não é impresso; valor do .LAJ"
+    },
+    {
+      "id": "L1.lado3.codigo",
+      "grandeza": "L1 código final do lado 3 ([3, 7.5] → [3, 0]); i = (código − 2)/10",
+      "unidade": "",
+      "impresso": "22",
+      "fonte": "obra/UMD.LAJ",
+      "obs": "não é impresso; valor do .LAJ (depois da otimização, se houve)"
+    },
+    {
+      "id": "L2.mu",
+      "grandeza": "L2 μ (relação M+ secundário/principal) gravado pelo LAJECALC 2",
+      "unidade": "",
+      "impresso": "0.55",
+      "fonte": "obra/UMD.LAJ",
+      "obs": "não é impresso; valor do .LAJ"
+    },
+    {
+      "id": "L2.lado2.codigo",
+      "grandeza": "L2 código final do lado 2 ([3, 0] → [3, 7.5]); i = (código − 2)/10",
+      "unidade": "",
+      "impresso": "22",
+      "fonte": "obra/UMD.LAJ",
+      "obs": "não é impresso; valor do .LAJ (depois da otimização, se houve)"
+    }
+  ]
+}
