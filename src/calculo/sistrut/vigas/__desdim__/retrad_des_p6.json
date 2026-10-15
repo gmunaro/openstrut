@@ -1,0 +1,204 @@
+{
+  "caso": "retrad_des_p6",
+  "run": "C:/tmp/oraculo/runs/retrad_des_p6-20261015-082952",
+  "programa": "DESENHO",
+  "descricao": "Sonda p6: detalhamento da V1 (20x50, 2 tramos) com 'Altero a armadura' = S. O DESDIM mostra a tabela de armação na tela (1ª passada), abre as janelas de alteração por apoio, por tramo e das bitolas de estribo (Enter em tudo) e imprime a tabela na 2ª passada.",
+  "entrada": {
+    "obra": "E2E, viga V1 registro 1 (mesma do caso retrad_des_det)",
+    "parametrização": "padrão SISTRUT do .DSP",
+    "roteiro": "dist/tests/retraducao/desenho/p6.sufixo.txt"
+  },
+  "valores": [
+    {
+      "id": "V1.a1.x/d",
+      "grandeza": "x/d no apoio 1 (tela do DESDIM)",
+      "unidade": "adimensional",
+      "impresso": "0.045",
+      "fonte": "telas/014_g14.txt:8"
+    },
+    {
+      "id": "V1.a1.Mk-",
+      "grandeza": "momento característico no apoio 1",
+      "unidade": "tm",
+      "impresso": "0.97",
+      "fonte": "telas/014_g14.txt:8"
+    },
+    {
+      "id": "V1.a1.As-",
+      "grandeza": "armadura tracionada no apoio 1",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "telas/014_g14.txt:8"
+    },
+    {
+      "id": "V1.a1.Asc",
+      "grandeza": "armadura comprimida no apoio 1",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "telas/014_g14.txt:8"
+    },
+    {
+      "id": "V1.a1.barras-",
+      "grandeza": "barras tracionadas no apoio 1",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "telas/014_g14.txt:9"
+    },
+    {
+      "id": "V1.t1.x/d",
+      "grandeza": "x/d no tramo 1",
+      "unidade": "adimensional",
+      "impresso": "0.025",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.Mk+",
+      "grandeza": "momento característico no tramo 1",
+      "unidade": "tm",
+      "impresso": "0.55",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.As+",
+      "grandeza": "armadura tracionada no tramo 1",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.Vke",
+      "grandeza": "cortante característico à esquerda do tramo 1 (com alívio)",
+      "unidade": "t",
+      "impresso": "0.61",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.Asw.e",
+      "grandeza": "estribo à esquerda do tramo 1",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.Vkd",
+      "grandeza": "cortante característico à direita do tramo 1 (com alívio)",
+      "unidade": "t",
+      "impresso": "1.09",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.Asw.d",
+      "grandeza": "estribo à direita do tramo 1",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "telas/014_g14.txt:15"
+    },
+    {
+      "id": "V1.t1.flecha",
+      "grandeza": "flecha do tramo 1",
+      "unidade": "cm",
+      "impresso": ".01",
+      "fonte": "telas/014_g14.txt:16",
+      "casas": 2
+    },
+    {
+      "id": "V1.t1.barras+",
+      "grandeza": "barras positivas do tramo 1",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "telas/014_g14.txt:16"
+    },
+    {
+      "id": "V1.t1.estribo.e",
+      "grandeza": "estribo à esquerda do tramo 1",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "telas/014_g14.txt:16"
+    },
+    {
+      "id": "V1.t2.x/d",
+      "grandeza": "x/d no tramo 2",
+      "unidade": "adimensional",
+      "impresso": "0.025",
+      "fonte": "telas/014_g14.txt:17"
+    },
+    {
+      "id": "V1.t2.Vke",
+      "grandeza": "cortante característico à esquerda do tramo 2 (com alívio)",
+      "unidade": "t",
+      "impresso": "1.09",
+      "fonte": "telas/014_g14.txt:17"
+    },
+    {
+      "id": "V1.t2.Vkd",
+      "grandeza": "cortante característico à direita do tramo 2 (com alívio)",
+      "unidade": "t",
+      "impresso": "0.61",
+      "fonte": "telas/014_g14.txt:17"
+    },
+    {
+      "id": "V1.t2.flecha",
+      "grandeza": "flecha do tramo 2",
+      "unidade": "cm",
+      "impresso": ".01",
+      "fonte": "telas/014_g14.txt:18",
+      "casas": 2
+    },
+    {
+      "id": "V1.t2.estribo.d",
+      "grandeza": "estribo à direita do tramo 2",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "telas/014_g14.txt:18"
+    },
+    {
+      "id": "V1.estribo.bitolaMaxima",
+      "grandeza": "bitola máxima de estribo da viga (janela de alteração)",
+      "unidade": "mm",
+      "impresso": "5",
+      "fonte": "telas/018_g18.txt:21"
+    },
+    {
+      "id": "V1.estribo.bitolaMinima",
+      "grandeza": "bitola mínima de estribo da viga (janela de alteração)",
+      "unidade": "mm",
+      "impresso": "5",
+      "fonte": "telas/018_g18.txt:22"
+    },
+    {
+      "id": "imp.V1.a1.x/d",
+      "grandeza": "x/d no apoio 1 (impressão da 2ª passada)",
+      "unidade": "adimensional",
+      "impresso": "0.045",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "imp.V1.a1.barras-",
+      "grandeza": "barras tracionadas no apoio 1 (impressão)",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:43"
+    },
+    {
+      "id": "imp.V1.t1.Vke",
+      "grandeza": "cortante à esquerda do tramo 1 (impressão)",
+      "unidade": "t",
+      "impresso": "0.61",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "imp.V1.t2.Vke",
+      "grandeza": "cortante à esquerda do tramo 2 (impressão)",
+      "unidade": "t",
+      "impresso": "1.09",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "imp.V1.t2.estribo.e",
+      "grandeza": "estribo à esquerda do tramo 2 (impressão)",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:51"
+    }
+  ]
+}
