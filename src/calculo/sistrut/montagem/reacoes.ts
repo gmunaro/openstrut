@@ -29,7 +29,7 @@ import {
   type PoligonoCarga,
   type TrechoAlvenaria,
 } from "./cargas";
-import { distancia, type Tolerancias } from "./geometria";
+import { distancia, sobreLado, type Tolerancias } from "./geometria";
 import { regiaoDoBordo } from "./regioes";
 import {
   alvenariaNoTrecho,
@@ -42,6 +42,7 @@ import {
   totalDivisoes,
   trechoDaDivisao,
   type DadosVigaMontagem,
+  type PilarMontagem,
   type VigaMontagem,
 } from "./vigas";
 
@@ -87,7 +88,10 @@ function trechoDoBordo(
  *  `apoiosDosBordos` e de `ReacaoDeBordo.bordo` com índice 0-based em `vertices`.
  *  Apoio null: procura a viga com um trecho igual ao bordo, como o original; sem
  *  viga, a carga vai para o total dos pilares (como o original faz com apoio em
- *  branco) e sai um aviso. */
+ *  branco) e sai um aviso.
+ *  `geometriaPilares` (fora do contrato): os pilares como segmentos (A_1156). Com ela o
+ *  pilar de cada ponto de viga, o pilar-parede, o bordo de laje apoiado em pilar-parede
+ *  e a alvenaria sobre ele saem como no original; sem ela, os pilares do `EixoViga`. */
 export function montaPavimentoSistrut(
   esforcos: EsforcosLajes,
   painel: PainelLajes,
@@ -96,6 +100,7 @@ export function montaPavimentoSistrut(
   pesoProprio: PesoProprioVigas,
   parametros: ParametrosLaje,
   modo: ModoSistrut,
+  geometriaPilares?: readonly PilarMontagem[],
 ): MontagemPavimentoSistrut {
   const s = atribuicao(modo);
   const t: Tolerancias = {
@@ -108,7 +113,7 @@ export function montaPavimentoSistrut(
   const lajes = esforcos.lajes;
 
   // S_3014b e S_2a7a8: eixos, tramos, J e peso próprio das vigas
-  const pilares = tabelaPilares(eixos);
+  const pilares = tabelaPilares(eixos, geometriaPilares);
   const vigas = montaPontos(
     eixos,
     lajes.flatMap((l) => l.vertices),
@@ -116,10 +121,22 @@ export function montaPavimentoSistrut(
     pesoProprio,
     t,
     avisos,
+    modo,
+    geometriaPilares,
   );
+  // pilares-parede (os pontuais não recebem carga de bordo nem de alvenaria)
+  const paredes = (geometriaPilares ?? [])
+    .map((p) => ({
+      nome: p.nome,
+      x1: s(p.inicio.x),
+      y1: s(p.inicio.y),
+      x2: s(p.fim.x),
+      y2: s(p.fim.y),
+    }))
+    .filter((p) => !(p.y1 === p.y2 && p.x1 === p.x2));
   let ppVigas = 0; // V_19ea
   for (const v of vigas) ppVigas = montaTramos(v, pilares, t, ppVigas);
-  resolveIndexacao(vigas);
+  resolveIndexacao(vigas, t);
   let totVigas = ppVigas; // V_19f6
   let totPilares = 0; // V_19fa
 
@@ -158,6 +175,14 @@ export function montaPavimentoSistrut(
     }
   }
 
+  // alvenaria sobre os pilares-parede (LAJEMONT.BAS:4383-4437)
+  for (const p of paredes) {
+    const carga = alvenariaNoTrecho(p.x1, p.y1, p.x2, p.y2, alvenarias, t);
+    if (!(carga > 0)) continue;
+    totAlv = s(totAlv + carga);
+    totPilares = s(totPilares + carga);
+  }
+
   // lajes: S_401b9 + S_20146 por laje
   const reacoes: ReacaoDeBordo[] = [];
   let ppLajes = 0; // V_19ee
@@ -177,7 +202,7 @@ export function montaPavimentoSistrut(
     let somaAreas = 0; // L_BPde
     for (let k = 1; k <= lm.n; k++) {
       if ((lm.codigos[k] ?? 0) === 1) continue;
-      const reg = regiaoDoBordo(lm, padrao, k, t);
+      const reg = regiaoDoBordo(lm, padrao, k, t, modo);
       const A = reg.area;
       somaAreas = s(somaAreas + A);
       if (!(A > t.tol)) continue;
@@ -197,7 +222,17 @@ export function montaPavimentoSistrut(
       const y1 = poli.y[1] ?? 0;
       const x2 = poli.x[poli.n - 1] ?? 0;
       const y2 = poli.y[poli.n - 1] ?? 0;
-      const indicado = apoiosDosBordos(laje.nome, k - 1);
+      let indicado = apoiosDosBordos(laje.nome, k - 1);
+      // L_29708: sem indicação, primeiro um pilar-parede igual ao bordo ou sobre ele
+      if (!indicado) {
+        const parede = paredes.find(
+          (p) =>
+            (p.y2 === y2 && p.x2 === x2 && p.y1 === y1 && p.x1 === x1) ||
+            (p.y2 === y1 && p.x2 === x1 && p.y1 === y2 && p.x1 === x2) ||
+            sobreLado(p.x1, p.y1, p.x2, p.y2, x1, y1, x2, y2, t),
+        );
+        if (parede) indicado = { tipo: "pilar", pilar: parede.nome };
+      }
       const trecho =
         indicado?.tipo === "pilar"
           ? undefined

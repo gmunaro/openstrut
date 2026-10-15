@@ -5,6 +5,7 @@
 // alinhados são retirados e a área sai pelos trapézios (positiva quando o polígono
 // da laje é horário, como o LAJEGEOM grava).
 import { type PadraoMontagem, inicioSegmento, type LajeMontagem } from "./charneiras";
+import type { ModoSistrut } from "../base/tipos";
 import { areaTrapezios, PI, perto, type PoligonoFechado, type Tolerancias } from "./geometria";
 
 /** Direção (fx, fy) → (tx, ty) com o teste de vertical por tolerância e as fórmulas
@@ -34,13 +35,17 @@ function giro(ee: number, f6: number, eps: number) {
 }
 
 /** Região do bordo `k` (do vértice k ao k+1): polígono fechado (ponto 1 = início do
- *  bordo, penúltimo = fim do bordo, último = ponto 1) e área. Área 0 e polígono vazio
- *  quando o traçado não acha saída num nó (V_0f14 = −1). */
+ *  bordo, penúltimo = fim do bordo, último = ponto 1) e área. Nó sem saída: o traçado
+ *  grava de novo o último ponto e volta pelo segmento por onde veio; no modo original
+ *  o passo seguinte devolve área 0 (L_224c8, V_0f14 = −1), no corrigido o traçado
+ *  segue. Se o nó sem saída é o primeiro, o original grava um V_153a velho de outra
+ *  rotina; aqui, o próprio nó (só muda o corrigido). */
 export function regiaoDoBordo(
   laje: LajeMontagem,
   padrao: PadraoMontagem,
   k: number,
   t: Tolerancias,
+  modo: ModoSistrut = "original",
 ): { poligono: PoligonoFechado; area: number } {
   const { s, tol, eps } = t;
   const sg = padrao.seg;
@@ -79,6 +84,9 @@ export function regiaoDoBordo(
   const py = [0, yi, s(y2)];
   let n = 2;
   let p140 = 1;
+  // V_153a/V_1542: último ponto escolhido; fica velho quando o nó não tem saída
+  let x153 = px[2] ?? 0;
+  let y153 = py[2] ?? 0;
   for (let passos = 0; ; passos++) {
     if (passos > 4 * sg.n + 10) return vazio;
     const xa = px[p140] ?? 0;
@@ -119,8 +127,18 @@ export function regiaoDoBordo(
         escolhido = f04;
       }
     }
-    // nó sem saída: o original grava um ponto velho e acaba com área 0 (V_0f14 = −1)
-    if (!fecha && escolhido === -1) return vazio;
+    // L_224c8 (LAJEMONT.BAS:2970-2973): no passo seguinte a um nó sem saída
+    // (V_0f14 = −1) a região vale 0 no original, feche ou não; no corrigido o recuo
+    // continua o traçado (defeito do original: a carga da região some)
+    if (atual === -1 && (modo === "original" || (!fecha && escolhido === -1))) return vazio;
+    if (fecha || escolhido !== -1) {
+      x153 = xs;
+      y153 = ys;
+    } else {
+      // nó sem saída: grava de novo o último ponto e volta pelo mesmo segmento
+      xs = x153;
+      ys = y153;
+    }
     n += 1;
     px[p140 + 2] = s(xs);
     py[p140 + 2] = s(ys);

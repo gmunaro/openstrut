@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type { EixoViga, EsforcosLajes, LajeSistrut, PainelLajes } from "../base/tipos";
 import { montaPavimentoSistrut } from "./reacoes";
-import { numeroDoPilar, pesoKgPorM } from "./vigas";
+import { montaPontos, numeroDoPilar, pesoKgPorM } from "./vigas";
 
 const laje = (nome: string, pts: [number, number][], codigos: number[]): LajeSistrut => ({
   nome,
@@ -206,6 +206,149 @@ describe("viga sobre viga, balanço e carga indexada (obra VBX)", () => {
     expect(Math.abs(r.totais.painel - (2.4 + 6 + 4.65 + 10 + 4))).toBeLessThan(1e-4);
     expect(Math.abs(r.totais.vigas - r.totais.painel)).toBeLessThan(1e-4);
     expect(r.totais.pilares).toBe(0);
-    expect(r.avisos).toEqual([]);
+    // V3 foi dada de 8 para 0: o original supõe eixo crescente (o LAJEGEOM grava assim)
+    expect(r.avisos).toEqual([expect.stringContaining("Viga V3: eixo em ordem decrescente")]);
+  });
+});
+
+describe("pontos do eixo e pilar-parede (S_3014b)", () => {
+  const t = { s: Math.fround, tol: Math.fround(0.005), eps: Math.fround(0.002) };
+  const pesoNulo = { predominanteKgPorM: 0, excecoes: {} };
+  const eixo = (pontos: [number, number][], apoios: EixoViga["apoios"]): EixoViga => ({
+    nome: "V1",
+    pontos: pontos.map(([x, y]) => ({ x, y })),
+    apoios,
+    balancoInicio: false,
+    balancoFim: false,
+  });
+
+  it("eixo decrescente: o original insere antes do primeiro x maior (LAJEMONT.BAS:4806-4814)", () => {
+    const e = [
+      eixo(
+        [
+          [8, 0],
+          [0, 0],
+        ],
+        [{ pilar: "P1" }, { pilar: "P2" }],
+      ),
+    ];
+    const avisos: string[] = [];
+    const [o] = montaPontos(e, [{ x: 4, y: 0 }], ["", "P1", "P2"], pesoNulo, t, avisos, "original");
+    expect(o?.x.slice(1)).toEqual([4, 8, 0]);
+    expect(avisos).toHaveLength(1);
+    const [c] = montaPontos(e, [{ x: 4, y: 0 }], ["", "P1", "P2"], pesoNulo, t, [], "corrigido");
+    expect(c?.x.slice(1)).toEqual([8, 4, 0]);
+  });
+
+  it("pilar-parede igual ao trecho da viga: engaste (Ee) e o tramo começa na ponta da parede", () => {
+    const r2 = montaPavimentoSistrut(
+      { ...esforcos, lajes: [] },
+      { ...painel, lajes: [], cargasPorArea: [], alvenarias: [] },
+      [
+        eixo(
+          [
+            [0, 0],
+            [1, 0],
+            [6, 0],
+          ],
+          [null, null, null],
+        ),
+      ],
+      () => null,
+      pesoNulo,
+      emSingle(PARAMETROS_LAJE),
+      "original",
+      [
+        { nome: "P1", inicio: { x: 0, y: 0 }, fim: { x: 1, y: 0 } },
+        { nome: "P2", inicio: { x: 6, y: 0 }, fim: { x: 6, y: 0 } },
+      ],
+    );
+    const v = r2.vigas[0];
+    expect(v?.engasteEsquerdo).toBe(true);
+    expect(v?.tramos.map((x) => x.vao)).toEqual([5]);
+    expect(v?.pilares).toEqual(["P1", "P2"]);
+  });
+
+  it("dois pilares de mesmo nome em pontos seguidos sem coincidir com o trecho: dois apoios", () => {
+    const geo = [
+      { nome: "P1", inicio: { x: 0, y: -0.5 }, fim: { x: 0, y: 0.5 } },
+      { nome: "P1", inicio: { x: 1, y: -0.5 }, fim: { x: 1, y: 0.5 } },
+      { nome: "P2", inicio: { x: 6, y: 0 }, fim: { x: 6, y: 0 } },
+    ];
+    const esfVazio: EsforcosLajes = { ...esforcos, lajes: [] };
+    const painelVazio: PainelLajes = { ...painel, lajes: [], cargasPorArea: [], alvenarias: [] };
+    const pontos: [number, number][] = [
+      [0, 0],
+      [1, 0],
+      [6, 0],
+    ];
+    const com = montaPavimentoSistrut(
+      esfVazio,
+      painelVazio,
+      [eixo(pontos, [null, null, null])],
+      () => null,
+      pesoNulo,
+      emSingle(PARAMETROS_LAJE),
+      "original",
+      geo,
+    ).vigas[0];
+    expect(com?.engasteEsquerdo).toBe(false);
+    expect(com?.tramos.map((x) => x.vao)).toEqual([1, 5]);
+    expect(com?.pilares).toEqual(["P1", "P1", "P2"]);
+    // sem a geometria, o mesmo nome em pontos seguidos é tratado como pilar-parede
+    const sem = montaPavimentoSistrut(
+      esfVazio,
+      painelVazio,
+      [eixo(pontos, [{ pilar: "P1" }, { pilar: "P1" }, { pilar: "P2" }])],
+      () => null,
+      pesoNulo,
+      emSingle(PARAMETROS_LAJE),
+      "original",
+    ).vigas[0];
+    expect(sem?.engasteEsquerdo).toBe(true);
+    expect(sem?.tramos.map((x) => x.vao)).toEqual([5]);
+  });
+
+  it("bordo de laje sobre pilar-parede: a carga vai ao pilar (L_29708) e ao total dos pilares", () => {
+    const l = laje(
+      "L1",
+      [
+        [0, 0],
+        [0, 5],
+        [4, 5],
+        [4, 0],
+      ],
+      [0, 0, 0, 0],
+    );
+    const r3 = montaPavimentoSistrut(
+      { ...esforcos, lajes: [l] },
+      { ...painel, lajes: [l], cargasPorArea: [], alvenarias: [] },
+      [
+        eixo(
+          [
+            [0, 5],
+            [4, 5],
+          ],
+          [{ pilar: "P1" }, { pilar: "P2" }],
+        ),
+      ],
+      () => null,
+      pesoNulo,
+      emSingle(PARAMETROS_LAJE),
+      "original",
+      [
+        { nome: "PP", inicio: { x: 0, y: 0 }, fim: { x: 0, y: 5 } },
+        { nome: "P1", inicio: { x: 0, y: 5 }, fim: { x: 0, y: 5 } },
+        { nome: "P2", inicio: { x: 4, y: 5 }, fim: { x: 4, y: 5 } },
+      ],
+    );
+    const noPilar = r3.reacoes.find((x) => x.apoio.tipo === "pilar");
+    expect(noPilar?.apoio).toEqual({ tipo: "pilar", pilar: "PP" });
+    // bordo esquerdo de 5 m, laje apoiada: trapézio de 6 m² × (0,10 + 0,25)
+    expect(Math.abs((noPilar?.area ?? 0) - 6)).toBeLessThan(1e-4);
+    // bordo de cima na viga (4 m² × 0,35); os outros dois sem viga também vão ao
+    // total dos pilares, com aviso, como o original faz com apoio em branco
+    expect(Math.abs(r3.totais.pilares - (20 - 4) * 0.35)).toBeLessThan(1e-4);
+    expect(r3.avisos).toHaveLength(2);
   });
 });
