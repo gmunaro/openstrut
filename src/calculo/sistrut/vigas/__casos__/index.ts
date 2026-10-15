@@ -3,7 +3,11 @@
 //   valores impressos estão em `__oraculo__/caso_b_viga.json`;
 // - p3.json, c1.json, x1.json, a1.json: casos `dist/tests/retraducao/viga/` (CHECKLIST.md) com
 //   a entrada do roteiro (C:/tmp/oraculo/casos/retrad_viga_*.txt) ou do .VIG gravado
-//   no run, e os valores impressos com `fonte` = arquivo:linha dentro de `run`.
+//   no run, e os valores impressos com `fonte` = arquivo:linha dentro de `run`;
+// - v2par_*.json (rodada 2, casos T10): entrada do .VIG do run ou da partida (pilares
+//   pela marca no J) ou do roteiro, e os valores de viga/.REP copiados de
+//   C:/tmp/v2-paridade/oraculo-novos/<caso>.json (índice: V2PAR.md da V1). Nos casos
+//   do DESENHO, só a análise (DESCALC com os parâmetros do .DSP).
 // Os números da entrada são os que o original leu (VAL do texto digitado ou o SINGLE
 // do .VIG); `dadosViga` aplica `sng` no modo original.
 import { sng } from "../../base/f32";
@@ -14,6 +18,12 @@ import a1 from "./a1.json";
 import caso_b from "./caso_b.json";
 import c1 from "./c1.json";
 import p3 from "./p3.json";
+import v2par_des_2tramos from "./v2par_des_2tramos.json";
+import v2par_des_3tramos from "./v2par_des_3tramos.json";
+import v2par_des_especial from "./v2par_des_especial.json";
+import v2par_laje_cargas from "./v2par_laje_cargas.json";
+import v2par_viga_fluxo from "./v2par_viga_fluxo.json";
+import v2par_viga_r6 from "./v2par_viga_r6.json";
 import x1 from "./x1.json";
 
 interface DivisaoJson {
@@ -73,7 +83,19 @@ export interface CasoVicalc {
   };
 }
 
-const casos: Record<string, CasoVicalc> = { caso_b, p3, c1, x1, a1 };
+const casos: Record<string, CasoVicalc> = {
+  caso_b,
+  p3,
+  c1,
+  x1,
+  a1,
+  v2par_viga_fluxo,
+  v2par_viga_r6,
+  v2par_laje_cargas,
+  v2par_des_especial,
+  v2par_des_3tramos,
+  v2par_des_2tramos,
+};
 export const CASOS_VICALC = casos;
 export const casoVicalc = (nome: string) => {
   const c = casos[nome];

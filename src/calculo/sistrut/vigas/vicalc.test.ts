@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { qbUsing, sng } from "../base/f32";
 import { emSingle, PARAMETROS_VIGA } from "../base/parametros";
-import type { ModoSistrut } from "../base/tipos";
+import type { DadosViga, ModoSistrut } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, type ValorOraculo } from "../__oraculo__/index";
 import { CASOS_VICALC, casoVicalc, dadosViga, parametrosDoCaso } from "./__casos__/index";
 import {
@@ -24,47 +24,64 @@ import {
   textoMep,
 } from "./vicalc";
 
-/** Valor calculado para o id do oráculo (sem o prefixo da viga): "a1.M-", "t2.max.x",
- *  "ep1.Vd", "b0.carga", "somaR". MEP volta à parte (é texto STR$). */
+/** Valor calculado para o id do oráculo (sem o prefixo da viga). Aceita as duas
+ *  convenções dos JSONs: retradução ("a1.Mmax", "a1.Rmin", "ep1.Vd", "b0.carga") e
+ *  v2par ("a1.max.M-", "a1.max.R", "a1.min.R", "t1.EEP.Vd", "t0.Vd" e "t{n+1}.Ve" =
+ *  carga do balanço), além de "a1.M-", "t2.max.x", "somaR". MEP volta à parte. */
 function calculado(a: AnaliseVigaSistrut, id: string): number {
   const [parte = "", campo = "", sub = ""] = id.split(".");
   if (parte === "somaR") return a.somaReacoes;
   const k = Number(parte.slice(parte.search(/\d/)));
+  const exige = (v: number | undefined) => {
+    if (v === undefined) throw new Error(`${id} não existe em ${a.nome}`);
+    return v;
+  };
   if (parte.startsWith("a")) {
     const apoio = a.apoios[k];
     if (!apoio) throw new Error(`apoio ${k} não existe em ${a.nome}`);
-    const mapa = {
+    const mapa: Record<string, number> = {
       "M-": apoio.m,
       R: apoio.r,
       Mmax: apoio.mMax,
       Rmax: apoio.rMax,
       Rmin: apoio.rMin,
+      "max.M-": apoio.mMax,
+      "max.R": apoio.rMax,
+      "min.R": apoio.rMin,
     };
-    const v = mapa[campo as keyof typeof mapa];
-    if (v === undefined) throw new Error(`campo ${id}`);
-    return v;
+    return exige(mapa[sub ? `${campo}.${sub}` : campo]);
   }
-  if (parte.startsWith("b")) {
-    const bal = k === 0 ? a.balancoEsquerdo : a.balancoDireito;
-    if (!bal) throw new Error(`balanço ${id} não existe em ${a.nome}`);
-    return bal.carga;
-  }
-  if (parte.startsWith("ep")) {
+  if (parte.startsWith("b")) return exige((k === 0 ? a.balancoEsquerdo : a.balancoDireito)?.carga);
+  const n = a.tramos.length;
+  if (parte.startsWith("t") && k === 0 && campo === "Vd") return exige(a.balancoEsquerdo?.carga);
+  if (parte.startsWith("t") && k === n + 1 && campo === "Ve") return exige(a.balancoDireito?.carga);
+  if (parte.startsWith("ep") || campo === "EEP") {
     const linha = a.engastamentoPerfeito.find((e) => e.tramo === k);
     if (!linha) throw new Error(`tramo ${k} fora da tabela de engastamento perfeito de ${a.nome}`);
-    const mapa = { Ve: linha.ve, x: linha.x, "M+": linha.mPositivo, Vd: linha.vd };
-    return mapa[campo as keyof typeof mapa];
+    const mapa: Record<string, number> = {
+      Ve: linha.ve,
+      x: linha.x,
+      "M+": linha.mPositivo,
+      Vd: linha.vd,
+    };
+    return exige(mapa[campo === "EEP" ? sub : campo]);
   }
   const tramo = a.tramos[k - 1];
   if (!tramo) throw new Error(`tramo ${k} não existe em ${a.nome}`);
   const fonte = campo === "max" ? tramo.envoltoria : tramo;
   if (!fonte) throw new Error(`${id}: ${a.nome} sem envoltória`);
-  const nome = campo === "max" ? sub : campo;
-  const mapa = { Ve: fonte.ve, x: fonte.x, "M+": fonte.mPositivo, Vd: fonte.vd, fEJ: fonte.fEJ };
-  const v = mapa[nome as keyof typeof mapa];
-  if (v === undefined) throw new Error(`campo ${id}`);
-  return v;
+  const mapa: Record<string, number> = {
+    Ve: fonte.ve,
+    x: fonte.x,
+    "M+": fonte.mPositivo,
+    Vd: fonte.vd,
+    fEJ: fonte.fEJ,
+  };
+  return exige(mapa[campo === "max" ? sub : campo]);
 }
+
+/** Ecos da entrada no quadro de dados (L, J, P, D, F, Pac, Fac, por tramo e divisão). */
+const ehEco = (id: string) => /^t\d+\.(d\d+\.)?(P|L|J|D|F|Pac|Fac)$/.test(id);
 
 /** Máscara do PRINT USING de cada campo (VIGA.BAS:7501-7502, 7529, 7577-7578, 7636). */
 function mascara(id: string) {
@@ -85,7 +102,7 @@ function confere(
   for (const v of valores) {
     if (!v.id.startsWith(`${prefixo}.`)) continue;
     const id = v.id.slice(prefixo.length + 1);
-    if (/^t\d+\.(P|L|J|D|F)$/.test(id)) continue;
+    if (ehEco(id)) continue;
     conferidos += 1;
     if (/^MEP\d+$/.test(id)) {
       const mep = id === "MEP0" ? a.mepEsquerdo : a.mepDireito;
@@ -305,6 +322,116 @@ describe("a1 (opção 2 na tela: engaste nas duas pontas e concentrada)", () => 
   });
 });
 
+describe("rodada 2: casos v2par_* (T10; valores de C:/tmp/v2-paridade/oraculo-novos/)", () => {
+  /** Analisa cada viga do caso e confere todos os valores com o prefixo dela. */
+  const confereCaso = (nome: string, preparar = (v: DadosViga) => v) => {
+    const caso = casoVicalc(nome);
+    const parametros = parametrosDoCaso(caso.parametros, ORIGINAL);
+    const falhas: string[] = [];
+    let conferidos = 0;
+    for (const vj of caso.vigas) {
+      const a = analisaViga(preparar(dadosViga(vj, ORIGINAL)), parametros, ORIGINAL);
+      const r = confere(a, caso.valores ?? [], vj.nome, ORIGINAL);
+      falhas.push(...r.falhas);
+      conferidos += r.conferidos;
+    }
+    const total = (caso.valores ?? []).filter(
+      (v) => /^[A-Z]+\d+\./.test(v.id) && !v.id.startsWith("REP"),
+    );
+    return {
+      falhas,
+      conferidos,
+      esperados: total.filter((v) => !ehEco(v.id.slice(v.id.indexOf(".") + 1))).length,
+    };
+  };
+
+  it.each([
+    "v2par_viga_fluxo",
+    "v2par_laje_cargas",
+    "v2par_des_especial",
+    "v2par_des_3tramos",
+    "v2par_des_2tramos",
+  ])("%s: apoios, tramos, envoltória, balanços, MEP e engastamento perfeito", (nome) => {
+    const { falhas, conferidos, esperados } = confereCaso(nome);
+    expect(falhas).toEqual([]);
+    expect(conferidos).toBe(esperados);
+  });
+
+  it("v2par_viga_r6: acidental gerada de 150 % (3 t/m sobre 2 t/m) e reações mínimas negativas", () => {
+    const caso = casoVicalc("v2par_viga_r6");
+    const parametros = parametrosDoCaso(caso.parametros, ORIGINAL);
+    const gera = (v: DadosViga): DadosViga => ({
+      ...v,
+      tramos: v.tramos.map((t) => ({
+        ...t,
+        divisoes: t.divisoes.map((d) => divisaoComAcidentalGerada(d, parametros, ORIGINAL)),
+      })),
+    });
+    const viga = gera(dadosViga(caso.vigas[0]!, ORIGINAL));
+    for (const v of (caso.valores ?? []).filter((x) => /\.Pac$/.test(x.id))) {
+      const t = viga.tramos[Number(v.id.split(".")[1]!.slice(1)) - 1]!;
+      expect(qbUsing("##.###", t.divisoes[0]!.pAcidental).trim(), v.id).toBe(v.impresso);
+    }
+    const { falhas, conferidos, esperados } = confereCaso("v2par_viga_r6", gera);
+    expect(falhas).toEqual([]);
+    expect(conferidos).toBe(esperados);
+    // Corrigido (R6): % limitada a 96, acidental 1,92 t/m < carga total.
+    const corr = parametrosDoCaso(caso.parametros, "corrigido");
+    const d = divisaoComAcidentalGerada(
+      dadosViga(caso.vigas[0]!, "corrigido").tramos[0]!.divisoes[0]!,
+      corr,
+      "corrigido",
+    );
+    expect(d.pAcidental).toBeCloseTo(1.92, 10);
+  });
+
+  it.each([
+    "v2par_viga_fluxo",
+    "v2par_laje_cargas",
+    "v2par_des_especial",
+    "v2par_des_3tramos",
+    "v2par_des_2tramos",
+  ])("%s: a entrada decodificada ecoa como o quadro de dados (L, J, P, D, F, Pac, Fac)", (nome) => {
+    const caso = casoVicalc(nome);
+    let conferidos = 0;
+    for (const vj of caso.vigas) {
+      const viga = dadosViga(vj, ORIGINAL);
+      const n = viga.tramos.length;
+      for (const v of (caso.valores ?? []).filter((x) => x.id.startsWith(`${vj.nome}.`))) {
+        const id = v.id.slice(vj.nome.length + 1);
+        if (!ehEco(id)) continue;
+        const partes = id.split(".");
+        const k = Number(partes[0]!.slice(1));
+        const tramo =
+          k === 0 ? viga.balancoEsquerdo : k === n + 1 ? viga.balancoDireito : viga.tramos[k - 1];
+        const div = tramo?.divisoes[partes.length === 3 ? Number(partes[1]!.slice(1)) - 1 : 0];
+        const campo = partes[partes.length - 1]!;
+        const entrada: Record<string, number | undefined> = {
+          L: tramo?.vao,
+          J: tramo?.inercia,
+          P: div?.p,
+          D: div?.d,
+          F: div?.f,
+          Pac: div?.pAcidental,
+          Fac: div?.fAcidental,
+        };
+        const x = entrada[campo];
+        expect(x !== undefined && bateComImpresso(v, x), `${v.id} = ${x}`).toBe(true);
+        conferidos += 1;
+      }
+    }
+    expect(conferidos).toBeGreaterThan(0);
+  });
+
+  it("v2par_viga_fluxo: f·EJ do tramo com M+ = 0 sai ' 0.00', nunca '-0.00' (MAX(0, −S), VIGA.BAS:7778-7782)", () => {
+    const caso = casoVicalc("v2par_viga_fluxo");
+    const parametros = parametrosDoCaso(caso.parametros, ORIGINAL);
+    const v1 = analisaViga(dadosViga(caso.vigas[0]!, ORIGINAL), parametros, ORIGINAL);
+    expect(qbUsing("#####.##", v1.tramos[0]!.fEJ)).toBe("    0.00");
+    expect(Object.is(v1.tramos[0]!.fEJ, -0)).toBe(false);
+  });
+});
+
 describe("modo corrigido: R6 (redução e % gerada do VIGA.INI)", () => {
   const p = (reducaoNegativos: number, porcentagemAcidentalGerada = 30) => ({
     ...PARAMETROS_VIGA,
@@ -329,11 +456,11 @@ describe("modo corrigido: R6 (redução e % gerada do VIGA.INI)", () => {
     expect(analisaViga(v1c, p(1.5), "corrigido").apoios[1]!.m).toBeCloseTo(-0.972051, 5);
   });
 
-  it("% de acidental gerada limitada a 4..96 nos dois modos (leitura do INI, VIGA.BAS:617-629)", () => {
-    expect(porcentagemAcidentalGerada(emSingle(p(1, 150)), "original")).toBe(96);
-    expect(porcentagemAcidentalGerada(emSingle(p(1, 2)), "original")).toBe(4);
+  it("% de acidental gerada: original sem limite (tela, U62-025); corrigido 4..96", () => {
+    expect(porcentagemAcidentalGerada(emSingle(p(1, 150)), "original")).toBe(150);
     expect(porcentagemAcidentalGerada(p(1, 25.5), "original")).toBe(26);
     expect(porcentagemAcidentalGerada(p(1, 150), "corrigido")).toBe(96);
+    expect(porcentagemAcidentalGerada(p(1, 2), "corrigido")).toBe(4);
   });
 });
 

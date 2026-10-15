@@ -148,12 +148,14 @@ export function fatorReducaoNegativos(parametros: ParametrosVicalc, modo: ModoSi
   return modo === "original" ? s(Math.min(v, s(15))) : Math.max(0.15, Math.min(1, v));
 }
 
-/** % de acidental gerada efetiva. Original: CINT(MAX(4, MIN(96, v))) da leitura do
- *  VIGA.INI (VIGA.BAS:617-629); a tela (opção 8) aceita qualquer valor pelo AND do teste
- *  (U62-025), o que só se reproduz passando o valor já gravado. Corrigido (R6): 4..96. */
+/** % de acidental gerada efetiva (V_12d2%). Original: o valor em memória, CINT(v), sem
+ *  limite: a tela (opção 8) testa `VAL > 96 AND VAL < 4`, que nunca recusa (VIGA.BAS:≈5434;
+ *  U62-025; caso v2par_viga_r6 com 150 %). A leitura do VIGA.INI já grava
+ *  CINT(MAX(4, MIN(96, v))) (VIGA.BAS:617-629): quem monta os parâmetros a partir do INI
+ *  aplica esse limite. Corrigido (R6): 4..96. */
 export function porcentagemAcidentalGerada(parametros: ParametrosVicalc, modo: ModoSistrut) {
   const v = parametros.porcentagemAcidentalGerada;
-  return modo === "original" ? qbCint(Math.max(4, Math.min(96, v))) : Math.max(4, Math.min(96, v));
+  return modo === "original" ? qbCint(v) : Math.max(4, Math.min(96, v));
 }
 
 /** Acidental gerada de uma divisão, na entrada da viga: Pac = pct·P/100 e, fora da carga
