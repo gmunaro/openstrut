@@ -1,0 +1,735 @@
+{
+  "caso": "v2par_pilar_mk",
+  "run": "C:/tmp/oraculo/runs/v2par_pilar_mk-20261015-170447",
+  "programa": "PILAR opção 6 (verificação NB-1/78)",
+  "descricao": "Pilar avulso com Mk inicial ≠ 0: o Mk entra no momento solicitante junto com o acidental (Mx = Mk(i) + ea·Nk(a)) em casos separados por direção. Conjunto 1: flexo-compressão reta, 'SITUACAO DE INSTABILIDADE'; conjuntos 2 e 3: flexão oblíqua com Mk nas duas direções, 'ok'. Ids com o prefixo e<k>. do conjunto. (As combinações que travam o original estão no v2par_pilar_trava.)",
+  "entrada": {
+    "parametros": {
+      "norma": "NB-1/78 (PILAR.INI e SISTRUT.PIP de fábrica)",
+      "fck_tcm2": 0.15,
+      "fyk_tcm2": 5,
+      "classeAco": "B",
+      "fluencia": 0,
+      "secaoComprimidaCritica": "N (resposta à pergunta 'Secao comprimida')"
+    },
+    "secao": {
+      "tipo": "retangular",
+      "B_cm": 20,
+      "H_cm": 30,
+      "cLinha_cm": 3,
+      "barrasBordaSuperior": 2,
+      "barrasBordaInferior": 2,
+      "barrasLaterais": 0,
+      "bitola_mm": 16
+    },
+    "conjuntos": [
+      {
+        "k": 1,
+        "Nk_t": 30,
+        "Mxk_tm": 1.5,
+        "Myk_tm": 0,
+        "Lxe_m": 3,
+        "Lye_m": 3
+      },
+      {
+        "k": 2,
+        "Nk_t": 30,
+        "Mxk_tm": 0.5,
+        "Myk_tm": 0.3,
+        "Lxe_m": 3,
+        "Lye_m": 3
+      },
+      {
+        "k": 3,
+        "Nk_t": 20,
+        "Mxk_tm": 0.6,
+        "Myk_tm": 0.4,
+        "Lxe_m": 3,
+        "Lye_m": 3
+      }
+    ],
+    "notas": "B é a largura (paralela a x) e H a altura; Mxk gira em torno de x (usa H). Sem desenho da seção; verificações impressas."
+  },
+  "valores": [
+    {
+      "id": "e1.P.Jx",
+      "grandeza": "conjunto 1: momento de inércia Jx",
+      "unidade": "cm4",
+      "impresso": "45000",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "e1.P.Jy",
+      "grandeza": "conjunto 1: momento de inércia Jy",
+      "unidade": "cm4",
+      "impresso": "20000",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "e1.P.lambdaX",
+      "grandeza": "conjunto 1: esbeltez λx",
+      "unidade": "",
+      "impresso": "52",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "e1.P.lambdaY",
+      "grandeza": "conjunto 1: esbeltez λy",
+      "unidade": "",
+      "impresso": "35",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "e1.c1.situacao",
+      "grandeza": "conjunto 1, caso 1: situação",
+      "unidade": "",
+      "impresso": "Flexo Compressao",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "e1.c1.Mx",
+      "grandeza": "conjunto 1, caso 1: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "2.10",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "e1.c1.My",
+      "grandeza": "conjunto 1, caso 1: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "e1.c1.Mtotal",
+      "grandeza": "conjunto 1, caso 1: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "2.1",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "e1.c1.incl",
+      "grandeza": "conjunto 1, caso 1: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "0",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "e1.c1.veredito",
+      "grandeza": "conjunto 1, caso 1: veredito",
+      "unidade": "",
+      "impresso": "SITUACAO DE INSTABILIDADE",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "e1.c1.MR1a",
+      "grandeza": "conjunto 1, caso 1: momento resistente de 1ª ordem (instabilidade)",
+      "unidade": "tm",
+      "impresso": "2",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "e1.c1.MR2a",
+      "grandeza": "conjunto 1, caso 1: parcela de 2ª ordem (instabilidade)",
+      "unidade": "tm",
+      "impresso": ".66",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "e1.c1.Matuante",
+      "grandeza": "conjunto 1, caso 1: momento atuante na comparação",
+      "unidade": "tm",
+      "impresso": "2.09",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "e1.c2.situacao",
+      "grandeza": "conjunto 1, caso 2: situação",
+      "unidade": "",
+      "impresso": "Flexo Compressao",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "e1.c2.Mx",
+      "grandeza": "conjunto 1, caso 2: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "e1.c2.My",
+      "grandeza": "conjunto 1, caso 2: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.60",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "e1.c2.Mtotal",
+      "grandeza": "conjunto 1, caso 2: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "1.62",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "e1.c2.incl",
+      "grandeza": "conjunto 1, caso 2: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "22",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "e1.c2.veredito",
+      "grandeza": "conjunto 1, caso 2: veredito",
+      "unidade": "",
+      "impresso": "SITUACAO DE INSTABILIDADE",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "e1.c2.MR1a",
+      "grandeza": "conjunto 1, caso 2: momento resistente de 1ª ordem (instabilidade)",
+      "unidade": "tm",
+      "impresso": "1.86",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "e1.c2.MR2a",
+      "grandeza": "conjunto 1, caso 2: parcela de 2ª ordem (instabilidade)",
+      "unidade": "tm",
+      "impresso": ".59",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "e1.c2.Matuante",
+      "grandeza": "conjunto 1, caso 2: momento atuante na comparação",
+      "unidade": "tm",
+      "impresso": "1.62",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "e2.P.Jx",
+      "grandeza": "conjunto 2: momento de inércia Jx",
+      "unidade": "cm4",
+      "impresso": "45000",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "e2.P.Jy",
+      "grandeza": "conjunto 2: momento de inércia Jy",
+      "unidade": "cm4",
+      "impresso": "20000",
+      "fonte": "impressora.prn:56"
+    },
+    {
+      "id": "e2.P.lambdaX",
+      "grandeza": "conjunto 2: esbeltez λx",
+      "unidade": "",
+      "impresso": "52",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "e2.P.lambdaY",
+      "grandeza": "conjunto 2: esbeltez λy",
+      "unidade": "",
+      "impresso": "35",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "e2.c1.situacao",
+      "grandeza": "conjunto 2, caso 1: situação",
+      "unidade": "",
+      "impresso": "Flexao Obliqua",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "e2.c1.Mx",
+      "grandeza": "conjunto 2, caso 1: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "1.10",
+      "fonte": "impressora.prn:65"
+    },
+    {
+      "id": "e2.c1.My",
+      "grandeza": "conjunto 2, caso 1: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.30",
+      "fonte": "impressora.prn:66"
+    },
+    {
+      "id": "e2.c1.Mtotal",
+      "grandeza": "conjunto 2, caso 1: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "1.14",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "e2.c1.incl",
+      "grandeza": "conjunto 2, caso 1: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "15",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "e2.c1.MRx1a",
+      "grandeza": "conjunto 2, caso 1: momento resistente Mx de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "1.85",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "e2.c1.MRx2a",
+      "grandeza": "conjunto 2, caso 1: momento resistente Mx, parcela de 2ª ordem",
+      "unidade": "tm",
+      "impresso": "0.61",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "e2.c1.MRx",
+      "grandeza": "conjunto 2, caso 1: momento resistente Mx",
+      "unidade": "tm",
+      "impresso": "1.25",
+      "fonte": "impressora.prn:69"
+    },
+    {
+      "id": "e2.c1.MRy1a",
+      "grandeza": "conjunto 2, caso 1: momento resistente My de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "e2.c1.MRy",
+      "grandeza": "conjunto 2, caso 1: momento resistente My",
+      "unidade": "tm",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "e2.c1.MRtotal",
+      "grandeza": "conjunto 2, caso 1: momento resistente total",
+      "unidade": "tm",
+      "impresso": "1.26",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "e2.c1.ln",
+      "grandeza": "conjunto 2, caso 1: inclinação da linha neutra",
+      "unidade": "graus",
+      "impresso": "273.1",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "e2.c1.Xln",
+      "grandeza": "conjunto 2, caso 1: profundidade da linha neutra",
+      "unidade": "cm",
+      "impresso": "15.73",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "e2.c1.1/r",
+      "grandeza": "conjunto 2, caso 1: curvatura 1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.22254",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "e2.c1.defCon",
+      "grandeza": "conjunto 2, caso 1: deformação do concreto",
+      "unidade": "‰",
+      "impresso": "3.5000",
+      "fonte": "impressora.prn:73"
+    },
+    {
+      "id": "e2.c1.defAco",
+      "grandeza": "conjunto 2, caso 1: deformação do aço",
+      "unidade": "‰",
+      "impresso": "0.6073",
+      "fonte": "impressora.prn:73"
+    },
+    {
+      "id": "e2.c2.situacao",
+      "grandeza": "conjunto 2, caso 2: situação",
+      "unidade": "",
+      "impresso": "Flexao Obliqua",
+      "fonte": "impressora.prn:75"
+    },
+    {
+      "id": "e2.c2.Mx",
+      "grandeza": "conjunto 2, caso 2: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "e2.c2.My",
+      "grandeza": "conjunto 2, caso 2: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.90",
+      "fonte": "impressora.prn:77"
+    },
+    {
+      "id": "e2.c2.Mtotal",
+      "grandeza": "conjunto 2, caso 2: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "1.03",
+      "fonte": "impressora.prn:78"
+    },
+    {
+      "id": "e2.c2.incl",
+      "grandeza": "conjunto 2, caso 2: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "61",
+      "fonte": "impressora.prn:78"
+    },
+    {
+      "id": "e2.c2.MRx1a",
+      "grandeza": "conjunto 2, caso 2: momento resistente Mx de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "1.15",
+      "fonte": "impressora.prn:80"
+    },
+    {
+      "id": "e2.c2.MRx2a",
+      "grandeza": "conjunto 2, caso 2: momento resistente Mx, parcela de 2ª ordem",
+      "unidade": "tm",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:80"
+    },
+    {
+      "id": "e2.c2.MRx",
+      "grandeza": "conjunto 2, caso 2: momento resistente Mx",
+      "unidade": "tm",
+      "impresso": "0.95",
+      "fonte": "impressora.prn:80"
+    },
+    {
+      "id": "e2.c2.MRy1a",
+      "grandeza": "conjunto 2, caso 2: momento resistente My de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "0.93",
+      "fonte": "impressora.prn:81"
+    },
+    {
+      "id": "e2.c2.MRy",
+      "grandeza": "conjunto 2, caso 2: momento resistente My",
+      "unidade": "tm",
+      "impresso": "0.93",
+      "fonte": "impressora.prn:81"
+    },
+    {
+      "id": "e2.c2.MRtotal",
+      "grandeza": "conjunto 2, caso 2: momento resistente total",
+      "unidade": "tm",
+      "impresso": "1.33",
+      "fonte": "impressora.prn:82"
+    },
+    {
+      "id": "e2.c2.ln",
+      "grandeza": "conjunto 2, caso 2: inclinação da linha neutra",
+      "unidade": "graus",
+      "impresso": "289.7",
+      "fonte": "impressora.prn:83"
+    },
+    {
+      "id": "e2.c2.Xln",
+      "grandeza": "conjunto 2, caso 2: profundidade da linha neutra",
+      "unidade": "cm",
+      "impresso": "21.66",
+      "fonte": "impressora.prn:83"
+    },
+    {
+      "id": "e2.c2.1/r",
+      "grandeza": "conjunto 2, caso 2: curvatura 1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.07673",
+      "fonte": "impressora.prn:83"
+    },
+    {
+      "id": "e2.c2.defCon",
+      "grandeza": "conjunto 2, caso 2: deformação do concreto",
+      "unidade": "‰",
+      "impresso": "1.6617",
+      "fonte": "impressora.prn:84"
+    },
+    {
+      "id": "e2.c2.defAco",
+      "grandeza": "conjunto 2, caso 2: deformação do aço",
+      "unidade": "‰",
+      "impresso": "0.2643",
+      "fonte": "impressora.prn:84"
+    },
+    {
+      "id": "e2.c2.veredito",
+      "grandeza": "conjunto 2, caso 2: veredito",
+      "unidade": "",
+      "impresso": "ok",
+      "fonte": "impressora.prn:85"
+    },
+    {
+      "id": "e3.P.Jx",
+      "grandeza": "conjunto 3: momento de inércia Jx",
+      "unidade": "cm4",
+      "impresso": "45000",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "e3.P.Jy",
+      "grandeza": "conjunto 3: momento de inércia Jy",
+      "unidade": "cm4",
+      "impresso": "20000",
+      "fonte": "impressora.prn:103"
+    },
+    {
+      "id": "e3.P.lambdaX",
+      "grandeza": "conjunto 3: esbeltez λx",
+      "unidade": "",
+      "impresso": "52",
+      "fonte": "impressora.prn:109"
+    },
+    {
+      "id": "e3.P.lambdaY",
+      "grandeza": "conjunto 3: esbeltez λy",
+      "unidade": "",
+      "impresso": "35",
+      "fonte": "impressora.prn:109"
+    },
+    {
+      "id": "e3.c1.situacao",
+      "grandeza": "conjunto 3, caso 1: situação",
+      "unidade": "",
+      "impresso": "Flexao Obliqua",
+      "fonte": "impressora.prn:111"
+    },
+    {
+      "id": "e3.c1.Mx",
+      "grandeza": "conjunto 3, caso 1: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:112"
+    },
+    {
+      "id": "e3.c1.My",
+      "grandeza": "conjunto 3, caso 1: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:113"
+    },
+    {
+      "id": "e3.c1.Mtotal",
+      "grandeza": "conjunto 3, caso 1: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "1.08",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "e3.c1.incl",
+      "grandeza": "conjunto 3, caso 1: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "22",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "e3.c1.MRx1a",
+      "grandeza": "conjunto 3, caso 1: momento resistente Mx de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "1.72",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "e3.c1.MRx2a",
+      "grandeza": "conjunto 3, caso 1: momento resistente Mx, parcela de 2ª ordem",
+      "unidade": "tm",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "e3.c1.MRx",
+      "grandeza": "conjunto 3, caso 1: momento resistente Mx",
+      "unidade": "tm",
+      "impresso": "1.47",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "e3.c1.MRy1a",
+      "grandeza": "conjunto 3, caso 1: momento resistente My de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "e3.c1.MRy",
+      "grandeza": "conjunto 3, caso 1: momento resistente My",
+      "unidade": "tm",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "e3.c1.MRtotal",
+      "grandeza": "conjunto 3, caso 1: momento resistente total",
+      "unidade": "tm",
+      "impresso": "1.54",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "e3.c1.ln",
+      "grandeza": "conjunto 3, caso 1: inclinação da linha neutra",
+      "unidade": "graus",
+      "impresso": "276.8",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "e3.c1.Xln",
+      "grandeza": "conjunto 3, caso 1: profundidade da linha neutra",
+      "unidade": "cm",
+      "impresso": "13.61",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "e3.c1.1/r",
+      "grandeza": "conjunto 3, caso 1: curvatura 1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.14082",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "e3.c1.defCon",
+      "grandeza": "conjunto 3, caso 1: deformação do concreto",
+      "unidade": "‰",
+      "impresso": "1.9160",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "e3.c1.defAco",
+      "grandeza": "conjunto 3, caso 1: deformação do aço",
+      "unidade": "‰",
+      "impresso": "0.9117",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "e3.c1.veredito",
+      "grandeza": "conjunto 3, caso 1: veredito",
+      "unidade": "",
+      "impresso": "ok",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "e3.c2.situacao",
+      "grandeza": "conjunto 3, caso 2: situação",
+      "unidade": "",
+      "impresso": "Flexao Obliqua",
+      "fonte": "impressora.prn:122"
+    },
+    {
+      "id": "e3.c2.Mx",
+      "grandeza": "conjunto 3, caso 2: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.60",
+      "fonte": "impressora.prn:123"
+    },
+    {
+      "id": "e3.c2.My",
+      "grandeza": "conjunto 3, caso 2: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:124"
+    },
+    {
+      "id": "e3.c2.Mtotal",
+      "grandeza": "conjunto 3, caso 2: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "1",
+      "fonte": "impressora.prn:125"
+    },
+    {
+      "id": "e3.c2.incl",
+      "grandeza": "conjunto 3, caso 2: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "53",
+      "fonte": "impressora.prn:125"
+    },
+    {
+      "id": "e3.c2.MRx1a",
+      "grandeza": "conjunto 3, caso 2: momento resistente Mx de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "1.04",
+      "fonte": "impressora.prn:127"
+    },
+    {
+      "id": "e3.c2.MRx2a",
+      "grandeza": "conjunto 3, caso 2: momento resistente Mx, parcela de 2ª ordem",
+      "unidade": "tm",
+      "impresso": "0.11",
+      "fonte": "impressora.prn:127"
+    },
+    {
+      "id": "e3.c2.MRx",
+      "grandeza": "conjunto 3, caso 2: momento resistente Mx",
+      "unidade": "tm",
+      "impresso": "0.93",
+      "fonte": "impressora.prn:127"
+    },
+    {
+      "id": "e3.c2.MRy1a",
+      "grandeza": "conjunto 3, caso 2: momento resistente My de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "0.94",
+      "fonte": "impressora.prn:128"
+    },
+    {
+      "id": "e3.c2.MRy",
+      "grandeza": "conjunto 3, caso 2: momento resistente My",
+      "unidade": "tm",
+      "impresso": "0.94",
+      "fonte": "impressora.prn:128"
+    },
+    {
+      "id": "e3.c2.MRtotal",
+      "grandeza": "conjunto 3, caso 2: momento resistente total",
+      "unidade": "tm",
+      "impresso": "1.32",
+      "fonte": "impressora.prn:129"
+    },
+    {
+      "id": "e3.c2.ln",
+      "grandeza": "conjunto 3, caso 2: inclinação da linha neutra",
+      "unidade": "graus",
+      "impresso": "292.9",
+      "fonte": "impressora.prn:130"
+    },
+    {
+      "id": "e3.c2.Xln",
+      "grandeza": "conjunto 3, caso 2: profundidade da linha neutra",
+      "unidade": "cm",
+      "impresso": "19.36",
+      "fonte": "impressora.prn:130"
+    },
+    {
+      "id": "e3.c2.1/r",
+      "grandeza": "conjunto 3, caso 2: curvatura 1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.06498",
+      "fonte": "impressora.prn:130"
+    },
+    {
+      "id": "e3.c2.defCon",
+      "grandeza": "conjunto 3, caso 2: deformação do concreto",
+      "unidade": "‰",
+      "impresso": "1.2578",
+      "fonte": "impressora.prn:131"
+    },
+    {
+      "id": "e3.c2.defAco",
+      "grandeza": "conjunto 3, caso 2: deformação do aço",
+      "unidade": "‰",
+      "impresso": "0.4425",
+      "fonte": "impressora.prn:131"
+    },
+    {
+      "id": "e3.c2.veredito",
+      "grandeza": "conjunto 3, caso 2: veredito",
+      "unidade": "",
+      "impresso": "ok",
+      "fonte": "impressora.prn:132"
+    }
+  ],
+  "comparacao_v1": "igual (10 de 10; impressora 5.967 bytes)"
+}

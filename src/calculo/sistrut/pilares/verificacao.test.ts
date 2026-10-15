@@ -7,7 +7,7 @@ import { emSingle, PARAMETROS_PILAR } from "../base/parametros";
 import type { BarraPilar, SecaoPilar } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, type CasoOraculo, valorOraculo } from "../__oraculo__";
 import { CASOS_PILAR } from "./__casos__";
-import { cobre } from "./elu";
+import { type CasoPilarSistrut, cobre } from "./elu";
 import { verificaPilarSistrut } from "./verificacao";
 
 const par = emSingle(PARAMETROS_PILAR);
@@ -258,5 +258,143 @@ describe("defeitos do original no PILAR (livros_viga_pilar.md 5.2)", () => {
       "corrigido",
     );
     expect(r.casos.every((c) => c.erro === undefined)).toBe(true);
+  });
+});
+
+/** Confere todos os valores de um carregamento `pref` ("e1") de um caso v2par do PILAR. */
+function confereCarregamento(
+  caso: CasoOraculo,
+  pref: string,
+  r: ReturnType<typeof verificaPilarSistrut>,
+) {
+  const ids = caso.valores.map((v) => v.id).filter((id) => id.startsWith(`${pref}.`));
+  const campos: Record<string, (c: CasoPilarSistrut) => number | string | undefined> = {
+    situacao: () => r.situacao,
+    Mx: (c) => c.mx,
+    My: (c) => c.my,
+    Mtotal: (c) => c.mTotal,
+    incl: (c) => c.anguloAtuante,
+    veredito: (c) => textoVeredito(c.veredito),
+    MR1a: (c) => c.instabilidade?.m1,
+    MR2a: (c) => c.instabilidade?.m2,
+    Matuante: (c) => c.instabilidade?.atuante,
+    MRx1a: (c) => c.mrx,
+    MRx2a: (c) => c.m2x,
+    MRx: (c) => c.mrxReduzido,
+    MRy1a: (c) => c.mry,
+    MRy2a: (c) => c.m2y,
+    MRy: (c) => c.mryReduzido,
+    MRtotal: (c) => c.mrTotal,
+    ln: (c) => c.anguloLN,
+    Xln: (c) => c.xLN,
+    "1/r": (c) => c.curvatura * 1000,
+    defCon: (c) => c.deformacaoConcreto,
+    defAco: (c) => c.deformacaoAco,
+  };
+  for (const id of ids) {
+    const partes = id.split(".");
+    if (partes[1] === "P") {
+      const v = { Jx: r.jx, Jy: r.jy, lambdaX: r.lambdaX, lambdaY: r.lambdaY }[partes[2]!];
+      confere(caso, id, v!);
+      continue;
+    }
+    const c = r.casos[Number(partes[1]!.slice(1)) - 1]!;
+    const nome = partes.slice(2).join(".");
+    if (nome.endsWith(".tela")) continue;
+    const v = campos[nome]!(c);
+    if (typeof v === "string") expect(v, id).toBe(valorOraculo(caso, id).impresso);
+    else confere(caso, id, v!);
+  }
+}
+
+describe("v2par_pilar_mk / lambda / trava (rodada 2)", () => {
+  const verifica = (
+    secao: SecaoPilar,
+    cj: { Nk_t: number; Mxk_tm: number; Myk_tm: number; Lxe_m: number; Lye_m: number },
+  ) =>
+    verificaPilarSistrut(
+      {
+        secao,
+        nk: sng(cj.Nk_t),
+        mxk: sng(cj.Mxk_tm),
+        myk: sng(cj.Myk_tm),
+        lxe: sng(cj.Lxe_m),
+        lye: sng(cj.Lye_m),
+        materiais,
+        parametros: par,
+      },
+      "original",
+    );
+  type Conjunto = {
+    k: number;
+    Nk_t: number;
+    Mxk_tm: number;
+    Myk_tm: number;
+    Lxe_m: number;
+    Lye_m: number;
+  };
+  const conjuntos = (caso: CasoOraculo) => (caso.entrada as { conjuntos: Conjunto[] }).conjuntos;
+
+  it.each(["v2par_pilar_mk", "v2par_pilar_lambda"])("%s: todos os valores impressos", (nome) => {
+    const caso = CASOS_PILAR[nome]!;
+    const secao =
+      nome === "v2par_pilar_mk"
+        ? retangular(20, 30, 3, 2, 2, 16)
+        : retangular(20, 20, 3, 2, 2, 12.5);
+    for (const cj of conjuntos(caso)) confereCarregamento(caso, `e${cj.k}`, verifica(secao, cj));
+  });
+
+  it("v2par_pilar_trava: caso 1 bate; caso 2 (27°) sai com erro em vez de travar", () => {
+    const caso = CASOS_PILAR.v2par_pilar_trava!;
+    const r = verifica(retangular(20, 30, 3, 2, 2, 16), conjuntos(caso)[0]!);
+    expect(r.casos[1]!.erro).toBe("nao-converge");
+    const sem = {
+      ...caso,
+      valores: caso.valores.filter(
+        (v) => !v.id.startsWith("e1.c2.") || /\.(Mx|My|Mtotal|incl|situacao)$/.test(v.id),
+      ),
+    };
+    confereCarregamento(sem, "e1", r);
+  });
+});
+
+describe("D-17: laço sem fim no ajuste do ângulo da LN (v2par_pilar_trava)", () => {
+  // 20×30, 2 + 2 φ16, le 3: os atuantes a 27°, 21° e 37° travam o original no laço
+  // PILAR.BAS:5258-5315 (passo halvado a cada volta, faixa em θ presa acima de 1°).
+  const secao = retangular(20, 30, 3, 2, 2, 16);
+  const conjuntos = [
+    [20, 0.8, 0, 1],
+    [30, 1.0, 0.6, 0],
+    [30, 0.8, 0, 1],
+  ] as const;
+  const entrada = (nk: number, mxk: number, myk: number) => ({
+    secao,
+    nk: sng(nk),
+    mxk: sng(mxk),
+    myk: sng(myk),
+    lxe: 3,
+    lye: 3,
+    materiais,
+    parametros: par,
+  });
+
+  it.each(conjuntos)(
+    "original: Nk %s, Mxk %s, Myk %s → erro explícito no caso que trava",
+    (nk, mxk, myk, i) => {
+      const r = verificaPilarSistrut(entrada(nk, mxk, myk), "original");
+      expect(r.casos[i]!.erro).toBe("nao-converge");
+    },
+  );
+
+  it.each(conjuntos)("corrigido: Nk %s, Mxk %s, Myk %s converge pela bissecção", (nk, mxk, myk) => {
+    const r = verificaPilarSistrut(
+      { ...entrada(nk, mxk, myk), parametros: PARAMETROS_PILAR },
+      "corrigido",
+    );
+    for (const c of r.casos) {
+      expect(c.erro).toBeUndefined();
+      // LN dentro de 2° do alvo (atuante − 90°) ou faixa fechada em 1°
+      expect(["ok", "NAO", "INSTABILIDADE"]).toContain(c.veredito);
+    }
   });
 });

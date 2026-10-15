@@ -1,0 +1,235 @@
+{
+  "caso": "v2par_pilar_trava",
+  "run": "C:/tmp/oraculo/runs/v2par_pilar_trava-20261015-171708",
+  "programa": "PILAR opção 6 (verificação NB-1/78)",
+  "descricao": "Achado da T10: o PILAR opção 6 não termina a verificação de alguns casos de flexão oblíqua (laço na busca do momento resistente). Seção 20 × 30, c' 3, 2 + 2 φ16, Nk 20 t, Mxk 0,8, Myk 0, le 3 m: o caso 1/2 termina 'ok'; o caso 2/2 (Mx 0,80 inicial, My acidental, inclinação 27°) fica em 'Esforcos resistentes do Pilar — Aguarde ...' aos 30 s e aos 60 s; F2 leva a 'Erro de Operacao'. Também travam (V1 nova, código nativo): Nk 30, Mxk 1,0, Myk 0,6 (caso 1, 21°) e Nk 30, Mxk 0,8 (caso 2, 37°). Terminam: inclinações 15°, 18°, 22°, 53°, 61°, 72°.",
+  "entrada": {
+    "parametros": {
+      "norma": "NB-1/78 (PILAR.INI e SISTRUT.PIP de fábrica)",
+      "fck_tcm2": 0.15,
+      "fyk_tcm2": 5,
+      "classeAco": "B",
+      "fluencia": 0,
+      "secaoComprimidaCritica": "N (resposta à pergunta 'Secao comprimida')"
+    },
+    "secao": {
+      "tipo": "retangular",
+      "B_cm": 20,
+      "H_cm": 30,
+      "cLinha_cm": 3,
+      "barrasBordaSuperior": 2,
+      "barrasBordaInferior": 2,
+      "barrasLaterais": 0,
+      "bitola_mm": 16
+    },
+    "conjuntos": [
+      {
+        "k": 1,
+        "Nk_t": 20,
+        "Mxk_tm": 0.8,
+        "Myk_tm": 0,
+        "Lxe_m": 3,
+        "Lye_m": 3
+      }
+    ]
+  },
+  "valores": [
+    {
+      "id": "e1.P.Jx",
+      "grandeza": "conjunto 1: momento de inércia Jx",
+      "unidade": "cm4",
+      "impresso": "45000",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "e1.P.Jy",
+      "grandeza": "conjunto 1: momento de inércia Jy",
+      "unidade": "cm4",
+      "impresso": "20000",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "e1.P.lambdaX",
+      "grandeza": "conjunto 1: esbeltez λx",
+      "unidade": "",
+      "impresso": "52",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "e1.P.lambdaY",
+      "grandeza": "conjunto 1: esbeltez λy",
+      "unidade": "",
+      "impresso": "35",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "e1.c1.situacao",
+      "grandeza": "conjunto 1, caso 1: situação",
+      "unidade": "",
+      "impresso": "Flexo Compressao",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "e1.c1.Mx",
+      "grandeza": "conjunto 1, caso 1: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "1.20",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "e1.c1.My",
+      "grandeza": "conjunto 1, caso 1: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "e1.c1.Mtotal",
+      "grandeza": "conjunto 1, caso 1: momento solicitante total",
+      "unidade": "tm",
+      "impresso": "1.2",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "e1.c1.incl",
+      "grandeza": "conjunto 1, caso 1: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "0",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "e1.c1.MRx1a",
+      "grandeza": "conjunto 1, caso 1: momento resistente Mx de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "1.41",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "e1.c1.MRx2a",
+      "grandeza": "conjunto 1, caso 1: momento resistente Mx, parcela de 2ª ordem",
+      "unidade": "tm",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "e1.c1.MRx",
+      "grandeza": "conjunto 1, caso 1: momento resistente Mx",
+      "unidade": "tm",
+      "impresso": "1.23",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "e1.c1.MRy1a",
+      "grandeza": "conjunto 1, caso 1: momento resistente My de 1ª ordem",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "e1.c1.MRy",
+      "grandeza": "conjunto 1, caso 1: momento resistente My",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "e1.c1.MRtotal",
+      "grandeza": "conjunto 1, caso 1: momento resistente total",
+      "unidade": "tm",
+      "impresso": "1.23",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "e1.c1.ln",
+      "grandeza": "conjunto 1, caso 1: inclinação da linha neutra",
+      "unidade": "graus",
+      "impresso": "270",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "e1.c1.Xln",
+      "grandeza": "conjunto 1, caso 1: profundidade da linha neutra",
+      "unidade": "cm",
+      "impresso": "12.70",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "e1.c1.1/r",
+      "grandeza": "conjunto 1, caso 1: curvatura 1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.09733",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "e1.c1.defCon",
+      "grandeza": "conjunto 1, caso 1: deformação do concreto",
+      "unidade": "‰",
+      "impresso": "1.2358",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "e1.c1.defAco",
+      "grandeza": "conjunto 1, caso 1: deformação do aço",
+      "unidade": "‰",
+      "impresso": "0.4188",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "e1.c1.veredito",
+      "grandeza": "conjunto 1, caso 1: veredito",
+      "unidade": "",
+      "impresso": "ok",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "e1.c2.situacao",
+      "grandeza": "conjunto 1, caso 2: situação",
+      "unidade": "",
+      "impresso": "Flexo Compressao",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "e1.c2.Mx",
+      "grandeza": "conjunto 1, caso 2: momento solicitante Mx (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "e1.c2.My",
+      "grandeza": "conjunto 1, caso 2: momento solicitante My (inicial + acidental)",
+      "unidade": "tm",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "e1.c2.Mtotal",
+      "grandeza": "conjunto 1, caso 2: momento solicitante total",
+      "unidade": "tm",
+      "impresso": ".89",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "e1.c2.incl",
+      "grandeza": "conjunto 1, caso 2: inclinação do momento",
+      "unidade": "graus",
+      "impresso": "27",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "e1.c2.Mtotal.tela",
+      "grandeza": "caso 2: momento solicitante total na tela do laço (60 s)",
+      "unidade": "tm",
+      "impresso": ".89",
+      "fonte": "telas/005_t02_trava.txt:13"
+    },
+    {
+      "id": "e1.c2.incl.tela",
+      "grandeza": "caso 2: inclinação do momento na tela do laço",
+      "unidade": "graus",
+      "impresso": "27",
+      "fonte": "telas/005_t02_trava.txt:13"
+    }
+  ],
+  "comparacao_v1": "sem comparação útil: a V1 nova também não termina o caso 2 (PILAR.exe a 100 % de CPU por mais de 5 min), mas o roteiro da V1 não avança durante o laço (o RT45 só atende teclas e ON KEY quando o programa lê o teclado)"
+}

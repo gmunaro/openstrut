@@ -14,7 +14,7 @@ import {
   dimensionaPilarSistrut,
   posicaoNoVertice,
 } from "./armadura";
-import { cargasPilaresSistrut } from "./carga";
+import { cargasPilaresSistrut, predimensionaColuna } from "./carga";
 import type { CasoPilarSistrut } from "./elu";
 import { constantes, criaContexto } from "./secao";
 
@@ -250,5 +250,54 @@ describe("circular numa variação de armadura que não é a primeira (PILAREDI.
     const r = arranjoCircular(ctx, g, 3.52, 5, 5, PARAMETROS_PIP.bitolas, 2, 5);
     expect(r.tipo === "ok" && r.n1).toBe(5);
     expect(arranjoCircular(ctx, g, 3.52, 5, 5, PARAMETROS_PIP.bitolas, 2).tipo).toBe("ok");
+  });
+});
+
+describe("v2par_pilar_niveis: P5 25×40 de FUND a COB, carga do .REP nos níveis 2, 3 e 4", () => {
+  const caso = CASOS_PILAR.v2par_pilar_niveis!;
+  const secao: SecaoPilar = { tipo: "retangular", b: 25, h: 40, barras: [] };
+  const nivel = (cota: number) => ({
+    cota,
+    secao,
+    vinculoX: 2 as const,
+    vinculoY: 2 as const,
+    normalVento: 0,
+    mkx: 0,
+    mky: 0,
+  });
+  const coluna: ColunaEdificio = {
+    nome: "P   5",
+    pilarRep: "P   5",
+    niveis: [0, 3, 6, 9].map(nivel),
+  };
+  const reps = [1, 2, 3].map((n) => ({ ...repP5, nivelInicial: n, nivelFinal: n }));
+  const cargas = cargasPilaresSistrut(reps, [coluna], pip, "original");
+
+  it.each([
+    ["FUND", 0],
+    ["PAV1", 1],
+    ["PAV2", 2],
+  ] as const)("lance %s: Nk acumulada + peso próprio, casos e armadura 8 # 10", (nome, i) => {
+    const carga = cargas[i]!;
+    const r = dimensionaPilarSistrut(carga, coluna, materiais, par, pip, "original");
+    const pref = `P5.${nome}`;
+    confere(caso, `${pref}.Nk`, carga.nk);
+    confere(caso, `${pref}.Mkxi`, carga.mkx);
+    confere(caso, `${pref}.Mkyi`, carga.mky);
+    confere(caso, `${pref}.lambdaX`, r.lambdaX);
+    confere(caso, `${pref}.lambdaY`, r.lambdaY);
+    expect(r.casos.map((c) => c.rotulo)).toEqual(["1e", "2e", "1f", "2f"]);
+    for (const c of r.casos) confereLinha(caso, pref, c);
+    confereArmadura(caso, pref, r);
+  });
+
+  it("predimensionamento com a seção imposta desde FUND: carga 54,36, σ 0,001 e 0,027", () => {
+    const p = predimensionaColuna(reps, coluna, 0, materiais, pip, "original", { secao });
+    confere(caso, "P5.predim.sigmaAdmComp", p.tensaoNormalAdmissivel);
+    confere(caso, "P5.predim.sigmaComp", p.tensaoNormal);
+    confere(caso, "P5.predim.sigmaAdmCompM", p.tensaoFlexaoAdmissivel);
+    confere(caso, "P5.predim.sigmaCompM", p.tensaoFlexao);
+    confere(caso, "P5.predim.carga", cargas[0]!.nk);
+    confere(caso, "P5.predim.cargaNivel", cargas[0]!.cargaAcumulada);
   });
 });

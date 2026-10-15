@@ -205,9 +205,19 @@ const novaFaixa = (): Faixa => ({
 });
 
 /** Corrige θ quando o MR reduzido sai mais de 2° do alvo; devolve o novo θ ou
- *  null (PILAR.BAS:5258-5322; PILAREDI.BAS:5300-5345). O passo só cai à metade no
- *  ramo "ângulo acima do alvo", como nos dois EXE; o PILAREDI não ajusta a
- *  circular (`ajusta` falso). */
+ *  null (PILAR.BAS:5258-5322; PILAREDI.BAS:5300-5345). O PILAREDI não ajusta a
+ *  circular (`ajusta` falso).
+ *
+ *  Defeito D-17 (laço sem fim, v2par_pilar_trava): no ramo "ângulo acima do alvo"
+ *  o passo cai à metade a CADA volta assim que há limite inferior (PILAR.BAS:5286;
+ *  PILAREDI.BAS:5323), e o limite superior só é trocado por um ângulo menor
+ *  (5261). A soma dos passos fica limitada (≤ 2·passo), θ converge para um ponto
+ *  que não é a raiz, a faixa em θ nunca fica ≤ 1° (5280), o passo cai abaixo do
+ *  ulp do SINGLE e o GOTO L_33c77 (5315) refaz a busca para sempre. Corrigido:
+ *  bissecção na faixa assim que ela existe (o lado trocado é sempre o do sinal de
+ *  ângulo − alvo); a faixa cai à metade a cada volta e o critério de 1° fecha
+ *  em poucas voltas (teorema do valor intermediário; Burden e Faires, Análise
+ *  Numérica, cap. 2). */
 function ajustaAngulo(
   ctx: Contexto,
   f: Faixa,
@@ -218,12 +228,13 @@ function ajustaAngulo(
 ) {
   const { s, k } = ctx;
   if (!(Math.abs(angulo - theta0) > 2)) return null;
+  const corrigido = ctx.modo === "corrigido";
   if (angulo > theta0) {
-    if (f.acimaAng > angulo) {
+    if (f.acimaAng > angulo || corrigido) {
       f.acimaAng = angulo;
       f.acimaTheta = theta;
     }
-  } else if (f.abaixoAng < angulo) {
+  } else if (f.abaixoAng < angulo || corrigido) {
     f.abaixoAng = angulo;
     f.abaixoTheta = theta;
   }
@@ -238,6 +249,8 @@ function ajustaAngulo(
     )
   )
     return null;
+  if (corrigido && f.abaixoTheta !== -1000 && f.acimaTheta !== 1000)
+    return normalizaAngulo(ctx, (f.acimaTheta + (f.abaixoTheta - v1270)) / 2);
   const limite = s(Math.abs(f.acimaTheta - f.abaixoTheta) * k.c09);
   let novo: number;
   if (angulo > theta0) {
