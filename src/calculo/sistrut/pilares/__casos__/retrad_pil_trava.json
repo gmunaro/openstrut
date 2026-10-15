@@ -1,0 +1,132 @@
+{
+  "caso": "retrad_pil_trava",
+  "run": "C:/tmp/oraculo/runs/retrad_pil_trava-20261015-083047",
+  "programa": "PILAR opção 6",
+  "descricao": "PILAR opção 6, seção do verif2 em flexão oblíqua (Nk 40, Mxk 2, Myk 1): caso 1/2 em instabilidade; o caso 2/2 fica em laço sem fim na busca do equilíbrio (D-2, U49-009), a impressora para em 'Esforcos resistentes do Pilar'.",
+  "entrada": {
+    "secao": "como retrad_pil_verif2",
+    "carregamento": "Nk 40 t, Mxk 2 tm, Myk 1 tm, Lxe 4 m, Lye 6 m",
+    "roteiro": "tests/retraducao/pilar/trava.sufixo.txt"
+  },
+  "valores": [
+    {
+      "id": "P.lambdaX",
+      "grandeza": "λx",
+      "unidade": "",
+      "impresso": "69",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "P.lambdaY",
+      "grandeza": "λy",
+      "unidade": "",
+      "impresso": "52",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "c1.situacao",
+      "grandeza": "situação",
+      "unidade": "",
+      "impresso": "Flexao Obliqua",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "c1.Mx",
+      "grandeza": "Mx",
+      "unidade": "tm",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "c1.My",
+      "grandeza": "My",
+      "unidade": "tm",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "c1.Mtotal",
+      "grandeza": "Mtotal",
+      "unidade": "tm",
+      "impresso": "2.97",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "c1.incl",
+      "grandeza": "inclinação",
+      "unidade": "graus",
+      "impresso": "20",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "c1.veredito",
+      "grandeza": "veredito",
+      "unidade": "",
+      "impresso": "SITUACAO DE INSTABILIDADE",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "c1.M1a",
+      "grandeza": "M(1a)",
+      "unidade": "tm",
+      "impresso": "2.95",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "c1.M2a",
+      "grandeza": "M(2a)",
+      "unidade": "tm",
+      "impresso": "1.62",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "c1.Matuante",
+      "grandeza": "M(Atuante)",
+      "unidade": "tm",
+      "impresso": "2.97",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "c2.Mx",
+      "grandeza": "Mx",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "c2.Mya",
+      "grandeza": "Ma y",
+      "unidade": "tm",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "c2.My",
+      "grandeza": "My",
+      "unidade": "tm",
+      "impresso": "1.80",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "c2.Mtotal",
+      "grandeza": "Mtotal",
+      "unidade": "tm",
+      "impresso": "2.69",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "c2.incl",
+      "grandeza": "inclinação",
+      "unidade": "graus",
+      "impresso": "42",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "c2.travou",
+      "grandeza": "último texto antes do laço sem fim",
+      "unidade": "",
+      "impresso": "Esforcos resistentes do Pilar",
+      "fonte": "impressora.prn:39"
+    }
+  ]
+}

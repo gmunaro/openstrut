@@ -1,0 +1,360 @@
+{
+  "caso": "retrad_pil_verif2",
+  "run": "C:/tmp/oraculo/runs/retrad_pil_verif2-20261015-082939",
+  "programa": "PILAR opção 6",
+  "descricao": "PILAR opção 6 com dois carregamentos na mesma seção 20x40 (3+3 φ16 e 1 lateral de cada lado a 20 cm): flexo-compressão com 2ª ordem em situação de instabilidade e compressão centrada com λ 139 (instabilidade no caso 1, ok no caso 2).",
+  "entrada": {
+    "secao": "retangular B 20, H 40, cobrimento c 3; 3 barras em cima, 3 embaixo, 1 por lateral (Di = Df = 20); φ16",
+    "fck_tcm2": 0.15,
+    "fyk_tcm2": 5,
+    "classeAco": "B",
+    "carregamento 1": "Nk 40 t, Mxk 2 tm, Myk 0, Lxe 4 m, Lye 6 m",
+    "carregamento 2": "Nk 25 t, Mxk 0, Myk 0, Lxe 8 m, Lye 8 m",
+    "roteiro": "tests/retraducao/pilar/verif2.sufixo.txt"
+  },
+  "valores": [
+    {
+      "id": "P.Jx",
+      "grandeza": "Jx",
+      "unidade": "cm4",
+      "impresso": "106666.7",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "P.Jy",
+      "grandeza": "Jy",
+      "unidade": "cm4",
+      "impresso": "26666.66",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "P.lambdaX",
+      "grandeza": "λx",
+      "unidade": "",
+      "impresso": "69",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "P.lambdaY",
+      "grandeza": "λy",
+      "unidade": "",
+      "impresso": "52",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "c1.situacao",
+      "grandeza": "situação",
+      "unidade": "",
+      "impresso": "Flexo Compressao",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "c1.caso",
+      "grandeza": "caso",
+      "unidade": "",
+      "impresso": "1/2",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "c1.Mxa",
+      "grandeza": "Ma x",
+      "unidade": "tm",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "c1.Mx",
+      "grandeza": "Mx",
+      "unidade": "tm",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "c1.My",
+      "grandeza": "My",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "c1.Mtotal",
+      "grandeza": "Mtotal",
+      "unidade": "tm",
+      "impresso": "2.8",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "c1.incl",
+      "grandeza": "inclinação",
+      "unidade": "graus",
+      "impresso": "0",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "c1.veredito",
+      "grandeza": "veredito",
+      "unidade": "",
+      "impresso": "SITUACAO DE INSTABILIDADE",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "c1.M1a",
+      "grandeza": "M(1a)",
+      "unidade": "tm",
+      "impresso": "3.11",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "c1.M2a",
+      "grandeza": "M(2a)",
+      "unidade": "tm",
+      "impresso": "1.72",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "c1.Matuante",
+      "grandeza": "M(Atuante)",
+      "unidade": "tm",
+      "impresso": "2.79",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "c2.caso",
+      "grandeza": "caso",
+      "unidade": "",
+      "impresso": "2/2",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "c2.Mx",
+      "grandeza": "Mx",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "c2.Mya",
+      "grandeza": "Ma y",
+      "unidade": "tm",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "c2.My",
+      "grandeza": "My",
+      "unidade": "tm",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "c2.Mtotal",
+      "grandeza": "Mtotal",
+      "unidade": "tm",
+      "impresso": "2.15",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "c2.incl",
+      "grandeza": "inclinação",
+      "unidade": "graus",
+      "impresso": "22",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "c2.veredito",
+      "grandeza": "veredito",
+      "unidade": "",
+      "impresso": "SITUACAO DE INSTABILIDADE",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "c2.M1a",
+      "grandeza": "M(1a)",
+      "unidade": "tm",
+      "impresso": "2.95",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "c2.M2a",
+      "grandeza": "M(2a)",
+      "unidade": "tm",
+      "impresso": "1.63",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "c2.Matuante",
+      "grandeza": "M(Atuante)",
+      "unidade": "tm",
+      "impresso": "2.15",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "L2.P.lambdaX",
+      "grandeza": "λx",
+      "unidade": "",
+      "impresso": "139",
+      "fonte": "impressora.prn:68"
+    },
+    {
+      "id": "L2.P.lambdaY",
+      "grandeza": "λy",
+      "unidade": "",
+      "impresso": "69",
+      "fonte": "impressora.prn:68"
+    },
+    {
+      "id": "L2.c1.situacao",
+      "grandeza": "situação",
+      "unidade": "",
+      "impresso": "Compressao Centrada",
+      "fonte": "impressora.prn:70"
+    },
+    {
+      "id": "L2.c1.Mx",
+      "grandeza": "Mx",
+      "unidade": "tm",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:71"
+    },
+    {
+      "id": "L2.c1.Mtotal",
+      "grandeza": "Mtotal",
+      "unidade": "tm",
+      "impresso": ".5",
+      "fonte": "impressora.prn:73"
+    },
+    {
+      "id": "L2.c1.veredito",
+      "grandeza": "veredito",
+      "unidade": "",
+      "impresso": "SITUACAO DE INSTABILIDADE",
+      "fonte": "impressora.prn:75"
+    },
+    {
+      "id": "L2.c1.M1a",
+      "grandeza": "M(1a)",
+      "unidade": "tm",
+      "impresso": "3.49",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "L2.c1.M2a",
+      "grandeza": "M(2a)",
+      "unidade": "tm",
+      "impresso": "5.27",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "L2.c1.Matuante",
+      "grandeza": "M(Atuante)",
+      "unidade": "tm",
+      "impresso": ".5",
+      "fonte": "impressora.prn:76"
+    },
+    {
+      "id": "L2.c2.My",
+      "grandeza": "My",
+      "unidade": "tm",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:79"
+    },
+    {
+      "id": "L2.c2.incl",
+      "grandeza": "inclinação",
+      "unidade": "graus",
+      "impresso": "90",
+      "fonte": "impressora.prn:80"
+    },
+    {
+      "id": "L2.c2.MRx1a",
+      "grandeza": "Mx(1a)",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:82"
+    },
+    {
+      "id": "L2.c2.MRx2a",
+      "grandeza": "Mx(2a)",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:82"
+    },
+    {
+      "id": "L2.c2.MRx",
+      "grandeza": "Mx resistente",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:82"
+    },
+    {
+      "id": "L2.c2.MRy1a",
+      "grandeza": "My(1a)",
+      "unidade": "tm",
+      "impresso": "3.62",
+      "fonte": "impressora.prn:83"
+    },
+    {
+      "id": "L2.c2.MRy2a",
+      "grandeza": "My(2a)",
+      "unidade": "tm",
+      "impresso": "0.56",
+      "fonte": "impressora.prn:83"
+    },
+    {
+      "id": "L2.c2.MRy",
+      "grandeza": "My resistente",
+      "unidade": "tm",
+      "impresso": "3.07",
+      "fonte": "impressora.prn:83"
+    },
+    {
+      "id": "L2.c2.MRtotal",
+      "grandeza": "Mtotal resistente",
+      "unidade": "tm",
+      "impresso": "3.07",
+      "fonte": "impressora.prn:84"
+    },
+    {
+      "id": "L2.c2.ln",
+      "grandeza": "ln",
+      "unidade": "graus",
+      "impresso": "0",
+      "fonte": "impressora.prn:85"
+    },
+    {
+      "id": "L2.c2.Xln",
+      "grandeza": "Xln",
+      "unidade": "cm",
+      "impresso": "26.62",
+      "fonte": "impressora.prn:85"
+    },
+    {
+      "id": "L2.c2.1/r",
+      "grandeza": "1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.03446",
+      "fonte": "impressora.prn:85"
+    },
+    {
+      "id": "L2.c2.defCon",
+      "grandeza": "def. concreto",
+      "unidade": "‰",
+      "impresso": "0.9173",
+      "fonte": "impressora.prn:86"
+    },
+    {
+      "id": "L2.c2.defAco",
+      "grandeza": "def. aço",
+      "unidade": "‰",
+      "impresso": "0.3578",
+      "fonte": "impressora.prn:86"
+    },
+    {
+      "id": "L2.c2.veredito",
+      "grandeza": "veredito",
+      "unidade": "",
+      "impresso": "ok",
+      "fonte": "impressora.prn:87"
+    }
+  ]
+}

@@ -1,0 +1,454 @@
+{
+  "caso": "retrad_pil_poliinv",
+  "run": "C:/tmp/oraculo/runs/retrad_pil_poliinv-20261015-084151",
+  "programa": "PILAREDI",
+  "descricao": "Como retrad_pil_secoes, com a poligonal no sentido anti-horário (0,0) (20,0) (20,20) (0,20): área negativa, peso próprio negativo (17,37 − 0,30 = 17,07) e recusa 'NAO SUPORTA' (D-6). A circular D 25 (prefixo C) é igual à do secoes.",
+  "entrada": {
+    "circular": "D 25 cm",
+    "poligonal": "(0,0) (20,0) (20,20) (0,20)",
+    "roteiro": "tests/retraducao/pilar/poliinv.sufixo.txt"
+  },
+  "valores": [
+    {
+      "id": "C.lambdaX",
+      "grandeza": "Lbx",
+      "unidade": "",
+      "impresso": "48",
+      "fonte": "impressora.prn:5"
+    },
+    {
+      "id": "C.lambdaY",
+      "grandeza": "Lby",
+      "unidade": "",
+      "impresso": "48",
+      "fonte": "impressora.prn:5"
+    },
+    {
+      "id": "C.Nk",
+      "grandeza": "Nk",
+      "unidade": "t",
+      "impresso": "17.74",
+      "fonte": "impressora.prn:6"
+    },
+    {
+      "id": "C.1e.Mkx",
+      "grandeza": "Mkx",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.Mky",
+      "grandeza": "Mky",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.Mktot",
+      "grandeza": "Mktot",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.MRx1a",
+      "grandeza": "MRx1a",
+      "unidade": "tm",
+      "impresso": "1.11",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.MRx2a",
+      "grandeza": "MRx2a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.MRy1a",
+      "grandeza": "MRy1a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.MRy2a",
+      "grandeza": "MRy2a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.MRtot",
+      "grandeza": "MRtot",
+      "unidade": "tm",
+      "impresso": "1.11",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.incLN",
+      "grandeza": "incLN",
+      "unidade": "graus",
+      "impresso": "270.0",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.1/r",
+      "grandeza": "1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.1419",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.x/d",
+      "grandeza": "x/d",
+      "unidade": "",
+      "impresso": "0.71",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.defCon",
+      "grandeza": "defCon",
+      "unidade": "‰",
+      "impresso": "2.2813",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1e.defAco",
+      "grandeza": "defAco",
+      "unidade": "‰",
+      "impresso": "0.9110",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "C.1f.Mkx",
+      "grandeza": "Mkx",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.Mky",
+      "grandeza": "Mky",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.Mktot",
+      "grandeza": "Mktot",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.MRx1a",
+      "grandeza": "MRx1a",
+      "unidade": "tm",
+      "impresso": "1.20",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.MRx2a",
+      "grandeza": "MRx2a",
+      "unidade": "tm",
+      "impresso": "0.24",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.MRy1a",
+      "grandeza": "MRy1a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.MRy2a",
+      "grandeza": "MRy2a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.MRtot",
+      "grandeza": "MRtot",
+      "unidade": "tm",
+      "impresso": "0.97",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.incLN",
+      "grandeza": "incLN",
+      "unidade": "graus",
+      "impresso": "270.0",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.1/r",
+      "grandeza": "1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.1456",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.x/d",
+      "grandeza": "x/d",
+      "unidade": "",
+      "impresso": "0.77",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.defCon",
+      "grandeza": "defCon",
+      "unidade": "‰",
+      "impresso": "2.3000",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.1f.defAco",
+      "grandeza": "defAco",
+      "unidade": "‰",
+      "impresso": "0.6995",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "C.2e.Mkx",
+      "grandeza": "Mkx",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.Mky",
+      "grandeza": "Mky",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.Mktot",
+      "grandeza": "Mktot",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.MRx1a",
+      "grandeza": "MRx1a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.MRx2a",
+      "grandeza": "MRx2a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.MRy1a",
+      "grandeza": "MRy1a",
+      "unidade": "tm",
+      "impresso": "1.11",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.MRy2a",
+      "grandeza": "MRy2a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.MRtot",
+      "grandeza": "MRtot",
+      "unidade": "tm",
+      "impresso": "1.11",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.incLN",
+      "grandeza": "incLN",
+      "unidade": "graus",
+      "impresso": "0.0",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.1/r",
+      "grandeza": "1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.1419",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.x/d",
+      "grandeza": "x/d",
+      "unidade": "",
+      "impresso": "0.71",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.defCon",
+      "grandeza": "defCon",
+      "unidade": "‰",
+      "impresso": "2.2813",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2e.defAco",
+      "grandeza": "defAco",
+      "unidade": "‰",
+      "impresso": "0.9110",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "C.2f.Mkx",
+      "grandeza": "Mkx",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.Mky",
+      "grandeza": "Mky",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.Mktot",
+      "grandeza": "Mktot",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.MRx1a",
+      "grandeza": "MRx1a",
+      "unidade": "tm",
+      "impresso": "-0.01",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.MRx2a",
+      "grandeza": "MRx2a",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.MRy1a",
+      "grandeza": "MRy1a",
+      "unidade": "tm",
+      "impresso": "1.21",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.MRy2a",
+      "grandeza": "MRy2a",
+      "unidade": "tm",
+      "impresso": "0.23",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.MRtot",
+      "grandeza": "MRtot",
+      "unidade": "tm",
+      "impresso": "0.97",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.incLN",
+      "grandeza": "incLN",
+      "unidade": "graus",
+      "impresso": "0.0",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.1/r",
+      "grandeza": "1/r",
+      "unidade": "10-3/cm",
+      "impresso": "0.1444",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.x/d",
+      "grandeza": "x/d",
+      "unidade": "",
+      "impresso": "0.71",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.defCon",
+      "grandeza": "defCon",
+      "unidade": "‰",
+      "impresso": "2.2719",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.2f.defAco",
+      "grandeza": "defAco",
+      "unidade": "‰",
+      "impresso": "0.9057",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "C.As",
+      "grandeza": "As",
+      "unidade": "cm2",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "C.taxa",
+      "grandeza": "taxa",
+      "unidade": "%",
+      "impresso": "0.81",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "C.barras.n",
+      "grandeza": "barras",
+      "unidade": "",
+      "impresso": "5",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "C.barras.phi",
+      "grandeza": "bitola",
+      "unidade": "mm",
+      "impresso": "10",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "C.estribo.phi",
+      "grandeza": "estribo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "C.estribo.s",
+      "grandeza": "espaçamento",
+      "unidade": "cm",
+      "impresso": "12",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "A.pre.carga",
+      "grandeza": "carga do predimensionamento (área negativa)",
+      "unidade": "t",
+      "impresso": "17.07",
+      "fonte": "telas/012_s07.txt:11"
+    },
+    {
+      "id": "A.naoSuporta",
+      "grandeza": "recusa",
+      "unidade": "",
+      "impresso": "ESTA SECAO NAO SUPORTA OS ESFORCOS ATUANTES COM A MAXIMA TAXA DE ARMADURA",
+      "fonte": "telas/013_s08.txt:18"
+    }
+  ]
+}
