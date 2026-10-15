@@ -1,7 +1,9 @@
-// Diálogo "Obra e materiais": nome, norma, fck, aços, classe do aço (só NB-1/78; CA-25 só A),
+// Diálogo "Obra e materiais": nome, norma, modo de cálculo (corrigido ou como o SISTRUT
+// original, com a dica do que muda), fck, aços, classe do aço (só NB-1/78; CA-25 só A),
 // classe de agressividade e cobrimentos. Grava tudo de uma vez (uma entrada no desfazer).
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dica } from "@/components/ui/dica";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +21,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { materiaisPadrao } from "../../dominio/criar";
-import type { Aco, Caa, ClasseAco, Materiais, NormaId, Obra } from "../../dominio/obra";
+import type {
+  Aco,
+  Caa,
+  ClasseAco,
+  Materiais,
+  ModoCalculo,
+  NormaId,
+  Obra,
+} from "../../dominio/obra";
 import { useObra } from "../../estado/obra";
-import { NOME_NORMA } from "../calculo";
+import { NOME_MODO, NOME_NORMA } from "../calculo";
 import { formatarNumero, lerNumero } from "../formato";
 
 const ACOS: Aco[] = ["CA-25", "CA-50", "CA-60"];
@@ -53,6 +64,7 @@ const CAMPOS_NUM: { campo: CampoNum; rotulo: string; unidade: string; positivo: 
 interface Formulario {
   nome: string;
   norma: NormaId;
+  modoCalculo: ModoCalculo;
   aco: Aco;
   acoEstribo: Aco;
   classeAco: ClasseAco;
@@ -63,6 +75,7 @@ interface Formulario {
 const paraFormulario = (o: Obra, m: Materiais = o.materiais): Formulario => ({
   nome: o.nome,
   norma: o.norma,
+  modoCalculo: o.modoCalculo,
   aco: m.aco,
   acoEstribo: m.acoEstribo,
   classeAco: classeCompativel(m.aco, m.classeAco),
@@ -118,7 +131,13 @@ export function DialogoMateriais({
       caa: f.caa,
       ...numeros,
     };
-    editar((o) => ({ ...o, nome: f.nome.trim(), norma: f.norma, materiais }));
+    editar((o) => ({
+      ...o,
+      nome: f.nome.trim(),
+      norma: f.norma,
+      modoCalculo: f.modoCalculo,
+      materiais,
+    }));
     aoMudarAberto(false);
   };
 
@@ -161,6 +180,7 @@ export function DialogoMateriais({
               </SelectContent>
             </Select>
           </div>
+          <SwitchModo modo={f.modoCalculo} aoMudar={(modoCalculo) => setF({ ...f, modoCalculo })} />
           {CAMPOS_NUM.slice(0, 1).map((c) => (
             <CampoNumerico key={c.campo} c={c} f={f} setF={setF} />
           ))}
@@ -245,6 +265,7 @@ export function DialogoMateriais({
                 ...paraFormulario(obra, materiaisPadrao(f.norma)),
                 nome: f.nome,
                 norma: f.norma,
+                modoCalculo: f.modoCalculo,
               })
             }
           >
@@ -320,6 +341,55 @@ function SeletorAco({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+/** Switch do modo de cálculo (Obra.modoCalculo): desligado = corrigido, ligado = como o
+ *  SISTRUT original. A dica cita cada item que muda (docs/MODO-CALCULO.md, E, F e H). */
+function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCalculo) => void }) {
+  return (
+    <div className="col-span-2 grid gap-1.5">
+      <div className="flex items-center gap-1">
+        <span id="mat-modo-titulo" className="text-sm leading-none font-medium">
+          Modo de cálculo
+        </span>
+        <Dica id="mat-modo-dica" rotulo="O que muda com o modo de cálculo">
+          <span className="block">
+            Corrigido calcula certo. {NOME_MODO.original} repete três erros do programa de 1991,
+            para conferir com a V1:
+          </span>
+          <span className="mt-1 block">
+            · negativas das lajes contadas duas vezes (em torno de +23 % no aço das lajes);
+          </span>
+          <span className="block">
+            · volume e fôrma: a tela esquece os pilares e o relatório conta duas vezes a laje sobre
+            as vigas (no exemplo da V1, volume 9 % menor na tela e 6 % maior no relatório);
+          </span>
+          <span className="block">
+            · só na NB-1/78: armadura mínima de viga com CA-25 de 0,15 % em vez de 0,25 %.
+          </span>
+        </Dica>
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <span className={modo === "corrigido" ? "font-medium" : "text-muted-foreground"}>
+          {NOME_MODO.corrigido}
+        </span>
+        <Switch
+          id="mat-modo"
+          checked={modo === "original"}
+          onCheckedChange={(ligado) => aoMudar(ligado ? "original" : "corrigido")}
+          aria-labelledby="mat-modo-titulo mat-modo-original"
+          aria-describedby="mat-modo-dica"
+        />
+        <Label
+          id="mat-modo-original"
+          htmlFor="mat-modo"
+          className={modo === "original" ? "" : "text-muted-foreground font-normal"}
+        >
+          {NOME_MODO.original}
+        </Label>
+      </div>
     </div>
   );
 }
