@@ -1,0 +1,896 @@
+{
+  "v2par_des_3tramos": {
+    "fonte": {
+      "vig": "C:/tmp/oraculo/casos/v2par_des_3tramos.dados/ASS.VIG registro 2",
+      "sec": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027/obra/ASS.SEC registro 1",
+      "for": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027/obra/ASS.FOR registro 1"
+    },
+    "vig": {
+      "nome": "V1",
+      "tramos": 3,
+      "balancoEsquerdo": 0,
+      "balancoDireito": 0,
+      "engasteEsquerdo": 0,
+      "engasteDireito": 0,
+      "momentosExternos": [0.0, 0.0],
+      "porTramo": [
+        {
+          "vao": 0.0,
+          "inercia": 1.0000200271606445,
+          "divisoes": []
+        },
+        {
+          "vao": 3.0,
+          "inercia": 1.0000300407409668,
+          "divisoes": [
+            {
+              "p": 0.4245190918445587,
+              "pAcidental": 0.08235573023557663,
+              "d": 3.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 5.0,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 0.5108439326286316,
+              "pAcidental": 0.10825318098068237,
+              "d": 5.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 4.0,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 0.5422810316085815,
+              "pAcidental": 0.11768431216478348,
+              "d": 4.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 0.0,
+          "inercia": 0.0,
+          "divisoes": []
+        }
+      ]
+    },
+    "sec": {
+      "tramos": [
+        [0.0, 0.0, 0.0, 0.0],
+        [20.0, 50.0, 0.0, 0.0],
+        [20.0, 50.0, 0.0, 0.0],
+        [20.0, 50.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0]
+      ],
+      "apoios": [
+        [20.0, 50.0],
+        [20.0, 50.0],
+        [20.0, 50.0],
+        [20.0, 50.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0]
+      ]
+    },
+    "for": [
+      {
+        "largura": 20.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP1"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 280.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP2"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 480.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP3"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 380.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP4"
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      }
+    ]
+  },
+  "v2par_des_2tramos": {
+    "fonte": {
+      "vig": "C:/tmp/oraculo/casos/v2par_des_2tramos.dados/ASS.VIG registro 6",
+      "sec": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207/obra/ASS.SEC registro 5",
+      "for": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207/obra/ASS.FOR registro 5"
+    },
+    "vig": {
+      "nome": "V5",
+      "tramos": 2,
+      "balancoEsquerdo": 0,
+      "balancoDireito": 0,
+      "engasteEsquerdo": 0,
+      "engasteDireito": 0,
+      "momentosExternos": [0.0, 0.0],
+      "porTramo": [
+        {
+          "vao": 0.0,
+          "inercia": 1.0000900030136108,
+          "divisoes": []
+        },
+        {
+          "vao": 4.0,
+          "inercia": 1.0000799894332886,
+          "divisoes": [
+            {
+              "p": 0.5473654866218567,
+              "pAcidental": 0.1192096397280693,
+              "d": 4.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 5.0,
+          "inercia": 1.0000300407409668,
+          "divisoes": [
+            {
+              "p": 1.6491941213607788,
+              "pAcidental": 0.44975823163986206,
+              "d": 5.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 0.0,
+          "inercia": 0.0,
+          "divisoes": []
+        }
+      ]
+    },
+    "sec": {
+      "tramos": [
+        [0.0, 0.0, 0.0, 0.0],
+        [15.0, 45.0, 0.0, 0.0],
+        [15.0, 45.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0]
+      ],
+      "apoios": [
+        [15.0, 45.0],
+        [15.0, 45.0],
+        [15.0, 45.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0]
+      ]
+    },
+    "for": [
+      {
+        "largura": 20.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP1"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 380.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP2"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 480.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP3"
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      }
+    ]
+  },
+  "v2par_des_especial": {
+    "fonte": {
+      "vig": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.VIG registro 2",
+      "sec": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.SEC registro 1",
+      "for": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.FOR registro 1"
+    },
+    "vig": {
+      "nome": "D1",
+      "tramos": 2,
+      "balancoEsquerdo": 1,
+      "balancoDireito": 1,
+      "engasteEsquerdo": 0,
+      "engasteDireito": 0,
+      "momentosExternos": [0.0, 0.0],
+      "porTramo": [
+        {
+          "vao": 1.5,
+          "inercia": 1.0,
+          "divisoes": [
+            {
+              "p": 3.0,
+              "pAcidental": 0.5,
+              "d": 1.5,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 6.0,
+          "inercia": 1.0,
+          "divisoes": [
+            {
+              "p": 3.0,
+              "pAcidental": 0.5,
+              "d": 0.4000000059604645,
+              "f": 3.0,
+              "fAcidental": 0.0
+            },
+            {
+              "p": 3.0,
+              "pAcidental": 0.5,
+              "d": 6.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 4.0,
+          "inercia": 1.0,
+          "divisoes": [
+            {
+              "p": 3.0,
+              "pAcidental": 0.5,
+              "d": 4.0,
+              "f": 0.0,
+              "fAcidental": 0.0
+            }
+          ]
+        },
+        {
+          "vao": 1.2000000476837158,
+          "inercia": 1.0,
+          "divisoes": [
+            {
+              "p": 3.0,
+              "pAcidental": 0.5,
+              "d": 1.2000000476837158,
+              "f": 3.0,
+              "fAcidental": 0.0
+            }
+          ]
+        }
+      ]
+    },
+    "sec": {
+      "tramos": [
+        [20.0, 40.0, -0.0, -0.0],
+        [20.0, 40.0, 80.0, 10.0],
+        [20.0, 40.0, 80.0, 10.0],
+        [20.0, 40.0, -0.0, -0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0]
+      ],
+      "apoios": [
+        [20.0, 40.0],
+        [20.0, 40.0],
+        [20.0, 40.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0],
+        [0.0, 0.0]
+      ]
+    },
+    "for": [
+      {
+        "largura": 20.0,
+        "vaoLivre": 140.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP1"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 580.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP2"
+      },
+      {
+        "largura": 20.0,
+        "vaoLivre": 380.0,
+        "alinhamento": 0.0,
+        "eixo": 10.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 1.0,
+        "lps": 20.0,
+        "dis": 0.0,
+        "titulo": "PP3"
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 110.0,
+        "alinhamento": 0.0,
+        "eixo": 10.000004768371582,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      },
+      {
+        "largura": 0.0,
+        "vaoLivre": 0.0,
+        "alinhamento": 0.0,
+        "eixo": 0.0,
+        "pe": 0,
+        "hle": 0,
+        "pd": 0,
+        "hld": 0,
+        "codigo": 0.0,
+        "lps": 0.0,
+        "dis": 0.0,
+        "titulo": ""
+      }
+    ]
+  }
+}

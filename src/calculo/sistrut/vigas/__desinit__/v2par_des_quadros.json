@@ -1,0 +1,224 @@
+{
+  "v2par_des_3tramos": {
+    "run": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027",
+    "quadro": {
+      "fonte": "impressora.png do run: quadro de ferros do desenho definitivo (N, #, Q, UNI, TOTAL), lido da imagem (o desenho sai em bit-image, sem texto)",
+      "linhas": [
+        {
+          "bitola": 10,
+          "quantidade": 2,
+          "unitario": 970,
+          "total": 1940
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 3,
+          "unitario": 100,
+          "total": 300
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 3,
+          "unitario": 101,
+          "total": 303
+        },
+        {
+          "bitola": 10,
+          "quantidade": 2,
+          "unitario": 843,
+          "total": 1686
+        },
+        {
+          "bitola": 10,
+          "quantidade": 2,
+          "unitario": 443,
+          "total": 886
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 2,
+          "unitario": 137,
+          "total": 274
+        },
+        {
+          "bitola": 5,
+          "quantidade": 97,
+          "unitario": 132,
+          "total": 12804
+        }
+      ]
+    },
+    "tab": {
+      "fonte": "obra/ASS.TAB registro 1 (70 bytes: nome, A_1CEC(0..14) em SINGLE)",
+      "nome": "~V1",
+      "rept": 0.0,
+      "volume": 114.0,
+      "forma": 1368.0,
+      "comprimentos": [0.0, 12804.0, 877.0, 0.0, 4512.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    }
+  },
+  "v2par_des_2tramos": {
+    "run": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207",
+    "quadro": {
+      "fonte": "impressora.png do run: quadro de ferros do desenho definitivo (N, #, Q, UNI, TOTAL), lido da imagem (o desenho sai em bit-image, sem texto)",
+      "linhas": [
+        {
+          "bitola": 12.5,
+          "quantidade": 2,
+          "unitario": 620,
+          "total": 1240
+        },
+        {
+          "bitola": 8,
+          "quantidade": 1,
+          "unitario": 360,
+          "total": 360
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 2,
+          "unitario": 95,
+          "total": 190
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 2,
+          "unitario": 96,
+          "total": 192
+        },
+        {
+          "bitola": 10,
+          "quantidade": 2,
+          "unitario": 443,
+          "total": 886
+        },
+        {
+          "bitola": 12.5,
+          "quantidade": 2,
+          "unitario": 554,
+          "total": 1108
+        },
+        {
+          "bitola": 10,
+          "quantidade": 1,
+          "unitario": 493,
+          "total": 493
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 2,
+          "unitario": 242,
+          "total": 484
+        },
+        {
+          "bitola": 5,
+          "quantidade": 54,
+          "unitario": 112,
+          "total": 6048
+        }
+      ]
+    },
+    "tab": {
+      "fonte": "obra/ASS.TAB registro 5 (70 bytes: nome, A_1CEC(0..14) em SINGLE)",
+      "nome": "~V5",
+      "rept": 0.0,
+      "volume": 58.0,
+      "forma": 903.0,
+      "comprimentos": [0.0, 6048.0, 866.0, 360.0, 1379.0, 2348.0, 0.0, 0.0, 0.0, 0.0]
+    }
+  },
+  "v2par_des_especial": {
+    "run": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646",
+    "quadro": {
+      "fonte": "impressora.png do run: quadro de ferros do desenho definitivo (N, #, Q, UNI, TOTAL), lido da imagem (o desenho sai em bit-image, sem texto)",
+      "linhas": [
+        {
+          "bitola": 12.5,
+          "quantidade": 2,
+          "unitario": 344,
+          "total": 688
+        },
+        {
+          "bitola": 12.5,
+          "quantidade": 1,
+          "unitario": 314,
+          "total": 314
+        },
+        {
+          "bitola": 20,
+          "quantidade": 2,
+          "unitario": 490,
+          "total": 980
+        },
+        {
+          "bitola": 16,
+          "quantidade": 2,
+          "unitario": 775,
+          "total": 1550
+        },
+        {
+          "bitola": 16,
+          "quantidade": 2,
+          "unitario": 545,
+          "total": 1090
+        },
+        {
+          "bitola": 20,
+          "quantidade": 2,
+          "unitario": 800,
+          "total": 1600
+        },
+        {
+          "bitola": 20,
+          "quantidade": 1,
+          "unitario": 570,
+          "total": 570
+        },
+        {
+          "bitola": 12.5,
+          "quantidade": 2,
+          "unitario": 512,
+          "total": 1024
+        },
+        {
+          "bitola": 8,
+          "quantidade": 2,
+          "unitario": 123,
+          "total": 246
+        },
+        {
+          "bitola": 8,
+          "quantidade": 2,
+          "unitario": 153,
+          "total": 306
+        },
+        {
+          "bitola": 8,
+          "quantidade": 2,
+          "unitario": 160,
+          "total": 320
+        },
+        {
+          "bitola": 6.3,
+          "quantidade": 63,
+          "unitario": 114,
+          "total": 7182
+        },
+        {
+          "bitola": 8,
+          "quantidade": 27,
+          "unitario": 116,
+          "total": 3132
+        }
+      ]
+    },
+    "tab": {
+      "fonte": "obra/DSX.TAB registro 1 (70 bytes: nome, A_1CEC(0..14) em SINGLE)",
+      "nome": "~D1",
+      "rept": 0.0,
+      "volume": 96.0,
+      "forma": 1210.0,
+      "comprimentos": [0.0, 0.0, 7182.0, 4004.0, 0.0, 2026.0, 2640.0, 3150.0, 0.0, 0.0]
+    }
+  }
+}
