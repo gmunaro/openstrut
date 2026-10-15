@@ -1,0 +1,51 @@
+{
+  "caso": "v2par_laje_balanco",
+  "laj": "C:/tmp/oraculo/runs/v2par_laje_balanco-20261015-162752/obra/BAL.LAJ",
+  "lajes": [
+    {
+      "nome": "L1",
+      "tipo": 0,
+      "poligono": 2,
+      "vertices": [
+        [4.0, 5.0],
+        [0.0, 5.0],
+        [0.0, 6.5],
+        [4.0, 6.5]
+      ],
+      "codigosFinais": [22, 1, 1, 1],
+      "angulo": 0.0,
+      "mu": 1.6,
+      "area": 6.0,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": -28.125
+    },
+    {
+      "nome": "L2",
+      "tipo": 0,
+      "poligono": 1,
+      "vertices": [
+        [0.0, 0.0],
+        [0.0, 5.0],
+        [4.0, 5.0],
+        [4.0, 0.0]
+      ],
+      "codigosFinais": [0, 22, 0, 0],
+      "angulo": 0.0,
+      "mu": 0.8,
+      "area": 20.0,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 36.73977
+    }
+  ],
+  "continuidades": [
+    {
+      "lajeA": "L1",
+      "bordoA": 0,
+      "lajeB": "L2",
+      "bordoB": 1,
+      "armaduraImposta": 0
+    }
+  ]
+}

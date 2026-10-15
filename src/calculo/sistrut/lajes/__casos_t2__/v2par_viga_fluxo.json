@@ -1,0 +1,2102 @@
+{
+  "caso": "v2par_viga_fluxo",
+  "run": "C:/tmp/oraculo/runs/v2par_viga_fluxo-20261015-164332",
+  "programa": "LAJEGEOM + LAJECALC + LAJEMONT + LAJEPROC + VIGA (opções 6, 2 e 7)",
+  "descricao": "Viga com BALANÇO e CARGA INDEXADA no fluxo da obra (LAJEMONT → VIGA) e reações no .REP com truncamento (R5). Pilares só em x = 0 e x = 4: as vigas V1 (y = 5) e V2 (y = 0) têm balanço de 4 m e a V5 (x = 8) se apoia nas pontas dos balanços ('V5 apoia em V1' e 'V5 apoia em V2' no LAJEMONT). O VIGA 7 recusa obra com carga indexada ('Leia o arquivo, processe e regrave'): lê, processa (opção 2: V3, V4, V5 e só então V1 e V2 com a reação da V5 como carga F = 1,67 t na ponta), regrava e roda a opção 7. No .REP o P4 recebe −1,67 (V1) + 1,66 (V3: R = 1,67 truncado) = −0,01.",
+  "entrada": {
+    "parametros": {
+      "norma": "NB-1/78, parametrização SISTRUT de fábrica (LAJE.INI/SISTRUT.LAP da instalação oficial)",
+      "fck_tcm2": 0.15,
+      "fyk_tcm2": 5,
+      "classeAco": "B",
+      "gama_f": 1.4,
+      "gama_c": 1.4,
+      "gama_s": 1.15,
+      "cobrimentoLaje_cm": 1.5,
+      "acrescimoAlturaUtil_cm": 0.5,
+      "densidadeConcreto_tm3": 2.5,
+      "MnegMpos_min": 0.3,
+      "MnegMpos_max": 2.0,
+      "eficienciaNegativa": 1.0,
+      "Hmin_Hmax_cm": [6, 40],
+      "unidades": "t, m, cm; cargas de laje em t/m2; cargas de viga em t/m"
+    },
+    "obra": {
+      "descricao": "eixos x 0/4/8, y 0/5; arquitetura e ocupação 0,15 (0,15) no contorno 8 × 5; vigas y = 0 (0..8), x = 8 (0..5), y = 5 (8..0), x = 0 (5..0), x = 4 (0..5); pilares P1 (0,0), P2 (4,0), P3 (4,5), P4 (0,5); LAJEMONT: V1 = y 5, V2 = y 0, V3 = x 0, V4 = x 4, V5 = x 8; nos cruzamentos sem pilar escolhido 'V5 apoia em V1' e 'V5 apoia em V2'; L1 = x 0..4, L2 = x 4..8",
+      "obra_gravada_pelo_original": {
+        "eixos_y_m": [0, 5],
+        "eixos_x_m": [0, 4, 8],
+        "arquitetura_trechos": [
+          [0, 0, 8, 0],
+          [8, 0, 8, 5],
+          [8, 5, 0, 5],
+          [0, 5, 0, 0]
+        ],
+        "alvenarias": [],
+        "cargas_area": [
+          {
+            "total_tm2": 0.15,
+            "parcela_acidental_tm2": 0.15,
+            "poligono": [
+              [0, 0],
+              [8, 0],
+              [8, 5],
+              [0, 5],
+              [0, 0]
+            ]
+          }
+        ],
+        "estrutura_trechos_na_ordem_desenhada": [
+          [0, 0, 8, 0],
+          [8, 0, 8, 5],
+          [8, 5, 0, 5],
+          [0, 5, 0, 0],
+          [4, 0, 4, 5]
+        ],
+        "vertices_numerados": {
+          "1": [0, 0],
+          "2": [8, 0],
+          "3": [4, 0],
+          "4": [8, 5],
+          "5": [0, 5],
+          "6": [4, 5]
+        },
+        "pilares": {
+          "P1": [0, 0],
+          "P2": [4, 0],
+          "P3": [4, 5],
+          "P4": [0, 5]
+        },
+        "vigas_nos_m": {
+          "V1": [
+            [0, 5],
+            [4, 5],
+            [8, 5]
+          ],
+          "V2": [
+            [0, 0],
+            [4, 0],
+            [8, 0]
+          ],
+          "V3": [
+            [0, 0],
+            [0, 5]
+          ],
+          "V4": [
+            [4, 0],
+            [4, 5]
+          ],
+          "V5": [
+            [8, 0],
+            [8, 5]
+          ]
+        },
+        "lajes": {
+          "L1": {
+            "tipo": "macica",
+            "area_m2": 20,
+            "carga_permanente_tm2": 0.1,
+            "peso_proprio_digitado_tm2": 0.25,
+            "lados": [
+              {
+                "lado": 1,
+                "de": [0, 0],
+                "para": [0, 5],
+                "codigo": 0
+              },
+              {
+                "lado": 2,
+                "de": [0, 5],
+                "para": [4, 5],
+                "codigo": 0
+              },
+              {
+                "lado": 3,
+                "de": [4, 5],
+                "para": [4, 0],
+                "codigo": 22
+              },
+              {
+                "lado": 4,
+                "de": [4, 0],
+                "para": [0, 0],
+                "codigo": 0
+              }
+            ],
+            "angulo_armadura_graus": 0,
+            "mu": 0.8,
+            "H_gravado_cm": 10
+          },
+          "L2": {
+            "tipo": "macica",
+            "area_m2": 20,
+            "carga_permanente_tm2": 0.1,
+            "peso_proprio_digitado_tm2": 0.25,
+            "lados": [
+              {
+                "lado": 1,
+                "de": [8, 0],
+                "para": [4, 0],
+                "codigo": 0
+              },
+              {
+                "lado": 2,
+                "de": [4, 0],
+                "para": [4, 5],
+                "codigo": 22
+              },
+              {
+                "lado": 3,
+                "de": [4, 5],
+                "para": [8, 5],
+                "codigo": 0
+              },
+              {
+                "lado": 4,
+                "de": [8, 5],
+                "para": [8, 0],
+                "codigo": 0
+              }
+            ],
+            "angulo_armadura_graus": 0,
+            "mu": 0.8,
+            "H_gravado_cm": 10
+          }
+        },
+        "continuidades": [
+          {
+            "lajeA": "L1",
+            "ladoA": 3,
+            "lajeB": "L2",
+            "ladoB": 2,
+            "armadura_imposta": 0
+          }
+        ]
+      }
+    },
+    "sequencia": [
+      "LAJEGEOM 1: eixos; 2: nome da obra e arquitetura; 3: cargas (alvenarias lineares e cargas de ocupação por área); 4: estrutura (trechos de viga); 5: pilares; 6: todas as lajes maciças, carga permanente 0,10 t/m2 e peso próprio 0,25 t/m2",
+      "LAJECALC 1: continuidade automática, sem alterações; 2: direção padrão (0 grau) e μ pela tabela de relação de vãos",
+      "LAJECALC 3: espessuras mínimas de todas as lajes (impressas)",
+      "LAJECALC 4: H = 10 cm imposto em todas as lajes (impresso)",
+      "LAJECALC 5: momentos e armaduras de todas as lajes (impressos)",
+      "LAJECALC 6: otimização dos negativos em todas as lajes",
+      "LAJECALC 5 de novo (impresso; os ids sem sufixo são esta impressão, os .antesOtim a anterior)",
+      "LAJEGEOM 7 (LAJEMONT): 'V5 apoia em V1' (tecla para trocar da opção 1 para a 2, confirma), 'V5 apoia em V2', indexações corretas; peso próprio predominante 0,15 t/m; relatório impresso",
+      "LAJEGRAV: grava a obra; LAJEPROC 1 (escolha automática de todas as armaduras), 2 (desenho das positivas), 3 (desenho das negativas), 5 (impressão gráfica)",
+      "F2 → gerenciador → VIGA: 6 → 5 lê VBX registros 1 A 5; 4 lista; 2 processa 1 A 5 com impressão; 6 → 1/2 regrava VBX (registros 1 A 5 a partir do 1); 7 da obra VBX (apoios como gravados; a V5 tem os dois apoios 'desconsiderado'), multiplicador 100 %, impressão, grava VBX.REP. VIGA.INI de fábrica"
+    ],
+    "notas": "'obra_gravada_pelo_original' é o .LAJ que o original gravou neste run (LAJEGRAV, depois do LAJECALC e do LAJEMONT, antes do LAJEPROC). Coordenadas em m. Cada laje é um polígono no sentido horário que começa no vértice de menor número; 'lado k' vai do vértice k ao k+1. Código do lado: 0 apoiado (viga), 1 livre (trecho só de arquitetura), >2 engastado com i = (código−2)/10. A continuidade automática (LAJECALC 1) dá código 22 (i = 2,0) aos dois lados com os mesmos dois vértices; os códigos gravados são os FINAIS, depois da otimização (LAJECALC 6) quando ela roda. 'vigas_nos_m' = nós de cada viga gerada pelo LAJEMONT (nome V1..Vn usado nos relatórios); 'pilares' = posição de cada pilar."
+  },
+  "valores": [
+    {
+      "id": "L1.Hmin",
+      "grandeza": "L1 espessura mínima",
+      "unidade": "cm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.x/d",
+      "grandeza": "L1 x/d com H mínimo",
+      "unidade": "",
+      "impresso": "0.366",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.As.phi",
+      "grandeza": "L1 bitola da armadura com H mínimo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.As.s",
+      "grandeza": "L1 espaçamento da armadura com H mínimo",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.perm",
+      "grandeza": "L1 carga permanente (coluna Perm.)",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.acid",
+      "grandeza": "L1 coluna Acid. (ocupação total + alvenaria/área)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.pp",
+      "grandeza": "L1 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L1.Hmin.p",
+      "grandeza": "L1 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "L2.Hmin",
+      "grandeza": "L2 espessura mínima",
+      "unidade": "cm",
+      "impresso": "8.0",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.x/d",
+      "grandeza": "L2 x/d com H mínimo",
+      "unidade": "",
+      "impresso": "0.366",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.As.phi",
+      "grandeza": "L2 bitola da armadura com H mínimo",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.As.s",
+      "grandeza": "L2 espaçamento da armadura com H mínimo",
+      "unidade": "cm",
+      "impresso": "7.5",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.perm",
+      "grandeza": "L2 carga permanente (coluna Perm.)",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.acid",
+      "grandeza": "L2 coluna Acid. (ocupação total + alvenaria/área)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.pp",
+      "grandeza": "L2 peso próprio com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.20",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L2.Hmin.p",
+      "grandeza": "L2 carga total com H mínimo",
+      "unidade": "t/m2",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "L1.H",
+      "grandeza": "L1 espessura imposta",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.x/d",
+      "grandeza": "L1 x/d com H imposto",
+      "unidade": "",
+      "impresso": "0.213",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.As.phi",
+      "grandeza": "L1 bitola da armadura (tabela de espessuras)",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.As.s",
+      "grandeza": "L1 espaçamento da armadura (tabela de espessuras)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.perm",
+      "grandeza": "L1 carga permanente",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.acid",
+      "grandeza": "L1 coluna Acid. (ocupação total + alvenaria/área)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.pp",
+      "grandeza": "L1 peso próprio",
+      "unidade": "t/m2",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L1.p",
+      "grandeza": "L1 carga total p",
+      "unidade": "t/m2",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "L2.H",
+      "grandeza": "L2 espessura imposta",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.x/d",
+      "grandeza": "L2 x/d com H imposto",
+      "unidade": "",
+      "impresso": "0.213",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.As.phi",
+      "grandeza": "L2 bitola da armadura (tabela de espessuras)",
+      "unidade": "mm",
+      "impresso": "6.3",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.As.s",
+      "grandeza": "L2 espaçamento da armadura (tabela de espessuras)",
+      "unidade": "cm",
+      "impresso": "10.0",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.perm",
+      "grandeza": "L2 carga permanente",
+      "unidade": "t/m2",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.acid",
+      "grandeza": "L2 coluna Acid. (ocupação total + alvenaria/área)",
+      "unidade": "t/m2",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.pp",
+      "grandeza": "L2 peso próprio",
+      "unidade": "t/m2",
+      "impresso": "0.25",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L2.p",
+      "grandeza": "L2 carga total p",
+      "unidade": "t/m2",
+      "impresso": "0.50",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "L1.M+princ.antesOtim",
+      "grandeza": "L1 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M+sec.antesOtim",
+      "grandeza": "L1 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-maior.antesOtim",
+      "grandeza": "L1 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-menor.antesOtim",
+      "grandeza": "L1 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:40",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+princ.antesOtim",
+      "grandeza": "L2 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+sec.antesOtim",
+      "grandeza": "L2 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-maior.antesOtim",
+      "grandeza": "L2 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-menor.antesOtim",
+      "grandeza": "L2 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:41",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.M+princ",
+      "grandeza": "L1 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.M+sec",
+      "grandeza": "L1 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-maior",
+      "grandeza": "L1 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.M-menor",
+      "grandeza": "L1 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:70",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+princ",
+      "grandeza": "L2 M+princ",
+      "unidade": "tm/m",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M+sec",
+      "grandeza": "L2 M+sec",
+      "unidade": "tm/m",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-maior",
+      "grandeza": "L2 M-maior",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.M-menor",
+      "grandeza": "L2 M-menor",
+      "unidade": "tm/m",
+      "impresso": "0.65",
+      "fonte": "impressora.prn:71",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.As+princ.antesOtim",
+      "grandeza": "L1 As+princ",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:55",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.As+sec.antesOtim",
+      "grandeza": "L1 As+sec",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:55",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.As-maior.antesOtim",
+      "grandeza": "L1 As-maior",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:55",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.As-menor.antesOtim",
+      "grandeza": "L1 As-menor",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:55",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.As+princ.antesOtim",
+      "grandeza": "L2 As+princ",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:56",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.As+sec.antesOtim",
+      "grandeza": "L2 As+sec",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:56",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.As-maior.antesOtim",
+      "grandeza": "L2 As-maior",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:56",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L2.As-menor.antesOtim",
+      "grandeza": "L2 As-menor",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:56",
+      "obs": "primeira impressão, antes da otimização dos negativos"
+    },
+    {
+      "id": "L1.As+princ",
+      "grandeza": "L1 As+princ",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:85",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.As+sec",
+      "grandeza": "L1 As+sec",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:85",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.As-maior",
+      "grandeza": "L1 As-maior",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:85",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L1.As-menor",
+      "grandeza": "L1 As-menor",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:85",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.As+princ",
+      "grandeza": "L2 As+princ",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:86",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.As+sec",
+      "grandeza": "L2 As+sec",
+      "unidade": "cm2/m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:86",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.As-maior",
+      "grandeza": "L2 As-maior",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:86",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "L2.As-menor",
+      "grandeza": "L2 As-menor",
+      "unidade": "cm2/m",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:86",
+      "obs": "última impressão, depois da otimização dos negativos"
+    },
+    {
+      "id": "V1.t1.ppViga",
+      "grandeza": "V1 tramo 1: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:96"
+    },
+    {
+      "id": "V1.t1.alv",
+      "grandeza": "V1 tramo 1: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:96"
+    },
+    {
+      "id": "V1.t2.ppViga",
+      "grandeza": "V1 tramo 2: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:97"
+    },
+    {
+      "id": "V1.t2.alv",
+      "grandeza": "V1 tramo 2: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:97"
+    },
+    {
+      "id": "V2.t1.ppViga",
+      "grandeza": "V2 tramo 1: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:98"
+    },
+    {
+      "id": "V2.t1.alv",
+      "grandeza": "V2 tramo 1: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:98"
+    },
+    {
+      "id": "V2.t2.ppViga",
+      "grandeza": "V2 tramo 2: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:99"
+    },
+    {
+      "id": "V2.t2.alv",
+      "grandeza": "V2 tramo 2: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:99"
+    },
+    {
+      "id": "V3.t1.ppViga",
+      "grandeza": "V3 tramo 1: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:100"
+    },
+    {
+      "id": "V3.t1.alv",
+      "grandeza": "V3 tramo 1: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:100"
+    },
+    {
+      "id": "V4.t1.ppViga",
+      "grandeza": "V4 tramo 1: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "V4.t1.alv",
+      "grandeza": "V4 tramo 1: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "V5.t1.ppViga",
+      "grandeza": "V5 tramo 1: peso próprio da viga (LAJEMONT)",
+      "unidade": "t/m",
+      "impresso": "0.15",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "V5.t1.alv",
+      "grandeza": "V5 tramo 1: alvenaria sobre a viga",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "L1>V3.area",
+      "grandeza": "L1 → V3 (sub-área 1 = lado 1 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "5.18",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "L1>V3.qLinear",
+      "grandeza": "L1 → V3 (sub-área 1 = lado 1 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "L1>V3.qArea",
+      "grandeza": "L1 → V3 (sub-área 1 = lado 1 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.16",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "L1>V3.qEstru",
+      "grandeza": "L1 → V3 (sub-área 1 = lado 1 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "L1>V3.qPeso",
+      "grandeza": "L1 → V3 (sub-área 1 = lado 1 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:114"
+    },
+    {
+      "id": "L1>V1.area",
+      "grandeza": "L1 → V1 (sub-área 2 = lado 2 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "2.93",
+      "fonte": "impressora.prn:115"
+    },
+    {
+      "id": "L1>V1.qLinear",
+      "grandeza": "L1 → V1 (sub-área 2 = lado 2 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:115"
+    },
+    {
+      "id": "L1>V1.qArea",
+      "grandeza": "L1 → V1 (sub-área 2 = lado 2 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.11",
+      "fonte": "impressora.prn:115"
+    },
+    {
+      "id": "L1>V1.qEstru",
+      "grandeza": "L1 → V1 (sub-área 2 = lado 2 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.07",
+      "fonte": "impressora.prn:115"
+    },
+    {
+      "id": "L1>V1.qPeso",
+      "grandeza": "L1 → V1 (sub-área 2 = lado 2 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:115"
+    },
+    {
+      "id": "L1>V4.area",
+      "grandeza": "L1 → V4 (sub-área 3 = lado 3 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "8.97",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "L1>V4.qLinear",
+      "grandeza": "L1 → V4 (sub-área 3 = lado 3 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "L1>V4.qArea",
+      "grandeza": "L1 → V4 (sub-área 3 = lado 3 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.27",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "L1>V4.qEstru",
+      "grandeza": "L1 → V4 (sub-área 3 = lado 3 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "L1>V4.qPeso",
+      "grandeza": "L1 → V4 (sub-área 3 = lado 3 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:116"
+    },
+    {
+      "id": "L1>V2.area",
+      "grandeza": "L1 → V2 (sub-área 4 = lado 4 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "2.93",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "L1>V2.qLinear",
+      "grandeza": "L1 → V2 (sub-área 4 = lado 4 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "L1>V2.qArea",
+      "grandeza": "L1 → V2 (sub-área 4 = lado 4 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.11",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "L1>V2.qEstru",
+      "grandeza": "L1 → V2 (sub-área 4 = lado 4 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.07",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "L1>V2.qPeso",
+      "grandeza": "L1 → V2 (sub-área 4 = lado 4 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:117"
+    },
+    {
+      "id": "L2>V2.area",
+      "grandeza": "L2 → V2 (sub-área 1 = lado 1 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "2.93",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "L2>V2.qLinear",
+      "grandeza": "L2 → V2 (sub-área 1 = lado 1 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "L2>V2.qArea",
+      "grandeza": "L2 → V2 (sub-área 1 = lado 1 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.11",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "L2>V2.qEstru",
+      "grandeza": "L2 → V2 (sub-área 1 = lado 1 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.07",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "L2>V2.qPeso",
+      "grandeza": "L2 → V2 (sub-área 1 = lado 1 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:118"
+    },
+    {
+      "id": "L2>V4.area",
+      "grandeza": "L2 → V4 (sub-área 2 = lado 2 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "8.97",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "L2>V4.qLinear",
+      "grandeza": "L2 → V4 (sub-área 2 = lado 2 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "L2>V4.qArea",
+      "grandeza": "L2 → V4 (sub-área 2 = lado 2 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.27",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "L2>V4.qEstru",
+      "grandeza": "L2 → V4 (sub-área 2 = lado 2 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "L2>V4.qPeso",
+      "grandeza": "L2 → V4 (sub-área 2 = lado 2 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:119"
+    },
+    {
+      "id": "L2>V1.area",
+      "grandeza": "L2 → V1 (sub-área 3 = lado 3 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "2.93",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "L2>V1.qLinear",
+      "grandeza": "L2 → V1 (sub-área 3 = lado 3 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "L2>V1.qArea",
+      "grandeza": "L2 → V1 (sub-área 3 = lado 3 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.11",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "L2>V1.qEstru",
+      "grandeza": "L2 → V1 (sub-área 3 = lado 3 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.07",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "L2>V1.qPeso",
+      "grandeza": "L2 → V1 (sub-área 3 = lado 3 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.18",
+      "fonte": "impressora.prn:120"
+    },
+    {
+      "id": "L2>V5.area",
+      "grandeza": "L2 → V5 (sub-área 4 = lado 4 da laje): área de influência",
+      "unidade": "m2",
+      "impresso": "5.18",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "L2>V5.qLinear",
+      "grandeza": "L2 → V5 (sub-área 4 = lado 4 da laje): carga linear de alvenaria",
+      "unidade": "t/m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "L2>V5.qArea",
+      "grandeza": "L2 → V5 (sub-área 4 = lado 4 da laje): carga linear de ocupação (total)",
+      "unidade": "t/m",
+      "impresso": "0.16",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "L2>V5.qEstru",
+      "grandeza": "L2 → V5 (sub-área 4 = lado 4 da laje): carga linear de estrutura (permanente)",
+      "unidade": "t/m",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "L2>V5.qPeso",
+      "grandeza": "L2 → V5 (sub-área 4 = lado 4 da laje): carga linear de peso próprio",
+      "unidade": "t/m",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:121"
+    },
+    {
+      "id": "total.cargasArea",
+      "grandeza": "total das cargas por área",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:123"
+    },
+    {
+      "id": "total.cargasAreaConsiderado",
+      "grandeza": "total considerado das cargas por área",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:124"
+    },
+    {
+      "id": "total.ppVigas",
+      "grandeza": "peso próprio das vigas",
+      "unidade": "t",
+      "impresso": "4.65",
+      "fonte": "impressora.prn:126"
+    },
+    {
+      "id": "total.ppLajes",
+      "grandeza": "peso próprio das lajes",
+      "unidade": "t",
+      "impresso": "10.00",
+      "fonte": "impressora.prn:127"
+    },
+    {
+      "id": "total.estrutura",
+      "grandeza": "cargas de estrutura",
+      "unidade": "t",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:128"
+    },
+    {
+      "id": "total.painel",
+      "grandeza": "total das cargas no painel",
+      "unidade": "t",
+      "impresso": "24.65",
+      "fonte": "impressora.prn:129"
+    },
+    {
+      "id": "total.vigas",
+      "grandeza": "cargas aplicadas nas vigas",
+      "unidade": "t",
+      "impresso": "24.65",
+      "fonte": "impressora.prn:131"
+    },
+    {
+      "id": "total.pilares",
+      "grandeza": "cargas aplicadas nos pilares",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:132"
+    },
+    {
+      "id": "total.vigasPilares",
+      "grandeza": "cargas aplicadas nas vigas + pilares",
+      "unidade": "t",
+      "impresso": "24.65",
+      "fonte": "impressora.prn:133"
+    },
+    {
+      "id": "V3.t1.L",
+      "grandeza": "V3 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:421"
+    },
+    {
+      "id": "V3.t1.J",
+      "grandeza": "V3 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:421"
+    },
+    {
+      "id": "V3.t1.P",
+      "grandeza": "V3 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.668",
+      "fonte": "impressora.prn:422"
+    },
+    {
+      "id": "V3.t1.D",
+      "grandeza": "V3 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:422"
+    },
+    {
+      "id": "V3.t1.F",
+      "grandeza": "V3 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:422"
+    },
+    {
+      "id": "V3.a0.M-",
+      "grandeza": "V3 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:426",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V3.a0.R",
+      "grandeza": "V3 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:426",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V3.a1.M-",
+      "grandeza": "V3 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:427",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V3.a1.R",
+      "grandeza": "V3 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:427",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V3.somaR",
+      "grandeza": "V3 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "3.34",
+      "fonte": "impressora.prn:429"
+    },
+    {
+      "id": "V3.MEP0",
+      "grandeza": "V3 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-1.4",
+      "fonte": "impressora.prn:433"
+    },
+    {
+      "id": "V3.t1.Ve",
+      "grandeza": "V3 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:434"
+    },
+    {
+      "id": "V3.t1.x",
+      "grandeza": "V3 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:434"
+    },
+    {
+      "id": "V3.t1.M+",
+      "grandeza": "V3 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "2.09",
+      "fonte": "impressora.prn:434"
+    },
+    {
+      "id": "V3.t1.Vd",
+      "grandeza": "V3 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:434"
+    },
+    {
+      "id": "V3.t1.fEJ",
+      "grandeza": "V3 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "5.43",
+      "fonte": "impressora.prn:434"
+    },
+    {
+      "id": "V3.MEP1",
+      "grandeza": "V3 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-1.4",
+      "fonte": "impressora.prn:435"
+    },
+    {
+      "id": "V4.t1.L",
+      "grandeza": "V4 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:449"
+    },
+    {
+      "id": "V4.t1.J",
+      "grandeza": "V4 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:449"
+    },
+    {
+      "id": "V4.t1.P",
+      "grandeza": "V4 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "1.943",
+      "fonte": "impressora.prn:450"
+    },
+    {
+      "id": "V4.t1.D",
+      "grandeza": "V4 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:450"
+    },
+    {
+      "id": "V4.t1.F",
+      "grandeza": "V4 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:450"
+    },
+    {
+      "id": "V4.a0.M-",
+      "grandeza": "V4 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:454",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V4.a0.R",
+      "grandeza": "V4 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "4.86",
+      "fonte": "impressora.prn:454",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V4.a1.M-",
+      "grandeza": "V4 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:455",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V4.a1.R",
+      "grandeza": "V4 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "4.86",
+      "fonte": "impressora.prn:455",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V4.somaR",
+      "grandeza": "V4 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "9.72",
+      "fonte": "impressora.prn:457"
+    },
+    {
+      "id": "V4.MEP0",
+      "grandeza": "V4 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-4.05",
+      "fonte": "impressora.prn:461"
+    },
+    {
+      "id": "V4.t1.Ve",
+      "grandeza": "V4 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "4.86",
+      "fonte": "impressora.prn:462"
+    },
+    {
+      "id": "V4.t1.x",
+      "grandeza": "V4 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:462"
+    },
+    {
+      "id": "V4.t1.M+",
+      "grandeza": "V4 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "6.07",
+      "fonte": "impressora.prn:462"
+    },
+    {
+      "id": "V4.t1.Vd",
+      "grandeza": "V4 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "4.86",
+      "fonte": "impressora.prn:462"
+    },
+    {
+      "id": "V4.t1.fEJ",
+      "grandeza": "V4 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "15.81",
+      "fonte": "impressora.prn:462"
+    },
+    {
+      "id": "V4.MEP1",
+      "grandeza": "V4 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-4.05",
+      "fonte": "impressora.prn:463"
+    },
+    {
+      "id": "V5.t1.L",
+      "grandeza": "V5 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:477"
+    },
+    {
+      "id": "V5.t1.J",
+      "grandeza": "V5 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:477"
+    },
+    {
+      "id": "V5.t1.P",
+      "grandeza": "V5 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.668",
+      "fonte": "impressora.prn:478"
+    },
+    {
+      "id": "V5.t1.D",
+      "grandeza": "V5 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:478"
+    },
+    {
+      "id": "V5.t1.F",
+      "grandeza": "V5 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:478"
+    },
+    {
+      "id": "V5.a0.M-",
+      "grandeza": "V5 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:482"
+    },
+    {
+      "id": "V5.a0.R",
+      "grandeza": "V5 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:482"
+    },
+    {
+      "id": "V5.a1.M-",
+      "grandeza": "V5 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:483"
+    },
+    {
+      "id": "V5.a1.R",
+      "grandeza": "V5 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:483"
+    },
+    {
+      "id": "V5.somaR",
+      "grandeza": "V5 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "3.34",
+      "fonte": "impressora.prn:485"
+    },
+    {
+      "id": "V5.MEP0",
+      "grandeza": "V5 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-1.4",
+      "fonte": "impressora.prn:489"
+    },
+    {
+      "id": "V5.t1.Ve",
+      "grandeza": "V5 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:490"
+    },
+    {
+      "id": "V5.t1.x",
+      "grandeza": "V5 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:490"
+    },
+    {
+      "id": "V5.t1.M+",
+      "grandeza": "V5 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "2.09",
+      "fonte": "impressora.prn:490"
+    },
+    {
+      "id": "V5.t1.Vd",
+      "grandeza": "V5 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:490"
+    },
+    {
+      "id": "V5.t1.fEJ",
+      "grandeza": "V5 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "5.43",
+      "fonte": "impressora.prn:490"
+    },
+    {
+      "id": "V5.MEP1",
+      "grandeza": "V5 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-1.4",
+      "fonte": "impressora.prn:491"
+    },
+    {
+      "id": "V1.t1.L",
+      "grandeza": "V1 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:353"
+    },
+    {
+      "id": "V1.t1.J",
+      "grandeza": "V1 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:353"
+    },
+    {
+      "id": "V1.t1.P",
+      "grandeza": "V1 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.516",
+      "fonte": "impressora.prn:354"
+    },
+    {
+      "id": "V1.t1.D",
+      "grandeza": "V1 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:354"
+    },
+    {
+      "id": "V1.t1.F",
+      "grandeza": "V1 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:354"
+    },
+    {
+      "id": "V1.t2.L",
+      "grandeza": "V1 tramo 2 (balanço): comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:355"
+    },
+    {
+      "id": "V1.t2.J",
+      "grandeza": "V1 tramo 2 (balanço): inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:355"
+    },
+    {
+      "id": "V1.t2.P",
+      "grandeza": "V1 tramo 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.516",
+      "fonte": "impressora.prn:356"
+    },
+    {
+      "id": "V1.t2.D",
+      "grandeza": "V1 tramo 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:356"
+    },
+    {
+      "id": "V1.t2.F",
+      "grandeza": "V1 tramo 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:356"
+    },
+    {
+      "id": "V1.a0.M-",
+      "grandeza": "V1 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:360",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V1.a0.R",
+      "grandeza": "V1 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "-1.67",
+      "fonte": "impressora.prn:360",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V1.a1.M-",
+      "grandeza": "V1 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "-10.80",
+      "fonte": "impressora.prn:361",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V1.a1.R",
+      "grandeza": "V1 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "7.47",
+      "fonte": "impressora.prn:361",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V1.somaR",
+      "grandeza": "V1 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "5.80",
+      "fonte": "impressora.prn:363"
+    },
+    {
+      "id": "V1.MEP0",
+      "grandeza": "V1 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-.69",
+      "fonte": "impressora.prn:367"
+    },
+    {
+      "id": "V1.t1.Ve",
+      "grandeza": "V1 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "-1.67",
+      "fonte": "impressora.prn:368"
+    },
+    {
+      "id": "V1.t1.x",
+      "grandeza": "V1 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:368"
+    },
+    {
+      "id": "V1.t1.M+",
+      "grandeza": "V1 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:368"
+    },
+    {
+      "id": "V1.t1.Vd",
+      "grandeza": "V1 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "3.73",
+      "fonte": "impressora.prn:368"
+    },
+    {
+      "id": "V1.t1.fEJ",
+      "grandeza": "V1 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:368"
+    },
+    {
+      "id": "V1.t2.Ve",
+      "grandeza": "V1 tramo 2 (balanço): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "3.73",
+      "fonte": "impressora.prn:369"
+    },
+    {
+      "id": "V1.MEP1",
+      "grandeza": "V1 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-.69",
+      "fonte": "impressora.prn:370"
+    },
+    {
+      "id": "V1.t1.EEP.Ve",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "0.77",
+      "fonte": "impressora.prn:374"
+    },
+    {
+      "id": "V1.t1.EEP.x",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:374"
+    },
+    {
+      "id": "V1.t1.EEP.M+",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "0.58",
+      "fonte": "impressora.prn:374"
+    },
+    {
+      "id": "V1.t1.EEP.Vd",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "1.29",
+      "fonte": "impressora.prn:374"
+    },
+    {
+      "id": "V2.t1.L",
+      "grandeza": "V2 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:387"
+    },
+    {
+      "id": "V2.t1.J",
+      "grandeza": "V2 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:387"
+    },
+    {
+      "id": "V2.t1.P",
+      "grandeza": "V2 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.516",
+      "fonte": "impressora.prn:388"
+    },
+    {
+      "id": "V2.t1.D",
+      "grandeza": "V2 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:388"
+    },
+    {
+      "id": "V2.t1.F",
+      "grandeza": "V2 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:388"
+    },
+    {
+      "id": "V2.t2.L",
+      "grandeza": "V2 tramo 2 (balanço): comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:389"
+    },
+    {
+      "id": "V2.t2.J",
+      "grandeza": "V2 tramo 2 (balanço): inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:389"
+    },
+    {
+      "id": "V2.t2.P",
+      "grandeza": "V2 tramo 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.516",
+      "fonte": "impressora.prn:390"
+    },
+    {
+      "id": "V2.t2.D",
+      "grandeza": "V2 tramo 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:390"
+    },
+    {
+      "id": "V2.t2.F",
+      "grandeza": "V2 tramo 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:390"
+    },
+    {
+      "id": "V2.a0.M-",
+      "grandeza": "V2 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:394",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V2.a0.R",
+      "grandeza": "V2 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "-1.67",
+      "fonte": "impressora.prn:394",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V2.a1.M-",
+      "grandeza": "V2 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "-10.80",
+      "fonte": "impressora.prn:395",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V2.a1.R",
+      "grandeza": "V2 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "7.47",
+      "fonte": "impressora.prn:395",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V2.somaR",
+      "grandeza": "V2 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "5.80",
+      "fonte": "impressora.prn:397"
+    },
+    {
+      "id": "V2.MEP0",
+      "grandeza": "V2 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-.69",
+      "fonte": "impressora.prn:401"
+    },
+    {
+      "id": "V2.t1.Ve",
+      "grandeza": "V2 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "-1.67",
+      "fonte": "impressora.prn:402"
+    },
+    {
+      "id": "V2.t1.x",
+      "grandeza": "V2 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:402"
+    },
+    {
+      "id": "V2.t1.M+",
+      "grandeza": "V2 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:402"
+    },
+    {
+      "id": "V2.t1.Vd",
+      "grandeza": "V2 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "3.73",
+      "fonte": "impressora.prn:402"
+    },
+    {
+      "id": "V2.t1.fEJ",
+      "grandeza": "V2 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:402"
+    },
+    {
+      "id": "V2.t2.Ve",
+      "grandeza": "V2 tramo 2 (balanço): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "3.73",
+      "fonte": "impressora.prn:403"
+    },
+    {
+      "id": "V2.MEP1",
+      "grandeza": "V2 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-.69",
+      "fonte": "impressora.prn:404"
+    },
+    {
+      "id": "V2.t1.EEP.Ve",
+      "grandeza": "V2 tramo 1 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "0.77",
+      "fonte": "impressora.prn:408"
+    },
+    {
+      "id": "V2.t1.EEP.x",
+      "grandeza": "V2 tramo 1 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:408"
+    },
+    {
+      "id": "V2.t1.EEP.M+",
+      "grandeza": "V2 tramo 1 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "0.58",
+      "fonte": "impressora.prn:408"
+    },
+    {
+      "id": "V2.t1.EEP.Vd",
+      "grandeza": "V2 tramo 1 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "1.29",
+      "fonte": "impressora.prn:408"
+    },
+    {
+      "id": "REP.P4",
+      "grandeza": "P4 carga total no .REP",
+      "unidade": "t",
+      "impresso": "-0.01",
+      "fonte": "impressora.prn:507",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P3",
+      "grandeza": "P3 carga total no .REP",
+      "unidade": "t",
+      "impresso": "12.31",
+      "fonte": "impressora.prn:507",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P1",
+      "grandeza": "P1 carga total no .REP",
+      "unidade": "t",
+      "impresso": "-0.01",
+      "fonte": "impressora.prn:507",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P2",
+      "grandeza": "P2 carga total no .REP",
+      "unidade": "t",
+      "impresso": "12.31",
+      "fonte": "impressora.prn:508",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P4.carga.V1",
+      "grandeza": "P4 parcela da carga vinda de V1",
+      "unidade": "t",
+      "impresso": "-1.67",
+      "fonte": "impressora.prn:511",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P4.carga.V3",
+      "grandeza": "P4 parcela da carga vinda de V3",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:511",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P4.momento.V1",
+      "grandeza": "P4 momento vindo de V1",
+      "unidade": "tm",
+      "impresso": "-.68",
+      "fonte": "impressora.prn:512",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-.68@1 [4]\""
+    },
+    {
+      "id": "REP.P4.momento.V3",
+      "grandeza": "P4 momento vindo de V3",
+      "unidade": "tm",
+      "impresso": "-1.39",
+      "fonte": "impressora.prn:512",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.39@1 [5]\""
+    },
+    {
+      "id": "REP.P3.carga.V1",
+      "grandeza": "P3 parcela da carga vinda de V1",
+      "unidade": "t",
+      "impresso": "7.46",
+      "fonte": "impressora.prn:513",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P3.carga.V4",
+      "grandeza": "P3 parcela da carga vinda de V4",
+      "unidade": "t",
+      "impresso": "4.85",
+      "fonte": "impressora.prn:513",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P3.momento.V4",
+      "grandeza": "P3 momento vindo de V4",
+      "unidade": "tm",
+      "impresso": "-4.04",
+      "fonte": "impressora.prn:514",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-4.04@1 [5]\""
+    },
+    {
+      "id": "REP.P1.carga.V2",
+      "grandeza": "P1 parcela da carga vinda de V2",
+      "unidade": "t",
+      "impresso": "-1.67",
+      "fonte": "impressora.prn:515",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P1.carga.V3",
+      "grandeza": "P1 parcela da carga vinda de V3",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:515",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P1.momento.V2",
+      "grandeza": "P1 momento vindo de V2",
+      "unidade": "tm",
+      "impresso": "-.68",
+      "fonte": "impressora.prn:516",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-.68@1 [4]\""
+    },
+    {
+      "id": "REP.P1.momento.V3",
+      "grandeza": "P1 momento vindo de V3",
+      "unidade": "tm",
+      "impresso": "-1.39",
+      "fonte": "impressora.prn:516",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.39@1 [5]\""
+    },
+    {
+      "id": "REP.P2.carga.V2",
+      "grandeza": "P2 parcela da carga vinda de V2",
+      "unidade": "t",
+      "impresso": "7.46",
+      "fonte": "impressora.prn:517",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P2.carga.V4",
+      "grandeza": "P2 parcela da carga vinda de V4",
+      "unidade": "t",
+      "impresso": "4.85",
+      "fonte": "impressora.prn:517",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P2.momento.V4",
+      "grandeza": "P2 momento vindo de V4",
+      "unidade": "tm",
+      "impresso": "-4.04",
+      "fonte": "impressora.prn:518",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-4.04@1 [5]\""
+    },
+    {
+      "id": "L1.mu",
+      "grandeza": "L1 μ (relação M+ secundário/principal) gravado pelo LAJECALC 2",
+      "unidade": "",
+      "impresso": "0.8",
+      "fonte": "obra/VBX.LAJ",
+      "obs": "não é impresso; valor do .LAJ"
+    },
+    {
+      "id": "L1.lado3.codigo",
+      "grandeza": "L1 código final do lado 3 ([4, 5] → [4, 0]); i = (código − 2)/10",
+      "unidade": "",
+      "impresso": "22",
+      "fonte": "obra/VBX.LAJ",
+      "obs": "não é impresso; valor do .LAJ (depois da otimização, se houve)"
+    },
+    {
+      "id": "L2.mu",
+      "grandeza": "L2 μ (relação M+ secundário/principal) gravado pelo LAJECALC 2",
+      "unidade": "",
+      "impresso": "0.8",
+      "fonte": "obra/VBX.LAJ",
+      "obs": "não é impresso; valor do .LAJ"
+    },
+    {
+      "id": "L2.lado2.codigo",
+      "grandeza": "L2 código final do lado 2 ([4, 0] → [4, 5]); i = (código − 2)/10",
+      "unidade": "",
+      "impresso": "22",
+      "fonte": "obra/VBX.LAJ",
+      "obs": "não é impresso; valor do .LAJ (depois da otimização, se houve)"
+    },
+    {
+      "id": "L1.proc.posPrinc",
+      "grandeza": "L1 armadura positiva escolhida pelo LAJEPROC, rótulo com traço '—' (direção do ângulo da armadura, x)",
+      "unidade": "",
+      "impresso": "#6.3c/20",
+      "fonte": "telas/041_p04_desenho.png",
+      "obs": "lido no desenho (tela gráfica); bitola em mm e espaçamento em cm"
+    },
+    {
+      "id": "L1.proc.posSec",
+      "grandeza": "L1 armadura positiva escolhida pelo LAJEPROC, rótulo sem traço (direção y)",
+      "unidade": "",
+      "impresso": "#6.3c/20",
+      "fonte": "telas/041_p04_desenho.png",
+      "obs": "lido no desenho (tela gráfica)"
+    },
+    {
+      "id": "L2.proc.posPrinc",
+      "grandeza": "L2 armadura positiva escolhida pelo LAJEPROC, rótulo com traço '—' (direção do ângulo da armadura, x)",
+      "unidade": "",
+      "impresso": "#6.3c/20",
+      "fonte": "telas/041_p04_desenho.png",
+      "obs": "lido no desenho (tela gráfica); bitola em mm e espaçamento em cm"
+    },
+    {
+      "id": "L2.proc.posSec",
+      "grandeza": "L2 armadura positiva escolhida pelo LAJEPROC, rótulo sem traço (direção y)",
+      "unidade": "",
+      "impresso": "#6.3c/20",
+      "fonte": "telas/041_p04_desenho.png",
+      "obs": "lido no desenho (tela gráfica)"
+    },
+    {
+      "id": "L1-L2.proc.neg",
+      "grandeza": "armadura negativa da continuidade L1-L2 escolhida pelo LAJEPROC (um código por continuidade)",
+      "unidade": "",
+      "impresso": "#6.3c/10",
+      "fonte": "telas/044_p05n_desenho.png",
+      "obs": "lido no desenho das negativas (tela gráfica); o rótulo aparece uma vez de cada lado"
+    }
+  ],
+  "comparacao_v1": "DIFERENTE: 65 de 71. 3 telas de FRE; 2 telas da escolha de apoio do LAJEMONT (v02a, v02c) com 27 pixels: a seta que pisca por TIMER (laço de 0,08 s), dependente do relógio real; e a impressora (byte 39184; impressora.txt linhas 268, 304, 340 e 376): coluna f*EJ do tramo 1 das vigas V1 e V2 (tramo com M+ = 0 em x = 0, ao lado do balanço) sai ' 0.00' no original e '-0.00' na V1 nova, nas duas impressões (opções 2 e 7). Provável defeito da V1 no PRINT USING de valor negativo minúsculo ou −0. VBX.LAJ/.VIG/.RLP/.REP iguais byte a byte"
+}

@@ -1,0 +1,51 @@
+{
+  "caso": "v2par_laje_umadir",
+  "laj": "C:/tmp/oraculo/runs/v2par_laje_umadir-20261015-162808/obra/UMD.LAJ",
+  "lajes": [
+    {
+      "nome": "L1",
+      "tipo": 0,
+      "poligono": 1,
+      "vertices": [
+        [0.0, 0.0],
+        [0.0, 7.5],
+        [3.0, 7.5],
+        [3.0, 0.0]
+      ],
+      "codigosFinais": [0, 0, 22, 0],
+      "angulo": 0.0,
+      "mu": 0.55,
+      "area": 22.5,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 24.59992
+    },
+    {
+      "nome": "L2",
+      "tipo": 0,
+      "poligono": 2,
+      "vertices": [
+        [6.0, 0.0],
+        [3.0, 0.0],
+        [3.0, 7.5],
+        [6.0, 7.5]
+      ],
+      "codigosFinais": [0, 22, 0, 0],
+      "angulo": 0.0,
+      "mu": 0.55,
+      "area": 22.5,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 24.59992
+    }
+  ],
+  "continuidades": [
+    {
+      "lajeA": "L1",
+      "bordoA": 2,
+      "lajeB": "L2",
+      "bordoB": 1,
+      "armaduraImposta": 0
+    }
+  ]
+}

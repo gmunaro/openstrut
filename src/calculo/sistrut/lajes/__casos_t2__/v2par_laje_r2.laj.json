@@ -1,0 +1,51 @@
+{
+  "caso": "v2par_laje_r2",
+  "laj": "C:/tmp/oraculo/runs/v2par_laje_r2-20261015-163144/obra/RDOIS.LAJ",
+  "lajes": [
+    {
+      "nome": "L1",
+      "tipo": 0,
+      "poligono": 1,
+      "vertices": [
+        [0.0, 0.0],
+        [0.0, 5.0],
+        [6.0, 5.0],
+        [6.0, 0.0]
+      ],
+      "codigosFinais": [0, 0, 22, 0],
+      "angulo": 0.0,
+      "mu": 1.0,
+      "area": 30.0,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 50.16966
+    },
+    {
+      "nome": "L2",
+      "tipo": 0,
+      "poligono": 2,
+      "vertices": [
+        [10.0, 5.0],
+        [10.0, 0.0],
+        [6.0, 0.0],
+        [6.0, 5.0]
+      ],
+      "codigosFinais": [0, 0, 22, 0],
+      "angulo": 0.0,
+      "mu": 0.8,
+      "area": 20.0,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 32.49876
+    }
+  ],
+  "continuidades": [
+    {
+      "lajeA": "L1",
+      "bordoA": 2,
+      "lajeB": "L2",
+      "bordoB": 2,
+      "armaduraImposta": 0
+    }
+  ]
+}
