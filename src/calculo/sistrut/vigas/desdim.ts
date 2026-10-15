@@ -13,6 +13,7 @@ import type {
   DimensionamentoViga,
   DivisaoCarga,
   EntradaDesdim,
+  EnvoltoriaTramo,
   FlexaoViga,
   ModoSistrut,
   SecaoViga,
@@ -58,9 +59,42 @@ export interface EsforcosTramoDesdim {
   /** Cortantes característicos com alívio (A_1540), t, em módulo. */
   vkEsquerda: number;
   vkDireita: number;
-  /** Momento no apoio à esquerda (A_17c4(t,1)), tm. */
+  /** Cortante à esquerda e momento no apoio esquerdo do carregamento do M+ (A_17c4(t,0)
+   *  e A_17c4(t,1)), t e tm: os da flecha. Sem envoltória, os da análise estática. */
+  veFlecha: number;
   mEsquerdo: number;
   divisoes: readonly DivisaoCarga[];
+}
+
+/** Envoltória com o carregamento do M+ máximo (xadrez por paridade, DESDIM.BAS:
+ *  6262-6265), que o contrato `EnvoltoriaTramo` não tem. Se a análise trouxer estes
+ *  campos, a flecha os usa; senão eles são reconstruídos de x e M+. */
+export interface EnvoltoriaComCarregamento extends EnvoltoriaTramo {
+  veCarregamento?: number;
+  mEsquerdoCarregamento?: number;
+}
+
+/** Ve e M esquerdo do carregamento que dá o M+ (x, m) da envoltória, com as cargas
+ *  TOTAIS do tramo (L_55a83 recalcula x e M+ com elas, DESDIM.BAS:6270-6276): Ve é a
+ *  carga até x (o cortante zera em x) e Me = M+ − Ve·x + momento das cargas até x.
+ *  Não há solução única quando o zero cai sob uma concentrada (x = d): devolve
+ *  undefined. */
+export function carregamentoDoMaximo(divisoes: readonly DivisaoCarga[], x: number, m: number) {
+  let ve = 0;
+  let momento = 0;
+  let anterior = 0;
+  for (const d of divisoes) {
+    if (x < d.d) {
+      ve += (x - anterior) * d.p;
+      momento += ((x - anterior) ** 2 * d.p) / 2;
+      return { ve, mEsquerdo: m - ve * x + momento };
+    }
+    if (x === d.d) return undefined;
+    ve += (d.d - anterior) * d.p + d.f;
+    momento += (d.d - anterior) * d.p * (x - (d.d + anterior) / 2) + d.f * (x - d.d);
+    anterior = d.d;
+  }
+  return undefined;
 }
 
 export interface EsforcosDesdim {
@@ -68,6 +102,7 @@ export interface EsforcosDesdim {
   momentosApoio: number[];
   /** Tramos na ordem 1 − balE .. n + balD. */
   tramos: EsforcosTramoDesdim[];
+  avisos: string[];
 }
 
 /** Seção de cálculo de um índice de tramo do original. Balanço sem seção própria
@@ -125,15 +160,16 @@ function aliviaCortantes(t: EsforcosTramoDesdim, h: number, n: number, modo: Mod
 
 /** Adaptador análise → DESDIM: M dos apoios, M+ e x, cortantes com e sem alívio por
  *  tramo, a partir da `AnaliseViga` (DESCALC, DESDIM.BAS:6020-6035) e das cargas do
- *  .VIG. Com a envoltória de acidentais usa o M+, o x e o maior cortante dela
- *  (DESDIM.BAS:6270-6276, 6503-6510); o caminho da envoltória não foi conferido no
- *  oráculo. Engastamento perfeito: o M+ vira o maior dos dois (DESDIM.BAS:2940-2952). */
+ *  .VIG. Com a envoltória de acidentais usa o M−, o M+, o x e o maior cortante dela
+ *  (DESDIM.BAS:6270-6276, 6503-6510) e, na flecha, o carregamento do M+ máximo.
+ *  Engastamento perfeito: o M+ vira o maior dos dois (DESDIM.BAS:2940-2952). */
 export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): EsforcosDesdim {
   const s = atribuicao(modo);
   const { viga, analise, parametros } = entrada;
   const n = viga.tramos.length;
   const momentosApoio = analise.apoios.map((a) => a.mMax);
   const tramos: EsforcosTramoDesdim[] = [];
+  const avisosAdaptador: string[] = [];
   const balE = viga.balancoEsquerdo;
   if (balE) {
     const carga = Math.abs(analise.balancoEsquerdo?.carga ?? 0);
@@ -146,6 +182,7 @@ export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): Esfor
       vd: carga,
       vkEsquerda: 0,
       vkDireita: carga,
+      veFlecha: 0,
       mEsquerdo: 0,
       divisoes: balE.divisoes,
     });
@@ -159,6 +196,23 @@ export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): Esfor
     if (ep && ep.mPositivo > mPositivo) mPositivo = ep.mPositivo;
     const ve = s(Math.max(Math.abs(a.ve), Math.abs(env?.ve ?? 0)));
     const vd = s(Math.max(Math.abs(a.vd), Math.abs(env?.vd ?? 0)));
+    let veFlecha = a.ve;
+    let mEsquerdo = analise.apoios[i]?.m ?? 0;
+    if (env && env.x > 0) {
+      const c: EnvoltoriaComCarregamento = env;
+      const carregamento =
+        c.veCarregamento !== undefined && c.mEsquerdoCarregamento !== undefined
+          ? { ve: c.veCarregamento, mEsquerdo: c.mEsquerdoCarregamento }
+          : carregamentoDoMaximo(tramo.divisoes, env.x, env.mPositivo);
+      if (carregamento) {
+        veFlecha = s(carregamento.ve);
+        mEsquerdo = s(carregamento.mEsquerdo);
+      } else {
+        avisosAdaptador.push(
+          `${viga.nome} tramo ${i + 1}: o M+ da envoltória cai sob uma concentrada; a flecha usou o Ve e o M da análise estática.`,
+        );
+      }
+    }
     tramos.push({
       indice: i + 1,
       vao: tramo.vao,
@@ -168,7 +222,8 @@ export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): Esfor
       vd,
       vkEsquerda: ve,
       vkDireita: vd,
-      mEsquerdo: analise.apoios[i]?.m ?? 0,
+      veFlecha,
+      mEsquerdo,
       divisoes: tramo.divisoes,
     });
   });
@@ -184,6 +239,7 @@ export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): Esfor
       vd: 0,
       vkEsquerda: carga,
       vkDireita: 0,
+      veFlecha: carga,
       mEsquerdo: analise.apoios[n]?.m ?? 0,
       divisoes: balD.divisoes,
     });
@@ -194,7 +250,7 @@ export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): Esfor
       Object.assign(t, aliviaCortantes(t, h, n, modo));
     }
   }
-  return { momentosApoio, tramos };
+  return { momentosApoio, tramos, avisos: avisosAdaptador };
 }
 
 // ---------------------------------------------------------------- dimensionamento
@@ -294,6 +350,7 @@ export function dimensionaVigaDesdim(
     d: s(sec.hw - cobrimentoTotal),
   });
   const esforcos = esforcosDesdim(entrada, modo);
+  avisos.push(...esforcos.avisos);
   const ec = moduloEc(materiais, p, modo);
   const xiLim = xiLimite(materiais, mult, modo);
   const taxaMin = taxaArmaduraMinima(p.taxaArmaduraMinima, materiais, modo);
@@ -323,7 +380,7 @@ export function dimensionaVigaDesdim(
   const ejfPorTramo = new Map<number, number>();
   for (const t of esforcos.tramos) {
     if (t.indice < 1 || t.indice > n) continue;
-    ejfPorTramo.set(t.indice, flechaEJ(t, modo));
+    ejfPorTramo.set(t.indice, flechaEJ({ ...t, ve: t.veFlecha }, modo));
   }
 
   // Asw de cada lado (com ρ = 0,001: a coluna 5 de A_128e ainda é 0) e bitolas da viga.

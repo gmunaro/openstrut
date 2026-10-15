@@ -1,0 +1,930 @@
+{
+  "caso": "v2par_des_3tramos",
+  "run": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027",
+  "programa": "DESENHO → DESDIM → DESGRAF → DESINIT → DESIMP; DESENHO 4",
+  "descricao": "Dimensionamento e detalhamento (DESDIM/DESINIT) de viga de 3 tramos (3, 5 e 4 m), com o resumo de consumo.",
+  "entrada": {
+    "parametros": {
+      "norma": "NB-1/78 (DESENHO.INI e SISTRUT.DSP de fábrica)",
+      "fck_tcm2": 0.15,
+      "fyk_tcm2": 5,
+      "classeAco": "B",
+      "cobrimento_cm": 2.0
+    },
+    "obra": "Obra ASS gravada pelo original no caso v2par_laje_assim (ASS.LAJ/.VIG/.RLP em C:/tmp/oraculo/casos/v2par_des_*.dados). As cargas da viga são as do ASS.VIG (impressas como <V>.t<k>.P; o DESDIM analisa a viga de novo, VIGA.INI de fábrica).",
+    "viga": {
+      "registro": 1,
+      "nome": "V1",
+      "linha": "y = 9 m, nós x 0, 3, 8, 12",
+      "tramos_m": [3, 5, 4],
+      "Bw_cm": 20,
+      "Hw_cm": 50,
+      "Bf_cm": 0,
+      "Hf_cm": 0,
+      "apoios_cm": [20, 20, 20, 20],
+      "vaosLivres_cm": [280, 480, 380]
+    },
+    "sequencia": [
+      "DESENHO 1: obra ASS, registro 1; seção 20, 50, 0, 0 (Bw, Hw, Bf, Hf), seções iguais, retangular; apoios de 20 cm, tipo padrão, títulos P1..P4; vãos livres 280, 480, 380 cm; face superior e centralização padrão; sem lajes no corte; imprime esforços e armação (S, S), diagramas (S, S) em escala VIDEO; não altera a armadura; desenho definitivo 1/50 na impressora, sem edição e sem CAD; cabeçalhos 'OBRA ASS', 'VIGA V1', 'SISTRUT', notas 'NOTA UM', 'NOTA DOIS'; depois DESENHO 4: resumo geral de consumo da obra ASS impresso"
+    ]
+  },
+  "valores": [
+    {
+      "id": "V1.t1.L",
+      "grandeza": "V1 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "3.000",
+      "fonte": "impressora.prn:9"
+    },
+    {
+      "id": "V1.t1.J",
+      "grandeza": "V1 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:9"
+    },
+    {
+      "id": "V1.t1.P",
+      "grandeza": "V1 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.425",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "V1.t1.D",
+      "grandeza": "V1 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "3.00",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "V1.t1.F",
+      "grandeza": "V1 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "V1.t2.L",
+      "grandeza": "V1 tramo 2: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "V1.t2.J",
+      "grandeza": "V1 tramo 2: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "V1.t2.P",
+      "grandeza": "V1 tramo 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.511",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "V1.t2.D",
+      "grandeza": "V1 tramo 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "V1.t2.F",
+      "grandeza": "V1 tramo 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "V1.t3.L",
+      "grandeza": "V1 tramo 3: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "V1.t3.J",
+      "grandeza": "V1 tramo 3: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "V1.t3.P",
+      "grandeza": "V1 tramo 3: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.542",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "V1.t3.D",
+      "grandeza": "V1 tramo 3: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "V1.t3.F",
+      "grandeza": "V1 tramo 3: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "V1.a0.M-",
+      "grandeza": "V1 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "V1.a0.R",
+      "grandeza": "V1 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "0.36",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "V1.a1.M-",
+      "grandeza": "V1 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "-0.82",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "V1.a1.R",
+      "grandeza": "V1 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "2.12",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "V1.a2.M-",
+      "grandeza": "V1 apoio 2 M−",
+      "unidade": "tm",
+      "impresso": "-1.14",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "V1.a2.R",
+      "grandeza": "V1 apoio 2 reação",
+      "unidade": "t",
+      "impresso": "2.71",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "V1.a3.M-",
+      "grandeza": "V1 apoio 3 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "V1.a3.R",
+      "grandeza": "V1 apoio 3 reação",
+      "unidade": "t",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "V1.somaR",
+      "grandeza": "V1 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "V1.MEP0",
+      "grandeza": "V1 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-.32",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "V1.t1.Ve",
+      "grandeza": "V1 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "0.36",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "V1.t1.x",
+      "grandeza": "V1 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "0.86",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "V1.t1.M+",
+      "grandeza": "V1 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "0.16",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "V1.t1.Vd",
+      "grandeza": "V1 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "0.91",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "V1.t2.Ve",
+      "grandeza": "V1 tramo 2: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.21",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "V1.t2.x",
+      "grandeza": "V1 tramo 2: posição do M+",
+      "unidade": "m",
+      "impresso": "2.37",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "V1.t2.M+",
+      "grandeza": "V1 tramo 2: M+",
+      "unidade": "tm",
+      "impresso": "0.62",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "V1.t2.Vd",
+      "grandeza": "V1 tramo 2: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.34",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "V1.t3.Ve",
+      "grandeza": "V1 tramo 3: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.37",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "V1.t3.x",
+      "grandeza": "V1 tramo 3: posição do M+",
+      "unidade": "m",
+      "impresso": "2.53",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "V1.t3.M+",
+      "grandeza": "V1 tramo 3: M+",
+      "unidade": "tm",
+      "impresso": "0.59",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "V1.t3.Vd",
+      "grandeza": "V1 tramo 3: cortante à direita",
+      "unidade": "t",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "V1.MEP3",
+      "grandeza": "V1 momento de engastamento perfeito no apoio 3",
+      "unidade": "tm",
+      "impresso": "-.73",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "V1.t1.EEP.Ve",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "0.48",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "V1.t1.EEP.x",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "1.13",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "V1.t1.EEP.M+",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "0.27",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "V1.t1.EEP.Vd",
+      "grandeza": "V1 tramo 1 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:35"
+    },
+    {
+      "id": "V1.t3.EEP.Ve",
+      "grandeza": "V1 tramo 3 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.36",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "V1.t3.EEP.x",
+      "grandeza": "V1 tramo 3 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "V1.t3.EEP.M+",
+      "grandeza": "V1 tramo 3 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "0.61",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "V1.t3.EEP.Vd",
+      "grandeza": "V1 tramo 3 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "0.81",
+      "fonte": "impressora.prn:36"
+    },
+    {
+      "id": "V1.cobrimento",
+      "grandeza": "V1 cobrimento (DESDIM)",
+      "unidade": "cm",
+      "impresso": "2",
+      "fonte": "impressora.prn:45"
+    },
+    {
+      "id": "V1.a1.x/d",
+      "grandeza": "V1 apoio 1: x/d",
+      "unidade": "",
+      "impresso": "0.038",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.a1.Mk",
+      "grandeza": "V1 apoio 1: Mk",
+      "unidade": "tm",
+      "impresso": "0.82",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.a1.Ast",
+      "grandeza": "V1 apoio 1: armadura tracionada",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.a1.Asc",
+      "grandeza": "V1 apoio 1: armadura comprimida",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:50"
+    },
+    {
+      "id": "V1.a1.barras",
+      "grandeza": "V1 apoio 1: barras da armadura tracionada",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:51"
+    },
+    {
+      "id": "V1.a2.x/d",
+      "grandeza": "V1 apoio 2: x/d",
+      "unidade": "",
+      "impresso": "0.053",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "V1.a2.Mk",
+      "grandeza": "V1 apoio 2: Mk",
+      "unidade": "tm",
+      "impresso": "1.14",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "V1.a2.Ast",
+      "grandeza": "V1 apoio 2: armadura tracionada",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "V1.a2.Asc",
+      "grandeza": "V1 apoio 2: armadura comprimida",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "V1.a2.barras",
+      "grandeza": "V1 apoio 2: barras da armadura tracionada",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "V1.t1.x/d",
+      "grandeza": "V1 tramo 1: x/d",
+      "unidade": "",
+      "impresso": "0.012",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Mk",
+      "grandeza": "V1 tramo 1: Mk",
+      "unidade": "tm",
+      "impresso": "0.27",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Ast",
+      "grandeza": "V1 tramo 1: armadura tracionada",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Asc",
+      "grandeza": "V1 tramo 1: armadura comprimida",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Vke",
+      "grandeza": "V1 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "0.26",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Aee",
+      "grandeza": "V1 tramo 1: estribos à esquerda",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Vkd",
+      "grandeza": "V1 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "0.80",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.Aed",
+      "grandeza": "V1 tramo 1: estribos à direita",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:58"
+    },
+    {
+      "id": "V1.t1.flecha",
+      "grandeza": "V1 tramo 1: flecha",
+      "unidade": "cm",
+      "impresso": "0",
+      "fonte": "impressora.prn:59"
+    },
+    {
+      "id": "V1.t1.barras",
+      "grandeza": "V1 tramo 1: barras da armadura tracionada",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:59"
+    },
+    {
+      "id": "V1.t1.estriboE",
+      "grandeza": "V1 tramo 1: estribo à esquerda",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:59"
+    },
+    {
+      "id": "V1.t1.estriboD",
+      "grandeza": "V1 tramo 1: estribo à direita",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:59"
+    },
+    {
+      "id": "V1.t2.x/d",
+      "grandeza": "V1 tramo 2: x/d",
+      "unidade": "",
+      "impresso": "0.028",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Mk",
+      "grandeza": "V1 tramo 2: Mk",
+      "unidade": "tm",
+      "impresso": "0.62",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Ast",
+      "grandeza": "V1 tramo 2: armadura tracionada",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Asc",
+      "grandeza": "V1 tramo 2: armadura comprimida",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Vke",
+      "grandeza": "V1 tramo 2: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.09",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Aee",
+      "grandeza": "V1 tramo 2: estribos à esquerda",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Vkd",
+      "grandeza": "V1 tramo 2: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.21",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.Aed",
+      "grandeza": "V1 tramo 2: estribos à direita",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:60"
+    },
+    {
+      "id": "V1.t2.flecha",
+      "grandeza": "V1 tramo 2: flecha",
+      "unidade": "cm",
+      "impresso": ".02",
+      "fonte": "impressora.prn:61"
+    },
+    {
+      "id": "V1.t2.barras",
+      "grandeza": "V1 tramo 2: barras da armadura tracionada",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:61"
+    },
+    {
+      "id": "V1.t2.estriboE",
+      "grandeza": "V1 tramo 2: estribo à esquerda",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:61"
+    },
+    {
+      "id": "V1.t2.estriboD",
+      "grandeza": "V1 tramo 2: estribo à direita",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:61"
+    },
+    {
+      "id": "V1.t3.x/d",
+      "grandeza": "V1 tramo 3: x/d",
+      "unidade": "",
+      "impresso": "0.028",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Mk",
+      "grandeza": "V1 tramo 3: Mk",
+      "unidade": "tm",
+      "impresso": "0.61",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Ast",
+      "grandeza": "V1 tramo 3: armadura tracionada",
+      "unidade": "cm2",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Asc",
+      "grandeza": "V1 tramo 3: armadura comprimida",
+      "unidade": "cm2",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Vke",
+      "grandeza": "V1 tramo 3: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.23",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Aee",
+      "grandeza": "V1 tramo 3: estribos à esquerda",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Vkd",
+      "grandeza": "V1 tramo 3: cortante à direita",
+      "unidade": "t",
+      "impresso": "0.66",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.Aed",
+      "grandeza": "V1 tramo 3: estribos à direita",
+      "unidade": "cm2/m",
+      "impresso": "2.80",
+      "fonte": "impressora.prn:62"
+    },
+    {
+      "id": "V1.t3.flecha",
+      "grandeza": "V1 tramo 3: flecha",
+      "unidade": "cm",
+      "impresso": ".01",
+      "fonte": "impressora.prn:63"
+    },
+    {
+      "id": "V1.t3.barras",
+      "grandeza": "V1 tramo 3: barras da armadura tracionada",
+      "unidade": "",
+      "impresso": "2#10",
+      "fonte": "impressora.prn:63"
+    },
+    {
+      "id": "V1.t3.estriboE",
+      "grandeza": "V1 tramo 3: estribo à esquerda",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:63"
+    },
+    {
+      "id": "V1.t3.estriboD",
+      "grandeza": "V1 tramo 3: estribo à direita",
+      "unidade": "",
+      "impresso": "#5/12",
+      "fonte": "impressora.prn:63"
+    },
+    {
+      "id": "resumo.V1.rept",
+      "grandeza": "resumo: repetições da V1",
+      "unidade": "",
+      "impresso": "1",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.4",
+      "grandeza": "resumo: comprimento das barras de 4 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.5",
+      "grandeza": "resumo: comprimento das barras de 5 mm da V1",
+      "unidade": "m",
+      "impresso": "128",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.6.3",
+      "grandeza": "resumo: comprimento das barras de 6.3 mm da V1",
+      "unidade": "m",
+      "impresso": "9",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.8",
+      "grandeza": "resumo: comprimento das barras de 8 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.10",
+      "grandeza": "resumo: comprimento das barras de 10 mm da V1",
+      "unidade": "m",
+      "impresso": "45",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.12.5",
+      "grandeza": "resumo: comprimento das barras de 12.5 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.16",
+      "grandeza": "resumo: comprimento das barras de 16 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.20",
+      "grandeza": "resumo: comprimento das barras de 20 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.25",
+      "grandeza": "resumo: comprimento das barras de 25 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.comp.32",
+      "grandeza": "resumo: comprimento das barras de 32 mm da V1",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.Vconc",
+      "grandeza": "resumo: volume de concreto da V1",
+      "unidade": "m3",
+      "impresso": "1.1",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.V1.Afor",
+      "grandeza": "resumo: área de fôrma da V1",
+      "unidade": "m2",
+      "impresso": "13.7",
+      "fonte": "impressora.prn:225"
+    },
+    {
+      "id": "resumo.total.comp.4",
+      "grandeza": "resumo: comprimento total de 4 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.5",
+      "grandeza": "resumo: comprimento total de 5 mm",
+      "unidade": "m",
+      "impresso": "128",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.6.3",
+      "grandeza": "resumo: comprimento total de 6.3 mm",
+      "unidade": "m",
+      "impresso": "9",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.8",
+      "grandeza": "resumo: comprimento total de 8 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.10",
+      "grandeza": "resumo: comprimento total de 10 mm",
+      "unidade": "m",
+      "impresso": "45",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.12.5",
+      "grandeza": "resumo: comprimento total de 12.5 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.16",
+      "grandeza": "resumo: comprimento total de 16 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.20",
+      "grandeza": "resumo: comprimento total de 20 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.25",
+      "grandeza": "resumo: comprimento total de 25 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.comp.32",
+      "grandeza": "resumo: comprimento total de 32 mm",
+      "unidade": "m",
+      "impresso": "0",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.Vconc",
+      "grandeza": "resumo: volume total de concreto",
+      "unidade": "m3",
+      "impresso": "1.1",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.total.Afor",
+      "grandeza": "resumo: área total de fôrma",
+      "unidade": "m2",
+      "impresso": "13.7",
+      "fonte": "impressora.prn:228"
+    },
+    {
+      "id": "resumo.peso.4",
+      "grandeza": "resumo: peso total de 4 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.5",
+      "grandeza": "resumo: peso total de 5 mm",
+      "unidade": "kg",
+      "impresso": "20",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.6.3",
+      "grandeza": "resumo: peso total de 6.3 mm",
+      "unidade": "kg",
+      "impresso": "2",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.8",
+      "grandeza": "resumo: peso total de 8 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.10",
+      "grandeza": "resumo: peso total de 10 mm",
+      "unidade": "kg",
+      "impresso": "28",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.12.5",
+      "grandeza": "resumo: peso total de 12.5 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.16",
+      "grandeza": "resumo: peso total de 16 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.20",
+      "grandeza": "resumo: peso total de 20 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.25",
+      "grandeza": "resumo: peso total de 25 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    },
+    {
+      "id": "resumo.peso.32",
+      "grandeza": "resumo: peso total de 32 mm",
+      "unidade": "kg",
+      "impresso": "0",
+      "fonte": "impressora.prn:230"
+    }
+  ],
+  "comparacao_v1": "igual nos números (30 de 31): impressora 58.827 bytes e ASS.FOR/.SEC/.TAB iguais; a tela d09 difere só no cabeçalho 'SISTRUT/Eng. Andre...' cortado pela janela, que a tabela de marca do compara_retrad.py não troca (artefato da marca)"
+}
