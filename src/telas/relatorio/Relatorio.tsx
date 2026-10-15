@@ -1,8 +1,8 @@
 // Aba Relatório: página para imprimir (ou salvar em PDF pelo navegador) com o
 // resumo da obra, materiais, pavimentos, as tabelas de resultados, os avisos e
 // a frase de conferência, com o detalhamento (vigas, lajes, pilares) e as
-// tabelas de aço da obra e de cada origem. O @media print do index.css troca o
-// tema para papel.
+// tabelas de aço da obra e de cada origem. O cabeçalho traz a norma e o modo de
+// cálculo. O @media print do index.css troca o tema para papel.
 import { Printer } from "lucide-react";
 import { useContext, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   AVISO_CONFERENCIA,
   coletarAvisos,
   coletarFalhas,
+  NOME_MODO,
   NOME_NORMA,
   type Calculo,
 } from "../calculo";
@@ -19,7 +20,7 @@ import { formatarGrandeza, formatarNumero, unidade } from "../formato";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "../marca";
 import { ListaAvisos, ListaFalhas } from "../resultados/avisos";
 import { DetalhamentoContexto, detalharObra } from "../detalhamento";
-import { TabelaQuantitativos, TabelasAco } from "../resultados/quantitativos";
+import { TabelaQuantitativos, TabelasAco, volumeFormaCertos } from "../resultados/quantitativos";
 import { SemCalculo, TabelasObra } from "../resultados/Resultados";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "../resultados/tabela";
 import { useUnidades } from "../sessao";
@@ -31,6 +32,13 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
   const uT = unidade("tensao", s);
   const quant = useMemo(
     () => (calculo.tipo === "ok" ? calcularQuantitativos(obra, calculo.resultado) : null),
+    [obra, calculo],
+  );
+  const certo = useMemo(
+    () =>
+      calculo.tipo === "ok" && obra.modoCalculo === "original"
+        ? volumeFormaCertos(obra, calculo.resultado)
+        : undefined,
     [obra, calculo],
   );
   // o detalhamento da obra fica no contexto (preenchido pela tela da obra); o
@@ -60,6 +68,17 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
             Norma: {calculo.tipo === "ok" ? calculo.resultado.norma.nome : NOME_NORMA[obra.norma]} ·
             unidades {s === "si" ? "SI (kN, m, MPa)" : "técnicas (tf, m, kgf/cm²)"} · emitido em{" "}
             {data}
+          </p>
+          <p
+            className={
+              obra.modoCalculo === "original"
+                ? "text-aviso text-xs font-semibold"
+                : "text-muted-foreground text-xs"
+            }
+          >
+            Modo de cálculo: {NOME_MODO[obra.modoCalculo]}
+            {obra.modoCalculo === "original" &&
+              " (reproduz erros do SISTRUT de 1991 para conferência com a V1)"}
           </p>
           <p className="text-aviso mt-2 text-sm font-semibold">{AVISO_CONFERENCIA}</p>
         </header>
@@ -185,7 +204,7 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
 
         {calculo.tipo === "ok" && <TabelasObra resultado={calculo.resultado} comMemoria={false} />}
 
-        {quant && <TabelaQuantitativos quant={quant} />}
+        {quant && <TabelaQuantitativos quant={quant} certo={certo} />}
 
         {detalhamento && (
           <section className="mt-6 break-inside-avoid">

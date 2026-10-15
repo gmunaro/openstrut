@@ -9,13 +9,22 @@ import {
   type ResultadoViga,
 } from "../calculo/fluxo";
 import { normaPorId } from "../calculo/normas";
-import type { NormaId, Obra } from "../dominio/obra";
+import type { ModoCalculo, NormaId, Obra } from "../dominio/obra";
 import type { DetalhamentoObra } from "./detalhamento";
 
 export const NOME_NORMA: Record<NormaId, string> = {
   "nb1-78": "NB-1/78",
   "nbr6118-2023": "NBR 6118:2023",
 };
+
+/** Rótulos do switch do modo de cálculo (docs/MODO-CALCULO.md). */
+export const NOME_MODO: Record<ModoCalculo, string> = {
+  corrigido: "Corrigido",
+  original: "Como o SISTRUT original",
+};
+
+/** Selo dos resultados quando a obra reproduz o SISTRUT de 1991. */
+export const SELO_MODO_ORIGINAL = "Modo: como o SISTRUT original";
 
 export type Calculo =
   | { tipo: "ok"; resultado: ResultadoObra }

@@ -3,9 +3,19 @@
 // memória; no relatório, por pavimento (com repetições) e o total. As tabelas
 // de aço por bitola (obra, vigas, lajes, pilares) saem do detalhamento
 // (DetalhamentoContexto).
+// Volume e forma do total: a tela mostra volumeTela/formaTela e o relatório
+// volumeRelatorio/formaRelatorio. No modo "original" eles diferem de propósito
+// (reproduzem o SISTRUT de 1991; docs/MODO-CALCULO.md, F e G) e um aviso dá o valor certo.
 import { Fragment, useContext } from "react";
 import type { LinhaTabelaAco, TabelaAco } from "../../calculo/detalhamento/tabelaAco";
-import { taxaAco, type Quantidades, type Quantitativos } from "../../calculo/quantitativos";
+import type { ResultadoObra } from "../../calculo/fluxo";
+import {
+  calcularQuantitativos,
+  taxaAco,
+  type Quantidades,
+  type Quantitativos,
+} from "../../calculo/quantitativos";
+import type { Obra } from "../../dominio/obra";
 import { formatarNumero } from "../formato";
 import { ListaAvisos } from "./avisos";
 import { LinhaElemento } from "./memoria";
@@ -54,8 +64,54 @@ function Celulas({ q }: { q: Quantidades }) {
   );
 }
 
-/** Bloco curto da aba Resultados: total da obra por tipo; a linha Total abre a memória. */
-export function ResumoQuantitativos({ quant }: { quant: Quantitativos }) {
+type VolumeForma = Pick<Quantidades, "concreto" | "forma">;
+
+/** Volume e forma certos (regra do modo corrigido), para o aviso do modo original.
+ *  Concreto e forma saem só da geometria da obra, então serve o resultado do
+ *  cálculo no modo original. */
+export const volumeFormaCertos = (obra: Obra, r: ResultadoObra): VolumeForma => {
+  const { concreto, forma } = calcularQuantitativos({ ...obra, modoCalculo: "corrigido" }, r).total;
+  return { concreto, forma };
+};
+
+const m3 = (v: number) => `${formatarNumero(v)} m³`;
+const m2 = (v: number) => `${formatarNumero(v)} m²`;
+
+/** Aviso do modo original ao lado do total: tela e relatório diferem de propósito;
+ *  diz quanto dá cada um e o valor certo. */
+export function AvisoVolumeOriginal({
+  quant,
+  certo,
+  onde,
+}: {
+  quant: Quantitativos;
+  certo: VolumeForma;
+  onde: "tela" | "relatorio";
+}) {
+  const tela = `${m3(quant.volumeTela)} e ${m2(quant.formaTela)}`;
+  const relatorio = `${m3(quant.volumeRelatorio)} e ${m2(quant.formaRelatorio)}`;
+  return (
+    <p role="note" className="text-aviso mt-2 max-w-3xl text-xs">
+      <span className="font-semibold">Modo como o SISTRUT original:</span>{" "}
+      {onde === "tela"
+        ? `o total de concreto e forma (${tela}) segue o editor de formas do SISTRUT, que esquece os pilares; as linhas por tipo e o relatório seguem a impressão (${relatorio}), que conta duas vezes a laje sobre as vigas.`
+        : `concreto e forma (${relatorio}) seguem a impressão do SISTRUT, que conta duas vezes a laje sobre as vigas; a tela mostra ${tela}, pelo editor de formas, que esquece os pilares.`}{" "}
+      Os dois diferem de propósito. O certo (modo corrigido) é {m3(certo.concreto)} e{" "}
+      {m2(certo.forma)}.
+    </p>
+  );
+}
+
+/** Bloco curto da aba Resultados: total da obra por tipo; a linha Total abre a memória.
+ *  O total usa volumeTela/formaTela; `certo` (volume e forma do modo corrigido) vai
+ *  no aviso do modo original. */
+export function ResumoQuantitativos({
+  quant,
+  certo,
+}: {
+  quant: Quantitativos;
+  certo?: VolumeForma | undefined;
+}) {
   const memoria = [
     { titulo: "Convenções", etapas: quant.memoria },
     ...quant.pavimentos.map((p) => ({
@@ -85,10 +141,13 @@ export function ResumoQuantitativos({ quant }: { quant: Quantitativos }) {
             colunas={5}
             comMemoria
           >
-            <Celulas q={quant.total} />
+            <Celulas q={{ ...quant.total, concreto: quant.volumeTela, forma: quant.formaTela }} />
           </LinhaElemento>
         </Corpo>
       </Tabela>
+      {quant.modoCalculo === "original" && certo && (
+        <AvisoVolumeOriginal quant={quant} certo={certo} onde="tela" />
+      )}
       <TabelasAcoDoContexto />
     </section>
   );
@@ -199,8 +258,15 @@ export function BlocoTabelaAco({
   );
 }
 
-/** Tabela do relatório: cada pavimento (já multiplicado pelas repetições) e o total. */
-export function TabelaQuantitativos({ quant }: { quant: Quantitativos }) {
+/** Tabela do relatório: cada pavimento (já multiplicado pelas repetições) e o total,
+ *  com volumeRelatorio/formaRelatorio; `certo` como em ResumoQuantitativos. */
+export function TabelaQuantitativos({
+  quant,
+  certo,
+}: {
+  quant: Quantitativos;
+  certo?: VolumeForma | undefined;
+}) {
   return (
     <section className="mt-6 break-inside-avoid">
       <h2 className="border-b pb-1 text-base font-semibold">Resumo de aço e concreto</h2>
@@ -246,10 +312,15 @@ export function TabelaQuantitativos({ quant }: { quant: Quantitativos }) {
           ))}
           <Linha className="font-semibold">
             <Td className="pl-4">Total</Td>
-            <Celulas q={quant.total} />
+            <Celulas
+              q={{ ...quant.total, concreto: quant.volumeRelatorio, forma: quant.formaRelatorio }}
+            />
           </Linha>
         </Corpo>
       </Tabela>
+      {quant.modoCalculo === "original" && certo && (
+        <AvisoVolumeOriginal quant={quant} certo={certo} onde="relatorio" />
+      )}
       {quant.avisos.length > 0 && (
         <div className="mt-2">
           <ListaAvisos

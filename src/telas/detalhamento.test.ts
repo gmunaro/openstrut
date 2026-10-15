@@ -506,3 +506,43 @@ describe("negativa de contato parcial entre lajes de espessuras diferentes", () 
     expect(n2 && [n2.ganchoInicio, n2.ganchoFim]).toEqual([3, 3]);
   });
 });
+
+describe("negativa do bordo de laje em balanço (obra q1, regressão)", () => {
+  // Obra de revisão _rev5/quant/q1.ts (a mesma de calculo/modoCalculo.test.ts): L1 4 × 5
+  // apoiada e L2 em balanço 1,5 × 5 à direita (bordos inferior, direito e superior
+  // livres), h 10, NB-1/78. As duas têm h = 10 (empate: a primeira, L1, seria a que
+  // detalha) e L2 é o balanço, que tem de levar a barra até a ponta livre. Antes as
+  // duas detalhavam a mesma barra (L1 N3 e L2 N1); agora só L2, e L1 marca o bordo.
+  const obra = obraNova("REV5", "nb1-78");
+  let pav = { ...obra.pavimentos[0]!, peDireito: 3 };
+  const l1 = lajeNova(pav, { x: 0, y: 0, lx: 4, ly: 5 }, { h: 10 });
+  pav = { ...pav, lajes: [l1] };
+  const l2 = lajeNova(
+    pav,
+    { x: 4, y: 0, lx: 1.5, ly: 5 },
+    { h: 10, vinculos: { inferior: "livre", direito: "livre", superior: "livre" } },
+  );
+  pav = gerarEstrutura({ ...pav, lajes: [l1, l2] });
+  pav = { ...pav, pilares: pav.pilares.map((p) => ({ ...p, b: 20, h: 30 })) };
+  const o: Obra = { ...obra, pavimentos: [pav] };
+  const c = calcular(o);
+  if (c.tipo !== "ok") throw new Error("cálculo falhou");
+  const det = detalharLajesObra(c.resultado, o);
+  const negativas = (nome: string, bordo: Bordo) =>
+    det.lajes
+      .find((l) => l.nome === nome)
+      ?.detalhamento.posicoes.filter((p) => p.tipo === "negativa" && p.bordo === bordo) ?? [];
+
+  it("pré-condição: bordo comum engastado dos dois lados, L2 com o oposto livre", () => {
+    const [r1, r2] = c.resultado.pavimentos[0]!.lajes;
+    expect(r1?.entrada.vinculos.direito).toBe("engastado");
+    expect(r2?.entrada.vinculos.esquerdo).toBe("engastado");
+    expect(r2?.entrada.vinculos.direito).toBe("livre");
+  });
+
+  it("a barra do bordo comum sai uma vez, no balanço; L1 marca o bordo na vizinha", () => {
+    expect(negativas("L1", "direito")).toEqual([]);
+    expect(negativas("L2", "esquerdo")).toHaveLength(1);
+    expect(det.lajes.map((l) => l.negativoNaVizinha)).toEqual([["direito"], []]);
+  });
+});

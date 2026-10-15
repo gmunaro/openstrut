@@ -3,18 +3,25 @@
 // nível. Cada elemento abre a memória.
 import { CircleAlert, Info } from "lucide-react";
 import { useContext, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import type { ResultadoObra } from "../../calculo/fluxo";
 import { calcularQuantitativos } from "../../calculo/quantitativos";
 import type { Obra } from "../../dominio/obra";
 import { useObra } from "../../estado/obra";
-import { coletarAvisos, coletarFalhas, mensagemSemNorma, type Calculo } from "../calculo";
+import {
+  coletarAvisos,
+  coletarFalhas,
+  mensagemSemNorma,
+  SELO_MODO_ORIGINAL,
+  type Calculo,
+} from "../calculo";
 import { DetalhamentoContexto } from "../detalhamento";
 import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
 import { TabelasLajes } from "./lajes";
 import { TabelaPilares } from "./pilares";
-import { ResumoQuantitativos } from "./quantitativos";
+import { ResumoQuantitativos, volumeFormaCertos } from "./quantitativos";
 import { TabelaVigas } from "./vigas";
 
 /** Mensagem quando não há resultado: norma sem implementação ou erro do motor. */
@@ -88,8 +95,16 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
   const r = calculo.resultado;
   return (
     <div className="pb-8">
-      <p className="text-muted-foreground mb-3 text-xs">
-        Calculado pela {r.norma.nome}. Clique na seta ao lado do nome para ver a memória de cálculo.
+      <p className="text-muted-foreground mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <span>
+          Calculado pela {r.norma.nome}. Clique na seta ao lado do nome para ver a memória de
+          cálculo.
+        </span>
+        {obra?.modoCalculo === "original" && (
+          <Badge variant="outline" className="border-aviso/60 text-aviso">
+            {SELO_MODO_ORIGINAL}
+          </Badge>
+        )}
       </p>
       <ListaFalhas falhas={coletarFalhas(r)} />
       <ListaAvisos avisos={coletarAvisos(r, detalhamento)} />
@@ -102,5 +117,9 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
 /** Resumo de aço e concreto da obra aberta (a obra traz cobrimentos e geometria). */
 function BlocoQuantitativos({ obra, resultado }: { obra: Obra; resultado: ResultadoObra }) {
   const quant = useMemo(() => calcularQuantitativos(obra, resultado), [obra, resultado]);
-  return <ResumoQuantitativos quant={quant} />;
+  const certo = useMemo(
+    () => (obra.modoCalculo === "original" ? volumeFormaCertos(obra, resultado) : undefined),
+    [obra, resultado],
+  );
+  return <ResumoQuantitativos quant={quant} certo={certo} />;
 }
