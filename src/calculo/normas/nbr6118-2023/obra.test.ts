@@ -132,3 +132,69 @@ describe("obra de duas lajes pela NBR 6118:2023", () => {
     expect(razao).toBeLessThan(1.06);
   });
 });
+
+// Viga sobre as pontas de dois balanços (a obra VBX do v2par_viga_fluxo, pela 6118):
+// pilares só em x = 0 e x = 4; as vigas y = 0 e y = 5 têm balanço de 4 m e a x = 8
+// termina nas pontas deles. Antes a V2 deixava a x = 8 sem apoio (não calculada, e a
+// carga da laje sobre ela não chegava aos pilares); agora ela se apoia nas pontas
+// (geometriaDasVigas), como no LAJEMONT. Conta à mão: viga x = 8 biapoiada de 5 m com
+// carga uniforme w (média da V2) → cada ponta de balanço recebe 5w/2.
+describe("NBR 6118: viga apoiada nas pontas de dois balanços", () => {
+  const obra = obraNova("VBX", "nbr6118-2023");
+  const base = { ...obra.pavimentos[0]!, peDireito: 3 };
+  const cargas = { h: 10, revestimento: 1, sobrecarga: 1.5 };
+  const l1 = lajeNova(base, { x: 0, y: 0, lx: 4, ly: 5 }, cargas);
+  const l2 = lajeNova({ ...base, lajes: [l1] }, { x: 4, y: 0, lx: 4, ly: 5 }, cargas);
+  const viga = (id: string, x1: number, y1: number, x2: number, y2: number) => ({
+    id,
+    nome: id,
+    x1,
+    y1,
+    x2,
+    y2,
+    bw: 12,
+    h: 40,
+    cargaLinear: 0,
+  });
+  const pav = {
+    ...base,
+    lajes: [l1, l2],
+    vigas: [
+      viga("V1", 0, 5, 8, 5),
+      viga("V2", 0, 0, 8, 0),
+      viga("V3", 0, 0, 0, 5),
+      viga("V4", 4, 0, 4, 5),
+      viga("V5", 8, 0, 8, 5),
+    ],
+    pilares: [
+      { id: "P1", nome: "P1", x: 0, y: 0, b: 20, h: 20 },
+      { id: "P2", nome: "P2", x: 4, y: 0, b: 20, h: 20 },
+      { id: "P3", nome: "P3", x: 4, y: 5, b: 20, h: 20 },
+      { id: "P4", nome: "P4", x: 0, y: 5, b: 20, h: 20 },
+    ],
+  };
+  const r = calcularObra({ ...obra, pavimentos: [pav] }, nbr6118).pavimentos[0]!;
+  const montada = (nome: string) => r.montagem.vigas.find((v) => v.nome === nome)!;
+
+  it("a V5 é calculada, apoiada em V2 e V1; nenhuma viga fica sem cálculo", () => {
+    expect(r.montagem.naoCalculadas).toEqual([]);
+    expect(montada("V5").apoios.map((a) => (a.tipo === "viga" ? a.nome : a.tipo))).toEqual([
+      "V2",
+      "V1",
+    ]);
+  });
+
+  it("cada ponta de balanço recebe 5w/2 da V5 e o equilíbrio fecha", () => {
+    const t = montada("V5").tramos[0]!;
+    const w = t.g + t.q;
+    for (const nome of ["V1", "V2"]) {
+      const balanco = montada(nome).tramos.at(-1)!;
+      expect(balanco.concentradas).toHaveLength(1);
+      const c = balanco.concentradas[0]!;
+      expect(c.origem).toBe("V5");
+      expect(c.a).toBeCloseTo(4, 9);
+      expect(c.g + c.q).toBeCloseTo((5 * w) / 2, 6);
+    }
+    expect(r.equilibrio.ok).toBe(true);
+  });
+});

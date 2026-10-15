@@ -62,6 +62,9 @@ export interface BarrasNaAlma extends BarrasLongitudinais {
   cabe: boolean;
   /** Largura da camada, cm. */
   largura: number;
+  /** NB-1/78 pelo SISTRUT: os grupos do arranjo do .DSP (até duas bitolas, ex.
+   *  "2#12.5+#8"); `n` e `phi` acima são o total e a maior bitola. */
+  grupos?: { n: number; phi: number }[];
 }
 
 /** Máximo de barras numa camada de viga (V1 CcaEscolheBarrasBw). */

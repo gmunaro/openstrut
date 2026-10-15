@@ -24,9 +24,11 @@ import type {
 import type { CargaPilar, Equilibrio, TramoMontado, VigaCalculada, VigaMontada } from "./montagem";
 import { moduloConcreto } from "./normas/nb1-78/materiais";
 import type {
+  AnaliseViga as AnaliseVigaContrato,
   DadosViga,
   DivisaoCarga,
   FlexaoViga,
+  MomentosDeLaje,
   PosicaoLajeproc,
   TramoDimensionado,
   TramoViga,
@@ -47,7 +49,7 @@ import {
   type VigaSistrut,
   vinculosDosCodigos,
 } from "./sistrut/obra";
-import { analisaViga } from "./sistrut/vigas/vicalc";
+import { analisaVigas } from "./sistrut/vigas/vicalc";
 import type {
   Barra,
   BarrasPilar,
@@ -95,20 +97,41 @@ function materiaisCalc(r: ResultadoSistrut, obra: Obra): MateriaisCalc {
   };
 }
 
+/** Valor de tabela do original (bitola em mm, espaçamento em cm) guardado em SINGLE:
+ *  na fronteira SI vale o nominal, com 1 casa (6,3000002 → 6,3). */
+const nominal = (x: number) => Math.round(x * 10) / 10;
+
 // ---------------------------------------------------------------- lajes
 
 const barraDaPosicao = (p: PosicaoLajeproc | undefined): Barra =>
   p?.barra.ok
-    ? { phi: p.barra.bitola, espacamento: p.barra.espacamento }
+    ? { phi: nominal(p.barra.bitola), espacamento: nominal(p.barra.espacamento) }
     : { phi: 0, espacamento: 0 };
+
+/** Momentos utilizáveis: finitos (laje sem nenhum bordo que gire, como a de quatro bordos
+ *  livres, não tem mecanismo e o coeficiente de carga não é finito). */
+const momentosValidos = (m: MomentosDeLaje | undefined) =>
+  m &&
+  [
+    m.mPositivoPrincipalTcm,
+    m.mPositivoSecundarioTcm,
+    m.mNegativoMaiorTcm,
+    m.mNegativoMenorTcm,
+  ].every(Number.isFinite)
+    ? m
+    : undefined;
 
 function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): ResultadoLaje {
   const desc = ps.lajesDoPainel.find((l) => l.id === laje.id);
   const nome = desc?.nome ?? laje.nome;
   const bordos = desc?.bordos ?? [];
   const sl = ps.esforcos.lajes.find((l) => l.nome === nome);
-  const mom = ps.esforcos.momentos[nome];
+  const mom = momentosValidos(ps.esforcos.momentos[nome]);
   const zero = { esquerdo: 0, inferior: 0, direito: 0, superior: 0 } as Record<Bordo, number>;
+  // Direção do M+ principal (o sem redução): com μ ≤ 1 é x (o lado vertical tem fator
+  // de direção 1); com μ > 1 é y (o lado vertical fica com 1/μ e o horizontal com 1;
+  // LAJECALC.BAS:1a159, `fatorDeDirecao`). A armadura principal do LAJEPROC vai junto.
+  const principalEmY = (sl?.mu ?? 1) > 1;
   const vinculos = vinculosDosCodigos(sl?.codigos ?? [], bordos);
   const pesoProprio = mom?.pesoProprio ?? 0;
   const permanente = sl?.cargaPermanente ?? 0;
@@ -152,7 +175,10 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
         ref: "LAJECALC.BAS:875-880",
       },
     );
-  } else avisos.push(`${nome}: momentos não calculados pelo LAJECALC.`);
+  } else
+    avisos.push(
+      `${nome}: momentos não calculados pelo LAJECALC (sem bordo que gire ou fora da faixa de H).`,
+    );
   for (const rb of ps.montagem.reacoes) {
     if (rb.laje !== nome) continue;
     const b = bordos[rb.bordo];
@@ -191,9 +217,11 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
   if (esp?.ok && esp.h > laje.h)
     avisos.push(`${nome}: H ${laje.h} cm abaixo da espessura mínima ${esp.h} cm (LAJECALC 3).`);
   if (esp && !esp.ok) avisos.push(`${nome}: H necessário > H máximo configurado (LAJECALC 3).`);
+  const mPrincipal = mom ? tmPorMParaKnmPorM(Math.max(mom.mPositivoPrincipalTcm, 0) / 100) : 0;
+  const mSecundario = mom ? tmPorMParaKnmPorM(mom.mPositivoSecundarioTcm / 100) : 0;
   const esforcos: LajeEsforcos = {
-    mx: mom ? tmPorMParaKnmPorM(Math.max(mom.mPositivoPrincipalTcm, 0) / 100) : 0,
-    my: mom ? tmPorMParaKnmPorM(mom.mPositivoSecundarioTcm / 100) : 0,
+    mx: principalEmY ? mSecundario : mPrincipal,
+    my: principalEmY ? mPrincipal : mSecundario,
     negativos,
     reacoes,
     flecha,
@@ -216,12 +244,15 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
     barrasNegativos[b] = barraDaPosicao(n);
   }
   const arm = ps.armaduras[nome];
+  const [posX, posY] = principalEmY
+    ? [pos?.secundaria, pos?.principal]
+    : [pos?.principal, pos?.secundaria];
   const armadura: LajeArmadura = {
-    asx: pos?.principal.as ?? 0,
-    asy: pos?.secundaria.as ?? 0,
+    asx: posX?.as ?? 0,
+    asy: posY?.as ?? 0,
     asNegativos,
-    barrasX: barraDaPosicao(pos?.principal),
-    barrasY: barraDaPosicao(pos?.secundaria),
+    barrasX: barraDaPosicao(posX),
+    barrasY: barraDaPosicao(posY),
     barrasNegativos,
     avisos:
       pos && (!pos.principal.barra.ok || !pos.secundaria.barra.ok)
@@ -252,15 +283,18 @@ function tramosVig(d: DadosViga) {
 }
 
 /** Segmentos de carga [a, b] e concentradas do tramo, com abscissa a partir da
- *  extremidade esquerda do tramo da V2 (no balanço esquerdo, D é medido a partir do
- *  apoio, que é a ponta direita). */
+ *  extremidade esquerda do tramo da V2. No balanço esquerdo o .VIG guarda as divisões
+ *  da ponta livre para o apoio, com D medido a partir do apoio (que é a ponta direita
+ *  do tramo da V2): elas são lidas de trás para a frente, como o VICALC faz
+ *  (VIGA.BAS:7048-7073, `balanco` em vicalc.ts). */
 function cargasDoTramo(t: TramoViga, tipo: "balE" | "tramo" | "balD") {
   const L = t.vao;
   const pos = (d: number) => (tipo === "balE" ? L - d : d);
   let anterior = 0;
   const distribuidas: { a: number; b: number; p: number; pac: number }[] = [];
   const concentradas: { a: number; f: number; fac: number }[] = [];
-  for (const dv of t.divisoes) {
+  const divisoes = tipo === "balE" ? [...t.divisoes].reverse() : t.divisoes;
+  for (const dv of divisoes) {
     const [a, b] = [pos(anterior), pos(dv.d)].sort((x, y) => x - y) as [number, number];
     distribuidas.push({ a, b, p: dv.p, pac: dv.pAcidental });
     if (dv.f !== 0) concentradas.push({ a: pos(dv.d), f: dv.f, fac: dv.fAcidental });
@@ -319,18 +353,26 @@ const soPermanente = (d: DadosViga): DadosViga => {
   };
 };
 
-/** Viga montada da V2 (cargas médias por tramo) a partir do .VIG e da geometria. */
-function vigaMontada(ps: PavimentoSistrut, dados: DadosViga): VigaMontada | undefined {
+/** Viga montada da V2 (cargas médias por tramo) a partir do .VIG e da geometria.
+ *  `permanente` = o mesmo .VIG só com as cargas permanentes, com as indexadas
+ *  resolvidas pelas reações permanentes: separa g e q das cargas de viga sobre viga. */
+function vigaMontada(
+  ps: PavimentoSistrut,
+  dados: DadosViga,
+  permanente: DadosViga | undefined,
+): VigaMontada | undefined {
   const g = ps.geometriaVigas.find((x) => x.viga.nome === dados.nome);
   if (!g) return undefined;
   const pesoKg = ps.montagem.vigas.find((v) => v.nome === dados.nome);
   // a origem das cargas indexadas (viga sobre viga) está no .VIG antes do VIGA
   const semResolver = pesoKg ? tramosVig(pesoKg) : [];
+  const perm = permanente ? tramosVig(permanente) : [];
   const tramos = tramosVig(dados).map(({ tramo, tipo }, i): TramoMontado => {
     const origens = (semResolver[i]?.tramo.divisoes ?? [])
       .filter((dv) => dv.indexada)
       .map((dv) => dv.indexada!.viga);
     const c = cargasDoTramo(tramo, tipo);
+    const cPerm = perm[i] ? cargasDoTramo(perm[i].tramo, tipo) : undefined;
     const L = tramo.vao;
     const total = c.distribuidas.reduce((s, d) => s + d.p * (d.b - d.a), 0) / L;
     const acid = c.distribuidas.reduce((s, d) => s + d.pac * (d.b - d.a), 0) / L;
@@ -345,13 +387,16 @@ function vigaMontada(ps: PavimentoSistrut, dados: DadosViga): VigaMontada | unde
       cargaLinear: tPorMParaKnPorM(linear),
       g: tPorMParaKnPorM(total - acid),
       q: tPorMParaKnPorM(acid),
-      concentradas: c.concentradas.map((f, k) => ({
-        a: f.a,
-        g: tParaKn(f.f - f.fac),
-        q: tParaKn(f.fac),
-        total: tParaKn(f.f),
-        origem: origens[k] ?? "",
-      })),
+      concentradas: c.concentradas.map((f, k) => {
+        const g = cPerm?.concentradas[k]?.f ?? f.f - f.fac;
+        return {
+          a: f.a,
+          g: tParaKn(g),
+          q: tParaKn(f.f - g),
+          total: tParaKn(f.f),
+          origem: origens[k] ?? "",
+        };
+      }),
     };
   });
   return {
@@ -369,13 +414,12 @@ function vigaMontada(ps: PavimentoSistrut, dados: DadosViga): VigaMontada | unde
 /** Análise do VICALC no formato da viga contínua da V2 (um apoio por nó da V2). */
 function analiseDaViga(
   ps: PavimentoSistrut,
-  r: ResultadoSistrut,
   dados: DadosViga,
   vm: VigaMontada,
+  g: AnaliseVigaContrato | undefined,
 ): AnaliseViga | undefined {
   const a = ps.analises.find((x) => x.nome === dados.nome);
-  if (!a) return undefined;
-  const g = analisaViga(soPermanente(dados), r.parametros.viga, r.modo);
+  if (!a || !g) return undefined;
   const n = dados.tramos.length;
   const be = dados.balancoEsquerdo ? 1 : 0;
   const tramos: TramoResultado[] = tramosVig(dados).map(({ tramo, tipo }, i) => {
@@ -439,14 +483,19 @@ function secaoDaFlexao(f: FlexaoViga | undefined, bw: number, aviso: string[]): 
   if (!f || f.mk === 0) return { flexao: null, barras: null };
   const b = f.barras;
   const area = (n: number, phi: number) => (n * Math.PI * (phi / 10) ** 2) / 4;
+  const grupos = [
+    { n: b.n1, phi: nominal(b.bitola1) },
+    { n: b.n2, phi: nominal(b.bitola2) },
+  ].filter((g) => g.n > 0);
   const barras: BarrasNaAlma | null =
     b.n1 > 0
       ? {
           n: b.n1 + b.n2,
-          phi: Math.max(b.bitola1, b.bitola2),
-          area: area(b.n1, b.bitola1) + area(b.n2, b.bitola2),
+          phi: Math.max(...grupos.map((g) => g.phi)),
+          area: grupos.reduce((s, g) => s + area(g.n, g.phi), 0),
           cabe: true,
           largura: bw,
+          grupos,
         }
       : null;
   return {
@@ -515,7 +564,10 @@ function resultadoViga(
             ]
           : [],
       },
-      estribo: c && Number.isFinite(s) ? { phi: c.estribo.bitola, espacamento: s } : null,
+      estribo:
+        c && Number.isFinite(s)
+          ? { phi: nominal(c.estribo.bitola), espacamento: nominal(s) }
+          : null,
     };
   };
   const tramos: ResultadoTramo[] = [
@@ -592,10 +644,19 @@ function resultadoPavimento(
   const vigasCalc: VigaCalculada<AnaliseViga>[] = [];
   const vigas: ResultadoViga[] = [];
   const naoCalculadas: VigaMontada[] = [];
+  // VIGA só com as permanentes, com as indexadas resolvidas na mesma ordem (V2: separa g
+  // e q das reações; a viga apoiada leva a reação permanente dela à de apoio)
+  const permanentes = analisaVigas(ps.montagem.vigas.map(soPermanente), r.parametros.viga, r.modo);
   for (const dados of ps.vigasVig) {
-    const vm = vigaMontada(ps, dados);
+    const permanente = permanentes.vigas.find((v) => v.nome === dados.nome);
+    const vm = vigaMontada(ps, dados, permanente);
     if (!vm) continue;
-    const an = analiseDaViga(ps, r, dados, vm);
+    const an = analiseDaViga(
+      ps,
+      dados,
+      vm,
+      permanentes.analises.find((x) => x.nome === dados.nome),
+    );
     if (!an) {
       naoCalculadas.push(vm);
       continue;
@@ -642,12 +703,19 @@ function resultadoPavimento(
     falhas: [],
   };
   for (const l of lajes)
-    if (!ps.esforcos.momentos[l.laje.nome])
+    if (!momentosValidos(ps.esforcos.momentos[l.laje.nome]))
       rp.falhas.push(
         `Laje ${l.laje.nome} sem cálculo: a carga dela não chegou às vigas nem aos pilares; vigas e pilares deste pavimento e dos de baixo estão incompletos.`,
       );
   for (const nome of ps.naoProcessadas)
     rp.falhas.push(`Viga ${nome} não processada pelo VIGA: a carga dela não chegou aos pilares.`);
+  // bordo de laje sem viga: o LAJEMONT soma no "total dos pilares", mas nenhum pilar a
+  // recebe no .REP (LAJEMONT.BAS:2655-2760; sai em branco no original)
+  if (ps.montagem.totais.pilares > 0)
+    rp.falhas.push(
+      `Bordos de laje sem viga embaixo: ${ps.montagem.totais.pilares.toFixed(2)} t vão ao "total dos pilares" do LAJEMONT, mas não chegam a nenhum pilar.`,
+    );
+  for (const f of r.falhas) if (f.pavimentoId === pav.id) rp.falhas.push(f.texto);
   if (rp.falhas.length > 0) {
     rp.equilibrio.avisos.push(...rp.falhas);
     rp.equilibrio.ok = false;
@@ -675,7 +743,7 @@ function barrasDoPilar(
     const min = Math.min(...v);
     return v.filter((x) => Math.abs(x - min) < 0.01).length;
   };
-  return { n, phi: b.bitola, area, porFaceX: naFace(xs), porFaceY: naFace(ys) };
+  return { n, phi: nominal(b.bitola), area, porFaceX: naFace(xs), porFaceY: naFace(ys) };
 }
 
 function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavimento[]) {
@@ -709,7 +777,7 @@ function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavim
         ? barrasDoPilar(d, r.parametros.pip)
         : { n: 0, phi: 0, area: 0, porFaceX: 0, porFaceY: 0 },
       estribo: d
-        ? { phi: d.estribo.bitola, espacamento: d.estribo.espacamento }
+        ? { phi: nominal(d.estribo.bitola), espacamento: nominal(d.estribo.espacamento) }
         : { phi: 0, espacamento: 0 },
       taxa: d?.taxa ?? 0,
       avisos,

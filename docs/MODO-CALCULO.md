@@ -32,7 +32,7 @@ Uma obra da V2 vira a entrada do original assim (`sistrut/obra.ts`):
 | `laje.h` | imposição de H (LAJECALC 4); o peso próprio é H·densidade/100. |
 | `laje.mu` | 1 (o padrão da V2) = μ pela relação das cordas (LAJECALC 2); outro valor = μ informado. Para reproduzir um .LAJ com μ gravado, informe o μ (ex.: 0,8). Não dá para impor exatamente μ = 1. |
 | `laje.vinculos` | livre → código 1, apoiado → 0, engastado → 22. Sem vínculo forçado vale a continuidade automática (lado com os mesmos dois vértices → 22). |
-| vigas | nós e apoios pela regra da V2 (`geometriaDasVigas`): pilar sobre o eixo; num cruzamento sem pilar, a viga que termina se apoia na que passa; quando as duas terminam ali, a que ficaria sem 2 apoios se apoia na outra (é o "Vx apoia em Vy" do LAJEMONT). O eixo vai em ordem crescente. |
+| vigas | nós e apoios pela regra da V2 (`geometriaDasVigas`): pilar sobre o eixo; num cruzamento sem pilar, a viga que termina se apoia na que passa; quando as duas terminam ali, a que ficaria sem 2 apoios se apoia na outra (é o "Vx apoia em Vy" do LAJEMONT). O eixo vai em ordem crescente. Essa última regra também vale no fluxo da V2 (NBR 6118): antes, a viga sobre as pontas de dois balanços ficava sem cálculo e a carga dela não chegava aos pilares. |
 | `viga.pesoProprio` (kN/m, opcional) | o peso digitado no LAJEGEOM, gravado em kg/m inteiro (CINT). Ausente: bw·h·densidade. O mais comum é o predominante, os outros viram exceções. |
 | `viga.cargaLinear` | alvenaria sobre o eixo da viga. |
 | nomes de pilares e vigas | o .VIG grava J = 1 + (número do pilar)/100000 e um bit muda o x impresso. Para bater no último dígito, use os nomes e números do original. |
@@ -104,7 +104,8 @@ D-2 (laço sem fim no PILAREDI) para nos dois modos com `ErroNaoConverge`, porqu
 ### Defeitos reproduzidos nos dois modos
 
 - LAJEPROC: uma seção negativa que não passa herda o As da posição anterior (`lajes/proc.ts`).
-- Lado que coincide só em parte com o da vizinha não vira continuidade (D10 do livro). Na V2 isso não acontece, porque os cantos das vizinhas viram vértices.
+- Lado que coincide só em parte com o da vizinha não vira continuidade (D10 do livro). Entre duas lajes da V2 isso não acontece, porque os cantos das vizinhas viram vértices.
+- Bordo de laje sem viga embaixo: o LAJEMONT soma a reação no "total dos pilares" e não a leva a pilar nenhum (sai em branco no .REP). A V2 reproduz e marca a falha no pavimento: essa carga não chega aos pilares.
 - Potência do BRUN45 (`X^2` por logaritmo): com M = 0 dá x > 0 e As mínima. Hoje é aproximado por `X * 2 ** -64` (`lajes/flexao.ts:62`), conferido num ponto só (H 10). O algoritmo do `^` está sendo determinado e vai para `base/f32.ts` como função única.
 
 ## O que não existe no SISTRUT

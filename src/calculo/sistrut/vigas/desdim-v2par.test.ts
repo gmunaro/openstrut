@@ -12,7 +12,7 @@
 // As cargas da obra ASS são os SINGLE do ASS.VIG (registros 1 e 5,
 // C:/tmp/oraculo/casos/v2par_des_3tramos.dados/ASS.VIG: P em +235, J em +55, ...).
 import { describe, expect, it } from "vitest";
-import { bateComImpresso, type CasoOraculo, numeroOraculo, valorOraculo } from "../__oraculo__";
+import { bateComImpresso, type CasoOraculo, valorOraculo } from "../__oraculo__";
 import { sng } from "../base/f32";
 import { PARAMETROS_DSP, emSingle } from "../base/parametros";
 import type {
@@ -25,7 +25,8 @@ import type {
   TramoDimensionado,
 } from "../base/tipos";
 import { CASOS_DESDIM } from "./__desdim__";
-import { dimensionaViga, esforcosDesdim } from "./desdim";
+import { dimensionaViga } from "./desdim";
+import { analisaDescalc } from "./desinitDescalc";
 
 const div = (p: number, d: number, f = 0, pAc = 0, fAc = 0): DivisaoCarga => ({
   p: sng(p),
@@ -186,28 +187,40 @@ function valoresDimensionados(viga: string, r: DimensionamentoViga) {
   return v;
 }
 
-/** Esforços do DESDIM (DESCALC) pelos ids da análise impressa: M− dos apoios e x dos
- *  tramos (os da linha "max" com envoltória); M+ do tramo, o da envoltória ou o de
- *  engastamento perfeito, o maior impresso; sem envoltória, Ve e Vd sem alívio. */
-function valoresEsforcos(caso: CasoOraculo, viga: string, e: EntradaDesdim) {
+/** Esforços do DESCALC pelos ids da análise que o DESDIM imprime, um array do COMMON
+ *  por id (DESDIM.BAS:5955-6040; desinitComum.ts):
+ *  - estática: M− do apoio A_15CA, Ve/Vd A_1654(t, 0/1), x A_15F8, M+ A_1626; os
+ *    balanços imprimem a carga em t0.Vd = A_1654(0, 1) e t(n+1).Ve = A_1654(n+1, 0);
+ *  - envoltória ("max"): M− A_16DE, Ve/Vd A_1796(t, 0/1), x A_173A, M+ A_1768;
+ *  - engastamento perfeito (i = 1..V_1176, tramo A_11D6): Ve/Vd A_1204(i, 0/1), x A_117A,
+ *    M+ A_11A8. */
+function valoresEsforcos(viga: string, e: EntradaDesdim) {
   const v = new Map<string, Valor>();
-  const r = esforcosDesdim(e, "original");
-  const envoltoria = e.parametros.acidentaisEnvoltoria;
-  const max = envoltoria ? ".max" : "";
+  const c = analisaDescalc(e, "original");
   const n = e.viga.tramos.length;
-  const ids = new Set(caso.valores.map((x) => x.id));
-  r.momentosApoio.forEach((m, k) => v.set(`${viga}.a${k}${max}.M-`, m));
-  for (const t of r.tramos) {
-    if (t.indice < 1 || t.indice > n) continue;
-    const p = `${viga}.t${t.indice}`;
-    v.set(`${p}${max}.x`, t.x);
-    const mais = [`${p}${max}.M+`, `${p}.EEP.M+`].filter((id) => ids.has(id));
-    const maior = mais.reduce((a, b) => (numeroOraculo(caso, b) > numeroOraculo(caso, a) ? b : a));
-    v.set(maior, t.mPositivo);
-    if (!envoltoria) {
-      v.set(`${p}.Ve`, t.ve);
-      v.set(`${p}.Vd`, t.vd);
-    }
+  for (let k = 0; k <= n; k++) {
+    v.set(`${viga}.a${k}.M-`, c.a15ca.g(k));
+    v.set(`${viga}.a${k}.max.M-`, c.a16de.g(k));
+  }
+  for (let t = 1; t <= n; t++) {
+    const p = `${viga}.t${t}`;
+    v.set(`${p}.Ve`, c.a1654.g(t, 0));
+    v.set(`${p}.Vd`, c.a1654.g(t, 1));
+    v.set(`${p}.x`, c.a15f8.g(t));
+    v.set(`${p}.M+`, c.a1626.g(t));
+    v.set(`${p}.max.Ve`, c.a1796.g(t, 0));
+    v.set(`${p}.max.Vd`, c.a1796.g(t, 1));
+    v.set(`${p}.max.x`, c.a173a.g(t));
+    v.set(`${p}.max.M+`, c.a1768.g(t));
+  }
+  v.set(`${viga}.t0.Vd`, c.a1654.g(0, 1));
+  v.set(`${viga}.t${n + 1}.Ve`, c.a1654.g(n + 1, 0));
+  for (let i = 1; i <= c.v1176; i++) {
+    const p = `${viga}.t${c.a11d6.g(i)}.EEP`;
+    v.set(`${p}.Ve`, c.a1204.g(i, 0));
+    v.set(`${p}.Vd`, c.a1204.g(i, 1));
+    v.set(`${p}.x`, c.a117a.g(i));
+    v.set(`${p}.M+`, c.a11a8.g(i));
   }
   return v;
 }
@@ -234,8 +247,15 @@ const casos = [
 
 describe.each(casos)("%s: esforços do DESCALC contra a análise impressa", (nome, viga, e) => {
   const caso = CASOS_DESDIM[nome]!;
-  const ids = confere(caso, valoresEsforcos(caso, viga, e));
-  it("conferiu os esforços", () => expect(ids.length).toBeGreaterThanOrEqual(7));
+  const valores = valoresEsforcos(viga, e);
+  const ids = confere(caso, valores);
+  it("conferiu os esforços", () => expect(ids.length).toBeGreaterThan(10));
+  it("todo id da análise impressa tem o seu array do DESCALC", () => {
+    const analise = caso.valores
+      .map((x) => x.id)
+      .filter((id) => /\.(a\d+|t\d+)\.(max\.|EEP\.)?(M-|Ve|x|M\+|Vd)$/.test(id));
+    expect(analise.filter((id) => !valores.has(id))).toEqual([]);
+  });
 });
 
 describe.each(casos)("%s: dimensionamento, modo original", (nome, viga, e) => {

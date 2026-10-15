@@ -240,6 +240,10 @@ export interface ResultadoSistrut {
   quadros: QuadroViga[];
   resumoVigas: ResumoVigas;
   avisos: string[];
+  /** Carga que não chegou à fundação, por pavimento: pilar que não continua até a
+   *  fundação (transição sobre viga, que o PILGEEDI não modela) e linha do .REP sem
+   *  coluna. A projeção marca o pavimento com falha. */
+  falhas: { pavimentoId: string; texto: string }[];
 }
 
 // ---------------------------------------------------------------- lajes
@@ -703,7 +707,7 @@ function calcularPilaresSistrut(
   mat: MateriaisSistrut,
   par: ParametrosSistrut,
   modo: ModoSistrut,
-  avisos: string[],
+  falhas: ResultadoSistrut["falhas"],
 ) {
   const s = atribuicao(modo);
   const niveis = niveisDoEdificio(obra);
@@ -722,13 +726,7 @@ function calcularPilaresSistrut(
       if (!p) break;
       lances.push({ pilar: p, nivel: k });
     }
-    if (lances.length === 0) {
-      const p = niveis.flatMap((n) => n.pav.pilares).find((q) => chavePilar(q) === chave);
-      avisos.push(
-        `Pilar ${p?.nome ?? chave} não chega à fundação (nasce sobre viga): o PILAREDI não o dimensiona.`,
-      );
-      return;
-    }
+    if (lances.length === 0) return;
     // nome com o número da coluna: o PILGEEDI casa o .REP pelo número no nome
     const nome = `P ${i + 1}`;
     let cota = 0;
@@ -751,6 +749,20 @@ function calcularPilaresSistrut(
     lancesDasColunas.push(lances);
   });
 
+  // pilar fora de coluna: não chega à fundação (falta num pavimento de baixo)
+  const naColuna = new Set(lancesDasColunas.flat().map((l) => `${l.nivel}|${l.pilar.id}`));
+  const falha = (pavimentoId: string, texto: string) => {
+    if (!falhas.some((f) => f.pavimentoId === pavimentoId && f.texto === texto))
+      falhas.push({ pavimentoId, texto });
+  };
+  for (const [k, { pav }] of niveis.entries())
+    for (const p of pav.pilares)
+      if (!naColuna.has(`${k}|${p.id}`))
+        falha(
+          pav.id,
+          `Pilar ${p.nome} do pavimento ${pav.nome} não continua até a fundação (falta num pavimento de baixo): o PILAREDI não o dimensiona e a carga dele não chega à fundação — modele a transição.`,
+        );
+
   // .REP de cada nível (o do pavimento, com o nome do pilar trocado pelo da coluna)
   const reps: LeituraRep[] = [];
   for (const [k, { pav }] of niveis.entries()) {
@@ -759,9 +771,17 @@ function calcularPilaresSistrut(
     const linhas = ps.rep.flatMap((linha) => {
       const p = pav.pilares.find((q) => q.nome === linha.pilar);
       const c = p
-        ? colunas.find((_, i) => lancesDasColunas[i]!.some((l) => l.pilar.id === p.id))
+        ? colunas.find((_, i) =>
+            lancesDasColunas[i]!.some((l) => l.pilar.id === p.id && l.nivel === k),
+          )
         : undefined;
-      if (!c) return [];
+      if (!c) {
+        falha(
+          pav.id,
+          `Carga de ${linha.total.toFixed(2)} t do pilar ${linha.pilar} no .REP do pavimento ${pav.nome} não foi levada a nenhuma coluna: não chega à fundação.`,
+        );
+        return [];
+      }
       // Corrigido: a inclinação e a rigidez da viga, que o original deixa em 0 até o
       // usuário digitar no PILGEEDI (PILGEEDI.BAS:597-640): com 0, o momento de uma viga
       // vertical entra na direção x e o pilar leva 100 % do MEP (kViga = 0 na
@@ -823,7 +843,8 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
   const pavimentos = obra.pavimentos.map((p) =>
     calcularPavimentoSistrut(p, mat, par, modo, otimiza),
   );
-  const { colunas, lances } = calcularPilaresSistrut(obra, pavimentos, mat, par, modo, avisos);
+  const falhas: ResultadoSistrut["falhas"] = [];
+  const { colunas, lances } = calcularPilaresSistrut(obra, pavimentos, mat, par, modo, falhas);
   const quadros = pavimentos.flatMap((p) => p.vigas.flatMap((v) => (v.quadro ? [v.quadro] : [])));
   return {
     modo,
@@ -833,6 +854,7 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     colunas,
     lances,
     quadros,
+    falhas,
     resumoVigas: resumoGeralVigas(quadros, par.dsp, modo),
     avisos,
   };

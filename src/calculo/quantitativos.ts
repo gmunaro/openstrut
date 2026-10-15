@@ -92,11 +92,15 @@ export interface QuantidadesPorTipo {
 export interface QuantitativoPavimento extends QuantidadesPorTipo, ComMemoria {
   nome: string;
   repeticoes: number;
+  /** NB-1/78: vigas sem quadro do DESINIT (dimensionamento ou detalhamento não
+   *  concluído), contadas pela regra da V2. */
+  vigasSemDesinit: string[];
 }
 
-/** De onde vem cada quantidade de um tipo: o quadro do DESINIT do SISTRUT ou a regra
- *  da V2 (o SISTRUT não tem a grandeza). */
-export type FonteQuantidade = "sistrut" | "v2";
+/** De onde vem cada quantidade de um tipo: o quadro do DESINIT do SISTRUT, a regra
+ *  da V2 (o SISTRUT não tem a grandeza) ou "misto" (vigas sem quadro do DESINIT, que
+ *  caíram na regra da V2, ao lado de vigas com quadro). */
+export type FonteQuantidade = "sistrut" | "v2" | "misto";
 
 export interface Quantitativos extends QuantidadesPorTipo, ComMemoria {
   pavimentos: QuantitativoPavimento[];
@@ -496,6 +500,7 @@ function quantPavimento(
   );
   const vigasCalc = new Map<string, ResultadoViga>(rp?.vigas.map((v) => [v.viga.id, v]) ?? []);
   const cob = obra.materiais.cobrimentoViga;
+  const vigasSemDesinit: string[] = [];
   const vigas = soma(
     ...pav.vigas.map((v) => {
       const hLaje = espessuraLajeNaViga(v, pav.lajes);
@@ -504,7 +509,8 @@ function quantPavimento(
       // pelos eixos e abaixo da laje, sem o aço estimado (o aço é o do DESINIT)
       const eixos = quantViga(v, hLaje, undefined, cob);
       if (!quadro) {
-        const aviso = `${v.nome}: sem detalhamento do DESINIT; aço não calculado.`;
+        vigasSemDesinit.push(v.nome);
+        const aviso = `${v.nome}: sem detalhamento do DESINIT; volume e fôrma pela regra da V2 e aço não calculado.`;
         return junta({ ...eixos, avisos: [aviso] });
       }
       const d = quantVigaDesinit(v.nome, quadro);
@@ -552,6 +558,7 @@ function quantPavimento(
   return {
     nome: pav.nome,
     repeticoes: pav.repeticoes,
+    vigasSemDesinit,
     ...porTipo,
     total: soma(porTipo.lajes, porTipo.vigas, porTipo.pilares),
     avisos: [...new Set(avisos)],
@@ -576,10 +583,12 @@ export function calcularQuantitativos(obra: Obra, r: ResultadoObra): Quantitativ
   const total = soma(lajes, vigas, pilares);
   const sistrut = r.sistrut !== undefined;
   const todas = (fonte: FonteQuantidade) => ({ concreto: fonte, forma: fonte, aco: fonte });
-  const geometriaViga: FonteQuantidade = sistrut && modo === "original" ? "sistrut" : "v2";
+  const semDesinit = pavimentos.some((p) => p.vigasSemDesinit.length > 0);
+  const doSistrut: FonteQuantidade = semDesinit ? "misto" : "sistrut";
+  const geometriaViga: FonteQuantidade = sistrut && modo === "original" ? doSistrut : "v2";
   const fonte: Quantitativos["fonte"] = {
     lajes: todas("v2"),
-    vigas: { concreto: geometriaViga, forma: geometriaViga, aco: sistrut ? "sistrut" : "v2" },
+    vigas: { concreto: geometriaViga, forma: geometriaViga, aco: sistrut ? doSistrut : "v2" },
     pilares: todas("v2"),
   };
   const memoria: Etapa[] = [

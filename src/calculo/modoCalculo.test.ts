@@ -16,7 +16,6 @@ import {
   quantLaje,
   vizinhancaLajes,
 } from "./quantitativos";
-import type { Barra } from "./tipos";
 
 const perto = (valor: number, esperado: number, tol: number) =>
   expect(Math.abs(valor - esperado)).toBeLessThanOrEqual(tol);
@@ -59,30 +58,37 @@ function obraE2E(modoCalculo: ModoCalculo, aco: Aco = "CA-50"): Obra {
 
 describe("H: armadura mínima de flexão de viga (DESDIM, As,mín = taxa·bw·hw)", () => {
   // DESENHO.BAS:4819-4820 (.DSP 0,0015 para qualquer aço) × 0,25 % com CA-25 no
-  // corrigido. Nos tramos de M pequeno a mínima governa: As = taxa·bw·hw.
-  const tramos = (modo: ModoCalculo, aco: Aco) =>
-    calcularObra(obraE2E(modo, aco), nb178).pavimentos[0]!.vigas.flatMap((v) =>
-      v.tramos.flatMap((t) =>
-        t.positivo.flexao ? [{ as: t.positivo.flexao.as, ac: v.viga.bw * v.viga.h }] : [],
-      ),
+  // corrigido. Nas vigas de borda (V1 e V3 12x40, V4 e V6 12x50) o M+ é pequeno e a
+  // mínima governa o tramo (conta à mão: taxa·bw·hw).
+  const asTramos = (modo: ModoCalculo, aco: Aco) =>
+    Object.fromEntries(
+      calcularObra(obraE2E(modo, aco), nb178).pavimentos[0]!.vigas.map((v) => [
+        v.viga.nome,
+        v.tramos.map((t) => t.positivo.flexao!.as),
+      ]),
     );
 
-  it('"corrigido" com CA-25: nenhum tramo abaixo de 0,25 %·bw·h e algum exatamente nela', () => {
-    const ts = tramos("corrigido", "CA-25");
-    expect(ts.length).toBeGreaterThan(0);
-    for (const t of ts) expect(t.as).toBeGreaterThanOrEqual(0.0025 * t.ac - 1e-9);
-    expect(ts.some((t) => Math.abs(t.as - 0.0025 * t.ac) < 1e-9)).toBe(true);
+  it.each(["original", "corrigido"] as const)(
+    "%s com CA-50: 0,0015·12·40 = 0,72 nas 12x40 e 0,0015·12·50 = 0,90 nas 12x50",
+    (modo) => {
+      const as = asTramos(modo, "CA-50");
+      for (const v of ["V1", "V3"]) for (const x of as[v]!) expect(x).toBeCloseTo(0.72, 6);
+      for (const v of ["V4", "V6"]) for (const x of as[v]!) expect(x).toBeCloseTo(0.9, 6);
+    },
+  );
+
+  it("corrigido com CA-25: 0,0025·12·40 = 1,20 nas 12x40 de borda", () => {
+    const as = asTramos("corrigido", "CA-25");
+    for (const v of ["V1", "V3"]) for (const x of as[v]!) expect(x).toBeCloseTo(1.2, 6);
   });
 
-  it('"original" com CA-25: a mínima é 0,15 % (12·40·0,0015 = 0,72): algum tramo abaixo de 0,25 %', () => {
-    const ts = tramos("original", "CA-25");
-    for (const t of ts) expect(t.as).toBeGreaterThanOrEqual(0.0015 * t.ac - 1e-6);
-    expect(ts.some((t) => t.as < 0.0025 * t.ac - 1e-6)).toBe(true);
-  });
-
-  it('"corrigido" com CA-50: 0,15 % também (a correção é só do CA-25)', () => {
-    for (const t of tramos("corrigido", "CA-50"))
-      expect(t.as).toBeGreaterThanOrEqual(0.0015 * t.ac - 1e-9);
+  it("original com CA-25: a mínima é 0,72; o tramo fica com a As de flexão, abaixo de 1,20", () => {
+    const as = asTramos("original", "CA-25");
+    for (const v of ["V1", "V3"])
+      for (const x of as[v]!) {
+        expect(x).toBeGreaterThan(0.72);
+        expect(x).toBeLessThan(1.2);
+      }
   });
 });
 
@@ -102,65 +108,92 @@ describe("negativas das lajes: cada laje conta o seu lado", () => {
   });
 });
 
-// Obra de revisão _rev5/quant/q1.ts: L1 4×5 apoiada e L2 em balanço 1,5×5 (bordos
-// inferior, direito e superior livres), h 10, NB-1/78, pilares 20x30.
-function obraQ1(modoCalculo: ModoCalculo): Obra {
-  const obra = obraNova("REV5", "nb1-78");
-  let pav = { ...obra.pavimentos[0]!, peDireito: 3 };
-  const l1 = lajeNova(pav, { x: 0, y: 0, lx: 4, ly: 5 }, { h: 10 });
-  pav = { ...pav, lajes: [l1] };
-  const l2 = lajeNova(
-    pav,
-    { x: 4, y: 0, lx: 1.5, ly: 5 },
-    { h: 10, vinculos: { inferior: "livre", direito: "livre", superior: "livre" } },
-  );
-  pav = gerarEstrutura({ ...pav, lajes: [l1, l2] });
-  pav = { ...pav, pilares: pav.pilares.map((p) => ({ ...p, b: 20, h: 30 })) };
-  return { ...obra, modoCalculo, pavimentos: [pav] };
+// Item D (regra da V2): a negativa do bordo comum é a armadura do balanço e vai da
+// borda livre até 0,25·x dentro da vizinha, x = máx(lmenor do balanço; menor vão da
+// vizinha); a vizinha não conta esse bordo. Obra do caso v2par_laje_balanco do oráculo
+// (C:/tmp/oraculo/runs/v2par_laje_balanco-20261015-162752): L2 interna 4 × 5 e L1 em
+// balanço 4 × 1,5 sobre ela (três bordos livres), h 10, permanente 0,10 e ocupação 0,15
+// t/m², fck 0,15 t/cm², CA-50 classe B, modo original. As malhas são as que o LAJEPROC
+// do original imprimiu (pré-condição): positivas # 6.3 c/20, negativa # 6.3 c/10.
+// Pesos à mão (φ 6,3: π·0,63²/4 = 0,311725 cm²; c/20 → 1,558623 cm²/m; c/10 → 3,117245):
+//   L1 positivas 2·1,558623e-4·1,5·4·7850 = 14,6822; negativa 1,5 + 0,25·4 = 2,5 m ao
+//   longo dos 4 m: 3,117245e-4·4·2,5·7850 = 24,4704 → (14,6822 + 24,4704)·1,1 = 43,0679 kg
+//   L2 positivas 2·1,558623e-4·20·7850 = 48,9407 → ·1,1 = 53,8348 kg (sem a negativa)
+function obraBalanco(): Obra {
+  const obra = obraNova("BAL", "nb1-78");
+  const kn = (t: number) => t * 9.80665;
+  const pav = { ...obra.pavimentos[0]!, peDireito: 3 };
+  const cargas = { h: 10, revestimento: kn(0.1), sobrecarga: kn(0.15) };
+  const l2 = { ...lajeNova(pav, { x: 0, y: 0, lx: 4, ly: 5 }, cargas), id: "L2", nome: "L2" };
+  const l1 = {
+    ...lajeNova(pav, { x: 0, y: 5, lx: 4, ly: 1.5 }, cargas),
+    id: "L1",
+    nome: "L1",
+    vinculos: { esquerdo: "livre", superior: "livre", direito: "livre" } as const,
+  };
+  const viga = (id: string, x1: number, y1: number, x2: number, y2: number) => ({
+    id,
+    nome: id,
+    x1,
+    y1,
+    x2,
+    y2,
+    bw: 12,
+    h: 40,
+    cargaLinear: 0,
+  });
+  return {
+    ...obra,
+    modoCalculo: "original",
+    materiais: { ...obra.materiais, classeAco: "B" },
+    pavimentos: [
+      {
+        ...pav,
+        lajes: [l1, l2],
+        vigas: [
+          viga("V1", 0, 5, 4, 5),
+          viga("V2", 0, 0, 4, 0),
+          viga("V3", 0, 0, 0, 5),
+          viga("V4", 4, 0, 4, 5),
+        ],
+        pilares: [
+          { id: "P1", nome: "P1", x: 0, y: 0, b: 20, h: 20 },
+          { id: "P2", nome: "P2", x: 4, y: 0, b: 20, h: 20 },
+          { id: "P3", nome: "P3", x: 4, y: 5, b: 20, h: 20 },
+          { id: "P4", nome: "P4", x: 0, y: 5, b: 20, h: 20 },
+        ],
+      },
+    ],
+  };
 }
 
-/** Peso de uma malha φ c/s cobrindo largura × comprimento (m), kg (conta à mão). */
-const malha = (b: Barra | undefined, largura: number, comprimento: number) =>
-  b && b.phi > 0
-    ? ((Math.PI * (b.phi / 10) ** 2) / 4) *
-      (100 / b.espacamento) *
-      1e-4 *
-      largura *
-      comprimento *
-      7850
-    : 0;
-
-// Item D: a negativa do bordo comum é a armadura do balanço L2 e vai da borda livre até
-// 0,25·x dentro de L1, x = máx(lmenor de L2 = 1,5; menor vão de L1 = 4) = 4: 1,5 + 1,0 =
-// 2,5 m ao longo dos 5 m do bordo. L1 não conta esse bordo. As malhas são as do LAJEPROC
-// (conferido contra o oráculo em sistrut/lajes/proc.test.ts); o peso é conta à mão.
-describe.each(["corrigido", "original"] as const)("D: aço da laje em balanço (%s)", (modo) => {
-  const obra = obraQ1(modo);
+describe("D: aço da laje em balanço (obra do v2par_laje_balanco, modo original)", () => {
+  const obra = obraBalanco();
   const r = calcularObra(obra, nb178);
   const rp = r.pavimentos[0]!;
   const lajeR = (nome: string) => rp.lajes.find((l) => l.laje.nome === nome)!;
 
-  it("a barra do bordo comum é do balanço: L2 com 4 m de vizinha, L1 não conta o bordo", () => {
-    const viz = vizinhancaLajes(rp);
-    expect(viz.get(lajeR("L2").laje.id)?.vaoMenorVizinha).toEqual({ esquerdo: 4 });
-    expect(viz.get(lajeR("L1").laje.id)?.negativaNoBalanco).toEqual(["direito"]);
+  it("pré-condição: as malhas do LAJEPROC do original (# 6.3 c/20 e # 6.3 c/10)", () => {
+    for (const nome of ["L1", "L2"]) {
+      expect(lajeR(nome).armadura.barrasX).toEqual({ phi: 6.3, espacamento: 20 });
+      expect(lajeR(nome).armadura.barrasY).toEqual({ phi: 6.3, espacamento: 20 });
+    }
+    expect(lajeR("L1").armadura.barrasNegativos.inferior).toEqual({ phi: 6.3, espacamento: 10 });
   });
 
-  it("pesos: L2 = (positivas + negativa × 2,5 m) · 1,1; L1 = positivas · 1,1", () => {
+  it("a barra do bordo comum é do balanço: L1 com 4 m de vizinha, L2 não conta o bordo", () => {
+    const viz = vizinhancaLajes(rp);
+    expect(viz.get("L1")?.vaoMenorVizinha).toEqual({ inferior: 4 });
+    expect(viz.get("L2")?.negativaNoBalanco).toEqual(["superior"]);
+  });
+
+  it("pesos: L1 = 43,068 kg e L2 = 53,835 kg (conta à mão no cabeçalho)", () => {
     const q = calcularQuantitativos(obra, r);
     const mem = (nome: string) =>
-      q.pavimentos[0]!.memoria.find((m) => m.descricao.startsWith(`${nome}: aço`))!.valor!;
-    const a2 = lajeR("L2").armadura;
-    const a1 = lajeR("L1").armadura;
-    const neg = a2.barrasNegativos.esquerdo;
-    expect(neg?.phi).toBeGreaterThan(0);
-    const l2 = (malha(a2.barrasX, 5, 1.5) + malha(a2.barrasY, 1.5, 5) + malha(neg, 5, 2.5)) * 1.1;
-    const l1 = (malha(a1.barrasX, 5, 4) + malha(a1.barrasY, 4, 5)) * 1.1;
-    perto(mem("L2"), l2, 1e-6);
-    perto(mem("L1"), l1, 1e-6);
-    expect(
-      q.pavimentos[0]!.memoria.find((m) => m.descricao.startsWith("L1: aço"))!.descricao,
-    ).toContain(NAO_EXISTE_NO_SISTRUT);
+      q.pavimentos[0]!.memoria.find((m) => m.descricao.startsWith(`${nome}: aço`))!;
+    perto(mem("L1").valor!, 43.0679, 0.001);
+    perto(mem("L2").valor!, 53.8348, 0.001);
+    expect(mem("L1").descricao).toContain(NAO_EXISTE_NO_SISTRUT);
   });
 });
 

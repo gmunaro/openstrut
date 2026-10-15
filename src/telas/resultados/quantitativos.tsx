@@ -11,6 +11,7 @@ import type { LinhaTabelaAco, TabelaAco } from "../../calculo/detalhamento/tabel
 import {
   NAO_EXISTE_NO_SISTRUT,
   taxaAco,
+  type FonteQuantidade,
   type Quantidades,
   type Quantitativos,
 } from "../../calculo/quantitativos";
@@ -68,21 +69,21 @@ const GRANDEZA = { concreto: "concreto", forma: "fôrma", aco: "aço" } as const
 /** Nota das fontes no NB-1/78: o que sai do SISTRUT (quadro do DESINIT) e o que é regra
  *  da V2, que não existe no SISTRUT. Nada na NBR 6118 (tudo é da V2). */
 export function NotaFontes({ quant }: { quant: Quantitativos }) {
-  const doSistrut: string[] = [];
-  const daV2: string[] = [];
+  const listas = { sistrut: [] as string[], v2: [] as string[], misto: [] as string[] };
   for (const [tipo, fontes] of Object.entries(quant.fonte) as [
     keyof typeof ROTULO_TIPO,
     Quantitativos["fonte"]["lajes"],
   ][])
-    for (const [g, f] of Object.entries(fontes) as [keyof typeof GRANDEZA, string][])
-      (f === "sistrut" ? doSistrut : daV2).push(
-        `${GRANDEZA[g]} de ${ROTULO_TIPO[tipo].toLowerCase()}`,
-      );
-  if (doSistrut.length === 0) return null;
+    for (const [g, f] of Object.entries(fontes) as [keyof typeof GRANDEZA, FonteQuantidade][])
+      listas[f].push(`${GRANDEZA[g]} de ${ROTULO_TIPO[tipo].toLowerCase()}`);
+  if (listas.sistrut.length === 0 && listas.misto.length === 0) return null;
   return (
     <p role="note" className="text-muted-foreground mt-2 max-w-3xl text-xs">
-      Do SISTRUT (quadro da viga do DESINIT): {doSistrut.join(", ")}. Regra da V2 (
-      {NAO_EXISTE_NO_SISTRUT}): {daV2.join(", ")}.
+      {listas.sistrut.length > 0 &&
+        `Do SISTRUT (quadro da viga do DESINIT): ${listas.sistrut.join(", ")}. `}
+      {listas.misto.length > 0 &&
+        `Do DESINIT, menos as vigas sem quadro, que seguem a regra da V2: ${listas.misto.join(", ")}. `}
+      Regra da V2 ({NAO_EXISTE_NO_SISTRUT}): {listas.v2.join(", ")}.
     </p>
   );
 }

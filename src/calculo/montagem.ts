@@ -146,7 +146,8 @@ interface VigaEixo {
  *  punha pilar em todo cruzamento). A viga que termina no ponto se apoia na que
  *  passa; se as duas passam, a de menor h se apoia na de maior h (empate: a mais
  *  curta na mais longa; persistindo, a vertical na horizontal). Se as duas
- *  terminam no ponto, nenhuma se apoia: as duas pontas ficam em balanço. */
+ *  terminam no ponto, aqui nenhuma se apoia; `geometriaDasVigas` depois apoia a que
+ *  ficaria sem 2 apoios na outra (viga sobre as pontas de balanços). */
 function apoiaEm(a: VigaEixo, b: VigaEixo, sa: number, sb: number) {
   const aTermina = extremidade(a.eixo, sa);
   const bTermina = extremidade(b.eixo, sb);
