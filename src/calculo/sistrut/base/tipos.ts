@@ -1,9 +1,19 @@
 // CONTRATOS do módulo `src/calculo/sistrut/`: os tipos de entrada e saída e as
-// assinaturas que as tarefas T1-T6 implementam (C:/tmp/v2-paridade/PLANO.md 5.3).
+// assinaturas das funções públicas de cada família (lajes, montagem, vigas, pilares,
+// quantitativos; C:/tmp/v2-paridade/PLANO.md 5.3). É o contrato FINAL que o código
+// cumpre: a integração (obra.ts) e a projeção (../fluxoSistrut.ts) usam só estes
+// tipos e as funções que os implementam.
 // Cada assinatura é um TIPO de função; a implementação a anota para o compilador
 // conferir o contrato:
 //
 //   export const momentosLaje: MomentosLaje = (entrada, modo) => { ... };
+//
+// Regras: uma família não cria tipo que estende o tipo de saída do contrato nem função
+// "irmã" com assinatura própria; o campo novo entra aqui, com o comentário de uso e a
+// fonte `.BAS:linha`. Dado opcional que só um chamador tem entra como parâmetro
+// opcional no fim da assinatura (ex.: `geometriaPilares` em `MontaPavimento`,
+// `extras` em `DetalhaViga`). Onde o original fica em laço sem fim, a implementação
+// lança `ErroNaoConverge` (base/f32.ts); erro de execução do QB4.5, `ErroQB`.
 //
 // Convenções que valem para todos os contratos:
 // - UNIDADES DO ORIGINAL, nos dois modos: t, m, cm, t/m, t/m², t/cm², t·m (tm) e
@@ -27,7 +37,7 @@
 // - Resultados de família levam `ComMemoria` (avisos visíveis e memória de
 //   cálculo, como o resto da V2). Aviso não esconde resultado.
 import type { ComMemoria } from "../../tipos";
-import type { ClasseAco } from "../../../dominio/obra";
+import type { Bordo, ClasseAco, Vinculo } from "../../../dominio/obra";
 import type {
   EmSingle,
   PARAMETROS_DSP,
@@ -99,7 +109,10 @@ export interface LajeSistrut {
   codigos: CodigoBordo[];
   /** Ângulo da armadura principal, graus, 0 ≤ a < 180 (A_1210(L,0)). */
   angulo: number;
-  /** μ = M+ secundário / M+ principal (A_1210(L,1)); vem de `direcaoMu`. */
+  /** μ = M+ secundário / M+ principal (A_1210(L,1)). ≤ 0 = não informado: o
+   *  `EsforcosDoPainel` calcula pelas cordas (`direcaoMu`) nas lajes do tipo 0; > 0 é o
+   *  informado e fica. No original o μ é do POLÍGONO (A_1210(A_10cc(i,0)),
+   *  LAJECALC.BAS:35ce6), não da laje: quem lê um .LAJ usa o índice do polígono. */
   mu: number;
   /** Carga permanente, t/m² (A_10cc(·,4)). */
   cargaPermanente: number;
@@ -141,7 +154,12 @@ export interface Continuidade {
    *  LAJEPROC (LAJEPROC.BAS:809) tratam esse caso. */
   lajeB: string | null;
   bordoB: number;
-  /** Armadura imposta na continuidade (A_11e0(c,4)), se houver. */
+  /** Armadura imposta na continuidade (A_11e0(c,4)), se houver. Dois formatos, como o
+   *  original grava: POSITIVO = o do LAJECALC, CINT(1000·índice da bitola + espaçamento
+   *  em cm) (LAJECALC.BAS:4166), que a otimização e o LAJEPROC leem como
+   *  área(INT(c/1000))/(c mod 1000)·100 (LAJECALC.BAS:2167; LAJEPROC.BAS:866-868;
+   *  `barraImpostaNaContinuidade`); NEGATIVO = o do LAJEPROC, −(1000·índice da bitola +
+   *  índice 1-based do espaçamento) (`CodigoBarraLaje`, LAJEPROC.BAS:451). */
   armaduraImposta?: CodigoBarraLaje;
 }
 
@@ -158,7 +176,8 @@ export interface PainelLajes {
 }
 
 // ============================================================== T1 LAJE: esforços
-// Arquivos: sistrut/lajes/charneiras.ts, coeficiente.ts, momentos.ts.
+// Arquivos: sistrut/lajes/charneiras.ts, coeficiente.ts, momentos.ts, continuidade.ts,
+// esforcos.ts.
 // Especificação: livros_laje.md 1.3-1.8; PLANO L1-L4, L13. Modo corrigido: sem
 // diferença de algoritmo (só precisão e materiais).
 
@@ -195,26 +214,47 @@ export interface RegiaoCharneira {
   area: number;
 }
 
+/** O padrão no formato do original, para o coeficiente de carga rodar sobre ele: o
+ *  coeficiente precisa saber de que vértice sai cada charneira e quais vértices são
+ *  colineares (LAJECALC.BAS:8172-8411). */
+export interface PadraoBruto {
+  /** Polígono de trabalho, sem repetir o primeiro vértice. */
+  poligono: Ponto[];
+  /** Código de cada bordo (DOUBLE; ver `EstadoLajecalc.carregaPoligono`). */
+  codigos: number[];
+  tipo: number;
+  /** Linhas 1..n de A_160c (x0, y0, x1, y1; x0 < 0 = −índice do vértice) e de A_163a. */
+  segmentos: [number, number, number, number][];
+  nos: [number, number, number][];
+}
+
 /** Saída do padrão de charneiras (A_160c segmentos, A_163a nós). */
 export interface PadraoCharneiras {
   /** Charneiras e cumeeiras (até 100 segmentos). */
   segmentos: { inicio: Ponto; fim: Ponto }[];
   /** Uma região por bordo não livre. */
   regioes: RegiaoCharneira[];
+  /** A_160c e A_163a como o original os guarda (entrada do `CoeficienteDeCarga`). */
+  bruto: PadraoBruto;
 }
 
-/** Padrão de charneiras de um polígono qualquer (LAMONTLB S_4019b,
+/** Padrão de charneiras do LAJECALC para um polígono qualquer (LAMONTLB S_4019b,
  *  LAJECALC.BAS:4980-7128; livros_laje.md 1.6): bissetriz ponderada
- *  φ = ATN(SIN(b−a)/(SQR((i2+1)/(i1+1)) + COS(b−a))) (LAJECALC.BAS:3300-3304),
- *  interseções, limpeza (0,005), bordos livres (6898-6941).
- *  `i` = i de cada bordo (`iDoBordo`); `livres` = código 1.
- *  Usado por T1 (polígono girado e afim) e por T6 (coordenadas reais). */
+ *  φ = ATN(SIN(b−a)/(SQR((i2+1)/(i1+1)) + COS(b−a))) (LAJECALC.BAS:3300-3304), com o i
+ *  do bordo truncado em 2 casas (LAJECALC.BAS:3425), interseções, limpeza (0,005),
+ *  bordos livres (6898-6941). `codigos` = código de cada bordo (`CodigoBordo`); `tipo`
+ *  1 (pré-moldada) pula o tratamento de bordos livres (LAJECALC.BAS:6657); padrão 0.
+ *  Polígono horário, como o LAJEGEOM grava (Σ(x_k + x_k+1)(y_k − y_k+1)/2 > 0,
+ *  LAJEGEOM.BAS:3110-3115); anti-horário lança erro.
+ *  Só o LAJECALC usa (polígono girado e afim, lajes/charneiras.ts). A montagem tem o
+ *  porte próprio do LAJEMONT (montagem/charneiras.ts): coordenadas reais, i sem
+ *  truncar, bordo livre até o meio do bordo e ramo de pré-moldada. */
 export type PadraoDeCharneiras = (
   vertices: readonly Ponto[],
-  i: readonly number[],
-  livres: readonly boolean[],
+  codigos: readonly CodigoBordo[],
   parametros: ParametrosLaje,
   modo: ModoSistrut,
+  tipo?: TipoLaje,
 ) => PadraoCharneiras;
 
 /** i de cada bordo: Σ(código−2)·L_k/(10·L) sobre os trechos colineares agrupados,
@@ -262,10 +302,10 @@ export interface CoeficienteCarga {
   l2e: number;
 }
 /** coef = (l_1a + l_32 + (1 + cantos)·l_2a − 2·l_22)/(l_1e/3 + l_2e − l_26/3)
- *  (LAJECALC.BAS:8408); se l_1a = 0, troca o sinal (8410). */
+ *  (LAJECALC.BAS:8408); se l_1a = 0, troca o sinal (8410). O i de cada bordo sai dos
+ *  códigos guardados em `padrao.bruto` (LAJECALC.BAS:8742-8757). */
 export type CoeficienteDeCarga = (
   padrao: PadraoCharneiras,
-  i: readonly number[],
   parametros: ParametrosLaje,
   modo: ModoSistrut,
 ) => CoeficienteCarga;
@@ -277,10 +317,18 @@ export interface MomentosDeLaje {
   h: number;
   /** Carga total q(H) = (alvenaria + cargaArea)/área + H·densidade/100 + permanente, t/m². */
   q: number;
+  /** q(H) antes do arredondamento: o original divide q ainda em precisão estendida
+   *  pelo coeficiente e só então grava V_1400! (LAJECALC.BAS:875). */
+  qSemArredondar: number;
+  /** p = q/coef (V_1400!, SINGLE no original), t/m; M+ = 100·p. A espessura usa este p
+   *  para o M− bit a bit. */
+  p: number;
   /** Peso próprio de H, t/m² (sai de H, não do digitado). */
   pesoProprio: number;
   coeficiente: CoeficienteCarga;
-  /** M+ principal em t·cm/m, como o original guarda (A_12fc(i,1) = 100·q/coef). */
+  /** M+ principal em t·cm/m, como o original guarda (A_12fc(i,1) = 100·q/coef).
+   *  Balanço (l_1a = 0): coeficiente e M+ negativos; o original imprime max(M+, 0)
+   *  (LAJECALC.BAS:12417) e o M− é |M+|·c. */
   mPositivoPrincipalTcm: number;
   /** M+ secundário = M+·μ (μ ≤ 1) ou M+/μ, t·cm/m. */
   mPositivoSecundarioTcm: number;
@@ -327,6 +375,18 @@ export type EsforcosDoPainel = (
   parametros: ParametrosLaje,
   modo: ModoSistrut,
 ) => EsforcosLajes;
+
+/** Otimização dos negativos já ligada aos materiais e parâmetros (a `OtimizaNegativos`
+ *  da T2): recebe os esforços e o recálculo de uma laje com os códigos novos. */
+export type OtimizacaoInjetada = (
+  esforcos: EsforcosLajes,
+  recalcula: (laje: LajeSistrut) => MomentosDeLaje,
+) => EsforcosLajes;
+
+/** `EsforcosDoPainel` com a otimização dos negativos injetada (LAJECALC opção 6 depois
+ *  da 5). O recálculo da mesma laje mais de `LIMITE_RECALCULOS` vezes lança
+ *  `ErroNaoConverge` (o laço do R3). Sem `otimiza` = `EsforcosDoPainel`. */
+export type EsforcosDoPainelCom = (otimiza?: OtimizacaoInjetada) => EsforcosDoPainel;
 
 // ============================================================== T2 LAJE: flexão, barras, espessura, LAJEPROC
 // Arquivos: sistrut/lajes/flexao.ts, barras.ts, espessura.ts, proc.ts (e
@@ -395,14 +455,25 @@ export type EspessuraDeLaje =
     }
   /** "H necessario > H maximo configurado": o original grava H = −1. */
   | { ok: false };
+/** Dados da flecha do modo corrigido (R1): retângulo equivalente lx × ly (m), vínculos
+ *  dos quatro bordos e a parcela acidental da carga (t/m²). A permanente é q(H) −
+ *  acidental. */
+export interface DadosFlechaLaje {
+  lx: number;
+  ly: number;
+  vinculos: Record<Bordo, Vinculo>;
+  acidental: number;
+}
 /** `momentosComH(h)` = momentos da laje com esse H; a T7 liga no `MomentosLaje` da
  *  T1. Os testes da T2 montam esse callback com o coeficiente das contas à mão
- *  (E2E: coef 2,0180, livros_laje.md 2.1) e não dependem da T1. */
+ *  (E2E: coef 2,0180, livros_laje.md 2.1) e não dependem da T1. `flecha` só conta no
+ *  corrigido (R1); sem ela, só a flexão. */
 export type EspessuraMinimaLaje = (
   momentosComH: (h: number) => MomentosDeLaje,
   materiais: MateriaisSistrut,
   parametros: ParametrosLaje,
   modo: ModoSistrut,
+  flecha?: DadosFlechaLaje,
 ) => EspessuraDeLaje;
 
 /** Armaduras de uma laje com H (LAJECALC.BAS:663-731; livros_laje.md 1.13): As+
@@ -466,9 +537,14 @@ export type Lajeproc = (
 ) => ResultadoLajeproc;
 
 // ============================================================== T6 MONTAGEM lajes → vigas (LAJEMONT)
-// Arquivo: sistrut/montagem/reacoes.ts. Especificação: livros_laje.md 1.15 e 2.6;
-// PLANO M1-M4. Usa o `PadraoDeCharneiras` da T1 em coordenadas reais, sem giro nem
-// afinidade, com o i de cada bordo (que muda depois da otimização).
+// Arquivos: sistrut/montagem/ (reacoes.ts, vigas.ts, charneiras.ts, regioes.ts,
+// cargas.ts). Especificação: livros_laje.md 1.15 e 2.6; PLANO M1-M4. O padrão de
+// charneiras é o porte próprio do LAJEMONT (montagem/charneiras.ts, não o
+// `PadraoDeCharneiras` do LAJECALC): coordenadas reais, sem giro nem afinidade, i de
+// cada bordo sem truncar (muda depois da otimização), bordo livre até o meio do bordo
+// e ramo da pré-moldada.
+// Convenções: índice de bordo 0-based em `vertices`; J do pilar pelo número do nome
+// ("P7" → 7); no modo original os eixos vêm em ordem crescente, como o LAJEGEOM grava.
 // Modo corrigido: sem diferença de algoritmo.
 
 /** Elemento sob um bordo de laje: viga (carga por metro) ou pilar (carga total). */
@@ -476,7 +552,11 @@ export type ApoioDeBordo = { tipo: "viga"; viga: string } | { tipo: "pilar"; pil
 
 /** Reação de um bordo (LAJEMONT.BAS:2655-2760): área da região, cargas por metro
  *  (÷ comprimento do bordo se o apoio é viga) e total. Arestas com área ≤ 0,005 são
- *  omitidas. E2E L1 → V4: área 4,39; área 0,13, estru 0,09, peso 0,22 t/m. */
+ *  omitidas. E2E L1 → V4: área 4,39; área 0,13, estru 0,09, peso 0,22 t/m.
+ *  Bordo sem viga nem pilar: o original imprime a linha com o apoio em branco e soma a
+ *  carga no total dos pilares. Aqui a reação NÃO entra na lista (`apoio` nunca é
+ *  null); a carga vai para `MontagemPavimento.totais.pilares`, como no original, e sai
+ *  um aviso com a laje, o bordo e a carga. */
 export interface ReacaoDeBordo {
   laje: string;
   bordo: number;
@@ -505,8 +585,10 @@ export interface PesoProprioVigas {
 /** Eixo de uma viga no pavimento, com os apoios (pilares ou outras vigas) em ordem. */
 export interface EixoViga {
   nome: string;
+  /** Pontos em ordem crescente (no modo original é obrigatório: o LAJEGEOM grava assim). */
   pontos: Ponto[];
-  /** Por ponto: pilar, viga (apoio em viga, escolha do usuário, U43-006) ou nada. */
+  /** Por ponto: pilar, viga (apoio em viga, escolha do usuário, U43-006) ou nada. O
+   *  "apoia em" de um cruzamento sem pilar não fica no .LAJ: chega por aqui (`{viga}`). */
   apoios: ({ pilar: string } | { viga: string } | null)[];
   /** Balanço na ponta inicial/final (código de nó 0/1000/2000/3000/4000, U42-008). */
   balancoInicio: boolean;
@@ -525,7 +607,9 @@ export interface EixoViga {
  *  pesoProprio = H·densidade/100 nos dois modos. */
 export interface MontagemPavimento extends ComMemoria {
   reacoes: ReacaoDeBordo[];
+  /** O .VIG gravado, com `inerciasBrutas`, `registro` e `alvenariasSobreViga`. */
   vigas: DadosViga[];
+  /** Totais "Considerados" do relatório (LAJEMONT.BAS:387-468), t. */
   totais: {
     cargasPorArea: number;
     pesoProprioVigas: number;
@@ -535,8 +619,26 @@ export interface MontagemPavimento extends ComMemoria {
     painel: number;
     vigas: number;
     pilares: number;
+    /** "Total das Cargas por Area": Σ área do polígono × total, antes do "Considerado". */
+    cargasPorAreaNominal: number;
+    /** "Total das Cargas Lineares": Σ comprimento × carga das alvenarias. */
+    alvenariasNominal: number;
   };
 }
+
+/** Pilar como o LAJEGEOM grava (A_1156): segmento x1, y1, x2, y2 (pontual quando as
+ *  duas pontas coincidem; pilar-parede quando não) e nome (A_1128$). */
+export interface PilarMontagem {
+  nome: string;
+  inicio: Ponto;
+  fim: Ponto;
+}
+
+/** Bordo do `apoiosDosBordos` com índice 0-based em `vertices`. Apoio null: procura a
+ *  viga com um trecho igual ao bordo, como o original. `geometriaPilares` (A_1156):
+ *  com ela, o pilar de cada ponto de viga, o pilar-parede, o bordo de laje apoiado em
+ *  pilar-parede e a alvenaria sobre ele saem como no original; sem ela, os pilares de
+ *  `EixoViga.apoios`. */
 export type MontaPavimento = (
   esforcos: EsforcosLajes,
   painel: PainelLajes,
@@ -545,10 +647,11 @@ export type MontaPavimento = (
   pesoProprio: PesoProprioVigas,
   parametros: ParametrosLaje,
   modo: ModoSistrut,
+  geometriaPilares?: readonly PilarMontagem[],
 ) => MontagemPavimento;
 
 // ============================================================== T3 VIGA: análise (VIGA/VICALC)
-// Arquivo: sistrut/vigas/vicalc.ts. Especificação: livros_viga_pilar.md 1.1-1.4 e
+// Arquivos: sistrut/vigas/vicalc.ts, rep.ts. Especificação: livros_viga_pilar.md 1.1-1.4 e
 // 3.1; PLANO V1-V10. Modo corrigido: R5 (.REP sem truncar as parcelas; arredonda o
 // total), R6 (redução dos negativos limitada a 0,15..1 e % gerada a 4..96).
 
@@ -558,7 +661,9 @@ export type MontaPavimento = (
 export interface DivisaoCarga {
   /** t/m. */
   p: number;
-  /** Abscissa do fim, m, a partir do apoio esquerdo do tramo. */
+  /** Abscissa do fim, m, a partir do apoio esquerdo do tramo. No balanço esquerdo as
+   *  divisões vêm na ordem do registro do .VIG (da ponta para o apoio) e D é medido a
+   *  partir do APOIO. */
   d: number;
   /** t. */
   f: number;
@@ -590,6 +695,31 @@ export interface DadosViga {
   momentosExternos: [number, number];
   /** Pilar de cada apoio 0..n (null = '*', apoio desconsiderado). */
   pilares: (string | null)[];
+  /** Só no .VIG gravado pela montagem (`MontagemPavimento.vigas`): J bruto de cada
+   *  tramo 0..n (+ n+1 com balanço direito), A_1c36. O .VIG grava J(0) mesmo sem
+   *  balanço (1,00471 no tramo 0 sem número; LAJEMONT.BAS:4128); `tramos` só tem 1..n. */
+  inerciasBrutas?: number[];
+  /** Só na montagem: campos do registro de 855 bytes do .VIG, para conferir com o
+   *  arquivo do original: A_1bda, por tramo 0..13 A_1c64/A_1c92/A_1c08/A_1c36, por
+   *  divisão 0..30 A_1af4/A_1b50/A_1b7e/A_1b22/A_1bac (S_33d84, LAJEMONT.BAS:5170-5393). */
+  registro?: RegistroVig;
+  /** Só na montagem: linhas do quadro "ALVENARIAS SOBRE AS VIGAS" (LAJEMONT.BAS:
+   *  4318-4380): tramo, divisão no tramo, peso próprio e alvenaria, t/m. */
+  alvenariasSobreViga?: { tramo: number; divisao: number; peso: number; alvenaria: number }[];
+}
+
+/** Vetores do registro do .VIG (ver `DadosViga.registro`). */
+export interface RegistroVig {
+  bda: number[];
+  c64: number[];
+  c92: number[];
+  c08: number[];
+  c36: number[];
+  p: number[];
+  d: number[];
+  f: number[];
+  pac: number[];
+  fac: number[];
 }
 // Índices de viga em todos os contratos: tramos[t − 1] = tramo t do original
 // (1..n); apoios[k] = apoio k (0..n), entre tramos[k − 1] e tramos[k]. Os balanços
@@ -597,12 +727,17 @@ export interface DadosViga {
 // (`balancoEsquerdo`, `balancoDireito`), nunca dentro de `tramos`. A ponta livre do
 // balanço não é apoio.
 
-/** Envoltória de um tramo/apoio (só com acidentais "S"; VIGA.BAS:7233-7469). */
+/** Linha "max" da envoltória de um tramo (só com acidentais "S"; VIGA.BAS:7233-7469,
+ *  7583-7591): Ve/Vd de maior módulo entre máximo e mínimo, x e M+ máximos e a flecha
+ *  f·EJ da envoltória (ST_1a8c(t+14), VIGA.BAS:7591). O Ve e o M esquerdo do
+ *  carregamento que dá o M+ máximo (A_17c4), que a flecha do DESDIM usa, saem do DESCALC
+ *  (`EsforcosTramoDesdim.veFlecha`/`mEsquerdo`). */
 export interface EnvoltoriaTramo {
   ve: number;
   vd: number;
   x: number;
   mPositivo: number;
+  fEJ: number;
 }
 
 export interface ApoioAnalisado {
@@ -627,6 +762,20 @@ export interface TramoAnalisado {
   envoltoria?: EnvoltoriaTramo;
 }
 
+/** Linha da tabela "Esforcos de Engastamento Perfeito" (VIGA.BAS:7138-7182, 7636-7640):
+ *  o original imprime tramo, Ve, x, M+ e Vd. `mEsquerdo` é o momento do apoio esquerdo
+ *  no estado de engastamento (V_1c04 antes do GOSUB); `mDireito` não é calculado pelo
+ *  original: sai por simetria, −((bf0+bf4)·B·bf4 − A·bf0·bf4)/(bf0+bf4+1), sem Mext. */
+export interface LinhaEngastamentoPerfeito {
+  tramo: number;
+  ve: number;
+  x: number;
+  mPositivo: number;
+  vd: number;
+  mEsquerdo: number;
+  mDireito: number;
+}
+
 /** Análise pelo método dos focos (S_40243, VIGA.BAS:6984-7785). Caso b V1: M(1)
  *  −0,97; Ve 0,73; x 1,50; M+ 0,55; Vd 1,22; R 0,73/2,43/0,73; f·EJ 0,66; MEP −0,65. */
 export interface AnaliseViga extends ComMemoria {
@@ -647,7 +796,9 @@ export interface AnaliseViga extends ComMemoria {
    *  INT(mult·100·MEP)/10000; |Mmax| com engaste; 0 com balanço. */
   momentosPilar: [number, number];
   /** Tramos com M+ de engastamento perfeito > 1,01·M+ (tabela informativa). */
-  engastamentoPerfeito: { tramo: number; mPositivo: number; mEsquerdo: number; mDireito: number }[];
+  engastamentoPerfeito: LinhaEngastamentoPerfeito[];
+  /** Vãos dos tramos 1..n, m (o .REP escreve "[L]" do tramo extremo). */
+  vaos: number[];
 }
 export type AnalisaViga = (
   viga: DadosViga,
@@ -655,13 +806,23 @@ export type AnalisaViga = (
   modo: ModoSistrut,
 ) => AnaliseViga;
 
-/** Resolve as cargas indexadas na ordem de dependência (VIGA.BAS:1677-1706) e analisa
- *  todas as vigas. */
+/** Resultado de `AnalisaVigas`: as análises na ordem em que o original as processa e
+ *  as vigas que ficaram sem processar ("AS VIGAS ... NAO FORAM PROCESSADAS"). */
+export interface AnaliseDeVigas {
+  analises: AnaliseViga[];
+  naoProcessadas: string[];
+  /** As vigas da entrada, na mesma ordem, com as cargas indexadas resolvidas (F e Fac
+   *  gravados, sem `indexada`): o .VIG que o DESDIM lê depois do VIGA. */
+  vigas: DadosViga[];
+}
+/** Opção 2 do VIGA (VIGA.BAS:1610-1706): em passadas sobre a lista, analisa cada viga
+ *  sem carga indexada pendente e resolve as cargas das outras vigas que apontam para
+ *  ela. Apoio inexistente na viga de origem deixa a carga pendente (U61-019). */
 export type AnalisaVigas = (
   vigas: readonly DadosViga[],
   parametros: ParametrosVicalc,
   modo: ModoSistrut,
-) => AnaliseViga[];
+) => AnaliseDeVigas;
 
 /** Uma linha do .REP por pilar (VIGA.BAS:2412-2420, 2545). Caso b: P5 17,37 =
  *  6,93 (V2) + 10,44 (V5); P7 momentos "-.64@1 [4]" (V1) e "-1.22@2 [5]" (V4). */
@@ -670,8 +831,9 @@ export interface LinhaRep {
   /** Σ parcelas, t. */
   total: number;
   /** Parcela = INT(R·100)/100 no original (R estática ou máxima); sem truncar no
-   *  corrigido (R5). */
-  parcelas: { viga: string; valor: number }[];
+   *  corrigido (R5). `texto` = a forma gravada no .REP depois do "*" (STR$ cortado 2
+   *  casas depois do ponto, VIGA.BAS:2415). */
+  parcelas: { viga: string; valor: number; texto: string }[];
   /** Momento de extremidade (VIGA.BAS:2416-2419): `valor` = A_0fc4 com 4 casas (tm,
    *  ex.: −0,6481); `texto` = STR$(valor) cortado 2 casas depois do ponto ("-.64"),
    *  que é o que vai ao .REP e o que o PILGEEDI lê, como ABS(VAL(texto))
@@ -697,7 +859,8 @@ export type SomaReacoesPilares = (
 ) => LinhaRep[];
 
 // ============================================================== T4 VIGA: dimensionamento e detalhamento (DESDIM, DESINIT, DESENHO)
-// Arquivos: sistrut/vigas/desdim.ts, sistrut/vigas/desinit.ts, sistrut/quant/vigas.ts.
+// Arquivos: sistrut/vigas/desdim*.ts, desinit*.ts (DESCALC em desinitDescalc.ts, usado
+// pelos dois), sistrut/quant/vigas.ts.
 // Especificação: livros_arm_forma_des.md 1-2 e 4.3; PLANO D1-D8, Q2-Q5. Modo
 // corrigido: R8 (σs elástico sem ÷ γs), R9 (área do φ32, AREAS_DSP_CORRIGIDAS; o φ4 fica desativado),
 // R11 (salto do ramo "barra longa demais"), H (As,mín 0,25 % com CA-25).
@@ -749,6 +912,16 @@ export interface EntradaDesdim {
   parametros: ParametrosDsp;
 }
 
+/** Barras lidas de um arranjo "n1#φ1+n2#φ2" (DESDIM.BAS:3135-3148, L_1521a), como o
+ *  original as guarda em A_128e/A_12bc (colunas 0..3). */
+export interface BarrasArranjo {
+  n1: number;
+  bitola1: number;
+  /** 0 sem segundo grupo; "+#8" conta 1 barra. */
+  n2: number;
+  bitola2: number;
+}
+
 /** Armadura de uma seção (flexão T e dupla, d = hw − 4, ξlim truncado em 3 casas;
  *  DESDIM.BAS:3677-3727, 2839-2957). */
 export interface FlexaoViga {
@@ -760,11 +933,47 @@ export interface FlexaoViga {
   asCompressao: number;
   /** Barras pela tabela de arranjos do .DSP (ex.: "2#12.5+#8"). */
   arranjo: string;
+  /** Barras da armadura comprimida ("-" sem As'; L_1600A, DESDIM.BAS:3276-3335). */
+  arranjoCompressao: string;
+  /** `arranjo` lido como o original o guarda. */
+  barras: BarrasArranjo;
+  /** Caminho da flexão: retangular na alma, T com a LN na mesa, armadura dupla, ou
+   *  "nenhum" onde o DESDIM não dimensiona (balanço, apoio fora do laço). */
+  ramo: "alma" | "mesa" | "dupla" | "nenhum";
+}
+
+/** Abertura de fissuras w1/w2 e limite da classe do .DSP, mm (o original calcula em
+ *  décimos de mm; DESDIM.BAS:4278-4319). `ok` = não passam os dois do limite. */
+export interface FissuracaoViga {
+  w1: number;
+  w2: number;
+  limite: number;
+  ok: boolean;
+}
+
+/** Apoio k (0..n) dimensionado (DESDIM.BAS:2798-2889). Só os apoios do laço do original
+ *  são dimensionados (internos; os extremos com balanço, engaste ou momento externo
+ *  negativo); os outros vêm com `dimensionado: false` e flexão zerada. */
+export interface ApoioDimensionado extends FlexaoViga {
+  apoio: number;
+  dimensionado: boolean;
+  /** Só com a verificação de fissuração ligada (e viga que não é simples). */
+  fissuracao?: FissuracaoViga;
+}
+
+/** Estribo de um lado do tramo (L_16b55, DESDIM.BAS:3395-3634). */
+export interface EstriboLado {
+  /** Texto como o original imprime ("#5/12", "2#6.3/15"); vazio sem Asw. */
+  texto: string;
+  bitola: number;
+  espacamento: number;
+  /** Estribos lado a lado (1, 2 ou 3). */
+  lado: number;
 }
 
 /** Cisalhamento (DESDIM.BAS:3127-3336): ψ = 0,225 + 15ρ, Asw; uma bitola de estribo
  *  para a viga inteira e um espaçamento por lado do tramo (retrad_des_det:
- *  V1.t1.estribo.e / .d). */
+ *  V1.t1.estribo.e / .d). O lado sem apoio do balanço sai zerado e sem texto. */
 export interface CisalhamentoViga {
   vkEsquerda: number;
   vkDireita: number;
@@ -777,15 +986,57 @@ export interface CisalhamentoViga {
     espacamentoEsquerda: number;
     espacamentoDireita: number;
   };
+  /** Estribo de cada lado: bitola mínima ou máxima da viga, espaçamento e texto. */
+  estriboEsquerda: EstriboLado;
+  estriboDireita: EstriboLado;
 }
 
 export interface TramoDimensionado {
+  /** Índice do original (0 = balanço esquerdo, 1..n tramos, n + 1 = balanço direito). */
+  indice: number;
   flexao: FlexaoViga;
   cisalhamento: CisalhamentoViga;
-  /** Flecha, cm (INT(L³·k·1e8/EI)/100, estádio I ou II; DESDIM.BAS:3894). */
+  /** Flecha, cm (INT(L³·k·1e8/EI)/100, estádio I ou II; DESDIM.BAS:3894); 0 nos balanços. */
   flecha: number;
-  /** Abertura de fissuras w1/w2, mm, se a verificação estiver ligada (DESDIM.BAS:4278). */
-  fissuracao?: { w1: number; w2: number; limite: number };
+  /** Flecha como impressa (STR$: ".01"); "" nos balanços. */
+  flechaTexto: string;
+  /** EJ·f no x do M+, t·m³ (S_113f7, DESDIM.BAS:2716-2765). */
+  ejf: number;
+  /** Só com a verificação de fissuração ligada (DESDIM.BAS:4278). */
+  fissuracao?: FissuracaoViga;
+}
+
+/** Esforços de um tramo como o DESDIM os lê do COMMON depois do DESCALC. Índice do
+ *  original: 0 = balanço esquerdo, 1..n = tramos, n + 1 = balanço direito. */
+export interface EsforcosTramoDesdim {
+  indice: number;
+  /** Vão, m (A_1006). */
+  vao: number;
+  /** M+ (tm): o da envoltória (A_1768) ou o de engastamento perfeito (A_11A8), o maior
+   *  (DESDIM.BAS:2934-2953); 0 nos balanços. */
+  mPositivo: number;
+  /** Abscissa do M+ da envoltória (A_173A), m: a da flecha. */
+  x: number;
+  /** Cortantes nas extremidades sem alívio (A_1796(t, 0..1)), t, com o sinal do
+   *  original: os da verificação τwd ≥ 0,25·fcd (DESDIM.BAS:2984-2988). */
+  ve: number;
+  vd: number;
+  /** Cortantes característicos com alívio (A_1540), t. */
+  vkEsquerda: number;
+  vkDireita: number;
+  /** Cortante à esquerda e momento no apoio esquerdo do carregamento do M+ (A_17C4(t,0)
+   *  e A_17C4(t,1)), t e tm: os da flecha (DESDIM.BAS:2716-2720, 6262-6276). */
+  veFlecha: number;
+  mEsquerdo: number;
+  divisoes: readonly DivisaoCarga[];
+}
+
+/** O que o DESDIM lê do COMMON depois do DESCALC (DESDIM.BAS:2707-3057). */
+export interface EsforcosDesdim {
+  /** M de cada apoio 0..n (A_16DE, o da envoltória), tm (negativo = tração em cima). */
+  momentosApoio: number[];
+  /** Tramos na ordem 1 − balE .. n + balD. */
+  tramos: EsforcosTramoDesdim[];
 }
 
 /** Dimensionamento do DESDIM. Caso retrad_des_det (V1 20×50): ver
@@ -793,10 +1044,21 @@ export interface TramoDimensionado {
 export interface DimensionamentoViga extends ComMemoria {
   nome: string;
   tramos: TramoDimensionado[];
-  apoios: FlexaoViga[];
+  /** Apoios 0..n (os fora do laço com `dimensionado: false`). */
+  apoios: ApoioDimensionado[];
+  /** Balanço sem seção própria herda a do apoio vizinho (DESDIM.BAS:2919). */
   balancoEsquerdo?: TramoDimensionado;
   balancoDireito?: TramoDimensionado;
+  /** Bitolas de estribo da viga: máxima para os esforços, mínima para o Asw mínimo
+   *  (DESDIM.BAS:3336, 3350). */
+  bitolasEstribo: { maxima: number; minima: number };
+  /** ξlim = INT(1000/((fyd/Es + 2‰ no aço B)/3,5 + 1))/1000 (DESDIM.BAS:3678). */
+  xiLimite: number;
+  /** Os esforços do DESCALC que o dimensionamento usou. */
+  esforcos: EsforcosDesdim;
 }
+/** Os esforços saem do DESCALC refeito a partir de `entrada.viga` (o original roda o
+ *  DESCALC antes de dimensionar, DESDIM.BAS:795-797): não recebe a análise do VICALC. */
 export type DimensionaViga = (entrada: EntradaDesdim, modo: ModoSistrut) => DimensionamentoViga;
 
 /** Uma posição de barra do detalhamento (DESINIT). */
@@ -811,6 +1073,21 @@ export interface PosicaoBarra {
   inicio: number;
   fim: number;
   tipo: "positiva" | "negativa" | "estribo" | "porta-estribo" | "grampo" | "pele";
+  /** Dobras (ganchos) das pontas, cm (A_1B4E/A_1B20); o comprimento já as inclui. */
+  dobras: [number, number];
+}
+
+/** Trecho de estribos de um tramo (A_1C06): início e fim (cm), bitola, espaçamento,
+ *  estribos lado a lado e o nº da posição (`posicao`, 1 = primeira posição de estribo). */
+export interface TrechoEstribo {
+  inicio: number;
+  fim: number;
+  bitola: number;
+  espacamento: number;
+  ladoALado: number;
+  posicao: number;
+  /** INT((fim − início)/s) + 1 (DESINIT.BAS:892; U07-029). */
+  quantidade: number;
 }
 
 /** Detalhamento longitudinal e transversal (corte sobre o diagrama de 21 pontos,
@@ -819,13 +1096,73 @@ export interface PosicaoBarra {
 export interface DetalhamentoViga extends ComMemoria {
   nome: string;
   posicoes: PosicaoBarra[];
+  trechosEstribo: TrechoEstribo[];
 }
+
+/** Um apoio como o .FOR o grava (A_1926(k,0), A_1954$, A_1982; DESDIM.BAS:4457-4621).
+ *  Na tela do DESENHO: "Apoio Tipo Titulo LPi LPs Dis". */
+export interface ApoioFormaViga {
+  /** Largura do apoio na direção da viga (LPi), cm. */
+  largura: number;
+  /** P pilar, V viga, O outro, A apoio. */
+  tipo: "P" | "V" | "O" | "A";
+  titulo: string;
+  /** Código do apoio (A_1982(k,0); 1 = "Continua Constante", o padrão). */
+  codigo: number;
+  /** LPs e Dis (A_1982(k,1..2)), cm. */
+  lps: number;
+  dis: number;
+}
+
+/** Eixo e alinhamento de um tramo (A_19DE, A_19B0), cm: distância da face do apoio ao
+ *  eixo e desnível da face superior. Índice do original: 0 balanço esquerdo, 1..n
+ *  tramos, n+1 balanço direito (no especial o eixo gravado é 10,0000048). */
+export interface EixoTramoViga {
+  eixo: number;
+  alinhamento: number;
+}
+
+/** Dados do .FOR e da tela do DESENHO que o DESINIT usa e que `EntradaDesdim` não traz.
+ *  Ausentes, valem os padrões da tela do DESENHO. */
+export interface ExtrasDesinit {
+  /** Apoios 0..n. Padrão: largura do apoio à esquerda de cada tramo (o último repete o
+   *  anterior ou vem do balanço direito), tipo P, título P1.., código 1, LPs = largura. */
+  apoios?: ApoioFormaViga[];
+  /** Por índice do original (0..n+1). Padrão: eixo = metade da largura do apoio à
+   *  esquerda (eixos centralizados), alinhamento 0 (face superior alinhada). */
+  eixos?: EixoTramoViga[];
+  /** Arranjo da armadura comprimida ("2#10") dos tramos 1..n (índice t − 1) e dos apoios
+   *  0..n. Padrão: "-" sem As comprimida; com As', o arranjo que o DESDIM escolhe
+   *  (L_1600A). */
+  comprimidaTramos?: string[];
+  comprimidaApoios?: string[];
+}
+
+type FlexaoParaDetalhe = Pick<FlexaoViga, "xd" | "mk" | "as" | "asCompressao" | "arranjo">;
+interface TramoParaDetalhe {
+  flexao: FlexaoParaDetalhe;
+  cisalhamento: Omit<CisalhamentoViga, "estriboEsquerda" | "estriboDireita">;
+  flecha: number;
+}
+/** O que o DESINIT recebe do DESDIM pelo COMMON (DESDIM.BAS:2839-3340): por tramo e
+ *  apoio o arranjo, As e As'; por tramo e balanço o Asw e o estribo. Um
+ *  `DimensionamentoViga` serve; os testes do detalhamento montam só isto, com os
+ *  números que o original imprime. */
+export interface DimensionamentoParaDetalhe {
+  nome: string;
+  tramos: TramoParaDetalhe[];
+  apoios: FlexaoParaDetalhe[];
+  balancoEsquerdo?: TramoParaDetalhe;
+  balancoDireito?: TramoParaDetalhe;
+}
+/** Os esforços do detalhamento saem do DESCALC refeito a partir de `entrada.viga`, como
+ *  no dimensionamento: não recebe a análise. */
 export type DetalhaViga = (
   entrada: EntradaDesdim,
-  dimensionamento: DimensionamentoViga,
+  dimensionamento: DimensionamentoParaDetalhe,
   modo: ModoSistrut,
+  extras?: ExtrasDesinit,
 ) => DetalhamentoViga;
-
 /** Quadro da viga gravado no .TAB (DESINIT.BAS:763-852): volume Σ bw·h·vão livre/10⁴
  *  e fôrma Σ (2h + bw − Hle − Hld)·vão livre/100, ambos INT no centésimo (unidade:
  *  centésimos de m³ e de m²); comprimento por bitola (cm) e peso CINT(compr·kg/m/100).
@@ -869,11 +1206,13 @@ export type ResumoGeralVigas = (
 ) => ResumoVigas;
 
 // ============================================================== T5 PILARES (PILAR, PILAREDI, PILGEEDI, PIPROEDI)
-// Arquivos: sistrut/pilares/** (esforcos.ts, secao.ts, elu.ts, armadura.ts, carga.ts).
-// Especificação: livros_viga_pilar.md seção 2 e 3.2; PLANO P1-P16. Ações
-// CARACTERÍSTICAS: Nk e Mk não são majorados; as resistências são ÷ Csf.
-// Modo corrigido: R12 (a decidir na T5 com o levantamento de livros_viga_pilar.md
-// 5.2: fluência e^X − 1, teto de iterações, ≥ no "ok", |A| na poligonal).
+// Arquivos: sistrut/pilares/** (esforcos.ts, secao.ts, elu.ts, armadura.ts, carga.ts,
+// verificacao.ts). Especificação: livros_viga_pilar.md seção 2 e 3.2; PLANO P1-P16.
+// Ações CARACTERÍSTICAS: Nk e Mk não são majorados; as resistências são ÷ Csf.
+// Modo corrigido (R12): D-1 fluência e^(X−1) → e^X − 1; D-3 Nk = 0; D-6 poligonal
+// anti-horária; D-7 "ok" com ≥; D-8 redução de sobrecarga sem o peso próprio; D-17 ajuste
+// do ângulo da LN por bissecção. D-2 (laço sem fim) vira erro explícito nos dois modos.
+// Não corrigidos: D-4 (λ = 80 exato), D-9.
 
 /** Barra longitudinal na seção: posição (cm, origem no canto inferior esquerdo) e bitola (mm). */
 export interface BarraPilar {
@@ -895,7 +1234,9 @@ export type SituacaoPilar =
   | "Flexao Obliqua"
   | "Flexo Tracao";
 
-/** Veredito de um caso (PILAR.BAS:5342-5360, 5534; PILAREDI.BAS:5361-5425). */
+/** Veredito de um caso (PILAR.BAS:5342-5360, 5534; PILAREDI.BAS:5361-5425). Onde o
+ *  original fica em laço (D-2) ou divide por Nk = 0 (D-3), o caso sai "NAO" com
+ *  `CasoPilar.erro` ("nao-converge" ou "nk-nulo") e um aviso. */
 export type VereditoPilar =
   | "ok"
   | "NAO"
@@ -929,6 +1270,17 @@ export interface CasoPilar {
   m2x: number;
   m2y: number;
   veredito: VereditoPilar;
+  /** Ângulo do momento atuante, graus (V_1368; impresso "incl" com CINT). */
+  anguloAtuante: number;
+  /** MR de 1ª ordem menos M2, por direção, e o total √(x² + y²), tm. */
+  mrxReduzido: number;
+  mryReduzido: number;
+  mrTotal: number;
+  /** "SITUACAO DE INSTABILIDADE": componente e os três números impressos. */
+  instabilidade?: { componente: "total" | "x" | "y"; m1: number; m2: number; atuante: number };
+  /** Situação de erro explícita no lugar do laço sem fim (D-2, `ErroNaoConverge`) ou da
+   *  divisão por zero (D-3). */
+  erro?: "nao-converge" | "nk-nulo";
 }
 
 /** PILAR opção 6, verificação de seção e armadura dadas (PILAR.BAS:4482-5534).
@@ -950,6 +1302,9 @@ export interface VerificacaoPilar extends ComMemoria {
   area: number;
   jx: number;
   jy: number;
+  /** Ec (t/cm²) e λ de Euler (V_118e, V_0e6e; PILAR.BAS:5633-5634). */
+  ec: number;
+  lambdaEuler: number;
   /** λ = CINT(L/√(J/A)·100), inteiro arredondado ao par (PILAR.BAS:5631-5632). */
   lambdaX: number;
   lambdaY: number;
@@ -961,26 +1316,41 @@ export type VerificaPilar = (
   modo: ModoSistrut,
 ) => VerificacaoPilar;
 
-/** Vínculo de um nível na matriz de flambagem do .PIP: 0 engaste, 1 semi-engaste,
- *  2 continuidade, 3 livre (A = 100·(Ry−1) + (Rx−1), PILGEEDI.BAS:1964). */
+/** Vínculo de um nível = ÍNDICE da matriz de flambagem do .PIP: 0 engaste, 1
+ *  semi-engaste, 2 continuidade ("travado", o padrão), 3 livre. Não é o código Rx/Ry
+ *  que o PILGEEDI grava (1-based, empacotado em A = 100·(Ry−1) + (Rx−1),
+ *  PILGEEDI.BAS:1964): o PILAREDI converte o código em índice com 1 → 2, 2 → 3,
+ *  3 e 4 → 0, ≥ 5 → 1 (PILAREDI.BAS:4733-4760; `indiceDoCodigoOriginal`). */
 export type VinculoPilar = 0 | 1 | 2 | 3;
 
-/** Coluna de edifício com os níveis (PILGEEDI). Índice do nível cresce para cima. */
+/** Um nível de uma coluna de edifício (PILGEEDI). */
+export interface NivelColuna {
+  /** Cota do nível, m. */
+  cota: number;
+  /** Seção do lance que começa no nível (níveis seguidos com a mesma geometria formam
+   *  uma "seção" do original, A_1338; o topo pertence à seção do lance de baixo). */
+  secao: SecaoPilar;
+  vinculoX: VinculoPilar;
+  vinculoY: VinculoPilar;
+  /** Normal de vento e momentos iniciais por nível, t e tm. Sem `ventos`, `mkx` vai a 0°
+   *  e `mky` a 90°. */
+  normalVento: number;
+  mkx: number;
+  mky: number;
+  /** Excentricidade da seção que começa no nível em relação à de baixo, cm (A_1338(s,
+   *  4|5), gravada CINT(100·cm)). */
+  excentricidade?: { x: number; y: number };
+  /** Até dois momentos de vento com ângulo, tm e graus (A_12dc 1..4). */
+  ventos?: { m: number; angulo: number }[];
+}
+
+/** Coluna de edifício com os níveis (PILGEEDI). Níveis pelo índice em `niveis` (0 = o
+ *  mais baixo, cresce para cima); `LeituraRep.nivelInicial/Final` são índices. */
 export interface ColunaEdificio {
   nome: string;
   /** Pilar do .REP associado pelo número no nome. */
   pilarRep: string;
-  niveis: {
-    /** Cota do nível, m. */
-    cota: number;
-    secao: SecaoPilar;
-    vinculoX: VinculoPilar;
-    vinculoY: VinculoPilar;
-    /** Normal de vento e momentos iniciais por nível, t e tm. */
-    normalVento: number;
-    mkx: number;
-    mky: number;
-  }[];
+  niveis: NivelColuna[];
 }
 
 /** Carga por coluna e nível (PILGEEDI.BAS:530-660; PILAREDI.BAS:4066-4077, 4721-4773,
@@ -992,11 +1362,20 @@ export interface CargaPilarNivel {
   nivel: number;
   nk: number;
   pesoProprio: number;
-  /** Mk iniciais (inclui o MEP do .REP), tm. */
+  /** Mk iniciais do caso "e" (maior extremo; inclui o MEP do .REP), tm. */
   mkx: number;
   mky: number;
   lex: number;
   ley: number;
+  /** Momentos do caso "f": 0,6·M1 + 0,4·M2 ≥ 0,4·M1 (PILAREDI.BAS:7619-7746), tm. */
+  momentosFlambagem: { mkx: number; mky: number };
+  /** Momentos na base do lance, tm. */
+  momentosBase: { mkx: number; mky: number };
+  /** Normal acumulada dos níveis de cima, sem peso próprio, vento e redução, t. */
+  cargaAcumulada: number;
+  /** Redução de sobrecarga (PILAREDI.BAS:6602-6615) e normal de vento do nível, t. */
+  reducao: number;
+  normalVento: number;
 }
 /** Um .REP lido pelo PILGEEDI (opção 5 de "Arquivar dados de Colunas"): vale para a
  *  faixa de níveis dada (PILGEEDI.BAS:557) e combina com o que já havia por
@@ -1008,12 +1387,19 @@ export interface LeituraRep {
   nivelFinal: number;
   modo: "substitui" | "soma" | "maxima";
 }
+/** `coeficientes`: coeficientes de medida e de força do PILAR.INI (padrão 1 e 1). */
 export type CargasPilares = (
   reps: readonly LeituraRep[],
   colunas: readonly ColunaEdificio[],
   parametros: ParametrosPip,
   modo: ModoSistrut,
+  coeficientes?: { medida: number; forca: number },
 ) => CargaPilarNivel[];
+
+/** Situação que interrompe o dimensionamento, como o original avisa: "LAMBDA" (λ > 140,
+ *  recusa), "NAOBARRA" (nem φ40 cabe), "NAOSUPORTA" (taxa máxima esgotada),
+ *  "NAOCONVERGE" (laço sem fim do original, D-2), "NKNULO" (D-3). */
+export type RecusaPilar = "LAMBDA" | "NAOBARRA" | "NAOSUPORTA" | "NAOCONVERGE" | "NKNULO";
 
 /** Dimensionamento PILAREDI de um nível (PILAREDI.BAS:4721-5885, 6649-6935): casos
  *  "e" (sem 2ª ordem) e "f" (flambagem), critério ≥, "DIMINUI" com 1,05; As
@@ -1033,7 +1419,11 @@ export interface DimensionamentoPilar extends ComMemoria {
   estribo: { bitola: number; espacamento: number };
   /** Seção com as barras escolhidas (para o desenho). */
   secao: SecaoPilar;
+  /** Presente quando o original interrompe o nível; os casos já calculados ficam. */
+  recusa?: RecusaPilar;
 }
+/** `opcoes.barrasAnteriores`: na seção circular, o nº de barras da variação de
+ *  armadura anterior (A_141e 1 + 3; PILAREDI.BAS:6848-6859). */
 export type DimensionaPilar = (
   carga: CargaPilarNivel,
   coluna: ColunaEdificio,
@@ -1041,22 +1431,47 @@ export type DimensionaPilar = (
   parametrosPilar: ParametrosPilar,
   parametrosPip: ParametrosPip,
   modo: ModoSistrut,
+  opcoes?: { barrasAnteriores?: number },
 ) => DimensionamentoPilar;
 
+/** Parâmetros do PILAR.INI usados no predimensionamento (PILAR.BAS:566-567, 576-577). */
+export interface ParametrosPredimensionamento {
+  excentricidadeMinima: number;
+  verificaH30: boolean;
+  coeficienteMedida: number;
+  coeficienteForca: number;
+}
+
 /** Predimensionamento (PILAREDI opção 3.1): tensões Nk/A e Nk/A + Mk/W contra
- *  0,6·fck e 0,75·fck; medidas múltiplas de 5, mínimo 14 cm. */
+ *  0,6·fck e 0,75·fck; medidas múltiplas de 5, mínimo 14 cm. Tensões = as máximas da
+ *  faixa de níveis, a partir de 0, como a tela mostra. */
 export interface PredimensionamentoPilar {
   coluna: string;
+  /** Lado do quadrado escolhido, cm; NaN com a seção imposta. */
   b: number;
   h: number;
+  /** Seção testada por último (a imposta ou o quadrado b × h). */
+  secao: SecaoPilar;
+  /** ΣN acima/((σs − σadm)·ρ/100 + σadm), cm². */
+  areaIdeal: number;
   tensaoNormal: number;
   tensaoNormalAdmissivel: number;
   tensaoFlexao: number;
   tensaoFlexaoAdmissivel: number;
+  /** Cada lado testado em cada nível, do topo para baixo, até o primeiro que reprova. */
+  tentativas: { lado: number; nivel: number; tensaoNormal: number; tensaoFlexao: number }[];
 }
+/** Predimensionamento de uma coluna a partir do nível `nivelBase` (PILAREDI.BAS:
+ *  3713-3740, 3976-4187): o S_60164 roda em modo PREDIMENSIONAMENTO (peso próprio e
+ *  rigidezes da seção em teste) do topo até `nivelBase`, com as cargas do .REP; o lado
+ *  é reprovado se σ1 > 0,6·fck ou σ2 > 0,75·fck em QUALQUER nível e cresce de 5 em 5.
+ *  `opcoes.secao` = B e H digitados: só calcula as tensões. */
 export type PredimensionaPilar = (
-  carga: CargaPilarNivel,
+  reps: readonly LeituraRep[],
+  coluna: ColunaEdificio,
+  nivelBase: number,
   materiais: MateriaisSistrut,
   parametros: ParametrosPip,
   modo: ModoSistrut,
+  opcoes?: { secao?: SecaoPilar; parametros?: ParametrosPredimensionamento },
 ) => PredimensionamentoPilar;

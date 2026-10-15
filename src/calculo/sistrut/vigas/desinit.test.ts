@@ -9,17 +9,9 @@ import { describe, expect, it } from "vitest";
 import { bateComImpresso, CASOS_ORACULO, numeroOraculo, valorOraculo } from "../__oraculo__/index";
 import { sng } from "../base/f32";
 import { emSingle, PARAMETROS_DSP } from "../base/parametros";
-import type { EntradaDesdim } from "../base/tipos";
+import type { EntradaDesdim, PosicaoBarra } from "../base/tipos";
 import { DIMENSIONAMENTO_V1, ENTRADA_V1, ESFORCOS_V1 } from "./__desinit__/casoV1";
-import {
-  apoiosPadrao,
-  arranjoComprimido,
-  detalhaViga,
-  detalhaVigaDesinit,
-  leArranjo,
-  montaComum,
-  type PosicaoDesinit,
-} from "./desinit";
+import { apoiosPadrao, arranjoComprimido, detalhaViga, leArranjo, montaComum } from "./desinit";
 import { faces, gramposPositivos, indiceDobra, qbVal, somaArea } from "./desinitBarras";
 import { cortaBarras, momentoNegativoNoTramo, momentoNoTramo } from "./desinitCorte";
 
@@ -50,8 +42,8 @@ describe("entrada do caso V1: esforços à mão batem com o que o original impri
 });
 
 describe("detalhamento da V1 (retrad_des_det, R1__E2E.DXF)", () => {
-  const d = detalhaVigaDesinit(ENTRADA_V1, DIMENSIONAMENTO_V1, "original");
-  const achar = (tipo: PosicaoDesinit["tipo"], bitola: number, comprimento?: number) => {
+  const d = detalhaViga(ENTRADA_V1, DIMENSIONAMENTO_V1, "original");
+  const achar = (tipo: PosicaoBarra["tipo"], bitola: number, comprimento?: number) => {
     const p = d.posicoes.find(
       (x) =>
         x.tipo === tipo &&
@@ -133,14 +125,14 @@ describe("detalhamento da V1 (retrad_des_det, R1__E2E.DXF)", () => {
   });
 
   it("modo corrigido: o caso não passa pelo defeito R11 e dá as mesmas posições", () => {
-    const c = detalhaVigaDesinit(ENTRADA_V1, DIMENSIONAMENTO_V1, "corrigido");
+    const c = detalhaViga(ENTRADA_V1, DIMENSIONAMENTO_V1, "corrigido");
     expect(c.posicoes.map((p) => [p.tipo, p.quantidade, p.bitola, p.comprimento])).toEqual(
       d.posicoes.map((p) => [p.tipo, p.quantidade, p.bitola, p.comprimento]),
     );
   });
 });
 
-describe("dados que o contrato não traz (padrões da tela do DESENHO)", () => {
+describe("sem `extras`: padrões da tela do DESENHO", () => {
   it("apoios padrão = listagem do .FOR da V1 (retrad_des_menu impressora.prn:7-10)", () => {
     // Apoio Tipo Titulo LPi LPs Dis: 0..2 P P1..P3 20 20 0
     expect(apoiosPadrao(ENTRADA_V1)).toEqual(

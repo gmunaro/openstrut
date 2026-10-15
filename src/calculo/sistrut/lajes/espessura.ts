@@ -8,7 +8,7 @@
 import type { Bordo, Vinculo } from "../../../dominio/obra";
 import { atribuicao } from "../base/f32";
 import type {
-  EspessuraDeLaje,
+  DadosFlechaLaje,
   EspessuraMinimaLaje,
   MateriaisSistrut,
   MomentosDeLaje,
@@ -21,21 +21,6 @@ import {
   type SecaoComBarra,
   secaoComBarra,
 } from "./armaduras";
-
-/** Dados da flecha do modo corrigido (R1), que o contrato `EspessuraMinimaLaje` não
- *  traz: retângulo equivalente lx × ly (m), vínculos dos quatro bordos e a parcela
- *  acidental da carga (t/m²). A permanente é q(H) − acidental. */
-export interface DadosFlechaLaje {
-  lx: number;
-  ly: number;
-  vinculos: Record<Bordo, Vinculo>;
-  acidental: number;
-}
-
-/** Assinatura de `espessuraMinimaLaje`: o contrato mais os dados da flecha (R1). */
-export type EspessuraMinimaLajeComFlecha = (
-  ...args: [...Parameters<EspessuraMinimaLaje>, flecha?: DadosFlechaLaje]
-) => EspessuraDeLaje;
 
 // ---------------------------------------------------------------- flecha (R1)
 // Cópia de `flechaElastica`/`tipoLaje`/`vaoReferencia` de
@@ -138,7 +123,7 @@ export function verificaFlechaLaje(
  * Corrigido (R1): com `flecha`, o H também precisa atender vão/300 e vão/500.
  * E2E: H 7,0, x/d 0,382, # 6.3 c/ 7.5, pp 0,17, p 0,43 (livros_laje.md 2.4).
  */
-export const espessuraMinimaLaje: EspessuraMinimaLajeComFlecha = (
+export const espessuraMinimaLaje: EspessuraMinimaLaje = (
   momentosComH,
   materiais,
   parametros,
@@ -183,7 +168,3 @@ export const espessuraMinimaLaje: EspessuraMinimaLajeComFlecha = (
   }
   return { ok: false };
 };
-
-/** Confere que a implementação atende o contrato de `base/tipos.ts`. */
-const _contrato: EspessuraMinimaLaje = espessuraMinimaLaje;
-void _contrato;

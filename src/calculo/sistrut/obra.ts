@@ -47,10 +47,18 @@ import {
   PARAMETROS_VIGA,
 } from "./base/parametros";
 import type {
+  AnaliseViga,
+  ApoioFormaViga,
   ArmadurasDeLaje,
+  CargaPilarNivel,
   CargaPorArea,
+  ColunaEdificio,
   Continuidade,
+  DadosFlechaLaje,
   DadosViga,
+  DetalhamentoViga,
+  DimensionamentoPilar,
+  DimensionamentoViga,
   EixoViga,
   EntradaDesdim,
   EsforcosLajes,
@@ -59,8 +67,10 @@ import type {
   FormaViga,
   LajeSistrut,
   LeituraRep,
+  LinhaRep,
   MateriaisSistrut,
   ModoSistrut,
+  MontagemPavimento,
   PainelLajes,
   PesoProprioVigas,
   QuadroViga,
@@ -82,23 +92,19 @@ import {
 import { armadurasLaje } from "./lajes/armaduras";
 import { continuidadeAutomatica } from "./lajes/continuidade";
 import { esforcosDoPainelCom } from "./lajes/esforcos";
-import { espessuraMinimaLaje, type DadosFlechaLaje } from "./lajes/espessura";
+import { espessuraMinimaLaje } from "./lajes/espessura";
 import { impoeEspessura, momentosComCoeficiente } from "./lajes/momentos";
 import { otimizaNegativos } from "./lajes/otimizacao";
 import { lajeproc } from "./lajes/proc";
-import { montaPavimentoSistrut, type MontagemPavimentoSistrut } from "./montagem/reacoes";
+import { montaPavimento } from "./montagem/reacoes";
 import { pesoKgPorM } from "./montagem/vigas";
-import { dimensionaPilarSistrut, type DimensionamentoPilarSistrut } from "./pilares/armadura";
-import {
-  cargasPilaresSistrut,
-  type CargaPilarNivelSistrut,
-  type ColunaEdificioSistrut,
-} from "./pilares/carga";
+import { dimensionaPilar } from "./pilares/armadura";
+import { cargasPilares } from "./pilares/carga";
 import { quadroDaViga, resumoGeralVigas } from "./quant/vigas";
-import { dimensionaVigaDesdim, type DimensionamentoDesdim } from "./vigas/desdim";
-import { detalhaVigaDesinit, type ApoioFormaViga, type DetalhamentoDesinit } from "./vigas/desinit";
-import { somaReacoesPilares, type LinhaRepSistrut } from "./vigas/rep";
-import { analisaVigasComPendencias, type AnaliseVigaSistrut } from "./vigas/vicalc";
+import { dimensionaViga } from "./vigas/desdim";
+import { detalhaViga } from "./vigas/desinit";
+import { somaReacoesPilares } from "./vigas/rep";
+import { analisaVigas } from "./vigas/vicalc";
 
 // ---------------------------------------------------------------- materiais e parâmetros
 
@@ -171,8 +177,8 @@ export interface VigaSistrut {
   id: string;
   nome: string;
   entrada: EntradaDesdim;
-  dimensionamento?: DimensionamentoDesdim;
-  detalhamento?: DetalhamentoDesinit;
+  dimensionamento?: DimensionamentoViga;
+  detalhamento?: DetalhamentoViga;
   quadro?: QuadroViga;
   avisos: string[];
 }
@@ -198,12 +204,12 @@ export interface PavimentoSistrut {
   /** Id da viga da V2 pelo nome. */
   idVigas: Record<string, string>;
   geometriaVigas: GeometriaViga[];
-  montagem: MontagemPavimentoSistrut;
+  montagem: MontagemPavimento;
   /** .VIG com as cargas indexadas resolvidas pelo VIGA. */
   vigasVig: DadosViga[];
-  analises: AnaliseVigaSistrut[];
+  analises: AnaliseViga[];
   naoProcessadas: string[];
-  rep: LinhaRepSistrut[];
+  rep: LinhaRep[];
   vigas: VigaSistrut[];
   avisos: string[];
   memoria: Etapa[];
@@ -218,8 +224,8 @@ export interface LancePilarSistrut {
   pavimentoId: string;
   repeticao: number;
   pilarId: string;
-  carga: CargaPilarNivelSistrut;
-  dimensionamento?: DimensionamentoPilarSistrut;
+  carga: CargaPilarNivel;
+  dimensionamento?: DimensionamentoPilar;
   avisos: string[];
 }
 
@@ -228,7 +234,7 @@ export interface ResultadoSistrut {
   materiais: MateriaisSistrut;
   parametros: ParametrosSistrut;
   pavimentos: PavimentoSistrut[];
-  colunas: ColunaEdificioSistrut[];
+  colunas: ColunaEdificio[];
   lances: LancePilarSistrut[];
   /** Quadros das vigas detalhadas (.TAB) e o resumo do DESENHO (item 4). */
   quadros: QuadroViga[];
@@ -594,7 +600,7 @@ function calcularPavimentoSistrut(
   avisos.push(...geo.avisos);
   const eixos = eixosDasVigas(geo.vigas, modo);
   const idVigas = Object.fromEntries(geo.vigas.map((g) => [g.viga.nome, g.viga.id]));
-  const montagem = montaPavimentoSistrut(
+  const montagem = montaPavimento(
     esforcos,
     painel,
     eixos,
@@ -609,7 +615,7 @@ function calcularPavimentoSistrut(
     analises,
     naoProcessadas,
     vigas: vigasVig,
-  } = analisaVigasComPendencias(montagem.vigas, par.viga, modo);
+  } = analisaVigas(montagem.vigas, par.viga, modo);
   if (naoProcessadas.length > 0)
     avisos.push(
       `Vigas não processadas pelo VIGA (carga indexada sem origem): ${naoProcessadas.join(", ")}.`,
@@ -641,8 +647,8 @@ function calcularPavimentoSistrut(
     };
     const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: [] };
     try {
-      v.dimensionamento = dimensionaVigaDesdim(entrada, modo);
-      v.detalhamento = detalhaVigaDesinit(entrada, v.dimensionamento, modo, { apoios });
+      v.dimensionamento = dimensionaViga(entrada, modo);
+      v.detalhamento = detalhaViga(entrada, v.dimensionamento, modo, { apoios });
       v.quadro = quadroDaViga(v.detalhamento, secoes, forma, pav.repeticoes, par.dsp, modo);
     } catch (e) {
       const qb = e instanceof ErroQB ? " (o original para com erro de execução)" : "";
@@ -706,7 +712,7 @@ function calcularPilaresSistrut(
   const chaves: string[] = [];
   for (const { pav } of niveis)
     for (const p of pav.pilares) if (!chaves.includes(chavePilar(p))) chaves.push(chavePilar(p));
-  const colunas: ColunaEdificioSistrut[] = [];
+  const colunas: ColunaEdificio[] = [];
   /** Lances de cada coluna (mesmo índice de `colunas`): pilar e nível de baixo. */
   const lancesDasColunas: { pilar: Pilar; nivel: number }[][] = [];
   chaves.forEach((chave, i) => {
@@ -775,7 +781,7 @@ function calcularPilaresSistrut(
     reps.push({ linhas, nivelInicial: k + 1, nivelFinal: k + 1, modo: "substitui" });
   }
 
-  const cargas = cargasPilaresSistrut(reps, colunas, par.pip, modo);
+  const cargas = cargasPilares(reps, colunas, par.pip, modo);
   const lances: LancePilarSistrut[] = [];
   for (const carga of cargas) {
     const ci = colunas.findIndex((c) => c.nome === carga.coluna);
@@ -793,7 +799,7 @@ function calcularPilaresSistrut(
       avisos: [],
     };
     try {
-      l.dimensionamento = dimensionaPilarSistrut(carga, coluna, mat, par.pilar, par.pip, modo);
+      l.dimensionamento = dimensionaPilar(carga, coluna, mat, par.pilar, par.pip, modo);
     } catch (e) {
       l.avisos.push(`${lance.pilar.nome}: dimensionamento não concluído: ${mensagem(e)}`);
     }

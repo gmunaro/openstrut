@@ -6,7 +6,7 @@
 // e conta à mão 3.2 (caso c). PLANO P1-P7, P16.
 import type { Etapa } from "../../tipos";
 import type { VerificaPilar, VerificacaoPilar } from "../base/tipos";
-import { type CasoPilarSistrut, eluPilar } from "./elu";
+import { eluPilar } from "./elu";
 import {
   casosExcentricidade,
   esbeltez,
@@ -16,22 +16,9 @@ import {
 } from "./esforcos";
 import { criaContexto, inercias, novoEstado, secaoCalculo } from "./secao";
 
-/** Verificação com os casos estendidos (ver `CasoPilarSistrut`). */
-export interface VerificacaoPilarSistrut extends VerificacaoPilar {
-  casos: CasoPilarSistrut[];
-  /** Ec (t/cm²) e λ de Euler (V_118e, V_0e6e; PILAR.BAS:5633-5634). */
-  ec: number;
-  lambdaEuler: number;
-}
-
 /** Verificação NB1/78 do PILAR (PILAR.BAS:4482-5534). Caso c: 20×20, 4 φ12,5,
  *  Nk 17,37, le 3 → λ 52, "Compressao Centrada", Mx 0,35, MR 0,60 − 0,09 = 0,51, "ok". */
-export const verificaPilar: VerificaPilar = (entrada, modo) => verificaPilarSistrut(entrada, modo);
-
-export function verificaPilarSistrut(
-  entrada: Parameters<VerificaPilar>[0],
-  modo: Parameters<VerificaPilar>[1],
-): VerificacaoPilarSistrut {
+export const verificaPilar: VerificaPilar = (entrada, modo) => {
   const par = entrada.parametros;
   const m = entrada.materiais;
   const ctx = criaContexto(modo, {
@@ -69,7 +56,7 @@ export function verificaPilarSistrut(
   if (area < 0)
     avisos.push("Poligonal no sentido anti-horário: área negativa, resultado sem sentido (D-6).");
   const situacao = situacaoPilar(nk, mxk, myk);
-  const resultado: VerificacaoPilarSistrut = {
+  const resultado: VerificacaoPilar = {
     area,
     jx,
     jy,
@@ -154,6 +141,6 @@ export function verificaPilarSistrut(
     });
   });
   return resultado;
-}
+};
 
 const qbIntLocal = (x: number) => Math.floor(x);

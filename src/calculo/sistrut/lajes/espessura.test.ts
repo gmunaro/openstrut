@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 import { type CasoOraculo, CASOS_ORACULO, bateComImpresso, valorOraculo } from "../__oraculo__";
 import { sng } from "../base/f32";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
-import type { MateriaisSistrut, MomentosDeLaje } from "../base/tipos";
-import { type DadosFlechaLaje, espessuraMinimaLaje } from "./espessura";
+import type { DadosFlechaLaje, MateriaisSistrut, MomentosDeLaje } from "../base/tipos";
+import { espessuraMinimaLaje } from "./espessura";
 
 const PARAM = emSingle(PARAMETROS_LAJE);
 const E2E: MateriaisSistrut = {
@@ -26,11 +26,14 @@ const momentosComH =
   (coef: number, mu: number, bordos: [number, number][]) =>
   (h: number): MomentosDeLaje => {
     const qExt = 3 / 20 + (1 / 100) * h * sng(2.5) + sng(0.1);
-    const mPos = sng(100 * sng(qExt / sng(coef)));
+    const p = sng(qExt / sng(coef));
+    const mPos = sng(100 * p);
     return {
       nome: "L",
       h,
       q: sng(qExt),
+      qSemArredondar: qExt,
+      p,
       pesoProprio: sng((1 / 100) * h * sng(2.5)),
       coeficiente: {
         coeficiente: sng(coef),

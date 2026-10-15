@@ -8,18 +8,7 @@
 //
 // Modo corrigido: o mesmo algoritmo em float64 (o PLANO 4.2 não lista defeito da
 // montagem; R4, peso digitado ≠ H, não se aplica na V2).
-import type {
-  ApoioDeBordo,
-  EixoViga,
-  EsforcosLajes,
-  MontaPavimento,
-  MontagemPavimento,
-  ModoSistrut,
-  PainelLajes,
-  ParametrosLaje,
-  PesoProprioVigas,
-  ReacaoDeBordo,
-} from "../base/tipos";
+import type { MontaPavimento, ReacaoDeBordo } from "../base/tipos";
 import { atribuicao, sng } from "../base/f32";
 import type { Etapa } from "../../tipos";
 import { lajeMontagem, PadraoMontagem } from "./charneiras";
@@ -41,22 +30,8 @@ import {
   tabelaPilares,
   totalDivisoes,
   trechoDaDivisao,
-  type DadosVigaMontagem,
-  type PilarMontagem,
   type VigaMontagem,
 } from "./vigas";
-
-/** `MontagemPavimento` com o que o contrato não tem: J bruto de todos os apoios e os
- *  totais "nominais" do relatório (antes do "Total Considerado"). */
-export interface MontagemPavimentoSistrut extends MontagemPavimento {
-  vigas: DadosVigaMontagem[];
-  totais: MontagemPavimento["totais"] & {
-    /** "Total das Cargas por Area": Σ área do polígono × total, t. */
-    cargasPorAreaNominal: number;
-    /** "Total das Cargas Lineares": Σ comprimento × carga das alvenarias, t. */
-    alvenariasNominal: number;
-  };
-}
 
 /** Limiar dos avisos de 3 % (o SINGLE 0,0299999993; LAJEMONT.BAS:427, 2742). */
 const TRES_POR_CENTO = sng(0.03);
@@ -88,20 +63,17 @@ function trechoDoBordo(
  *  `apoiosDosBordos` e de `ReacaoDeBordo.bordo` com índice 0-based em `vertices`.
  *  Apoio null: procura a viga com um trecho igual ao bordo, como o original; sem
  *  viga, a carga vai para o total dos pilares (como o original faz com apoio em
- *  branco) e sai um aviso.
- *  `geometriaPilares` (fora do contrato): os pilares como segmentos (A_1156). Com ela o
- *  pilar de cada ponto de viga, o pilar-parede, o bordo de laje apoiado em pilar-parede
- *  e a alvenaria sobre ele saem como no original; sem ela, os pilares do `EixoViga`. */
-export function montaPavimentoSistrut(
-  esforcos: EsforcosLajes,
-  painel: PainelLajes,
-  eixos: readonly EixoViga[],
-  apoiosDosBordos: (laje: string, bordo: number) => ApoioDeBordo | null,
-  pesoProprio: PesoProprioVigas,
-  parametros: ParametrosLaje,
-  modo: ModoSistrut,
-  geometriaPilares?: readonly PilarMontagem[],
-): MontagemPavimentoSistrut {
+ *  branco) e sai um aviso. `geometriaPilares`: os pilares como segmentos (A_1156). */
+export const montaPavimento: MontaPavimento = (
+  esforcos,
+  painel,
+  eixos,
+  apoiosDosBordos,
+  pesoProprio,
+  parametros,
+  modo,
+  geometriaPilares,
+) => {
   const s = atribuicao(modo);
   const t: Tolerancias = {
     s,
@@ -355,7 +327,7 @@ export function montaPavimentoSistrut(
     avisos,
     memoria,
   };
-}
+};
 
 /** Área do polígono da laje pelos trapézios (só quando `esforcos.preparadas` não a traz). */
 function areaPoligono(vs: readonly { x: number; y: number }[], s: (x: number) => number) {
@@ -368,6 +340,3 @@ function areaPoligono(vs: readonly { x: number; y: number }[], s: (x: number) =>
   }
   return Math.abs(a);
 }
-
-/** Contrato T6 (base/tipos.ts). */
-export const montaPavimento: MontaPavimento = montaPavimentoSistrut;

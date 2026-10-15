@@ -8,26 +8,22 @@
 // do dimensionamento.
 import { atribuicao } from "../base/f32";
 import type {
+  ApoioDimensionado,
+  BarrasArranjo,
   CisalhamentoViga,
   DimensionaViga,
-  DimensionamentoViga,
-  DivisaoCarga,
   EntradaDesdim,
+  EsforcosDesdim,
+  EsforcosTramoDesdim,
+  FissuracaoViga,
   FlexaoViga,
   ModoSistrut,
   SecaoViga,
   TramoDimensionado,
 } from "../base/tipos";
 import type { Etapa } from "../../tipos";
+import { areaBitola, arranjoCompressao, arranjoTracao, leArranjo } from "./desdim-barras";
 import {
-  type BarrasArranjo,
-  areaBitola,
-  arranjoCompressao,
-  arranjoTracao,
-  leArranjo,
-} from "./desdim-barras";
-import {
-  type EstriboLado,
   aswCortante,
   bitolasEstriboViga,
   estribosLadoALado,
@@ -43,38 +39,6 @@ const COEFICIENTE_MEDIDA = 1;
 const COEFICIENTE_FORCA = 1;
 
 // ---------------------------------------------------------------- esforços do DESCALC
-
-/** Esforços de um tramo como o DESDIM os lê do COMMON depois do DESCALC. Índice do
- *  original: 0 = balanço esquerdo, 1..n = tramos, n + 1 = balanço direito. */
-export interface EsforcosTramoDesdim {
-  indice: number;
-  /** Vão, m (A_1006). */
-  vao: number;
-  /** M+ (tm): o da envoltória (A_1768) ou o de engastamento perfeito (A_11A8), o maior
-   *  (DESDIM.BAS:2934-2953); 0 nos balanços. */
-  mPositivo: number;
-  /** Abscissa do M+ da envoltória (A_173A), m: a da flecha. */
-  x: number;
-  /** Cortantes nas extremidades sem alívio (A_1796(t, 0..1)), t, com o sinal do
-   *  original: os da verificação τwd ≥ 0,25·fcd (DESDIM.BAS:2984-2988). */
-  ve: number;
-  vd: number;
-  /** Cortantes característicos com alívio (A_1540), t. */
-  vkEsquerda: number;
-  vkDireita: number;
-  /** Cortante à esquerda e momento no apoio esquerdo do carregamento do M+ (A_17C4(t,0)
-   *  e A_17C4(t,1)), t e tm: os da flecha (DESDIM.BAS:2716-2720). */
-  veFlecha: number;
-  mEsquerdo: number;
-  divisoes: readonly DivisaoCarga[];
-}
-
-export interface EsforcosDesdim {
-  /** M de cada apoio 0..n (A_16DE, o da envoltória), tm (negativo = tração em cima). */
-  momentosApoio: number[];
-  /** Tramos na ordem 1 − balE .. n + balD. */
-  tramos: EsforcosTramoDesdim[];
-}
 
 /** Seção de cálculo de um índice de tramo do original. Balanço sem seção própria
  *  herda bw e hw do apoio vizinho (A_1260(MAX(0, t − 1)), DESDIM.BAS:2919-2929). */
@@ -137,61 +101,7 @@ export function esforcosDesdim(entrada: EntradaDesdim, modo: ModoSistrut): Esfor
 
 // ---------------------------------------------------------------- dimensionamento
 
-/** Flexão de uma seção com o detalhe que o original guarda. */
-export interface FlexaoDesdim extends FlexaoViga {
-  /** Barras da armadura comprimida ("-" sem Asc). */
-  arranjoCompressao: string;
-  /** Arranjo lido como o original o guarda em A_128e/A_12bc (colunas 0..3). */
-  barras: BarrasArranjo;
-  ramo: "alma" | "mesa" | "dupla" | "nenhum";
-}
-
-/** Apoio k (0..n). Só os apoios do laço do original são dimensionados (internos; os
- *  extremos com balanço, engaste ou momento externo negativo). */
-export interface ApoioDesdim extends FlexaoDesdim {
-  apoio: number;
-  dimensionado: boolean;
-  fissuracao?: FissuracaoDesdim;
-}
-
-export interface FissuracaoDesdim {
-  /** mm. */
-  w1: number;
-  w2: number;
-  limite: number;
-  ok: boolean;
-}
-
-export interface CisalhamentoDesdim extends CisalhamentoViga {
-  /** Estribo de cada lado: bitola mínima ou máxima da viga, espaçamento e texto. */
-  estriboEsquerda: EstriboLado;
-  estriboDireita: EstriboLado;
-}
-
-export interface TramoDesdim extends TramoDimensionado {
-  /** Índice do original (0 = balanço esquerdo, n + 1 = balanço direito). */
-  indice: number;
-  flexao: FlexaoDesdim;
-  cisalhamento: CisalhamentoDesdim;
-  /** Flecha como impressa (STR$: ".01"); "" nos balanços. */
-  flechaTexto: string;
-  /** EJ·f no x do M+, t·m³. */
-  ejf: number;
-  fissuracao?: FissuracaoDesdim;
-}
-
-export interface DimensionamentoDesdim extends DimensionamentoViga {
-  tramos: TramoDesdim[];
-  apoios: ApoioDesdim[];
-  balancoEsquerdo?: TramoDesdim;
-  balancoDireito?: TramoDesdim;
-  /** Bitolas de estribo da viga (máxima para os esforços, mínima para o Asw mínimo). */
-  bitolasEstribo: { maxima: number; minima: number };
-  xiLimite: number;
-  esforcos: EsforcosDesdim;
-}
-
-const SEM_FLEXAO: FlexaoDesdim = {
+const SEM_FLEXAO: FlexaoViga = {
   xd: 0,
   mk: 0,
   as: 0,
@@ -207,14 +117,7 @@ const SEM_FLEXAO: FlexaoDesdim = {
  *  0,0015·bw·hw do .DSP em todo apoio do laço, barras) e os tramos (M+, As,mín,
  *  barras, Asw e estribos dos dois lados, flecha). Modo corrigido: R8 (σs elástico
  *  sem ÷ γs), R9 (áreas de φ4 e φ32) e H (As,mín 0,25 % com CA-25). */
-export const dimensionaViga: DimensionaViga = (entrada, modo) =>
-  dimensionaVigaDesdim(entrada, modo);
-
-/** O mesmo que `dimensionaViga`, com o tipo detalhado do DESDIM. */
-export function dimensionaVigaDesdim(
-  entrada: EntradaDesdim,
-  modo: ModoSistrut,
-): DimensionamentoDesdim {
+export const dimensionaViga: DimensionaViga = (entrada, modo) => {
   const s = atribuicao(modo);
   const { viga, materiais, parametros: p } = entrada;
   const mult = p.multiplicadorUnidade;
@@ -343,7 +246,7 @@ export function dimensionaVigaDesdim(
   const ini = Math.max(0, Math.min(n, 1 - balE - engE + (externoNeg(0) ? -1 : 0)));
   const fim = Math.min(n, Math.max(0, n - 1 + balD + engD + (externoNeg(1) ? 1 : 0)));
   const simples = !balE && !balD && !engE && !engD && n <= 1 && !externoNeg(0) && !externoNeg(1);
-  const apoios: ApoioDesdim[] = [];
+  const apoios: ApoioDimensionado[] = [];
   for (let k = 0; k <= n; k++) {
     if (k < ini || k > fim) {
       apoios.push({ ...SEM_FLEXAO, apoio: k, dimensionado: false });
@@ -360,7 +263,7 @@ export function dimensionaVigaDesdim(
     if (taxaMin * sec.bw * sec.h > as) as = s(taxaMin * sec.bw * sec.h);
     const arranjo = arranjoTracao(as, sec.bw, p, modo);
     avisaArranjo(arranjo, `apoio ${k}`);
-    const apoio: ApoioDesdim = {
+    const apoio: ApoioDimensionado = {
       apoio: k,
       dimensionado: true,
       xd: r.xd,
@@ -398,13 +301,13 @@ export function dimensionaVigaDesdim(
   }
 
   // ---- tramos (DESDIM.BAS:2917-3057)
-  const tramos: TramoDesdim[] = [];
-  let balancoEsquerdo: TramoDesdim | undefined;
-  let balancoDireito: TramoDesdim | undefined;
+  const tramos: TramoDimensionado[] = [];
+  let balancoEsquerdo: TramoDimensionado | undefined;
+  let balancoDireito: TramoDimensionado | undefined;
   for (const t of esforcos.tramos) {
     const { sec, aswEsquerda, aswDireita } = aswDos(t);
     const interno = t.indice >= 1 && t.indice <= n;
-    let flexao: FlexaoDesdim = SEM_FLEXAO;
+    let flexao: FlexaoViga = SEM_FLEXAO;
     let m = 0;
     if (interno) {
       m = s(t.mPositivo * 100);
@@ -438,7 +341,7 @@ export function dimensionaVigaDesdim(
     if ((temEsquerda && tauAcima(t.ve)) || (temDireita && tauAcima(t.vd)))
       avisos.push(`${viga.nome} tramo ${t.indice}: tensão de cisalhamento acima do limite.`);
     const lado = estribosLadoALado(sec.bw, p);
-    const cisalhamento: CisalhamentoDesdim = {
+    const cisalhamento: CisalhamentoViga = {
       vkEsquerda: temEsquerda ? s(Math.abs(t.vkEsquerda)) : 0,
       vkDireita: temDireita ? s(Math.abs(t.vkDireita)) : 0,
       aswEsquerda: temEsquerda ? aswEsquerda : 0,
@@ -456,7 +359,7 @@ export function dimensionaVigaDesdim(
     let flecha = 0;
     let flechaTexto = "";
     let ejf = 0;
-    let fiss: FissuracaoDesdim | undefined;
+    let fiss: FissuracaoViga | undefined;
     if (interno) {
       ejf = ejfPorTramo.get(t.indice) ?? 0;
       // Deformação lenta: EJf·(1 + 2ξ) (DESDIM.BAS:3018-3019).
@@ -496,7 +399,7 @@ export function dimensionaVigaDesdim(
         ref: "DESDIM.BAS:2917-3057, 3184",
       });
     }
-    const tramo: TramoDesdim = {
+    const tramo: TramoDimensionado = {
       indice: t.indice,
       flexao,
       cisalhamento,
@@ -522,9 +425,9 @@ export function dimensionaVigaDesdim(
     avisos,
     memoria,
   };
-}
+};
 
 /** w do original (décimos de mm, comparados com a classe 1/2/3) em mm. */
-function paraMm(f: Fissuracao): FissuracaoDesdim {
+function paraMm(f: Fissuracao): FissuracaoViga {
   return { w1: f.w1 / 10, w2: f.w2 / 10, limite: f.limite / 10, ok: f.ok };
 }

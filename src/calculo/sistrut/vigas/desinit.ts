@@ -4,22 +4,22 @@
 // ferros do DESINIT o calcula (FUN_2000_2FE8, DESINIT.BAS:562-700).
 // Especificação: livros_arm_forma_des.md 4.3; PLANO D7, D8 e R11.
 //
-// `detalhaViga` implementa o contrato `DetalhaViga`. O contrato não traz tudo o que o
-// DESINIT lê do .FOR e do DESDIM; `detalhaVigaDesinit` aceita esses dados a mais
-// (`ExtrasDesinit`) e `detalhaViga` usa os padrões da tela do DESENHO para eles.
+// `detalhaViga` implementa o contrato `DetalhaViga`. O que o DESINIT lê do .FOR e da
+// tela do DESENHO e `EntradaDesdim` não traz vem em `extras` (`ExtrasDesinit`); sem
+// eles, valem os padrões da tela do DESENHO.
 // Os esforços vêm do DESCALC portado (`analisaDescalc`, `desinitDescalc.ts`), refeito a
 // partir de `entrada.viga` como o DESDIM faz, com a envoltória das acidentais; é o
 // mesmo DESCALC que o dimensionamento (`desdim.ts`) usa. O Mk dos tramos e o Vk com
 // alívio gravados no COMMON também saem dele.
 import type {
+  ApoioFormaViga,
   DetalhaViga,
-  DetalhamentoViga,
-  DimensionamentoViga,
+  DimensionamentoParaDetalhe,
   EntradaDesdim,
-  FlexaoViga,
+  ExtrasDesinit,
   ModoSistrut,
   PosicaoBarra,
-  TramoDimensionado,
+  TrechoEstribo,
 } from "../base/tipos";
 import type { Etapa } from "../../tipos";
 import { ErroQB, qbCint, qbStr } from "../base/f32";
@@ -28,68 +28,8 @@ import { apoiosComNegativo, cortaBarras } from "./desinitCorte";
 import { analisaDescalc } from "./desinitDescalc";
 import { detalhaLongitudinal, estribos, faces, portaEstribos, qbVal } from "./desinitBarras";
 
-/** Um apoio como o .FOR o grava (A_1926(k,0), A_1954$, A_1982; DESDIM.BAS:4457-4621).
- *  Na tela do DESENHO: "Apoio Tipo Titulo LPi LPs Dis". */
-export interface ApoioFormaViga {
-  /** Largura do apoio na direção da viga (LPi), cm. */
-  largura: number;
-  /** P pilar, V viga, O outro, A apoio. */
-  tipo: "P" | "V" | "O" | "A";
-  titulo: string;
-  /** Código do apoio (A_1982(k,0); 1 = "Continua Constante", o padrão). */
-  codigo: number;
-  /** LPs e Dis (A_1982(k,1..2)), cm. */
-  lps: number;
-  dis: number;
-}
-
-/** Eixo e alinhamento de um tramo (A_19DE, A_19B0), cm: distância da face do apoio ao
- *  eixo e desnível da face superior. Índice do original: 0 balanço esquerdo, 1..n
- *  tramos, n+1 balanço direito. */
-export interface EixoTramoViga {
-  eixo: number;
-  alinhamento: number;
-}
-
-/** Dados que o DESINIT usa e o contrato `EntradaDesdim`/`DimensionamentoViga` não traz. */
-export interface ExtrasDesinit {
-  /** Apoios 0..n. Padrão: largura do apoio à esquerda de cada tramo (o último repete o
-   *  anterior ou vem do balanço direito), tipo P, título P1.., código 1, LPs = largura. */
-  apoios?: ApoioFormaViga[];
-  /** Por índice do original (0..n+1). Padrão: eixo = metade da largura do apoio à
-   *  esquerda (eixos centralizados), alinhamento 0 (face superior alinhada). */
-  eixos?: EixoTramoViga[];
-  /** Arranjo da armadura comprimida ("2#10") dos tramos 1..n (índice t − 1) e dos apoios
-   *  0..n. Padrão: "-" sem As comprimida; com As', o arranjo que o DESDIM escolhe
-   *  (L_1600A). */
-  comprimidaTramos?: string[];
-  comprimidaApoios?: string[];
-}
-
-/** Posição com as dobras (ganchos) das pontas, cm, que o contrato `PosicaoBarra` não traz
- *  (A_1B4E/A_1B20; o comprimento já as inclui). */
-export interface PosicaoDesinit extends PosicaoBarra {
-  dobras: [number, number];
-}
-
-/** Trecho de estribos de um tramo (A_1C06): início e fim (cm), bitola, espaçamento,
- *  estribos lado a lado e o nº da posição (`posicao`, 1 = primeira posição de estribo). */
-export interface TrechoEstribo {
-  inicio: number;
-  fim: number;
-  bitola: number;
-  espacamento: number;
-  ladoALado: number;
-  posicao: number;
-  /** INT((fim − início)/s) + 1 (DESINIT.BAS:892; U07-029). */
-  quantidade: number;
-}
-
-/** Detalhamento com as dobras e os trechos de estribo. */
-export interface DetalhamentoDesinit extends DetalhamentoViga {
-  posicoes: PosicaoDesinit[];
-  trechosEstribo: TrechoEstribo[];
-}
+type TramoParaDetalhe = DimensionamentoParaDetalhe["tramos"][number];
+type FlexaoParaDetalhe = DimensionamentoParaDetalhe["apoios"][number];
 
 /** Arranjo da armadura comprimida pela área (L_1600A, DESDIM.BAS:3276-3335): o menor
  *  φ entre 6,3 e 20 em que (n + 1 ou n + 2) barras passam da área, n = 2/4/6 pela
@@ -168,7 +108,7 @@ function espacamentoMinimo(c: Comum, bw: number, h: number) {
  *  dimensionamento usa), a forma (.FOR) e o dimensionamento. */
 export function montaComum(
   entrada: EntradaDesdim,
-  dim: DimensionamentoViga,
+  dim: DimensionamentoParaDetalhe,
   modo: ModoSistrut,
   extras: ExtrasDesinit = {},
 ) {
@@ -220,9 +160,9 @@ export function apoiosPadrao(entrada: EntradaDesdim): ApoioFormaViga[] {
 /** Grava no COMMON o que o DESDIM (S_113F7) deixa para o DESAUXDI/DESINIT: barras de
  *  tramos e apoios (A_128E, A_12BC), comprimidas, cortantes com alívio (A_1540) e
  *  estribos (A_1374, V_0ECE, V_0ED2). */
-function montaDimensionamento(c: Comum, dim: DimensionamentoViga, extras: ExtrasDesinit) {
+function montaDimensionamento(c: Comum, dim: DimensionamentoParaDetalhe, extras: ExtrasDesinit) {
   const n = c.v0ddc;
-  const grava = (m: Comum["a128e"], i: number, f: FlexaoViga) => {
+  const grava = (m: Comum["a128e"], i: number, f: FlexaoParaDetalhe) => {
     const [n1, f1, n2, f2] = leArranjo(f.arranjo);
     m.p(i, 0, n1);
     m.p(i, 1, f1);
@@ -231,7 +171,7 @@ function montaDimensionamento(c: Comum, dim: DimensionamentoViga, extras: Extras
     m.p(i, 6, f.as);
     m.p(i, 7, f.asCompressao);
   };
-  const comprimida = (dado: string | undefined, f: FlexaoViga, bw: number) =>
+  const comprimida = (dado: string | undefined, f: FlexaoParaDetalhe, bw: number) =>
     dado ?? (f.asCompressao > 0 ? arranjoComprimido(c, f.asCompressao, bw) : "-");
   for (let t = 1; t <= n; t++) {
     const f = dim.tramos[t - 1]?.flexao;
@@ -262,7 +202,7 @@ function montaDimensionamento(c: Comum, dim: DimensionamentoViga, extras: Extras
   }
 
   // estribos (L_1661C, L_15433, L_16B55; DESDIM.BAS:3149-3175, 3336-3460)
-  const dimT = (t: number): TramoDimensionado | undefined =>
+  const dimT = (t: number): TramoParaDetalhe | undefined =>
     t === 0 ? dim.balancoEsquerdo : t === n + 1 ? dim.balancoDireito : dim.tramos[t - 1];
   const fimT = n + c.v0de4;
   // V_0E34 e V_0ED2 não são zerados no DESDIM (L_16976, L_1661C): ficam com o valor do
@@ -320,9 +260,9 @@ function montaDimensionamento(c: Comum, dim: DimensionamentoViga, extras: Extras
 /** Comprimento das posições e linhas do quadro de ferros, na ordem do DESINIT (L_20C2C,
  *  DESINIT.BAS:562-940): negativas, grampos negativos, positivas, grampos positivos,
  *  porta-estribos, pele e estribos. */
-function posicoesDoQuadro(c: Comum): PosicaoDesinit[] {
+function posicoesDoQuadro(c: Comum): PosicaoBarra[] {
   const s = c.s;
-  const pos: PosicaoDesinit[] = [];
+  const pos: PosicaoBarra[] = [];
   let num = 0;
   const nome = () => `N${++num}`;
   const longitudinal = (
@@ -477,13 +417,10 @@ function posicoesDoQuadro(c: Comum): PosicaoDesinit[] {
   return pos;
 }
 
-/** Detalhamento com os dados que o contrato não traz (ver `ExtrasDesinit`). */
-export function detalhaVigaDesinit(
-  entrada: EntradaDesdim,
-  dimensionamento: DimensionamentoViga,
-  modo: ModoSistrut,
-  extras: ExtrasDesinit = {},
-): DetalhamentoDesinit {
+/** Detalhamento da viga (contrato `DetalhaViga`): corte, ancoragem, estribos e o quadro
+ *  de ferros. `extras` = dados do .FOR e da tela do DESENHO (`ExtrasDesinit`); sem
+ *  eles, os padrões da tela. */
+export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras = {}) => {
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
   const c = montaComum(entrada, dimensionamento, modo, extras);
@@ -524,9 +461,4 @@ export function detalhaVigaDesinit(
     });
   }
   return { nome: entrada.viga.nome, posicoes, trechosEstribo, avisos, memoria };
-}
-
-/** Detalhamento da viga (contrato `DetalhaViga`), com os padrões da tela do DESENHO para
- *  os dados de forma que o contrato não traz. */
-export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo) =>
-  detalhaVigaDesinit(entrada, dimensionamento, modo);
+};

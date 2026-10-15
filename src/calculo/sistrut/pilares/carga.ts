@@ -9,21 +9,17 @@
 // (resumo na fundação). Livro: livros_viga_pilar.md 2.13 itens 1-3 (U51-046..048,
 // U53-023..027, U53-051..054, U56-025..031). PLANO P11-P13.
 //
-// Convenções desta implementação (o contrato não diz; ver relatório T5):
+// Convenções (documentadas no contrato, base/tipos.ts):
 // - Níveis pelo índice em `ColunaEdificio.niveis` (0 = mais baixo);
 //   `LeituraRep.nivelInicial/Final` são índices. O lance que começa no nível i usa
 //   `niveis[i].secao`; níveis seguidos com a mesma geometria formam uma "seção" do
 //   original (A_1338); o topo pertence à seção do lance de baixo.
-// - Vínculos do contrato = índice da matriz de flambagem (0 engaste, 1 semi-engaste,
-//   2 continuidade = "travado" padrão, 3 livre). O PILGEEDI grava o código Rx/Ry
-//   (1-based) e o PILAREDI mapeia 1→2, 2→3, 3 e 4→0, ≥5→1 (PILAREDI.BAS:4733-4760,
-//   `indiceDoCodigoOriginal`); "livre" é o código 2 do original. O comentário de
-//   `VinculoPilar` em base/tipos.ts ("A = 100·(Ry−1) + (Rx−1)") descreve só o
-//   empacotamento do PILGEEDI, não esse mapeamento.
+// - Vínculos = índice da matriz de flambagem (`VinculoPilar`); o código Rx/Ry do
+//   original converte por `indiceDoCodigoOriginal` (PILAREDI.BAS:4733-4760).
 // - Momentos do .REP: |VAL(texto)|, inclinação 0 (o PILGEEDI zera e só muda pela
 //   tela), rigidez de viga A(k+3)/A(k+2) = 0.
 // - Vento por nível (A_12dc): `normalVento` e até dois momentos com ângulo
-//   (`ventos`, campo local); sem `ventos`, `mkx` vai a 0° e `mky` a 90°.
+//   (`NivelColuna.ventos`); sem `ventos`, `mkx` vai a 0° e `mky` a 90°.
 import { qbCint } from "../base/f32";
 import type {
   CargaPilarNivel,
@@ -33,8 +29,8 @@ import type {
   MateriaisSistrut,
   ModoSistrut,
   ParametrosPip,
+  ParametrosPredimensionamento,
   PredimensionaPilar,
-  PredimensionamentoPilar,
   SecaoPilar,
 } from "../base/tipos";
 import {
@@ -46,17 +42,6 @@ import {
   posiciona,
   secaoCalculo,
 } from "./secao";
-
-/** Campos de nível que o contrato não tem: excentricidade da seção que começa no
- *  nível em relação à de baixo, cm (A_1338(s, 4|5), gravada CINT(100·cm)), e os
- *  dois momentos de vento com ângulo, tm e graus (A_12dc 1..4). */
-export interface NivelColunaSistrut {
-  excentricidade?: { x: number; y: number };
-  ventos?: { m: number; angulo: number }[];
-}
-export type ColunaEdificioSistrut = Omit<ColunaEdificio, "niveis"> & {
-  niveis: (ColunaEdificio["niveis"][number] & NivelColunaSistrut)[];
-};
 
 /** Slot de momento de viga num nível (A_1280(c, i, k..k+3)). */
 export interface MomentoNivel {
@@ -114,7 +99,7 @@ const slotsVazios = (): MomentoNivel[] =>
  *  cheios e mais momentos, o registro para (L_14dd9). */
 export function leCargasRep(
   reps: readonly LeituraRep[],
-  colunas: readonly ColunaEdificioSistrut[],
+  colunas: readonly ColunaEdificio[],
   modo: ModoSistrut,
 ): CargasLidas[] {
   const s = modo === "original" ? Math.fround : (x: number) => x;
@@ -169,7 +154,7 @@ const livre = (v: number) => v === 3;
 /** Comprimentos de flambagem do lance que começa no nível i (PILAREDI.BAS:4721-4771):
  *  desce e sobe enquanto o vínculo for livre; le = Δcota × matriz(inferior, superior). */
 export function comprimentosFlambagem(
-  coluna: ColunaEdificioSistrut,
+  coluna: ColunaEdificio,
   i: number,
   pip: ParametrosPip,
   s: (x: number) => number,
@@ -189,17 +174,6 @@ export function comprimentosFlambagem(
     return s(coef * s(nv[b]!.cota - nv[a]!.cota));
   };
   return { lex: le("vinculoX"), ley: le("vinculoY") };
-}
-
-/** Carga de um nível com o que o contrato ainda não tem: momentos do caso "f"
- *  (0,6·M1 + 0,4·M2) separados dos do caso "e" (maior extremo), momentos da base do
- *  lance, normal acumulada sem peso próprio, redução e normal de vento. */
-export interface CargaPilarNivelSistrut extends CargaPilarNivel {
-  momentosFlambagem: { mkx: number; mky: number };
-  momentosBase: { mkx: number; mky: number };
-  cargaAcumulada: number;
-  reducao: number;
-  normalVento: number;
 }
 
 /** Chave da geometria de uma seção (sem barras), para achar onde a seção muda. */
@@ -240,7 +214,7 @@ interface OpcoesAcumulada {
  *  maior extremo e caso "f" = 0,6·M1 + 0,4·M2 ≥ 0,4·M1. */
 function cargaAcumulada(
   ctx: Contexto,
-  coluna: ColunaEdificioSistrut,
+  coluna: ColunaEdificio,
   lidas: CargasLidas,
   pip: ParametrosPip,
   op: OpcoesAcumulada,
@@ -470,20 +444,17 @@ function contextoCarga(modo: ModoSistrut, materiais?: MateriaisSistrut) {
 /** Cargas de dimensionamento de cada lance (níveis 0..topo−1) de cada coluna
  *  (PILAREDI.BAS:4653, 6599-6630, 7304-7746): Nk = Σ N dos níveis acima + normal de
  *  vento do nível + peso próprio − redução. caso_c_pilaredi: 17,37 + 0,30 = 17,67. */
-export const cargasPilares: CargasPilares = (reps, colunas, parametros, modo) =>
-  cargasPilaresSistrut(reps, colunas, parametros, modo);
-
-export function cargasPilaresSistrut(
-  reps: readonly LeituraRep[],
-  colunas: readonly ColunaEdificioSistrut[],
-  pip: ParametrosPip,
-  modo: ModoSistrut,
+export const cargasPilares: CargasPilares = (
+  reps,
+  colunas,
+  pip,
+  modo,
   coeficientes = { medida: 1, forca: 1 },
-): CargaPilarNivelSistrut[] {
+) => {
   const ctx = contextoCarga(modo);
   const { s } = ctx;
   const todas = leCargasRep(reps, colunas, modo);
-  const saida: CargaPilarNivelSistrut[] = [];
+  const saida: CargaPilarNivel[] = [];
   colunas.forEach((coluna, ci) => {
     const lidas = todas[ci]!;
     const topo = coluna.niveis.length - 1;
@@ -514,7 +485,7 @@ export function cargasPilaresSistrut(
     }
   });
   return saida;
-}
+};
 
 /** Resumo de cargas na fundação (PILAREDI.BAS:960-1000, F_13521): S_60164 desde o
  *  nível de baixo com todas as normais; redução da FUNDAÇÃO (V_0e9e$); impressos
@@ -523,7 +494,7 @@ export function cargasPilaresSistrut(
  *  Caso dim: P5 17,37 + 0,30 = 17,67. */
 export function resumoFundacao(
   reps: readonly LeituraRep[],
-  coluna: ColunaEdificioSistrut,
+  coluna: ColunaEdificio,
   pip: ParametrosPip,
   modo: ModoSistrut,
 ) {
@@ -549,13 +520,6 @@ export function resumoFundacao(
   };
 }
 
-/** Parâmetros do PILAR.INI usados no predimensionamento. */
-export interface ParametrosPredimensionamento {
-  excentricidadeMinima: number;
-  verificaH30: boolean;
-  coeficienteMedida: number;
-  coeficienteForca: number;
-}
 const PADRAO_PREDIM: ParametrosPredimensionamento = {
   excentricidadeMinima: 2,
   verificaH30: true,
@@ -616,15 +580,15 @@ function tensoesNivel(
  *  reprovado se σ1 > 0,6·fck ou σ2 > 0,75·fck em QUALQUER nível e cresce de 5 em 5.
  *  Com `secao` imposta (B e H digitados), só calcula as tensões. As tensões
  *  devolvidas são as máximas da faixa, a partir de 0, como a tela mostra. */
-export function predimensionaColuna(
-  reps: readonly LeituraRep[],
-  coluna: ColunaEdificioSistrut,
-  nivelBase: number,
-  materiais: MateriaisSistrut,
-  pip: ParametrosPip,
-  modo: ModoSistrut,
-  opcoes: { secao?: SecaoPilar; parametros?: ParametrosPredimensionamento } = {},
-) {
+export const predimensionaPilar: PredimensionaPilar = (
+  reps,
+  coluna,
+  nivelBase,
+  materiais,
+  pip,
+  modo,
+  opcoes = {},
+) => {
   const ctx = contextoCarga(modo, materiais);
   const { s } = ctx;
   const par = opcoes.parametros ?? PADRAO_PREDIM;
@@ -689,49 +653,4 @@ export function predimensionaColuna(
       lado = (Math.trunc(lado / pip.multiploMedida) + 1) * pip.multiploMedida;
   }
   throw new Error(`Predimensionamento da coluna ${coluna.nome} não converge`);
-}
-
-/** Predimensionamento pelo contrato, com uma carga só (um nível): área ideal pela
- *  normal acumulada de cima (`cargaAcumulada` quando a carga vem de
- *  `cargasPilaresSistrut`), tensões com N = Nk − vento e os momentos da carga.
- *  Aproximação: o original refaz o peso próprio com a seção em teste e testa
- *  todos os níveis; para isso use `predimensionaColuna` (coluna e .REP). */
-export const predimensionaPilar: PredimensionaPilar = (
-  carga,
-  materiais,
-  pip,
-  modo,
-): PredimensionamentoPilar => {
-  const ctx = contextoCarga(modo, materiais);
-  const { s } = ctx;
-  const sis = "cargaAcumulada" in carga ? (carga as CargaPilarNivelSistrut) : null;
-  const acima = sis ? sis.cargaAcumulada : s(carga.nk - carga.pesoProprio);
-  const n = s(carga.nk - (sis?.normalVento ?? 0));
-  const admN = s(pip.tensaoAdmissivelNormal * materiais.fck);
-  const admM = s(pip.tensaoAdmissivelFlexao * materiais.fck);
-  const quadrado = (l: number): SecaoPilar => ({ tipo: "retangular", b: l, h: l, barras: [] });
-  const sigmaS = tensaoAco2(ctx, quadrado(20), pip);
-  const area = s(acima / ((sigmaS - admN) * (pip.taxaIdealPredimensionamento / 100) + admN));
-  const raiz = s(Math.sqrt(area));
-  let lado =
-    pip.medidaMinima > raiz
-      ? pip.medidaMinima
-      : qbCint(raiz / pip.multiploMedida) * pip.multiploMedida;
-  for (let volta = 0; volta < 200; volta++) {
-    const t = tensoesNivel(ctx, quadrado(lado), n, carga, sigmaS, pip, PADRAO_PREDIM);
-    if (!(t.tensaoFlexao > admM || t.tensaoNormal > admN))
-      return {
-        coluna: carga.coluna,
-        b: lado,
-        h: lado,
-        tensaoNormal: Math.max(0, t.tensaoNormal),
-        tensaoNormalAdmissivel: admN,
-        tensaoFlexao: Math.max(0, t.tensaoFlexao),
-        tensaoFlexaoAdmissivel: admM,
-      };
-    lado = s(lado + pip.multiploMedida);
-    if (lado / pip.multiploMedida !== Math.trunc(lado / pip.multiploMedida))
-      lado = (Math.trunc(lado / pip.multiploMedida) + 1) * pip.multiploMedida;
-  }
-  throw new Error(`Predimensionamento da coluna ${carga.coluna} não converge`);
 };

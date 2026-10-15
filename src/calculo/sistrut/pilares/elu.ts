@@ -12,34 +12,16 @@
 // integrações e o caso sai com `erro: "nao-converge"`; Nk = 0 no original sai com
 // `erro: "nk-nulo"` sem calcular. No corrigido, a tolerância de 0,5 % passa a ser
 // sobre max(|Nk|, 1 t).
-import { qbCint, qbClng, qbInt } from "../base/f32";
+import { ErroNaoConverge, qbCint, qbClng, qbInt } from "../base/f32";
 import type { CasoPilar, VereditoPilar } from "../base/tipos";
 import { type Contexto, type Estado, integra, normal, posiciona } from "./secao";
 
 /** Teto de integrações por caso; o original não tem (U49-009, caso trava). */
 export const LIMITE_INTEGRACOES = 400_000;
 
-/** Erro de convergência: o original ficaria em laço (D-2). */
-export class NaoConverge extends Error {
-  constructor() {
-    super("Busca do equilíbrio sem convergência (o original fica em laço, D-2)");
-  }
-}
-
-/** Caso do SISTRUT com o que o contrato `CasoPilar` ainda não tem (ver relatório T5):
- *  momentos resistentes reduzidos e total, os números da instabilidade e o erro. */
-export interface CasoPilarSistrut extends CasoPilar {
-  /** Ângulo do momento atuante, graus (V_1368; impresso "incl" com CINT). */
-  anguloAtuante: number;
-  /** MR de 1ª ordem menos M2, por direção, e o total √(x² + y²), tm. */
-  mrxReduzido: number;
-  mryReduzido: number;
-  mrTotal: number;
-  /** "SITUACAO DE INSTABILIDADE": componente e os três números impressos. */
-  instabilidade?: { componente: "total" | "x" | "y"; m1: number; m2: number; atuante: number };
-  /** Situação de erro explícita no lugar do laço sem fim ou da divisão por zero. */
-  erro?: "nao-converge" | "nk-nulo";
-}
+/** Erro de convergência da busca do equilíbrio: o original ficaria em laço (D-2). */
+export const naoConverge = () =>
+  new ErroNaoConverge("Busca do equilíbrio sem convergência (o original fica em laço, D-2)");
 
 /** Esforços atuantes de um caso, como o ELU recebe. */
 export interface AtuanteCaso {
@@ -61,7 +43,7 @@ export interface AtuanteCaso {
 /** Testa o equilíbrio: |Ns − Nk + Nc|/|Nk| > 0,5 % (PILAR.BAS:5078, 5147). O
  *  PILAREDI divide por Nk com sinal (PILAREDI.BAS:5105). Corrigido: max(|Nk|, 1). */
 function foraDoEquilibrio(ctx: Contexto, est: Estado, nk: number, comSinal: boolean) {
-  if (ctx.integracoes > LIMITE_INTEGRACOES) throw new NaoConverge();
+  if (ctx.integracoes > LIMITE_INTEGRACOES) throw naoConverge();
   const div = ctx.modo === "corrigido" ? Math.max(Math.abs(nk), 1) : comSinal ? nk : Math.abs(nk);
   return Math.abs(est.ns - nk + est.nc) / div > ctx.k.c0005;
 }
@@ -275,7 +257,7 @@ function normalizaAngulo(ctx: Contexto, theta: number) {
 
 /** Resultado do ELU de um caso, sem os campos de atuante (que vêm de esforcos.ts). */
 export type ResistenteCaso = Omit<
-  CasoPilarSistrut,
+  CasoPilar,
   "rotulo" | "mxa" | "mya" | "mx" | "my" | "mTotal" | "anguloAtuante"
 >;
 
@@ -405,7 +387,7 @@ export function eluPilar(ctx: Contexto, est: Estado, a: AtuanteCaso): Resistente
       if (!reinicia) break;
     }
   } catch (e) {
-    if (e instanceof NaoConverge) return { ...vazio("NAO"), erro: "nao-converge" };
+    if (e instanceof ErroNaoConverge) return { ...vazio("NAO"), erro: "nao-converge" };
     throw e;
   }
   return vazio("NAO");

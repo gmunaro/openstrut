@@ -38,6 +38,9 @@ function momentos(
     nome,
     h: 10,
     q: sng(0.5),
+    qSemArredondar: 0.5,
+    // M+ dado: p = M+/100
+    p: mPos / 100,
     pesoProprio: sng(0.25),
     coeficiente: {
       coeficiente: sng(2.017982780617627),

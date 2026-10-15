@@ -4,12 +4,12 @@
 // no .LAJ e a conta à mão do coeficiente de carga (casos.ts).
 import { describe, expect, it } from "vitest";
 import { bateComImpresso, type CasoOraculo } from "../../__oraculo__";
-import { sng } from "../../base/f32";
+import { ErroNaoConverge, sng } from "../../base/f32";
 import { emSingle, PARAMETROS_LAJE } from "../../base/parametros";
 import type { BarraDeLaje, MateriaisSistrut } from "../../base/tipos";
 import { armadurasLaje, relacoesNegativas } from "../armaduras";
 import { espessuraMinimaLaje } from "../espessura";
-import { NaoConvergeOtimizacao, otimizaNegativos } from "../otimizacao";
+import { type OtimizacaoParada, otimizaNegativos } from "../otimizacao";
 import { lajeproc } from "../proc";
 import {
   CASOS_T2,
@@ -209,10 +209,11 @@ describe("r3: piso Mneg/Mpos 0,35 (LAJECALC 7, item 6)", () => {
     } catch (x) {
       erro = x;
     }
-    expect(erro).toBeInstanceOf(NaoConvergeOtimizacao);
-    if (!(erro instanceof NaoConvergeOtimizacao)) return;
-    const { estado } = erro;
+    expect(erro).toBeInstanceOf(ErroNaoConverge);
+    if (!(erro instanceof ErroNaoConverge)) return;
+    const estado: OtimizacaoParada | undefined = erro.estado;
     expect(estado).toMatchObject({ laje: "L1", codigo: 5 });
+    if (!estado) return;
     confere(o, "L1.otim.alteradaPara", estado.relacaoNova);
     const [l1, l2] = estado.lados;
     for (const [nome, lado] of [

@@ -232,7 +232,7 @@ function viga(r: ResultadoSistrut, id: string): Valor {
   const t = a.tramos[k - 1];
   const td = k === n + 1 ? dados.balancoDireito : dados.tramos[k - 1];
   const div = td?.divisoes[0];
-  const alv = mont.alvenariasSobreViga.find((x) => x.tramo === k);
+  const alv = mont.alvenariasSobreViga?.find((x) => x.tramo === k);
   const mapa: Record<string, Valor> = {
     Ve: t?.ve,
     x: t?.x,

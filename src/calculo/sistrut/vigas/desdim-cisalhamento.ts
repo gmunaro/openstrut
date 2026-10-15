@@ -4,7 +4,7 @@
 // Unidades: cm, t, t/cm²; Asw em cm²/m. Livros: U03-026..039
 // (livros_arm_forma_des.md 4.3); PLANO D3.
 import { ErroQB, atribuicao, qbInt, qbStr } from "../base/f32";
-import type { MateriaisSistrut, ModoSistrut, ParametrosDsp } from "../base/tipos";
+import type { EstriboLado, MateriaisSistrut, ModoSistrut, ParametrosDsp } from "../base/tipos";
 import { areaDaPosicao, bitolaDaPosicao } from "./desdim-barras";
 import type { SecaoCalculo } from "./desdim-flexao";
 
@@ -116,16 +116,6 @@ function espacamentoDaBitola(
   const e = s((n * areaDaPosicao(posicao, parametros, modo) * 200) / asw);
   if (e >= parametros.espacamentoEstriboMaximo) return parametros.espacamentoEstriboMaximo;
   return arredondaNaLista(e, parametros);
-}
-
-/** Estribo de um lado do tramo. */
-export interface EstriboLado {
-  /** Texto como o original imprime ("#5/12", "2#6.3/15"); vazio sem Asw. */
-  texto: string;
-  bitola: number;
-  espacamento: number;
-  /** Estribos lado a lado (1, 2 ou 3). */
-  lado: number;
 }
 
 /** Bitola e espaçamento do estribo para o Asw de um lado (L_16b55, DESDIM.BAS:3395-3634;

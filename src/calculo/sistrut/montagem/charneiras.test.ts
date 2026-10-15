@@ -146,3 +146,23 @@ describe("modo corrigido: código fracionário da otimização (T2, R3)", () => 
     expect(Math.abs(r.areas.reduce<number>((s, a) => s + (a ?? 0), 0) - 20)).toBeLessThan(1e-9);
   });
 });
+
+describe("LAJEMONT × LAJECALC: i da bissetriz sem truncar (LAJEMONT.BAS:14b11-1505c)", () => {
+  // 6 × 6 com o lado x = 6 em código 5 (v2par_laje_otim L1 depois da otimização). O
+  // LAJEMONT usa i = 0,3 sem truncar: os cantos do lado x = 6 dividem com razão √1,3;
+  // o nó de cima fica em x = 6/(1 + √1,3) = 2,8034 e a região de x = 6 é
+  // ((6 + 0,3932)/2)·3,1966 = 10,218 (impresso 10,22). O LAJECALC trunca em 0,29 e dá
+  // 10,18 (lajes/charneiras.test.ts).
+  const Q: [number, number][] = [
+    [0, 0],
+    [0, 6],
+    [6, 6],
+    [6, 0],
+  ];
+  it("região do lado x = 6 = 10,218", () => {
+    const x = 6 / (1 + Math.sqrt(1.3));
+    const area = ((6 + (6 - 2 * x)) / 2) * (6 - x);
+    const a = areas(Q, [0, 0, 5, 0]).areas;
+    expect(Math.abs((a[2] ?? Number.NaN) - area)).toBeLessThan(1e-3);
+  });
+});

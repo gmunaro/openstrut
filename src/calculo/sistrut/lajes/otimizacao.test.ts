@@ -5,7 +5,7 @@
 // ou é fixado no teste; `recalcula` refaz os momentos com os códigos novos.
 import { describe, expect, it } from "vitest";
 import { CASOS_ORACULO, bateComImpresso, valorOraculo } from "../__oraculo__";
-import { sng } from "../base/f32";
+import { ErroNaoConverge, sng } from "../base/f32";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type {
   Continuidade,
@@ -16,7 +16,7 @@ import type {
   MomentosDeLaje,
 } from "../base/tipos";
 import { armadurasLaje } from "./armaduras";
-import { NaoConvergeOtimizacao, otimizaNegativos } from "./otimizacao";
+import { type OtimizacaoParada, otimizaNegativos } from "./otimizacao";
 
 const PARAM = emSingle(PARAMETROS_LAJE);
 const E2E: MateriaisSistrut = {
@@ -40,6 +40,9 @@ function momentosComMPositivo(
     nome,
     h: 10,
     q: sng(0.5),
+    qSemArredondar: 0.5,
+    // M+ dado: p = M+/100
+    p: mPos / 100,
     pesoProprio: sng(0.25),
     coeficiente: {
       coeficiente: sng(COEF_E2E),
@@ -204,11 +207,12 @@ describe("armadura imposta na continuidade (LAJECALC.BAS:2165-2221)", () => {
       }
       return undefined;
     })();
-    expect(erro).toBeInstanceOf(NaoConvergeOtimizacao);
-    if (!(erro instanceof NaoConvergeOtimizacao)) return;
+    expect(erro).toBeInstanceOf(ErroNaoConverge);
+    if (!(erro instanceof ErroNaoConverge)) return;
     expect(erro.message).toContain("R3");
-    expect(erro.estado).toMatchObject({ laje: "A", lado: 0, codigo: 12 });
-    expect(erro.estado.relacaoNova).toBeCloseTo(0.96, 6);
+    const estado: OtimizacaoParada | undefined = erro.estado;
+    expect(estado).toMatchObject({ laje: "A", lado: 0, codigo: 12 });
+    expect(estado?.relacaoNova).toBeCloseTo(0.96, 6);
   });
   it("R3, corrigido: grava 2 + 10·0,96 = 11,6; M− 48,58 → As 2,085 ≤ 2,163 e converge", () => {
     const { esforcos, recalcula } = imposta(50.6);

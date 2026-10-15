@@ -4,11 +4,11 @@
 import { describe, expect, it } from "vitest";
 import { sng } from "../base/f32";
 import { emSingle, PARAMETROS_PILAR } from "../base/parametros";
-import type { BarraPilar, SecaoPilar } from "../base/tipos";
+import type { BarraPilar, CasoPilar, SecaoPilar } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, type CasoOraculo, valorOraculo } from "../__oraculo__";
 import { CASOS_PILAR } from "./__casos__";
-import { type CasoPilarSistrut, cobre } from "./elu";
-import { verificaPilarSistrut } from "./verificacao";
+import { cobre } from "./elu";
+import { verificaPilar } from "./verificacao";
 
 const par = emSingle(PARAMETROS_PILAR);
 const materiais = {
@@ -57,7 +57,7 @@ const textoVeredito = (v: string) => (v === "INSTABILIDADE" ? "SITUACAO DE INSTA
 
 describe("caso_c_pilar: PILAR opção 6, 20×20, 4 φ12,5, Nk 17,37, le 3", () => {
   const caso = CASOS_ORACULO.caso_c_pilar!;
-  const r = verificaPilarSistrut(
+  const r = verificaPilar(
     {
       secao: retangular(20, 20, 3, 2, 2, 12.5),
       nk: sng(17.37),
@@ -110,7 +110,7 @@ describe("caso_c_pilar: PILAR opção 6, 20×20, 4 φ12,5, Nk 17,37, le 3", () =
   });
 
   it("corrigido: mesmo veredito (só o ≥ do D-7 e a tolerância do D-3 mudam)", () => {
-    const rc = verificaPilarSistrut(
+    const rc = verificaPilar(
       {
         secao: retangular(20, 20, 3, 2, 2, 12.5),
         nk: 17.37,
@@ -132,7 +132,7 @@ describe("retrad_pil_verif2: 20×40, 3 + 3 φ16 e laterais, dois carregamentos",
   const caso = CASOS_PILAR.retrad_pil_verif2!;
   const secao = retangular(20, 40, 3, 3, 3, 16, 20);
   const verifica = (nk: number, mxk: number, myk: number, lxe: number, lye: number) =>
-    verificaPilarSistrut(
+    verificaPilar(
       { secao, nk: sng(nk), mxk: sng(mxk), myk: sng(myk), lxe, lye, materiais, parametros: par },
       "original",
     );
@@ -205,7 +205,7 @@ describe("retrad_pil_trava: flexão oblíqua com laço sem fim no caso 2/2 (D-2)
   };
 
   it("original: 1/2 em instabilidade como impresso; 2/2 sai com erro explícito em vez de travar", () => {
-    const r = verificaPilarSistrut(entrada, "original");
+    const r = verificaPilar(entrada, "original");
     expect(r.situacao).toBe("Flexao Obliqua");
     const [c1, c2] = r.casos;
     confere(caso, "c1.Mx", c1!.mx);
@@ -225,7 +225,7 @@ describe("retrad_pil_trava: flexão oblíqua com laço sem fim no caso 2/2 (D-2)
   });
 
   it("corrigido também termina", () => {
-    const r = verificaPilarSistrut({ ...entrada, parametros: PARAMETROS_PILAR }, "corrigido");
+    const r = verificaPilar({ ...entrada, parametros: PARAMETROS_PILAR }, "corrigido");
     expect(r.casos).toHaveLength(2);
   });
 });
@@ -248,12 +248,12 @@ describe("defeitos do original no PILAR (livros_viga_pilar.md 5.2)", () => {
   });
 
   it("D-3: Nk = 0 no original devolve erro em vez de dividir por zero", () => {
-    const r = verificaPilarSistrut({ ...base, nk: 0 }, "original");
+    const r = verificaPilar({ ...base, nk: 0 }, "original");
     expect(r.casos.every((c) => c.erro === "nk-nulo")).toBe(true);
   });
 
   it("D-3: no corrigido, Nk = 0 (flexão pura) é verificado com tolerância absoluta", () => {
-    const r = verificaPilarSistrut(
+    const r = verificaPilar(
       { ...base, nk: 0, mxk: 0.2, parametros: PARAMETROS_PILAR },
       "corrigido",
     );
@@ -262,13 +262,9 @@ describe("defeitos do original no PILAR (livros_viga_pilar.md 5.2)", () => {
 });
 
 /** Confere todos os valores de um carregamento `pref` ("e1") de um caso v2par do PILAR. */
-function confereCarregamento(
-  caso: CasoOraculo,
-  pref: string,
-  r: ReturnType<typeof verificaPilarSistrut>,
-) {
+function confereCarregamento(caso: CasoOraculo, pref: string, r: ReturnType<typeof verificaPilar>) {
   const ids = caso.valores.map((v) => v.id).filter((id) => id.startsWith(`${pref}.`));
-  const campos: Record<string, (c: CasoPilarSistrut) => number | string | undefined> = {
+  const campos: Record<string, (c: CasoPilar) => number | string | undefined> = {
     situacao: () => r.situacao,
     Mx: (c) => c.mx,
     My: (c) => c.my,
@@ -312,7 +308,7 @@ describe("v2par_pilar_mk / lambda / trava (rodada 2)", () => {
     secao: SecaoPilar,
     cj: { Nk_t: number; Mxk_tm: number; Myk_tm: number; Lxe_m: number; Lye_m: number },
   ) =>
-    verificaPilarSistrut(
+    verificaPilar(
       {
         secao,
         nk: sng(cj.Nk_t),
@@ -381,13 +377,13 @@ describe("D-17: laço sem fim no ajuste do ângulo da LN (v2par_pilar_trava)", (
   it.each(conjuntos)(
     "original: Nk %s, Mxk %s, Myk %s → erro explícito no caso que trava",
     (nk, mxk, myk, i) => {
-      const r = verificaPilarSistrut(entrada(nk, mxk, myk), "original");
+      const r = verificaPilar(entrada(nk, mxk, myk), "original");
       expect(r.casos[i]!.erro).toBe("nao-converge");
     },
   );
 
   it.each(conjuntos)("corrigido: Nk %s, Mxk %s, Myk %s converge pela bissecção", (nk, mxk, myk) => {
-    const r = verificaPilarSistrut(
+    const r = verificaPilar(
       { ...entrada(nk, mxk, myk), parametros: PARAMETROS_PILAR },
       "corrigido",
     );

@@ -6,27 +6,20 @@
 // 1999-2136 (S_24f4a), 5711-6310 (L_50cef: As, taxa, estribo). Livro:
 // livros_viga_pilar.md 2.13 itens 4-9 (U53-051..062, U54-008..026). PLANO P8-P10, P14, P15.
 import type { Etapa } from "../../tipos";
-import { qbClng, qbInt } from "../base/f32";
+import { ErroNaoConverge, qbClng, qbInt } from "../base/f32";
 import type {
   BarraPilar,
-  CargaPilarNivel,
-  ColunaEdificio,
+  CasoPilar,
   DimensionaPilar,
   DimensionamentoPilar,
-  MateriaisSistrut,
   ModoSistrut,
   ParametrosPilar,
   ParametrosPip,
   Ponto,
+  RecusaPilar,
   SecaoPilar,
 } from "../base/tipos";
-import {
-  type CasoPilarSistrut,
-  type ControleDimensionamento,
-  NaoConverge,
-  eluPilaredi,
-} from "./elu";
-import type { CargaPilarNivelSistrut } from "./carga";
+import { type ControleDimensionamento, naoConverge, eluPilaredi } from "./elu";
 import { casosExcentricidade, esbeltez, momentoDirecao, momentoTotal } from "./esforcos";
 import {
   type BarraCalculo,
@@ -40,20 +33,12 @@ import {
   posiciona,
 } from "./secao";
 
-/** Número máximo de barras numa seção (V_0e30 = 60, PILAR.BAS:559, PILAR.INI). Não
- *  está em `PARAMETROS_PILAR` (ver relatório T5). */
+/** Número máximo de barras numa seção (V_0e30, comparado em PILAREDI.BAS:6715, 6832).
+ *  60 é o valor embutido (PILAR.BAS:559), mas o original o relê do PILAR.INI
+ *  (PILAR.BAS:616), e o PILAR.INI de fábrica traz 200 ("NUMERO MAXIMO DE BARRAS
+ *  INTERNAS A UMA SECAO", C:/tmp/oraculo/orig/PILAR.INI, linha 6). Pendente de decisão:
+ *  levar a `PARAMETROS_PILAR` com 200 muda o arranjo de seções com mais de 60 barras. */
 export const MAXIMO_BARRAS = 60;
-
-/** Situação que interrompe o dimensionamento, como o original avisa:
- *  "LAMBDA" (λ > 140, recusa), "NAOBARRA" (nem φ40 cabe), "NAOSUPORTA" (taxa
- *  máxima esgotada), "NAOCONVERGE" (laço sem fim do original, D-2), "NKNULO" (D-3). */
-export type RecusaPilar = "LAMBDA" | "NAOBARRA" | "NAOSUPORTA" | "NAOCONVERGE" | "NKNULO";
-
-/** Resultado com os casos estendidos e a recusa, se houver. */
-export interface DimensionamentoPilarSistrut extends DimensionamentoPilar {
-  casos: CasoPilarSistrut[];
-  recusa?: RecusaPilar;
-}
 
 /** Geometria do original para o arranjo: polígono horário com o fecho, ou círculo. */
 type Geometria =
@@ -228,7 +213,7 @@ function arranjoPoligonal(
       return i2 < i1 ? { tipo: "misto" } : { tipo: "bitola" };
     let alvo = s(total / (n2 + lados));
     for (let volta = 0; ; volta++) {
-      if (volta > 100_000) throw new NaoConverge();
+      if (volta > 100_000) throw naoConverge();
       const comp: BarraCalculo[] = [];
       let postas = 0;
       for (let i = 0; i < n; i++) {
@@ -352,7 +337,7 @@ function verificaArranjo(
   const ec = s(
     Math.sqrt(par.coeficienteTensao * ctx.mat.fck * 1000 + 35) * par.multiplicadorEc * 21,
   );
-  const casos: CasoPilarSistrut[] = [];
+  const casos: CasoPilar[] = [];
   const saida = {
     lambdaX,
     lambdaY,
@@ -438,20 +423,11 @@ export const dimensionaPilar: DimensionaPilar = (
   carga,
   coluna,
   materiais,
-  parametrosPilar,
-  parametrosPip,
+  par,
+  pip,
   modo,
-) => dimensionaPilarSistrut(carga, coluna, materiais, parametrosPilar, parametrosPip, modo);
-
-export function dimensionaPilarSistrut(
-  carga: CargaPilarNivel,
-  coluna: ColunaEdificio,
-  materiais: MateriaisSistrut,
-  par: ParametrosPilar,
-  pip: ParametrosPip,
-  modo: ModoSistrut,
-  opcoes: { barrasAnteriores?: number } = {},
-): DimensionamentoPilarSistrut {
+  opcoes = {},
+) => {
   const ctx = criaContexto(modo, {
     fck: materiais.fck,
     fyk: materiais.fyk,
@@ -476,17 +452,14 @@ export function dimensionaPilarSistrut(
     lex: carga.lex,
     ley: carga.ley,
   };
-  // momentos do caso "f" (0,6·M1 + 0,4·M2), quando a carga vem de cargasPilaresSistrut
-  const mf =
-    "momentosFlambagem" in carga ? (carga as CargaPilarNivelSistrut).momentosFlambagem : null;
-  const dadosF: DadosNivel = mf
-    ? {
-        ...dados,
-        mkx: s(mf.mkx * par.coeficienteForca * par.coeficienteMedida),
-        mky: s(mf.mky * par.coeficienteForca * par.coeficienteMedida),
-      }
-    : dados;
-  const resultado: DimensionamentoPilarSistrut = {
+  // momentos do caso "f" (0,6·M1 + 0,4·M2)
+  const mf = carga.momentosFlambagem;
+  const dadosF: DadosNivel = {
+    ...dados,
+    mkx: s(mf.mkx * par.coeficienteForca * par.coeficienteMedida),
+    mky: s(mf.mky * par.coeficienteForca * par.coeficienteMedida),
+  };
+  const resultado: DimensionamentoPilar = {
     coluna: coluna.nome,
     nivel: carga.nivel,
     lambdaX: 0,
@@ -554,8 +527,8 @@ export function dimensionaPilarSistrut(
   let flambagem = false;
   let asE = 0;
   let arranjo: Extract<Arranjo, { tipo: "ok" }> | null = null;
-  let casosE: CasoPilarSistrut[] = [];
-  let casosF: CasoPilarSistrut[] = [];
+  let casosE: CasoPilar[] = [];
+  let casosF: CasoPilar[] = [];
   let lambdas = { lambdaX: 0, lambdaY: 0 };
   const recusa = (r: RecusaPilar, texto: string) => {
     avisos.push(texto);
@@ -563,7 +536,7 @@ export function dimensionaPilarSistrut(
   };
   try {
     for (let volta = 0; ; volta++) {
-      if (volta > 1000) throw new NaoConverge();
+      if (volta > 1000) throw naoConverge();
       if (arranjo === null) {
         // L_56db1
         if (marca === "ESGOTADO" && limite < as)
@@ -656,7 +629,7 @@ export function dimensionaPilarSistrut(
       break;
     }
   } catch (e) {
-    if (e instanceof NaoConverge)
+    if (e instanceof ErroNaoConverge)
       return recusa(
         "NAOCONVERGE",
         "A busca do equilíbrio não converge; o original fica em laço (D-2).",
@@ -704,4 +677,4 @@ export function dimensionaPilarSistrut(
     estribo,
     secao: { ...nivel.secao, barras: barrasSecao },
   };
-}
+};

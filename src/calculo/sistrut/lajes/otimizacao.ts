@@ -11,12 +11,12 @@
 // (CINT(coef·10 + 2), ao par). Se o código não muda, o momento não muda e o mesmo
 // bordo se repete sem fim (ex.: 0,40 × 0,89 → 0,35 → CINT(5,5) = 6 → 0,40).
 // - original: o mesmo algoritmo; onde o original entraria em laço, lança
-//   `NaoConvergeOtimizacao` com o estado da tela (v2par_laje_r3: piso 0,35, CINT(5,4999999)
+//   `ErroNaoConverge` (base/f32.ts) com o estado da tela (v2par_laje_r3: piso 0,35, CINT(5,4999999)
 //   = 5 = código atual).
 // - corrigido: grava o código 2 + 10·coef sem arredondar (coef com 2 casas, que
 //   sempre cai), então a redução converge.
 import type { Etapa } from "../../tipos";
-import { atribuicao, qbCint, qbInt } from "../base/f32";
+import { ErroNaoConverge, atribuicao, qbCint, qbInt } from "../base/f32";
 import type {
   CodigoBordo,
   Continuidade,
@@ -42,25 +42,23 @@ export interface LadoOtimizacao {
 
 /** Ponto em que o SISTRUT original entra em laço (defeito R3): a relação nova grava o
  *  mesmo código, o momento não muda e o mesmo bordo se repete sem fim
- *  (LAJECALC.BAS:2113-2145, 2199-2207). `estado` = o que a tela mostra parada. */
-export class NaoConvergeOtimizacao extends Error {
-  readonly estado: {
-    laje: string;
-    lado: number;
-    relacaoNova: number;
-    codigo: number;
-    lados: LadoOtimizacao[];
-  };
-  constructor(estado: NaoConvergeOtimizacao["estado"]) {
-    super(
-      `Otimização dos negativos não converge: ${estado.laje}, lado ${estado.lado + 1}, relação ` +
-        `Mneg/Mpos alterada para ${estado.relacaoNova}, mas o código gravado continua ${estado.codigo} ` +
-        "(CINT(coef·10 + 2)); o SISTRUT original repete este bordo sem fim (defeito R3).",
-    );
-    this.name = "NaoConvergeOtimizacao";
-    this.estado = estado;
-  }
+ *  (LAJECALC.BAS:2113-2145, 2199-2207). É o `estado` do `ErroNaoConverge` que a
+ *  otimização lança: o que a tela mostra parada. */
+export interface OtimizacaoParada {
+  laje: string;
+  lado: number;
+  relacaoNova: number;
+  codigo: number;
+  lados: LadoOtimizacao[];
 }
+
+const naoConverge = (estado: OtimizacaoParada) =>
+  new ErroNaoConverge(
+    `Otimização dos negativos não converge: ${estado.laje}, lado ${estado.lado + 1}, relação ` +
+      `Mneg/Mpos alterada para ${estado.relacaoNova}, mas o código gravado continua ${estado.codigo} ` +
+      "(CINT(coef·10 + 2)); o SISTRUT original repete este bordo sem fim (defeito R3).",
+    estado,
+  );
 /** Teto de passos por bordo: só protege contra laço; o algoritmo converge antes. */
 const MAXIMO_PASSOS = 1000;
 
@@ -75,7 +73,7 @@ const continuidadeDoBordo = (continuidades: readonly Continuidade[], laje: strin
  * `recalcula(laje)` refaz os momentos da laje com os códigos novos (o
  * `MomentosLaje` da T1). Devolve os esforços com códigos, momentos, coeficientes e
  * fatores atualizados, e uma etapa de memória por alteração. No modo original, lança
- * `NaoConvergeOtimizacao` onde o original travaria (R3).
+ * `ErroNaoConverge` (estado `OtimizacaoParada`) onde o original travaria (R3).
  * v2par_laje_assim: L3 lado 3 22 → 16 e L4 lado 1 22 → 15; v2par_laje_otim: 22 → 5 (piso).
  * E2E: os dois lados de cada continuidade têm o mesmo negativo e nada muda
  * (caso_a_laje: As 2,13/1,68 antes e depois).
@@ -128,7 +126,7 @@ export const otimizaNegativos: OtimizaNegativos = (
     };
   };
   /** Grava a relação nova no bordo e recalcula a laje (LAJECALC.BAS:2116-2124, 2144-2161).
-   *  Código que não muda: no original, laço sem fim (R3), lança `NaoConvergeOtimizacao`;
+   *  Código que não muda: no original, laço sem fim (R3), lança `ErroNaoConverge`;
    *  no corrigido (que não chega aqui), para o bordo com aviso. */
   const grava = (
     nome: string,
@@ -141,7 +139,7 @@ export const otimizaNegativos: OtimizaNegativos = (
     const anterior = alvo.codigos[bordo]!;
     const codigo = codigoDe(coef);
     if (codigo === anterior) {
-      const erro = new NaoConvergeOtimizacao({
+      const erro = naoConverge({
         laje: nome,
         lado: bordo,
         relacaoNova: coef,

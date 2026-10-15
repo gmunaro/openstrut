@@ -14,6 +14,20 @@
 // Código de bordo: 1 livre, 0..2 apoiado, > 2 engastado com i = (código − 2)/10. No
 // modo corrigido a otimização (T2, R3) grava código fracionário (2 + 10·coef); ele
 // entra nas mesmas contas, sem truncar.
+//
+// Dois portes do padrão de charneiras, de propósito (decisão da T7): este é o ÚNICO
+// do LAJEMONT; o de lajes/charneiras.ts (`padraoDeCharneiras`, S_4019b) é o do
+// LAJECALC, que dá o coeficiente de carga. Unificar só valeria se uma versão cobrisse as
+// diferenças do LAJEMONT, e nenhuma das duas cobre a outra: aqui, coordenadas reais sem
+// giro nem afinidade, i do bordo sem o truncamento em 2 casas da bissetriz
+// (LAJECALC.BAS:3425 × LAJEMONT.BAS:14b11-1505c), bordo livre com as charneiras até o
+// meio do bordo (L_4dbbe, LAJEMONT.BAS:7362-7452 e 5539-5547; o LAJECALC usa o raio
+// de 1000 m, LAJECALC.BAS:6898-6941) e o ramo da pré-moldada (S_15790,
+// LAJEMONT.BAS:2276-2590). A T1 tinha um
+// `padraoDeCharneirasLajemont` que só tirava o truncamento do i (sem o bordo livre do
+// LAJEMONT nem a pré-moldada) e que só o próprio teste usava: saiu, com a chave
+// `truncaIDaBissetriz`. As áreas do LAJEMONT nos casos v2par (lajes/esforcos.casos.test.ts)
+// e o 6 × 6 com i 0,3 (10,22 m², charneiras.test.ts) são conferidos contra este porte.
 import {
   dist2,
   direcao,

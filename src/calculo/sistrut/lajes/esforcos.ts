@@ -4,6 +4,7 @@ import type { Etapa } from "../../tipos";
 import type {
   CoeficienteCarga,
   EsforcosDoPainel,
+  EsforcosDoPainelCom,
   EsforcosLajes,
   LajePreparada,
   LajeSistrut,
@@ -12,6 +13,7 @@ import type {
   PainelLajes,
   ParametrosLaje,
 } from "../base/tipos";
+import { ErroNaoConverge } from "../base/f32";
 import { EstadoLajecalc, S_4019b, areaLajegeom } from "./charneiras";
 import {
   S_50187,
@@ -23,19 +25,9 @@ import {
 import { continuidadeAutomatica } from "./continuidade";
 import { coeficientesDosBordos, direcaoMu, momentosComCoeficiente } from "./momentos";
 
-/** Otimização dos negativos já ligada aos materiais e parâmetros (a da T2,
- *  `OtimizaNegativos`): recebe os esforços e o recálculo de uma laje com os
- *  códigos novos. */
-export type OtimizacaoInjetada = (
-  esforcos: EsforcosLajes,
-  recalcula: (laje: LajeSistrut) => MomentosDeLaje,
-) => EsforcosLajes;
-
-/** A otimização injetada recalculou a mesma laje vezes demais: no original é o laço
- *  sem fim do defeito R3 (LAJECALC.BAS:2113, 2123, 2145; v2par_laje_r3, piso 0,35). */
-export class ErroNaoConverge extends Error {}
-
-/** Recálculos por laje antes de declarar que a otimização não converge. No
+/** Recálculos por laje antes de declarar que a otimização não converge
+ *  (`ErroNaoConverge`): no original é o laço sem fim do defeito R3 (LAJECALC.BAS:2113,
+ *  2123, 2145; v2par_laje_r3, piso 0,35). No
  *  v2par_laje_otim a L1 converge em 4 (código 22 → 7 → 6 → 5). */
 export const LIMITE_RECALCULOS = 100;
 
@@ -74,7 +66,7 @@ const calculavel = (l: LajeSistrut) => l.tipo === 0 || l.tipo === 3;
  *     com H, os momentos (opção 5).
  *  4. Com `otimiza`, a otimização dos negativos (opção 6), que recalcula as lajes
  *     cujo código mudou. */
-export function esforcosDoPainelCom(otimiza?: OtimizacaoInjetada): EsforcosDoPainel {
+export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza) => {
   return (painel, parametros, modo) => {
     const avisos: string[] = [];
     const memoria: Etapa[] = [];
@@ -178,7 +170,7 @@ export function esforcosDoPainelCom(otimiza?: OtimizacaoInjetada): EsforcosDoPai
     };
     return otimiza(resultado, recalcula);
   };
-}
+};
 
 /** Esforços do painel sem a otimização dos negativos (opções 1, 2 e 5). Para o
  *  modo original completo, use `esforcosDoPainelCom` com a otimização da T2. */

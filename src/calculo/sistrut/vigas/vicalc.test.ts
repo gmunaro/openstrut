@@ -9,14 +9,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { qbUsing, sng } from "../base/f32";
 import { emSingle, PARAMETROS_VIGA } from "../base/parametros";
-import type { DadosViga, ModoSistrut } from "../base/tipos";
+import type { AnaliseViga, DadosViga, ModoSistrut } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, type ValorOraculo } from "../__oraculo__/index";
 import { CASOS_VICALC, casoVicalc, dadosViga, parametrosDoCaso } from "./__casos__/index";
 import {
   analisaViga,
   analisaVigas,
-  analisaVigasComPendencias,
-  type AnaliseVigaSistrut,
   divisaoComAcidentalGerada,
   fatorReducaoNegativos,
   inerciaPorSecoes,
@@ -28,7 +26,7 @@ import {
  *  convenções dos JSONs: retradução ("a1.Mmax", "a1.Rmin", "ep1.Vd", "b0.carga") e
  *  v2par ("a1.max.M-", "a1.max.R", "a1.min.R", "t1.EEP.Vd", "t0.Vd" e "t{n+1}.Ve" =
  *  carga do balanço), além de "a1.M-", "t2.max.x", "somaR". MEP volta à parte. */
-function calculado(a: AnaliseVigaSistrut, id: string): number {
+function calculado(a: AnaliseViga, id: string): number {
   const [parte = "", campo = "", sub = ""] = id.split(".");
   if (parte === "somaR") return a.somaReacoes;
   const k = Number(parte.slice(parte.search(/\d/)));
@@ -92,7 +90,7 @@ function mascara(id: string) {
 
 /** Confere todos os valores (exceto ecos de entrada) de uma viga do caso. */
 function confere(
-  a: AnaliseVigaSistrut,
+  a: AnaliseViga,
   valores: readonly ValorOraculo[],
   prefixo: string,
   modo: ModoSistrut,
@@ -256,28 +254,19 @@ describe("x1 (acidentais fornecidas, carga indexada)", () => {
   const vigas = caso.vigas.map((v) => dadosViga(v, ORIGINAL));
 
   it("opção 2: V21 só depois da V20, com F = INT(R(1)·1000)/1000 = 2,00", () => {
-    const analises = analisaVigas(vigas, parametros, ORIGINAL);
+    const { analises } = analisaVigas(vigas, parametros, ORIGINAL);
     expect(analises.map((a) => a.nome)).toEqual(["V20", "V21"]);
     // F transferido = INT(R(1) da V20 · 1000)/1000, impresso "2.00" no quadro da V21.
     const f = Math.floor(analises[0]!.apoios[1]!.r * 1000) / 1000;
     expect(qbUsing("###.##", f).trim()).toBe(caso.indexada?.impresso);
     for (const a of analises) {
-      const { falhas } = confere(
-        a as AnaliseVigaSistrut,
-        caso.valores ?? [],
-        `op2.${a.nome}`,
-        ORIGINAL,
-      );
+      const { falhas } = confere(a, caso.valores ?? [], `op2.${a.nome}`, ORIGINAL);
       expect(falhas).toEqual([]);
     }
   });
 
   it("a ordem da lista não muda a ordem de dependência", () => {
-    const { analises, naoProcessadas } = analisaVigasComPendencias(
-      [...vigas].reverse(),
-      parametros,
-      ORIGINAL,
-    );
+    const { analises, naoProcessadas } = analisaVigas([...vigas].reverse(), parametros, ORIGINAL);
     expect(analises.map((a) => a.nome)).toEqual(["V20", "V21"]);
     expect(naoProcessadas).toEqual([]);
   });
@@ -285,10 +274,8 @@ describe("x1 (acidentais fornecidas, carga indexada)", () => {
   it("apoio inexistente na viga de origem: a viga fica sem processar (U61-019)", () => {
     const v21 = structuredClone(vigas[1]!);
     v21.tramos[1]!.divisoes[0]!.indexada = { viga: "V20", apoio: 5 };
-    const r = analisaVigasComPendencias([vigas[0]!, v21], parametros, ORIGINAL);
+    const r = analisaVigas([vigas[0]!, v21], parametros, ORIGINAL);
     expect(r.naoProcessadas).toEqual(["V21"]);
-    const contrato = analisaVigas([vigas[0]!, v21], parametros, ORIGINAL);
-    expect(contrato[0]!.avisos.join(" ")).toContain("V21");
   });
 
   it.each(["V20", "V21"])(

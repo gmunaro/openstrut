@@ -1,15 +1,12 @@
-// Padrão de charneiras e i dos bordos, contra o oráculo (áreas do LAJEMONT no
-// caso_a_laje) e contas à mão de livros_laje.md 1.6 e 2.1/2.6.
+// Padrão de charneiras do LAJECALC e i dos bordos, contra o oráculo (no retângulo com
+// i 0 e 2 as áreas coincidem com as do LAJEMONT no caso_a_laje) e contas à mão de
+// livros_laje.md 1.6 e 2.1/2.6. O padrão do LAJEMONT (i sem truncar) é testado em
+// montagem/charneiras.test.ts.
 import { describe, expect, it } from "vitest";
 import { CASOS_ORACULO, type CasoOraculo, bateComImpresso, valorOraculo } from "../__oraculo__";
 import { PARAMETROS_LAJE, emSingle } from "../base/parametros";
 import type { Ponto } from "../base/tipos";
-import {
-  iDoBordo,
-  padraoDeCharneiras,
-  padraoDeCharneirasLajemont,
-  padraoPorCodigos,
-} from "./charneiras";
+import { iDoBordo, padraoDeCharneiras } from "./charneiras";
 
 const P = emSingle(PARAMETROS_LAJE);
 const CASO_A = CASOS_ORACULO.caso_a_laje as CasoOraculo;
@@ -32,7 +29,7 @@ describe("E2E L1 em coordenadas reais (a montagem usa assim)", () => {
     { x: 4, y: 10 },
     { x: 4, y: 5 },
   ];
-  const padrao = padraoDeCharneiras(l1, [0, 0, 2, 2], [false, false, false, false], P, "original");
+  const padrao = padraoDeCharneiras(l1, [0, 0, 22, 22], P, "original");
   const area = (bordo: number) => padrao.regioes.find((r) => r.bordo === bordo)?.area ?? NaN;
 
   it.each([
@@ -60,7 +57,7 @@ describe("E2E L1 girada e afim (4 × 5,59; livros_laje.md 2.1)", () => {
     { x: 4, y: 10.59 },
     { x: 4, y: 5 },
   ];
-  const { segmentos } = padraoPorCodigos(poligono, [0, 0, 22, 22], P, "original");
+  const { segmentos } = padraoDeCharneiras(poligono, [0, 0, 22, 22], P, "original");
 
   it("cumeeira vertical em x = 1,4641 com 1,590 de comprimento", () => {
     const cumeeira = segmentos.find((s) => Math.abs(s.inicio.x - s.fim.x) < 1e-6 && s.inicio.x > 0);
@@ -86,7 +83,7 @@ describe("bordos livres (LAJECALC.BAS:6898-6941; livros_laje.md 1.6)", () => {
   it("4 × 5 com o bordo y = 5 livre: vizinhos paralelos, divide o livre em √1 : √1", () => {
     // o livre vai de (0,5) a (4,5); os vizinhos x = 0 e x = 4 são apoiados e paralelos,
     // então a charneira sai do meio do livre e desce até o nó dos cantos de baixo (45°)
-    const p = padraoPorCodigos(retangulo(4, 5), [0, 1, 0, 0], P, "original");
+    const p = padraoDeCharneiras(retangulo(4, 5), [0, 1, 0, 0], P, "original");
     const cumeeira = p.segmentos.find((s) => s.inicio.x === 2 && s.fim.x === 2);
     expect([cumeeira?.inicio.y, cumeeira?.fim.y].sort()).toEqual([2, 5]);
     const areas = Object.fromEntries(p.regioes.map((r) => [r.bordo, r.area]));
@@ -95,7 +92,7 @@ describe("bordos livres (LAJECALC.BAS:6898-6941; livros_laje.md 1.6)", () => {
   });
 
   it("dois livres opostos (x = 0 e x = 4): laje armada numa direção, regiões 4 × 2,5", () => {
-    const p = padraoPorCodigos(retangulo(4, 5), [1, 0, 1, 0], P, "original");
+    const p = padraoDeCharneiras(retangulo(4, 5), [1, 0, 1, 0], P, "original");
     expect(p.regioes.map((r) => [r.bordo, r.area])).toEqual([
       [1, 10],
       [3, 10],
@@ -103,7 +100,7 @@ describe("bordos livres (LAJECALC.BAS:6898-6941; livros_laje.md 1.6)", () => {
   });
 
   it("balanço (engaste em x = 0, três livres): uma região, a laje inteira", () => {
-    const p = padraoPorCodigos(retangulo(2, 4), [22, 1, 1, 1], P, "original");
+    const p = padraoDeCharneiras(retangulo(2, 4), [22, 1, 1, 1], P, "original");
     expect(p.regioes).toHaveLength(1);
     expect(p.regioes[0]?.area).toBe(8);
   });
@@ -119,13 +116,13 @@ describe("polígono qualquer", () => {
       { x: 6, y: 3 },
       { x: 6, y: 0 },
     ];
-    const p = padraoPorCodigos(l, [0, 0, 0, 0, 0, 0], P, "original");
+    const p = padraoDeCharneiras(l, [0, 0, 0, 0, 0, 0], P, "original");
     expect(p.regioes.reduce((s, r) => s + r.area, 0)).toBeCloseTo(27, 4);
   });
 
   it("sentido anti-horário é recusado (o LAJEGEOM não cria essa laje)", () => {
     expect(() =>
-      padraoPorCodigos([...retangulo(4, 5)].reverse(), [0, 0, 0, 0], P, "original"),
+      padraoDeCharneiras([...retangulo(4, 5)].reverse(), [0, 0, 0, 0], P, "original"),
     ).toThrow(/anti-horário/);
   });
 });
@@ -153,26 +150,14 @@ describe("iDoBordo (LAJECALC.BAS:6999-7043)", () => {
   });
 });
 
-describe("LAJECALC × LAJEMONT: i da bissetriz com e sem truncamento", () => {
-  // 6 × 6 com o lado x = 6 em i 0,3 (código 5; v2par_laje_otim L1 depois da otimização).
-  // Sem truncar (LAJEMONT): os cantos do lado x = 6 dividem com razão √1,3; o nó de cima
-  // fica em x = 6/(1 + √1,3) = 2,8034 e a região de x = 6 é ((6 + 0,3932)/2)·3,1966.
-  // O LAJECALC trunca i em SINGLE: 1,8/6 = 0,29999998 → INT(29,999998)/100 = 0,29.
+describe("LAJECALC: i da bissetriz truncado em 2 casas (LAJECALC.BAS:3425)", () => {
+  // 6 × 6 com o lado x = 6 em código 5 (v2par_laje_otim L1 depois da otimização). O
+  // LAJECALC trunca i em SINGLE: 1,8/6 = 0,29999998 → INT(29,999998)/100 = 0,29; o nó
+  // de cima fica em x = 6/(1 + √1,29). Sem truncar (LAJEMONT) a região de x = 6 dá
+  // 10,22 (montagem/charneiras.test.ts).
   const v = retangulo(6, 6);
-  const x = 6 / (1 + Math.sqrt(1.3));
-  const area = ((6 + (6 - 2 * x)) / 2) * (6 - x);
-  it("LAJEMONT: região do lado x = 6 = 10,218 (impresso 10,22)", () => {
-    const p = padraoDeCharneirasLajemont(
-      v,
-      [0, 0, 0.3, 0],
-      [false, false, false, false],
-      P,
-      "original",
-    );
-    expect(p.regioes.find((r) => r.bordo === 2)?.area).toBeCloseTo(area, 3);
-  });
-  it("LAJECALC: com i 0,29 a região fica menor", () => {
-    const p = padraoPorCodigos(v, [0, 0, 5, 0], P, "original");
+  it("com i 0,29 a região do lado x = 6 fica menor que a do LAJEMONT", () => {
+    const p = padraoDeCharneiras(v, [0, 0, 5, 0], P, "original");
     const x29 = 6 / (1 + Math.sqrt(1.29));
     expect(p.regioes.find((r) => r.bordo === 2)?.area).toBeCloseTo(
       ((6 + (6 - 2 * x29)) / 2) * (6 - x29),

@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { PARAMETROS_LAJE, emSingle } from "../base/parametros";
 import type { Alvenaria, LajeSistrut, PainelLajes, Ponto } from "../base/tipos";
-import { padraoPorCodigos } from "./charneiras";
+import { padraoDeCharneiras } from "./charneiras";
 import { coeficienteDeCarga, preparaLaje } from "./coeficiente";
 
 const P = emSingle(PARAMETROS_LAJE);
@@ -108,7 +108,7 @@ describe("preparaLaje (LAJECALC.BAS:7128-8171)", () => {
 
 describe("coeficienteDeCarga (LAJECALC.BAS:8172-8411)", () => {
   const coef = (v: Ponto[], codigos: number[]) =>
-    coeficienteDeCarga(padraoPorCodigos(v, codigos, P, "original"), [], P, "original");
+    coeficienteDeCarga(padraoDeCharneiras(v, codigos, P, "original"), P, "original");
 
   it("E2E L1 (4 × 5,59, contínuos à direita e embaixo): termos de livros_laje.md 2.1", () => {
     const c = coef(
@@ -158,8 +158,7 @@ describe("coeficienteDeCarga (LAJECALC.BAS:8172-8411)", () => {
   it("modo corrigido: mesmo coeficiente do E2E", () => {
     const v = retangulo(4, 5.59, 5);
     const c = coeficienteDeCarga(
-      padraoPorCodigos(v, [0, 0, 22, 22], PARAMETROS_LAJE, "corrigido"),
-      [],
+      padraoDeCharneiras(v, [0, 0, 22, 22], PARAMETROS_LAJE, "corrigido"),
       PARAMETROS_LAJE,
       "corrigido",
     );

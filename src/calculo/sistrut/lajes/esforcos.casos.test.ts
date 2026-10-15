@@ -3,7 +3,7 @@
 // run e os valores do JSON da T10; ver o campo "obs" de cada valor).
 import { describe, expect, it } from "vitest";
 import { type ValorOraculo, bateComImpresso } from "../__oraculo__";
-import { qbCint } from "../base/f32";
+import { ErroNaoConverge, atribuicao, qbCint } from "../base/f32";
 import { PARAMETROS_LAJE, emSingle } from "../base/parametros";
 import type { LajeSistrut, ModoSistrut, MomentosDeLaje, PainelLajes } from "../base/tipos";
 import assim from "./__casos_t1__/v2par_laje_assim.json";
@@ -14,8 +14,9 @@ import otim from "./__casos_t1__/v2par_laje_otim.json";
 import r2 from "./__casos_t1__/v2par_laje_r2.json";
 import r3 from "./__casos_t1__/v2par_laje_r3.json";
 import umadir from "./__casos_t1__/v2par_laje_umadir.json";
-import { padraoPorCodigos } from "./charneiras";
-import { ErroNaoConverge, esforcosDoPainel, esforcosDoPainelCom } from "./esforcos";
+import { lajeMontagem, PadraoMontagem } from "../montagem/charneiras";
+import { regiaoDoBordo } from "../montagem/regioes";
+import { esforcosDoPainel, esforcosDoPainelCom } from "./esforcos";
 import { momentosComCoeficiente } from "./momentos";
 
 interface CasoT1 {
@@ -216,10 +217,19 @@ describe.each(CASOS.map((c) => [c.caso, c] as const))("%s", (_, c) => {
           const ids = c.valores.filter(
             (x) => x.id.startsWith(`${l.nome}>`) && x.id.endsWith(".area"),
           );
-          // o LAJEMONT imprime na ordem dos bordos e omite área ≤ 0,005 (LAJEMONT.BAS:2713)
-          const regioes = padraoPorCodigos(l.vertices, l.codigos, p, modo, 0, true).regioes.filter(
-            (r) => r.area > 0.005,
-          );
+          // o LAJEMONT imprime na ordem dos bordos e omite área ≤ 0,005 (LAJEMONT.BAS:2713);
+          // o padrão é o do porte da montagem (i sem truncar), não o do LAJECALC
+          const t = {
+            s: atribuicao(modo),
+            tol: p.toleranciaComprimento,
+            eps: p.toleranciaAngulo,
+          };
+          const lm = lajeMontagem(l.vertices, l.codigos, l.tipo);
+          const padrao = new PadraoMontagem(lm, t);
+          padrao.executa();
+          const regioes = l.codigos
+            .flatMap((cod, k) => (cod === 1 ? [] : [regiaoDoBordo(lm, padrao, k + 1, t, modo)]))
+            .filter((r) => r.area > 0.005);
           expect(regioes.length, l.nome).toBe(ids.length);
           regioes.forEach((r, i) => {
             const v = ids[i];

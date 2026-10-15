@@ -14,15 +14,13 @@ import { sng } from "../../base/f32";
 import { emSingle, PARAMETROS_DSP } from "../../base/parametros";
 import type {
   DadosViga,
-  DimensionamentoViga,
+  DimensionamentoParaDetalhe,
   EntradaDesdim,
-  FlexaoViga,
+  ExtrasDesinit,
   FormaTramo,
   SecaoViga,
-  TramoDimensionado,
   TramoViga,
 } from "../../base/tipos";
-import type { ExtrasDesinit } from "../desinit";
 import entradas from "./v2par_des_entradas.json";
 
 export type NomeCaso = "v2par_des_3tramos" | "v2par_des_2tramos" | "v2par_des_especial";
@@ -94,7 +92,7 @@ const DIMENSIONAMENTOS: Record<
   },
 };
 
-const flexao = (f: Flex | undefined | null): FlexaoViga => ({
+const flexao = (f: Flex | undefined | null): DimensionamentoParaDetalhe["apoios"][number] => ({
   xd: 0,
   mk: 0,
   as: sng(f?.as ?? 0),
@@ -102,7 +100,7 @@ const flexao = (f: Flex | undefined | null): FlexaoViga => ({
   arranjo: f?.arranjo ?? "",
 });
 
-const tramoDim = (t: { flex?: Flex; cis: Cis }): TramoDimensionado => ({
+const tramoDim = (t: { flex?: Flex; cis: Cis }): DimensionamentoParaDetalhe["tramos"][number] => ({
   flexao: flexao(t.flex),
   cisalhamento: {
     vkEsquerda: 0,
@@ -188,14 +186,12 @@ export function casoV2par(nome: NomeCaso) {
   };
   const d = DIMENSIONAMENTOS[nome];
   const tramosDim = d.tramos.map(tramoDim);
-  const dim: DimensionamentoViga = {
+  const dim: DimensionamentoParaDetalhe = {
     nome: v.nome,
     tramos: balE ? tramosDim.slice(1, n + 1) : tramosDim.slice(0, n),
     apoios: d.apoios.slice(0, n + 1).map(flexao),
     ...(balE ? { balancoEsquerdo: tramosDim[0]! } : {}),
     ...(balD ? { balancoDireito: tramosDim[n + 1]! } : {}),
-    avisos: [],
-    memoria: [],
   };
   const extras: ExtrasDesinit = {
     apoios: Array.from({ length: n + 1 }, (_, k) => {

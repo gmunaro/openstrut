@@ -17,18 +17,15 @@ import { sng } from "../base/f32";
 import { PARAMETROS_DSP, emSingle } from "../base/parametros";
 import type {
   DadosViga,
+  DimensionamentoViga,
   DivisaoCarga,
   EntradaDesdim,
   MateriaisSistrut,
   SecaoViga,
+  TramoDimensionado,
 } from "../base/tipos";
 import { CASOS_DESDIM } from "./__desdim__";
-import {
-  type DimensionamentoDesdim,
-  type TramoDesdim,
-  dimensionaVigaDesdim,
-  esforcosDesdim,
-} from "./desdim";
+import { dimensionaViga, esforcosDesdim } from "./desdim";
 
 const div = (p: number, d: number, f = 0, pAc = 0, fAc = 0): DivisaoCarga => ({
   p: sng(p),
@@ -152,7 +149,7 @@ const entradaV5 = entrada(
 type Valor = number | string;
 
 /** Valores do dimensionamento pelos ids do oráculo (<viga>.a<k>.*, <viga>.t<k>.*). */
-function valoresDimensionados(viga: string, r: DimensionamentoDesdim) {
+function valoresDimensionados(viga: string, r: DimensionamentoViga) {
   const v = new Map<string, Valor>();
   for (const a of r.apoios) {
     if (!a.dimensionado) continue;
@@ -164,7 +161,7 @@ function valoresDimensionados(viga: string, r: DimensionamentoDesdim) {
     v.set(`${p}.barras`, a.arranjo);
     if (a.fissuracao) v.set(`${p}.fissura`, Math.min(a.fissuracao.w1, a.fissuracao.w2) * 10);
   }
-  const tramos: TramoDesdim[] = [
+  const tramos: TramoDimensionado[] = [
     ...(r.balancoEsquerdo ? [r.balancoEsquerdo] : []),
     ...r.tramos,
     ...(r.balancoDireito ? [r.balancoDireito] : []),
@@ -244,13 +241,13 @@ describe.each(casos)("%s: esforços do DESCALC contra a análise impressa", (nom
 describe.each(casos)("%s: dimensionamento, modo original", (nome, viga, e) => {
   const ids = confere(
     CASOS_DESDIM[nome]!,
-    valoresDimensionados(viga, dimensionaVigaDesdim(e, "original")),
+    valoresDimensionados(viga, dimensionaViga(e, "original")),
   );
   it("conferiu os números do dimensionamento", () => expect(ids.length).toBeGreaterThan(20));
 });
 
 describe("v2par_des_especial: avisos que o original mostrou (roteiro do caso)", () => {
-  const r = dimensionaVigaDesdim(entradaD1, "original");
+  const r = dimensionaViga(entradaD1, "original");
   it("momento acima de 40% do limite da armadura simples no apoio 1 (DESDIM.BAS:3712, 3070)", () => {
     expect(r.avisos.some((a) => a.includes("apoio 1") && a.includes("40%"))).toBe(true);
   });

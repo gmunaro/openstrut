@@ -4,16 +4,7 @@
 // livros_arm_forma_des.md 4.3 (U04-005, U05-010, U05-013).
 import { AREAS_DSP_CORRIGIDAS } from "../base/parametros";
 import { atribuicao, qbInt, qbStr } from "../base/f32";
-import type { ModoSistrut, ParametrosDsp } from "../base/tipos";
-
-/** Barras lidas de um arranjo "n1#φ1+n2#φ2" (DESDIM.BAS:3135-3148, L_1521a). */
-export interface BarrasArranjo {
-  n1: number;
-  bitola1: number;
-  /** 0 sem segundo grupo; "+#8" conta 1 barra. */
-  n2: number;
-  bitola2: number;
-}
+import type { BarrasArranjo, ModoSistrut, ParametrosDsp } from "../base/tipos";
 
 /** Área (cm²) da bitola pela tabela do .DSP (S_40141, DESDIM.BAS:4933-4970; U04-005).
  *  Bitola fora da tabela devolve a própria bitola, como o original (V_0e44 não muda).

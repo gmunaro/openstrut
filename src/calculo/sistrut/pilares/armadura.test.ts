@@ -5,17 +5,17 @@
 import { describe, expect, it } from "vitest";
 import { sng } from "../base/f32";
 import { emSingle, PARAMETROS_PILAR, PARAMETROS_PIP } from "../base/parametros";
-import type { ColunaEdificio, LeituraRep, SecaoPilar } from "../base/tipos";
+import type {
+  CasoPilar,
+  ColunaEdificio,
+  DimensionamentoPilar,
+  LeituraRep,
+  SecaoPilar,
+} from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, type CasoOraculo, valorOraculo } from "../__oraculo__";
 import { CASOS_PILAR } from "./__casos__";
-import {
-  arranjoCircular,
-  type DimensionamentoPilarSistrut,
-  dimensionaPilarSistrut,
-  posicaoNoVertice,
-} from "./armadura";
-import { cargasPilaresSistrut, predimensionaColuna } from "./carga";
-import type { CasoPilarSistrut } from "./elu";
+import { arranjoCircular, dimensionaPilar, posicaoNoVertice } from "./armadura";
+import { cargasPilares, predimensionaPilar } from "./carga";
 import { constantes, criaContexto } from "./secao";
 
 const par = emSingle(PARAMETROS_PILAR);
@@ -54,10 +54,10 @@ function colunaP5(secao: SecaoPilar): ColunaEdificio {
 function dimensiona(secao: SecaoPilar, modo: "original" | "corrigido" = "original") {
   const coluna = colunaP5(secao);
   const p = modo === "original" ? pip : PARAMETROS_PIP;
-  const [carga] = cargasPilaresSistrut([repP5], [coluna], p, modo);
+  const [carga] = cargasPilares([repP5], [coluna], p, modo);
   return {
     carga: carga!,
-    r: dimensionaPilarSistrut(
+    r: dimensionaPilar(
       carga!,
       coluna,
       materiais,
@@ -78,7 +78,7 @@ function confere(caso: CasoOraculo, id: string, calculado: number) {
 }
 
 /** Uma linha da tabela "Atuante / Resistente / Situação" do relatório do PILAREDI. */
-function confereLinha(caso: CasoOraculo, pref: string, c: CasoPilarSistrut) {
+function confereLinha(caso: CasoOraculo, pref: string, c: CasoPilar) {
   const campos: [string, number][] = [
     ["Mkx", c.mx],
     ["Mky", c.my],
@@ -97,7 +97,7 @@ function confereLinha(caso: CasoOraculo, pref: string, c: CasoPilarSistrut) {
   for (const [nome, valor] of campos) confere(caso, `${pref}.${c.rotulo}.${nome}`, valor);
 }
 
-function confereArmadura(caso: CasoOraculo, pref: string, r: DimensionamentoPilarSistrut) {
+function confereArmadura(caso: CasoOraculo, pref: string, r: DimensionamentoPilar) {
   confere(caso, `${pref}.As`, r.as);
   confere(caso, `${pref}.taxa`, r.taxa);
   expect(r.barras).toHaveLength(1);
@@ -271,7 +271,7 @@ describe("v2par_pilar_niveis: P5 25×40 de FUND a COB, carga do .REP nos níveis
     niveis: [0, 3, 6, 9].map(nivel),
   };
   const reps = [1, 2, 3].map((n) => ({ ...repP5, nivelInicial: n, nivelFinal: n }));
-  const cargas = cargasPilaresSistrut(reps, [coluna], pip, "original");
+  const cargas = cargasPilares(reps, [coluna], pip, "original");
 
   it.each([
     ["FUND", 0],
@@ -279,7 +279,7 @@ describe("v2par_pilar_niveis: P5 25×40 de FUND a COB, carga do .REP nos níveis
     ["PAV2", 2],
   ] as const)("lance %s: Nk acumulada + peso próprio, casos e armadura 8 # 10", (nome, i) => {
     const carga = cargas[i]!;
-    const r = dimensionaPilarSistrut(carga, coluna, materiais, par, pip, "original");
+    const r = dimensionaPilar(carga, coluna, materiais, par, pip, "original");
     const pref = `P5.${nome}`;
     confere(caso, `${pref}.Nk`, carga.nk);
     confere(caso, `${pref}.Mkxi`, carga.mkx);
@@ -292,7 +292,7 @@ describe("v2par_pilar_niveis: P5 25×40 de FUND a COB, carga do .REP nos níveis
   });
 
   it("predimensionamento com a seção imposta desde FUND: carga 54,36, σ 0,001 e 0,027", () => {
-    const p = predimensionaColuna(reps, coluna, 0, materiais, pip, "original", { secao });
+    const p = predimensionaPilar(reps, coluna, 0, materiais, pip, "original", { secao });
     confere(caso, "P5.predim.sigmaAdmComp", p.tensaoNormalAdmissivel);
     confere(caso, "P5.predim.sigmaComp", p.tensaoNormal);
     confere(caso, "P5.predim.sigmaAdmCompM", p.tensaoFlexaoAdmissivel);

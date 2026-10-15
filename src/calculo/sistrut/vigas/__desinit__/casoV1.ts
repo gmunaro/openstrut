@@ -12,12 +12,7 @@
 // 0,61/1,09 = Ve − q·h/2).
 import { sng } from "../../base/f32";
 import { emSingle, PARAMETROS_DSP } from "../../base/parametros";
-import type {
-  DimensionamentoViga,
-  EntradaDesdim,
-  FlexaoViga,
-  TramoDimensionado,
-} from "../../base/tipos";
+import type { DimensionamentoParaDetalhe, EntradaDesdim } from "../../base/tipos";
 
 const q = sng(0.486);
 const L = 4;
@@ -30,7 +25,7 @@ const xPos = sng(0.729 / 0.486);
 /** Esforços à mão (ver o cabeçalho). */
 export const ESFORCOS_V1 = { q, m1, ve, vd, mPos, xPos };
 
-const flexao = (mk: number): FlexaoViga => ({
+const flexao = (mk: number): DimensionamentoParaDetalhe["apoios"][number] => ({
   xd: sng(0.025),
   mk,
   as: sng(1.5),
@@ -42,7 +37,10 @@ const flexao = (mk: number): FlexaoViga => ({
 const vkE1 = sng(0.729 - 0.486 * 0.25);
 const vkD1 = sng(1.215 - 0.486 * 0.25);
 
-const tramoDim = (vkEsquerda: number, vkDireita: number): TramoDimensionado => ({
+const tramoDim = (
+  vkEsquerda: number,
+  vkDireita: number,
+): DimensionamentoParaDetalhe["tramos"][number] => ({
   flexao: flexao(mPos),
   cisalhamento: {
     vkEsquerda,
@@ -54,12 +52,10 @@ const tramoDim = (vkEsquerda: number, vkDireita: number): TramoDimensionado => (
   flecha: sng(0.01),
 });
 
-export const DIMENSIONAMENTO_V1: DimensionamentoViga = {
+export const DIMENSIONAMENTO_V1: DimensionamentoParaDetalhe = {
   nome: "V1",
   tramos: [tramoDim(vkE1, vkD1), tramoDim(vkD1, vkE1)],
   apoios: [flexao(0), flexao(sng(-m1)), flexao(0)],
-  avisos: [],
-  memoria: [],
 };
 
 const secao = { bw: 20, hw: 50, bf: 0, hf: 0 };

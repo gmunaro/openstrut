@@ -208,6 +208,8 @@ export function momentos(
     nome,
     h,
     q: sng(q),
+    qSemArredondar: q,
+    p: sng(q / coef),
     pesoProprio: sng((1 / 100) * h * sng(2.5)),
     coeficiente: { coeficiente: coef, l1a: 0, l32: 0, l1e: 0, l22: 0, l26: 0, l2a: 0, l2e: 0 },
     mPositivoPrincipalTcm: mPos,

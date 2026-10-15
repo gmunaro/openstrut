@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type { EixoViga, EsforcosLajes, LajeSistrut, PainelLajes } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, valorOraculo } from "../__oraculo__/index";
-import { montaPavimentoSistrut } from "./reacoes";
+import { montaPavimento } from "./reacoes";
 
 const casoA = CASOS_ORACULO.caso_a_laje;
 const casoB = CASOS_ORACULO.caso_b_viga;
@@ -181,7 +181,7 @@ const eixosE2E = [
 const pesos = { predominanteKgPorM: 150, excecoes: { V1: 120, V2: 120, V3: 120 } };
 
 const monta = (modo: "original" | "corrigido") =>
-  montaPavimentoSistrut(
+  montaPavimento(
     esforcosE2E,
     painelE2E,
     eixosE2E,
@@ -343,7 +343,8 @@ describe.skipIf(!existsSync(VIG_E2E))(`.VIG gravado pelo original (${VIG_E2E})`,
     for (const [i, v] of r.vigas.entries()) {
       const g = regs[i];
       if (!g) throw new Error("registro ausente");
-      v.inerciasBrutas.forEach((j, t) => expect(j, `${v.nome} J(${t})`).toBe(g.tramos[t]?.j));
+      expect(v.inerciasBrutas, v.nome).toBeDefined();
+      v.inerciasBrutas?.forEach((j, t) => expect(j, `${v.nome} J(${t})`).toBe(g.tramos[t]?.j));
       v.tramos.forEach((t, k) => {
         expect(t.vao).toBe(g.tramos[k + 1]?.l);
         expect(t.divisoes[0]?.d).toBe(g.divisoes[k + 1]?.d);

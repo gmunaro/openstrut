@@ -21,7 +21,7 @@ import quadros from "./__desinit__/v2par_des_quadros.json";
 import j2 from "./__desinit__/v2par_des_2tramos.json";
 import j3 from "./__desinit__/v2par_des_3tramos.json";
 import jEsp from "./__desinit__/v2par_des_especial.json";
-import { detalhaVigaDesinit, montaComum } from "./desinit";
+import { detalhaViga, montaComum } from "./desinit";
 
 const CASOS: [NomeCaso, CasoOraculo, string][] = [
   ["v2par_des_3tramos", j3 as CasoOraculo, "V1"],
@@ -100,7 +100,7 @@ describe.each(CASOS)("%s: análise do DESDIM (DESCALC) contra a impressora", (no
 
 describe.each(CASOS)("%s: detalhamento, .TAB e resumo", (nome, caso, v) => {
   const { entrada, dim, extras } = casoV2par(nome);
-  const d = detalhaVigaDesinit(entrada, dim, "original", extras);
+  const d = detalhaViga(entrada, dim, "original", extras);
   const esperado = quadros[nome];
   const q = quadroDaViga(d, entrada.secoes, entrada.forma, 0, entrada.parametros, "original");
 

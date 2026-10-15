@@ -27,6 +27,22 @@ export class ErroQB extends Error {
   }
 }
 
+/** Ponto em que o original entraria em laço sem fim. Lançado nos dois modos onde o
+ *  porte põe um teto de passos: recálculos da otimização dos negativos (lajes/esforcos.ts,
+ *  R3), código do bordo que não muda na otimização (lajes/otimizacao.ts, R3, com o
+ *  `estado` da tela parada) e busca do equilíbrio do pilar (pilares/elu.ts e
+ *  armadura.ts, D-2). `estado` = o que a tela do original mostraria travada, quando há.
+ *  Ao capturar com `instanceof`, anote o tipo do estado esperado:
+ *  `const estado: EstadoX | undefined = erro.estado`. */
+export class ErroNaoConverge<Estado = undefined> extends Error {
+  readonly estado: Estado | undefined;
+  constructor(mensagem: string, estado?: Estado) {
+    super(mensagem);
+    this.name = "ErroNaoConverge";
+    this.estado = estado;
+  }
+}
+
 /** Arredonda para SINGLE, como a atribuição a uma variável `!` do original.
  *  Use em toda atribuição do modo original: `const q = sng(g + pp)`. */
 export const sng = (x: number) => Math.fround(x);

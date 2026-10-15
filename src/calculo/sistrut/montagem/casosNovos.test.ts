@@ -11,9 +11,14 @@ import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type { EsforcosLajes } from "../base/tipos";
 import { bateComImpresso, type CasoOraculo, type ValorOraculo } from "../__oraculo__/index";
 import { lerObraLaj } from "./obraLaj";
-import { montaPavimentoSistrut } from "./reacoes";
+import { montaPavimento } from "./reacoes";
 
 const PASTA_JSON = "C:/tmp/v2-paridade/oraculo-novos";
+
+/** A montagem sempre grava o registro do .VIG; sem ele o teste falha. */
+const ausente = (viga: string): never => {
+  throw new Error(`${viga}: montagem sem o registro do .VIG`);
+};
 
 /** Casos da T6 e as escolhas "apoia em" do roteiro (não ficam no .LAJ). */
 const CASOS: { caso: string; apoiosEmViga?: Record<string, string> }[] = [
@@ -79,7 +84,7 @@ for (const { caso, apoiosEmViga } of CASOS) {
       avisos: [],
       memoria: [],
     };
-    const r = montaPavimentoSistrut(
+    const r = montaPavimento(
       esforcos,
       obra.painel,
       obra.eixos,
@@ -144,7 +149,7 @@ for (const { caso, apoiosEmViga } of CASOS) {
     it("quadro de alvenarias sobre as vigas (peso próprio e alvenaria por tramo)", () => {
       const erros: string[] = [];
       for (const v of r.vigas)
-        for (const l of v.alvenariasSobreViga) {
+        for (const l of v.alvenariasSobreViga ?? ausente(v.nome)) {
           confere(`${v.nome}.t${l.tramo}.ppViga`, l.peso, erros);
           confere(`${v.nome}.t${l.tramo}.alv`, l.alvenaria, erros);
         }
@@ -152,7 +157,7 @@ for (const { caso, apoiosEmViga } of CASOS) {
     });
 
     it("modo corrigido (float64, mesmo algoritmo): reações e totais dentro do impresso", () => {
-      const rc = montaPavimentoSistrut(
+      const rc = montaPavimento(
         esforcos,
         obra.painel,
         obra.eixos,
@@ -183,9 +188,10 @@ for (const { caso, apoiosEmViga } of CASOS) {
       r.vigas.forEach((v, i) => {
         const g = regs[i];
         if (!g) return;
+        const registro = v.registro ?? ausente(v.nome);
         const campos = ["bda", "c64", "c92", "c08", "c36", "p", "d", "pac"] as const;
         for (const c of campos) {
-          const nosso = v.registro[c];
+          const nosso = registro[c];
           const deles = g[c];
           deles.forEach((x, k) => {
             const y = nosso[k] ?? 0;
@@ -194,8 +200,8 @@ for (const { caso, apoiosEmViga } of CASOS) {
           });
         }
         g.f.forEach((x, k) => {
-          const f = v.registro.f[k] ?? 0;
-          const fac = v.registro.fac[k] ?? 0;
+          const f = registro.f[k] ?? 0;
+          const fac = registro.fac[k] ?? 0;
           if (fac === -100) {
             // carga indexada *n.aa: o VIGA opção 7 do mesmo run a resolveu e regravou o
             // registro (VIGA.BAS:1676-1704 e L_1abfd, 1667-1671): F = INT(R·1000)/1000 da

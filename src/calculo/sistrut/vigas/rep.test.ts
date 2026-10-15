@@ -11,13 +11,8 @@ import {
   type ValorOraculo,
 } from "../__oraculo__/index";
 import { casoVicalc, dadosViga, parametrosDoCaso, type VigaJson } from "./__casos__/index";
-import {
-  corteDuasCasas,
-  type LinhaRepSistrut,
-  linhasArquivoRep,
-  somaReacoesPilares,
-  tituloRep,
-} from "./rep";
+import type { LinhaRep } from "../base/tipos";
+import { corteDuasCasas, linhasArquivoRep, somaReacoesPilares, tituloRep } from "./rep";
 import { analisaViga } from "./vicalc";
 
 /** O valor bate com o impresso truncado? Trunca para zero o STR$ do SINGLE (7
@@ -33,7 +28,7 @@ function bateTruncadoStr(v: ValorOraculo, x: number) {
 }
 
 /** Confere os ids REP.* do caso (totais, parcelas e momentos) contra as linhas por pilar. */
-function confereRep(valores: readonly ValorOraculo[], linhas: readonly LinhaRepSistrut[]) {
+function confereRep(valores: readonly ValorOraculo[], linhas: readonly LinhaRep[]) {
   const falhas: string[] = [];
   let conferidos = 0;
   for (const v of valores.filter((x) => x.id.startsWith("REP"))) {

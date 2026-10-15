@@ -17,13 +17,7 @@ import type {
   PreparaLaje,
 } from "../base/tipos";
 import { qbCint, qbClng, qbFix, qbInt } from "../base/f32";
-import {
-  EstadoLajecalc,
-  S_2018c,
-  carregaPadrao,
-  pot,
-  type PadraoCharneirasSistrut,
-} from "./charneiras";
+import { EstadoLajecalc, S_2018c, carregaPadrao, pot } from "./charneiras";
 
 /** Área da laje como o LAJEGEOM a grava em A_10cc(i, 2): Σ (x_k + x_k+1)(y_k − y_k+1)/2
  *  acumulada em SINGLE (LAJEGEOM.BAS:3107-3115). Positiva no sentido horário. */
@@ -136,15 +130,11 @@ export function coeficienteDoEstado(g: EstadoLajecalc): CoeficienteCarga {
  *  c = (l_1a + l_32 + (1 + cantos)·l_2a − 2·l_22)/(l_1e/3 + l_2e − l_26/3), com
  *  rotação unitária de cada região em torno do seu bordo; sinal trocado se l_1a = 0.
  *  E2E: l_1a + l_32 = 38,36, l_1e/3 = 18,2491, l_22 = 1,5052, l_26 = 2,1955 → 2,0180.
- *  O padrão precisa vir de `padraoDeCharneiras` deste módulo (traz os segmentos no
- *  formato do original); o i de cada bordo sai dos códigos guardados nele
- *  (LAJECALC.BAS:8742-8757), igual ao `i` do contrato. */
-export const coeficienteDeCarga: CoeficienteDeCarga = (padrao, _i, parametros, modo) => {
-  if (!("bruto" in padrao)) {
-    throw new Error("coeficienteDeCarga: use o padrão de padraoDeCharneiras (sistrut/lajes)");
-  }
+ *  Roda sobre `padrao.bruto` (os segmentos no formato do original); o i de cada bordo
+ *  sai dos códigos guardados nele (LAJECALC.BAS:8742-8757). */
+export const coeficienteDeCarga: CoeficienteDeCarga = (padrao, parametros, modo) => {
   const g = new EstadoLajecalc(parametros, modo);
-  carregaPadrao(g, (padrao as PadraoCharneirasSistrut).bruto);
+  carregaPadrao(g, padrao.bruto);
   S_578ad(g);
   return coeficienteDoEstado(g);
 };

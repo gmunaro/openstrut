@@ -15,13 +15,15 @@
 // A_xxxx são os endereços DS:xxxx do original; o significado dos que importam
 // está em `EstadoLajecalc`.
 //
-// Uso: `padraoDeCharneiras` (contrato T1/T6) para um polígono; `iDoBordo` para o
-// i de cada bordo. O coeficiente de carga (coeficiente.ts) e a preparação da laje
-// rodam na mesma máquina.
+// Uso: `padraoDeCharneiras` (contrato `PadraoDeCharneiras`) para um polígono;
+// `iDoBordo` para o i de cada bordo. O coeficiente de carga (coeficiente.ts) e a
+// preparação da laje rodam na mesma máquina. É o padrão do LAJECALC (i truncado em 2
+// casas na bissetriz, LAJECALC.BAS:3425); o do LAJEMONT, que dá as reações, é o porte
+// próprio de montagem/charneiras.ts (ver o cabeçalho de lá).
 import type {
-  CodigoBordo,
   IDoBordo,
   ModoSistrut,
+  PadraoBruto,
   PadraoCharneiras,
   PadraoDeCharneiras,
   ParametrosLaje,
@@ -81,9 +83,6 @@ export class Matriz {
  *  - V_133a, V_133e: tolerâncias de comprimento e de ângulo; V_0e68_pi = π. */
 export class EstadoLajecalc {
   readonly s: (x: number) => number;
-  /** O LAJECALC trunca o i do bordo em 2 casas na bissetriz (LAJECALC.BAS:3425);
-   *  o LAJEMONT, que calcula as reações, não (LAJEMONT.BAS:1505c). */
-  truncaIDaBissetriz = true;
   V_0e50 = 1;
   V_0e68_pi = 4 * Math.atan(1);
   V_0ee8 = 0;
@@ -280,12 +279,6 @@ export function pot(a: number, b: number) {
 
 // ------------------------------------------------------------------ contratos
 
-/** Código do original a partir do i do contrato: livre 1, i > 0 → 2 + 10·i
- *  (engastado), senão 0 (apoiado). Para i de um trecho único é o código de volta. */
-function codigosDeI(i: readonly number[], livres: readonly boolean[]) {
-  return i.map((v, k) => (livres[k] ? 1 : v > 0 ? 2 + 10 * v : 0));
-}
-
 /** Marca com −100 em A_163a(v, 0) os vértices entre bordos colineares, como o
  *  primeiro laço do S_4019b (LAJECALC.BAS:5061-5091). */
 function marcaColineares(g: EstadoLajecalc) {
@@ -347,26 +340,6 @@ export const iDoBordo: IDoBordo = (vertices, codigos, parametros, modo) => {
     return g.s(soma / comp(inicio, fim));
   });
 };
-
-/** Dados do padrão no formato do original, para o coeficiente de carga
- *  (coeficiente.ts) rodar sobre eles. */
-export interface PadraoBruto {
-  /** Polígono de trabalho, sem repetir o primeiro vértice. */
-  poligono: Ponto[];
-  /** Código de cada bordo (DOUBLE; ver `EstadoLajecalc.carregaPoligono`). */
-  codigos: number[];
-  tipo: number;
-  /** Linhas 1..n de A_160c e de A_163a. */
-  segmentos: [number, number, number, number][];
-  nos: [number, number, number][];
-}
-
-/** `PadraoCharneiras` com os dados do original (mudança de contrato pedida no
- *  relatório: o coeficiente de carga precisa saber de que vértice sai cada
- *  charneira e quais vértices são colineares). */
-export interface PadraoCharneirasSistrut extends PadraoCharneiras {
-  bruto: PadraoBruto;
-}
 
 /** Guarda A_160c e A_163a do estado. */
 function brutoDoEstado(g: EstadoLajecalc, codigos: readonly number[], tipo: number): PadraoBruto {
@@ -443,27 +416,28 @@ export function regioesDoPadrao(g: EstadoLajecalc): RegiaoCharneira[] {
   return regioes;
 }
 
-/** Padrão de charneiras a partir dos códigos dos bordos (o que o original usa).
- *  `tipo` 1 (pré-moldada) pula o tratamento de bordos livres (LAJECALC.BAS:6657). */
-export function padraoPorCodigos(
-  vertices: readonly Ponto[],
-  codigos: readonly CodigoBordo[],
-  parametros: ParametrosLaje,
-  modo: ModoSistrut,
+/** Padrão de charneiras do polígono a partir dos códigos dos bordos (contrato
+ *  `PadraoDeCharneiras`; LAJECALC.BAS:4980-7128, livros_laje.md 1.6). `tipo` 1
+ *  (pré-moldada) pula o tratamento de bordos livres (LAJECALC.BAS:6657). Polígono no
+ *  sentido do LAJEGEOM (horário: área Σ(x_k + x_k+1)(y_k − y_k+1)/2 > 0,
+ *  LAJEGEOM.BAS:3110-3115). */
+export const padraoDeCharneiras: PadraoDeCharneiras = (
+  vertices,
+  codigos,
+  parametros,
+  modo,
   tipo = 0,
-  comoLajemont = false,
-): PadraoCharneirasSistrut {
+) => {
   if (areaLajegeom(vertices) <= 0) {
     // o LAJEGEOM não cria laje com área ≤ 0 (LAJEGEOM.BAS:3113); no sentido
     // anti-horário os termos de canto do coeficiente saem errados
     throw new Error("Polígono de laje no sentido anti-horário: o original só aceita o horário");
   }
   const g = new EstadoLajecalc(parametros, modo);
-  g.truncaIDaBissetriz = !comoLajemont;
   g.carregaPoligono(vertices, codigos, tipo);
   S_4019b(g);
   return padraoDoEstado(g, codigos, tipo);
-}
+};
 
 /** Área pela fórmula do LAJEGEOM (LAJEGEOM.BAS:3110): Σ (x_k + x_k+1)(y_k − y_k+1)/2,
  *  positiva no sentido horário. */
@@ -481,7 +455,7 @@ export function padraoDoEstado(
   g: EstadoLajecalc,
   codigos: readonly number[],
   tipo: number,
-): PadraoCharneirasSistrut {
+): PadraoCharneiras {
   const bruto = brutoDoEstado(g, codigos, tipo);
   const segmentos = bruto.segmentos.map(([x0, y0, x1, y1]) => {
     const v = x0 < 0 ? bruto.poligono[Math.abs(qbCint(x0)) - 1] : undefined;
@@ -489,26 +463,6 @@ export function padraoDoEstado(
   });
   return { segmentos, regioes: regioesDoPadrao(g), bruto };
 }
-
-/** Padrão de charneiras do polígono (contrato T1/T6; LAJECALC.BAS:4980-7128,
- *  livros_laje.md 1.6). `i` por bordo (de `iDoBordo`) e `livres` viram os códigos
- *  do original (2 + 10·i, 1 no livre). Polígono no sentido do LAJEGEOM (horário:
- *  área Σ(x_k + x_k+1)(y_k − y_k+1)/2 > 0, LAJEGEOM.BAS:3110-3115). */
-export const padraoDeCharneiras: PadraoDeCharneiras = (vertices, i, livres, parametros, modo) =>
-  padraoPorCodigos(vertices, codigosDeI(i, livres), parametros, modo);
-
-/** O mesmo padrão como o LAJEMONT o traça para as reações (coordenadas reais, i do
- *  bordo sem o truncamento em 2 casas da bissetriz do LAJECALC; LAJEMONT.BAS:14b11-
- *  1505c). Difere do `padraoDeCharneiras` só quando i não tem 2 casas exatas em
- *  SINGLE: v2par_laje_otim L1 com código 5 (i 0,3 → 0,29 no LAJECALC) dá a região do
- *  lado 3 com 10,22 m² (impresso) contra 10,18. É o que a montagem (T6) deve usar. */
-export const padraoDeCharneirasLajemont: PadraoDeCharneiras = (
-  vertices,
-  i,
-  livres,
-  parametros,
-  modo,
-) => padraoPorCodigos(vertices, codigosDeI(i, livres), parametros, modo, 0, true);
 
 // ===== TRADUÇÃO MECÂNICA de LAJECALC.BAS (gerada por traduz.py; não editar à mão) =====
 
@@ -7493,7 +7447,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
                 pot(g.A_15de.get(qbCint(L_BP16)) - g.A_15de.get(qbCint(L_BP1a)), 2.0),
             ),
         ); // 3424
-        L_BP22 = g.truncaIDaBissetriz ? g.s(qbInt(L_BP22 * 100.0) / 100.0) : L_BP22; // 3425
+        L_BP22 = g.s(qbInt(L_BP22 * 100.0) / 100.0); // 3425
         pc = pilha.pop() ?? 0;
         continue; // 3426
       case 56:

@@ -26,18 +26,13 @@ export function corteDuasCasas(x: number) {
   return texto.slice(0, ponto + 2).trimStart();
 }
 
-/** Linha do .REP com o texto de cada parcela (a forma gravada depois do "*"). */
-export interface LinhaRepSistrut extends LinhaRep {
-  parcelas: { viga: string; valor: number; texto: string }[];
-}
-
 /** Soma das reações por pilar, na ordem em que os pilares aparecem nas vigas (A_1718,
  *  VIGA.BAS:2190-2204), e momentos dos apoios extremos (A_0fc4(2..3), VIGA.BAS:2416-2419).
  *  `analises` na ordem de processamento; cada uma acha os pilares em `vigas` pelo nome.
  *  A parcela é a reação estática ou a máxima (linha 12 do VIGA.INI; U61-023). */
-export const somaReacoesPilares = ((analises, vigas, parametros, modo): LinhaRepSistrut[] => {
+export const somaReacoesPilares: SomaReacoesPilares = (analises, vigas, parametros, modo) => {
   const s = atribuicao(modo);
-  const porPilar = new Map<string, LinhaRepSistrut>();
+  const porPilar = new Map<string, LinhaRep>();
   const pares = analises.flatMap((analise) => {
     const viga = vigas.find((v) => v.nome === analise.nome);
     return viga ? [{ analise, viga }] : [];
@@ -71,7 +66,7 @@ export const somaReacoesPilares = ((analises, vigas, parametros, modo): LinhaRep
   const linhas = [...porPilar.values()];
   if (modo === "corrigido") for (const l of linhas) l.total = Math.round(l.total * 100) / 100;
   return linhas;
-}) satisfies SomaReacoesPilares;
+};
 
 function textoParcela(valor: number, modo: ModoSistrut) {
   return corteDuasCasas(modo === "original" ? valor : Math.round(valor * 100) / 100);
@@ -82,8 +77,7 @@ function momento(viga: DadosViga, valor: number, apoio: number, vao: number) {
 }
 
 /** Texto de uma parcela no .REP: "6.93 (V2) + " (VIGA.BAS:2415). */
-export const textoParcelaRep = (p: LinhaRepSistrut["parcelas"][number]) =>
-  `${p.texto} (${p.viga}) + `;
+export const textoParcelaRep = (p: LinhaRep["parcelas"][number]) => `${p.texto} (${p.viga}) + `;
 
 /** Texto de um momento no .REP: "-.64@1 [4]  (V1) > " (VIGA.BAS:2416-2419). */
 export const textoMomentoRep = (m: LinhaRep["momentos"][number]) =>
@@ -110,7 +104,7 @@ function numeroPilar(pilar: string) {
  *  pilar, "P   7         1.82", "*" + parcelas e ">" + momentos. `data` e `hora` vão
  *  como o original escreve DATE$ e TIME$ (ex.: "10-14-2026", "21:27"). */
 export function linhasArquivoRep(
-  linhas: readonly LinhaRepSistrut[],
+  linhas: readonly LinhaRep[],
   cabecalho: { obra: string; registros: string; data: string; hora: string },
   parametros: ParametrosVicalc,
 ) {

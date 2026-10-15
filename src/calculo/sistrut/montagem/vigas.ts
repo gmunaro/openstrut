@@ -13,6 +13,7 @@ import type {
   EixoViga,
   ModoSistrut,
   PesoProprioVigas,
+  PilarMontagem,
   TramoViga,
 } from "../base/tipos";
 import { qbCint } from "../base/f32";
@@ -67,14 +68,6 @@ export interface VigaMontagem {
 }
 
 const zeros = (n: number) => Array.from({ length: n }, () => 0);
-
-/** Pilar como o LAJEGEOM grava (A_1156): segmento x1, y1, x2, y2 (pontual quando as
- *  duas pontas coincidem; pilar-parede quando não) e nome (A_1128$). */
-export interface PilarMontagem {
-  nome: string;
-  inicio: { x: number; y: number };
-  fim: { x: number; y: number };
-}
 
 /** Números dos pilares (A_1156/A_1128$, índice 1-based): a lista dada, na ordem; sem
  *  ela, os nomes na ordem em que aparecem nos eixos. */
@@ -545,7 +538,7 @@ export function trechoDaDivisao(v: VigaMontagem, k: number) {
 /** Linhas do quadro de alvenaria sobre a viga: tramo e divisão de cada divisão gravada
  *  (L_2d3e3) e a alvenaria por metro (A_1ac6). */
 function linhasAlvenaria(v: VigaMontagem) {
-  const linhas: DadosVigaMontagem["alvenariasSobreViga"] = [];
+  const linhas: NonNullable<DadosViga["alvenariasSobreViga"]> = [];
   for (let k = 1; k <= totalDivisoes(v); k++) {
     let tramo = 0;
     let antes = 0;
@@ -558,39 +551,15 @@ function linhasAlvenaria(v: VigaMontagem) {
   return linhas;
 }
 
-/** `DadosViga` com o J bruto de todos os apoios (o .VIG grava J(0) mesmo sem balanço;
- *  o contrato `DadosViga` só tem J por tramo). */
-export interface DadosVigaMontagem extends DadosViga {
-  /** A_1c36(0..n+1) como gravado no .VIG. */
-  inerciasBrutas: number[];
-  /** Campos do registro de 855 bytes do .VIG (para conferir com o arquivo do
-   *  original): A_1bda, por tramo 0..13 A_1c64/A_1c92/A_1c08/A_1c36, por divisão
-   *  0..30 A_1af4/A_1b50/A_1b7e/A_1b22/A_1bac. */
-  registro: {
-    bda: number[];
-    c64: number[];
-    c92: number[];
-    c08: number[];
-    c36: number[];
-    p: number[];
-    d: number[];
-    f: number[];
-    pac: number[];
-    fac: number[];
-  };
-  /** Linhas do quadro "ALVENARIAS SOBRE AS VIGAS" (LAJEMONT.BAS:4318-4380): tramo,
-   *  divisão no tramo, peso próprio e alvenaria, t/m. */
-  alvenariasSobreViga: { tramo: number; divisao: number; peso: number; alvenaria: number }[];
-}
-
 /** Registro do .VIG da viga como `DadosViga` (S_33d84, LAJEMONT.BAS:5170-5393): por
  *  tramo o vão, o J bruto e as divisões (P, D, F, Pac, Fac). Balanço esquerdo com as
- *  divisões na ordem do registro: da ponta para o apoio, D medido a partir do apoio. */
+ *  divisões na ordem do registro: da ponta para o apoio, D medido a partir do apoio.
+ *  Sempre preenche `inerciasBrutas`, `registro` e `alvenariasSobreViga`. */
 export function dadosViga(
   v: VigaMontagem,
   vigas: readonly VigaMontagem[],
   pilares: readonly string[],
-): DadosVigaMontagem {
+): DadosViga {
   const n = v.bda[0] ?? 0;
   const be = v.bda[1] === 1;
   const bd = v.bda[2] === 1;

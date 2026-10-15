@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type { EixoViga, EsforcosLajes, LajeSistrut, PainelLajes } from "../base/tipos";
-import { montaPavimentoSistrut } from "./reacoes";
+import { montaPavimento } from "./reacoes";
 import { montaPontos, numeroDoPilar, pesoKgPorM } from "./vigas";
 
 const laje = (nome: string, pts: [number, number][], codigos: number[]): LajeSistrut => ({
@@ -127,7 +127,7 @@ const eixos: EixoViga[] = [
   },
 ];
 
-const r = montaPavimentoSistrut(
+const r = montaPavimento(
   esforcos,
   painel,
   eixos,
@@ -241,7 +241,7 @@ describe("pontos do eixo e pilar-parede (S_3014b)", () => {
   });
 
   it("pilar-parede igual ao trecho da viga: engaste (Ee) e o tramo começa na ponta da parede", () => {
-    const r2 = montaPavimentoSistrut(
+    const r2 = montaPavimento(
       { ...esforcos, lajes: [] },
       { ...painel, lajes: [], cargasPorArea: [], alvenarias: [] },
       [
@@ -282,7 +282,7 @@ describe("pontos do eixo e pilar-parede (S_3014b)", () => {
       [1, 0],
       [6, 0],
     ];
-    const com = montaPavimentoSistrut(
+    const com = montaPavimento(
       esfVazio,
       painelVazio,
       [eixo(pontos, [null, null, null])],
@@ -296,7 +296,7 @@ describe("pontos do eixo e pilar-parede (S_3014b)", () => {
     expect(com?.tramos.map((x) => x.vao)).toEqual([1, 5]);
     expect(com?.pilares).toEqual(["P1", "P1", "P2"]);
     // sem a geometria, o mesmo nome em pontos seguidos é tratado como pilar-parede
-    const sem = montaPavimentoSistrut(
+    const sem = montaPavimento(
       esfVazio,
       painelVazio,
       [eixo(pontos, [{ pilar: "P1" }, { pilar: "P1" }, { pilar: "P2" }])],
@@ -320,7 +320,7 @@ describe("pontos do eixo e pilar-parede (S_3014b)", () => {
       ],
       [0, 0, 0, 0],
     );
-    const r3 = montaPavimentoSistrut(
+    const r3 = montaPavimento(
       { ...esforcos, lajes: [l] },
       { ...painel, lajes: [l], cargasPorArea: [], alvenarias: [] },
       [

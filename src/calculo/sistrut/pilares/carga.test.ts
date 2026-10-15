@@ -5,17 +5,15 @@
 import { describe, expect, it } from "vitest";
 import { sng } from "../base/f32";
 import { emSingle, PARAMETROS_PIP } from "../base/parametros";
-import type { LeituraRep, SecaoPilar, VinculoPilar } from "../base/tipos";
+import type { ColunaEdificio, LeituraRep, SecaoPilar, VinculoPilar } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, valorOraculo } from "../__oraculo__";
 import { CASOS_PILAR } from "./__casos__";
 import {
-  type ColunaEdificioSistrut,
-  cargasPilaresSistrut,
+  cargasPilares,
   casaNome,
   comprimentosFlambagem,
   indiceDoCodigoOriginal,
   leCargasRep,
-  predimensionaColuna,
   predimensionaPilar,
   qbVal,
   resumoFundacao,
@@ -38,7 +36,7 @@ function coluna(
   secao: SecaoPilar = ret20,
   vinculo: VinculoPilar = 2,
   nome = "P   5",
-): ColunaEdificioSistrut {
+): ColunaEdificio {
   return {
     nome,
     pilarRep: nome,
@@ -141,7 +139,7 @@ describe("fundação: redução, acumulada e momentos da base (PILAREDI.BAS:960-
 
 describe("carga do lance e comprimento de flambagem", () => {
   it("P5 travado (continuidade × continuidade = 1,0): le = 3 m nas duas direções", () => {
-    const [c] = cargasPilaresSistrut([rep(17.37, 1)], [coluna([0, 3])], pip, "original");
+    const [c] = cargasPilares([rep(17.37, 1)], [coluna([0, 3])], pip, "original");
     expect(c!.lex).toBe(3);
     expect(c!.ley).toBe(3);
     expect(c!.cargaAcumulada).toBe(sng(17.37));
@@ -225,7 +223,7 @@ describe("momento de viga lido do .REP (PILAREDI.BAS:7304-7746), conta à mão",
   // topo do lance de baixo. No lance 0-3: topo −0,5; base −(−0,5)/2 = +0,25
   // (transporte de −1/2 com a ponta de cima não livre). Caso "e" = maior extremo
   // −0,5; caso "f" = 0,6·(−0,5) + 0,4·0,25 = −0,20, que não fica abaixo de 0,4·0,5.
-  const cargas = cargasPilaresSistrut(
+  const cargas = cargasPilares(
     [rep(10, 1, [momento("-1")])],
     [coluna([0, 3, 6])],
     PARAMETROS_PIP,
@@ -256,7 +254,7 @@ describe("troca de seção num nível com momento (PILAREDI.BAS:7487-7498 e 7521
   // Peso próprio do nível 1 com a área de A: 3·800·2,5/10⁴ = 0,60 (com B seria 0,30).
   const col = coluna([0, 3, 6], ret(20, 20));
   col.niveis[0]!.secao = ret(20, 40);
-  const cargas = cargasPilaresSistrut(
+  const cargas = cargasPilares(
     [rep(10, 1, [momento("-1"), momento("-1")])],
     [col],
     PARAMETROS_PIP,
@@ -281,7 +279,7 @@ describe("excentricidade entre seções sucessivas (PILAREDI.BAS:7431-7433)", ()
   const col = coluna([0, 3, 6], ret(20, 20));
   col.niveis[0]!.secao = ret(20, 40);
   col.niveis[1]!.excentricidade = { x: 5, y: 0 };
-  const cargas = cargasPilaresSistrut([rep(10, 2), rep(4, 1)], [col], PARAMETROS_PIP, "corrigido");
+  const cargas = cargasPilares([rep(10, 2), rep(4, 1)], [col], PARAMETROS_PIP, "corrigido");
 
   it("Mx = −0,50 tm no lance de baixo, nada no de cima", () => {
     expect(cargas[0]!.mkx).toBeCloseTo(-0.5, 6);
@@ -299,7 +297,7 @@ describe("vento com dois momentos e ângulos (PILAREDI.BAS:7614-7626)", () => {
     { m: 1, angulo: 180 },
   ];
   col.niveis[0]!.normalVento = 0.5;
-  const [c] = cargasPilaresSistrut(
+  const [c] = cargasPilares(
     [rep(10, 1)],
     [col],
     { ...PARAMETROS_PIP, pesoProprio: false },
@@ -320,13 +318,13 @@ describe("redução de sobrecarga no dimensionamento (opção S): D-8 no corrigi
   const comReducao = { ...PARAMETROS_PIP, reduzAcidentalDimensionamento: true };
 
   it("original inclui o peso próprio na base da redução", () => {
-    const [c] = cargasPilaresSistrut(reps, [col], comReducao, "original");
+    const [c] = cargasPilares(reps, [col], comReducao, "original");
     expect(c!.reducao).toBeCloseTo(2.06, 4);
     expect(c!.nk).toBeCloseTo(50 + 1.5 - 2.06, 4);
   });
 
   it("corrigido reduz só a parcela das cargas", () => {
-    const [c] = cargasPilaresSistrut(reps, [col], comReducao, "corrigido");
+    const [c] = cargasPilares(reps, [col], comReducao, "corrigido");
     expect(c!.reducao).toBeCloseTo(2, 6);
   });
 });
@@ -334,7 +332,7 @@ describe("redução de sobrecarga no dimensionamento (opção S): D-8 no corrigi
 describe("predimensionamento por coluna (PILAREDI.BAS:3713-3740, 3976-4187)", () => {
   it("caso_c_pilaredi 20×20 imposta: admissíveis 0,090 e 0,113; tensões 0,000 e 0,027", () => {
     const caso = CASOS_ORACULO.caso_c_pilaredi!;
-    const t = predimensionaColuna([rep(17.37, 1)], coluna([0, 3]), 0, materiais, pip, "original", {
+    const t = predimensionaPilar([rep(17.37, 1)], coluna([0, 3]), 0, materiais, pip, "original", {
       secao: ret20,
     });
     for (const [id, v] of [
@@ -349,7 +347,7 @@ describe("predimensionamento por coluna (PILAREDI.BAS:3713-3740, 3976-4187)", ()
   it("retrad_pil_secoes circular D 25 imposta: tensões 0,000 e 0,023", () => {
     const caso = CASOS_PILAR.retrad_pil_secoes!;
     const d25: SecaoPilar = { tipo: "circular", d: 25, dInterno: 0, barras: [] };
-    const t = predimensionaColuna(
+    const t = predimensionaPilar(
       [rep(17.37, 1)],
       coluna([0, 3], d25),
       0,
@@ -361,7 +359,7 @@ describe("predimensionamento por coluna (PILAREDI.BAS:3713-3740, 3976-4187)", ()
     expect(bateComImpresso(valorOraculo(caso, "C.pre.tensaoMaxN"), t.tensaoNormal)).toBe(true);
     expect(bateComImpresso(valorOraculo(caso, "C.pre.tensaoMaxNM"), t.tensaoFlexao)).toBe(true);
     // a tela mostra 17,73 para Nk = 17,37 + 0,368 = 17,738 (INFERIDO: trunca)
-    const [carga] = cargasPilaresSistrut([rep(17.37, 1)], [coluna([0, 3], d25)], pip, "original");
+    const [carga] = cargasPilares([rep(17.37, 1)], [coluna([0, 3], d25)], pip, "original");
     expect(Math.trunc(carga!.nk * 100) / 100).toBe(
       Number(valorOraculo(caso, "C.pre.carga").impresso),
     );
@@ -370,7 +368,7 @@ describe("predimensionamento por coluna (PILAREDI.BAS:3713-3740, 3976-4187)", ()
   it("seção automática: área 17,37/((3,555 − 0,09)·1,5 % + 0,09) = 122 cm² → 14 cm; com o pp de 14×14 σ2 = 0,1127 > 0,1125 → 20 cm", () => {
     // N = 17,37 + 3·196·2,5/10⁴ = 17,517; σ1 = (17,517 − 1,5·196·3,555/100)/196 = 0,0360;
     // M = 17,517·0,02 = 0,3503; σ2 = 0,0360 + 35,03·7/3201,3 = 0,1127.
-    const p = predimensionaColuna([rep(17.37, 1)], coluna([0, 3]), 0, materiais, pip, "original");
+    const p = predimensionaPilar([rep(17.37, 1)], coluna([0, 3]), 0, materiais, pip, "original");
     expect(p.areaIdeal).toBeCloseTo(122.3, 0);
     const t14 = p.tentativas.find((t) => t.lado === 14 && t.nivel === 0)!;
     expect(t14.tensaoFlexao).toBeCloseTo(0.1127, 4);
@@ -382,15 +380,10 @@ describe("predimensionamento por coluna (PILAREDI.BAS:3713-3740, 3976-4187)", ()
     // σ2 = (1 + 5,1·0,02)·100·7/3201 = 0,24 > 0,1125, mesmo com o lance 0-1 folgado.
     const col = coluna([0, 3, 6]);
     col.niveis[1]!.ventos = [{ m: 1, angulo: 0 }];
-    const p = predimensionaColuna([rep(5, 2)], col, 0, materiais, pip, "original");
+    const p = predimensionaPilar([rep(5, 2)], col, 0, materiais, pip, "original");
     expect(
       p.tentativas.some((t) => t.lado === 14 && t.nivel === 1 && t.tensaoFlexao > 0.1125),
     ).toBe(true);
     expect(p.b).toBeGreaterThan(14);
-  });
-
-  it("contrato (um nível): mesma regra com a carga do lance → 20 cm", () => {
-    const [carga] = cargasPilaresSistrut([rep(17.37, 1)], [coluna([0, 3])], pip, "original");
-    expect(predimensionaPilar(carga!, materiais, pip, "original").b).toBe(20);
   });
 });

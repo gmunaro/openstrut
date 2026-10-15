@@ -26,7 +26,7 @@ import type {
   SecaoViga,
 } from "../base/tipos";
 import { CASOS_DESDIM } from "./__desdim__";
-import { dimensionaViga, dimensionaVigaDesdim, esforcosDesdim } from "./desdim";
+import { dimensionaViga, esforcosDesdim } from "./desdim";
 
 const det = CASOS_ORACULO.retrad_des_det!;
 const p6 = CASOS_DESDIM.retrad_des_p6!;
@@ -206,7 +206,7 @@ describe("alívio com divisões e concentradas (L_5602E), tramo biapoiado de 4 m
 });
 
 describe("balanço direito (1,5 m, q = 1 t/m) com seção própria 20×50", () => {
-  const r = dimensionaVigaDesdim(
+  const r = dimensionaViga(
     entradaUmTramo([{ p: 1, d: 4, f: 0 }], {
       vao: 1.5,
       q: 1,
@@ -236,10 +236,7 @@ describe("balanço direito (1,5 m, q = 1 t/m) com seção própria 20×50", () =
 });
 
 describe("balanço direito sem seção própria", () => {
-  const r = dimensionaVigaDesdim(
-    entradaUmTramo([{ p: 1, d: 4, f: 0 }], { vao: 1.5, q: 1 }),
-    "corrigido",
-  );
+  const r = dimensionaViga(entradaUmTramo([{ p: 1, d: 4, f: 0 }], { vao: 1.5, q: 1 }), "corrigido");
   it("o DESCALC vê o h 0 do .SEC e não alivia: Vk = carga 1,5 (DESDIM.BAS:6511-6582)", () => {
     expect(r.balancoDireito!.cisalhamento.vkEsquerda).toBeCloseTo(1.5, 12);
   });
@@ -249,7 +246,7 @@ describe("balanço direito sem seção própria", () => {
 });
 
 describe("dimensionamento da V1, modo original, contra retrad_des_det (impressora.prn:42-51)", () => {
-  const r = dimensionaVigaDesdim(entradaV1("original"), "original");
+  const r = dimensionaViga(entradaV1("original"), "original");
   const a1 = r.apoios[1]!;
   const [t1, t2] = r.tramos;
 
@@ -306,7 +303,7 @@ describe("dimensionamento da V1, modo original, contra retrad_des_det (impressor
 });
 
 describe("sonda p6 (tela g14, janela das bitolas de estribo e 2ª passada impressa)", () => {
-  const r = dimensionaVigaDesdim(entradaV1("original"), "original");
+  const r = dimensionaViga(entradaV1("original"), "original");
   const a1 = r.apoios[1]!;
   const [t1, t2] = r.tramos;
   it("bitolas de estribo da viga: máxima 5, mínima 5", () => {
@@ -411,16 +408,13 @@ describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado 
   const entrada = entradaUmTramo([{ p: 8, d: 4, f: 0 }]);
 
   it("original: a coluna 5 de A_128e ainda é 0 e ρ fica no piso 0,001 (Asw 9,92 à mão)", () => {
-    const r = dimensionaVigaDesdim(
-      { ...entrada, parametros: emSingle(PARAMETROS_DSP) },
-      "original",
-    );
+    const r = dimensionaViga({ ...entrada, parametros: emSingle(PARAMETROS_DSP) }, "original");
     expect(r.tramos[0]!.cisalhamento.aswEsquerda).toBeCloseTo(asw(0.001), 2);
     expect(asw(0.001)).toBeCloseTo(9.918, 3);
   });
 
   it("corrigido: ρ = As/(3·bw·h) com a As de flexão do tramo, ψ maior e Asw menor", () => {
-    const r = dimensionaVigaDesdim(entrada, "corrigido");
+    const r = dimensionaViga(entrada, "corrigido");
     const as = r.tramos[0]!.flexao.as;
     // M+ = qL²/8 = 16 tm: As de flexão bem acima do mínimo 0,0015·20·50 = 1,5
     expect(as).toBeGreaterThan(10);

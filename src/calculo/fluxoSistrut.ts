@@ -23,7 +23,14 @@ import type {
 } from "./fluxo";
 import type { CargaPilar, Equilibrio, TramoMontado, VigaCalculada, VigaMontada } from "./montagem";
 import { moduloConcreto } from "./normas/nb1-78/materiais";
-import type { DadosViga, DivisaoCarga, PosicaoLajeproc, TramoViga } from "./sistrut/base/tipos";
+import type {
+  DadosViga,
+  DivisaoCarga,
+  FlexaoViga,
+  PosicaoLajeproc,
+  TramoDimensionado,
+  TramoViga,
+} from "./sistrut/base/tipos";
 import {
   tcm2ParaMpa,
   tmParaKnm,
@@ -40,7 +47,6 @@ import {
   type VigaSistrut,
   vinculosDosCodigos,
 } from "./sistrut/obra";
-import type { FlexaoDesdim, TramoDesdim } from "./sistrut/vigas/desdim";
 import { analisaViga } from "./sistrut/vigas/vicalc";
 import type {
   Barra,
@@ -429,7 +435,7 @@ function analiseDaViga(
 
 // ---------------------------------------------------------------- vigas: dimensionamento
 
-function secaoDaFlexao(f: FlexaoDesdim | undefined, bw: number, aviso: string[]): SecaoVigaV2 {
+function secaoDaFlexao(f: FlexaoViga | undefined, bw: number, aviso: string[]): SecaoVigaV2 {
   if (!f || f.mk === 0) return { flexao: null, barras: null };
   const b = f.barras;
   const area = (n: number, phi: number) => (n * Math.PI * (phi / 10) ** 2) / 4;
@@ -475,7 +481,7 @@ function resultadoViga(
   if (!dim) return { viga: vm, analise, d, tramos: [], avisos };
   const n = dados.tramos.length;
   const tramoV2 = (
-    t: TramoDesdim | undefined,
+    t: TramoDimensionado | undefined,
     k: number,
     balanco: "E" | "D" | null,
   ): ResultadoTramo => {

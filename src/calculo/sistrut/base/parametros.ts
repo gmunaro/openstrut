@@ -269,8 +269,9 @@ export const PARAMETROS_DSP = {
   /** Lista de espaçamentos de estribo, cm (texto "10/ 12/ ... 30/", DESENHO.BAS:4951). */
   espacamentosEstribo: [10, 12, 15, 17, 20, 22, 25, 27, 30],
   /** Bitola de estribo máxima e mínima por linha 0..5 (A_142c(i,1) e A_142c(i,0),
-   *  DESENHO.BAS:4952-4963). O leitor de um .DSP do disco grava a máxima com sinal
-   *  negativo (DESENHO.BAS:5365); o padrão embutido grava positivo. */
+   *  DESENHO.BAS:4952-4963). O leitor de um .DSP do disco grava a máxima como
+   *  −(FX##(i = k)·φ) (DESENHO.BAS:5365): FX## de condição verdadeira é −1, então
+   *  fica −(−1·φ), POSITIVA, igual ao padrão embutido. */
   bitolasEstribo: [
     { maxima: 4, minima: 4 },
     { maxima: 5, minima: 5 },

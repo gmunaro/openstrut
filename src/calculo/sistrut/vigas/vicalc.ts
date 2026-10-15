@@ -21,49 +21,12 @@ import type {
   AnaliseViga,
   DadosViga,
   DivisaoCarga,
-  EnvoltoriaTramo,
+  LinhaEngastamentoPerfeito,
   ModoSistrut,
   ParametrosVicalc,
   TramoAnalisado,
   TramoViga,
 } from "../base/tipos";
-
-// ---------------------------------------------------------------- tipos locais
-// O contrato (base/tipos.ts) não tem tudo o que o original imprime. Os tipos abaixo
-// o estendem sem quebrar a atribuição a `AnaliseViga` (mudanças de contrato
-// sugeridas no relatório da T3).
-
-/** Linha da tabela "Esforcos de Engastamento Perfeito" (VIGA.BAS:7138-7182, 7636-7640):
- *  o original imprime tramo, Ve, x, M+ e Vd. `mEsquerdo` é o momento do apoio esquerdo
- *  no estado de engastamento (V_1c04 antes do GOSUB); `mDireito` não é calculado pelo
- *  original: sai por simetria, −((bf0+bf4)·B·bf4 − A·bf0·bf4)/(bf0+bf4+1), sem Mext. */
-export interface LinhaEngastamentoPerfeito {
-  tramo: number;
-  ve: number;
-  x: number;
-  mPositivo: number;
-  vd: number;
-  mEsquerdo: number;
-  mDireito: number;
-}
-
-/** Linha "max" da envoltória com a flecha f·EJ da envoltória (ST_1a8c(t+14), VIGA.BAS:7591). */
-export interface EnvoltoriaTramoSistrut extends EnvoltoriaTramo {
-  fEJ: number;
-}
-
-export interface TramoAnalisadoSistrut extends TramoAnalisado {
-  envoltoria?: EnvoltoriaTramoSistrut;
-}
-
-/** Análise com os campos que o contrato não traz: vão de cada tramo (para o .REP),
- *  linha do engastamento perfeito completa e flecha da envoltória. */
-export interface AnaliseVigaSistrut extends AnaliseViga {
-  tramos: TramoAnalisadoSistrut[];
-  engastamentoPerfeito: LinhaEngastamentoPerfeito[];
-  /** Vãos dos tramos 1..n, m (o .REP escreve "[L]" do tramo extremo). */
-  vaos: number[];
-}
 
 /** Texto do "Momento Engastamento Perfeito apoio(k)" do relatório:
  *  STR$(INT(MEP·100)/100), piso em 2 casas (VIGA.BAS:7559, 7612). −0,648 → "-.65". */
@@ -395,7 +358,7 @@ function flecha(vt: VigaTrabalho, t: number, x: number, S0: number, s: (x: numbe
  *  cortante nulo, reações estática/máx./mín., f·EJ, envoltória de acidentais (só com
  *  acidentais "S"), MEP dos extremos e momentos levados aos pilares extremos.
  *  Caso b, V1 (livros_viga_pilar.md 3.1): M(1) −0,97; Ve 0,73; x 1,50; M+ 0,55. */
-export const analisaViga = ((viga, parametros, modo): AnaliseVigaSistrut => {
+export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
   const s = atribuicao(modo);
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
@@ -611,11 +574,11 @@ export const analisaViga = ((viga, parametros, modo): AnaliseVigaSistrut => {
   // Saída nos índices do contrato.
   const coefFlecha = (v: number) =>
     s(v * parametros.coeficienteMedida ** 3 * parametros.coeficienteForca);
-  const tramos: TramoAnalisadoSistrut[] = [];
+  const tramos: TramoAnalisado[] = [];
   for (let t = 1; t <= n; t++) {
     const e5 = ve5[t] ?? [0, 0, 0, 0, 0];
     const [eVe = 0, eVd = 0, , eVeMin = 0, eVdMin = 0] = e5;
-    const tramo: TramoAnalisadoSistrut = {
+    const tramo: TramoAnalisado = {
       ve: em(re, t),
       vd: em(rd, t),
       x: em(xs, t),
@@ -658,7 +621,7 @@ export const analisaViga = ((viga, parametros, modo): AnaliseVigaSistrut => {
     });
   }
 
-  const resultado: AnaliseVigaSistrut = {
+  const resultado: AnaliseViga = {
     nome: viga.nome,
     apoios,
     tramos,
@@ -674,7 +637,7 @@ export const analisaViga = ((viga, parametros, modo): AnaliseVigaSistrut => {
   if (balancoEsquerdo) resultado.balancoEsquerdo = balancoEsquerdo;
   if (balancoDireito) resultado.balancoDireito = balancoDireito;
   return resultado;
-}) satisfies AnalisaViga;
+};
 
 interface EstadoEnvoltoria {
   /** A_1924: momento máximo (negativo) por apoio. */
@@ -811,31 +774,17 @@ function envoltoria(
 
 // ---------------------------------------------------------------- várias vigas
 
-/** Resultado de `analisaVigasComPendencias`: as análises na ordem em que o original as
- *  processa e as vigas que ficaram sem processar ("AS VIGAS ... NAO FORAM PROCESSADAS"). */
-export interface AnaliseDeVigas {
-  analises: AnaliseVigaSistrut[];
-  naoProcessadas: string[];
-  /** As vigas da entrada, na mesma ordem, com as cargas indexadas resolvidas (F e Fac
-   *  gravados, sem `indexada`): o .VIG que o DESDIM lê depois do VIGA. */
-  vigas: DadosViga[];
-}
-
-/** Processa as vigas como a opção 2 do VIGA (VIGA.BAS:1610-1669): em passadas sobre a
- *  lista, calcula cada viga sem carga indexada pendente e, logo depois, resolve as
- *  cargas das outras vigas que apontam para ela (L_15d8a, VIGA.BAS:1670-1706):
- *  F = INT(R·1000)/1000 (estática) ou, com acidentais "S" e reação "M",
- *  F = INT(Rmax·1000)/1000 e Fac = INT((Rmax − Rmin)·1000)/1000; no corrigido, sem o
+/** Processa as vigas como a opção 2 do VIGA (contrato `AnalisaVigas`; VIGA.BAS:1610-1669):
+ *  em passadas sobre a lista, calcula cada viga sem carga indexada pendente e, logo
+ *  depois, resolve as cargas das outras vigas que apontam para ela (L_15d8a,
+ *  VIGA.BAS:1670-1706): F = INT(R·1000)/1000 (estática) ou, com acidentais "S" e reação
+ *  "M", F = INT(Rmax·1000)/1000 e Fac = INT((Rmax − Rmin)·1000)/1000; no corrigido, sem o
  *  INT (como o R5). Apoio inexistente na viga de origem deixa a carga pendente (U61-019). */
-export function analisaVigasComPendencias(
-  vigas: readonly DadosViga[],
-  parametros: ParametrosVicalc,
-  modo: ModoSistrut,
-): AnaliseDeVigas {
+export const analisaVigas: AnalisaVigas = (vigas, parametros, modo) => {
   const s = atribuicao(modo);
   const trabalho = vigas.map((v) => structuredClone(v));
   const feitas = new Set<number>();
-  const analises: AnaliseVigaSistrut[] = [];
+  const analises: AnaliseViga[] = [];
   const pendente = (v: DadosViga) =>
     [v.balancoEsquerdo, ...v.tramos, v.balancoDireito].some((t) =>
       t?.divisoes.some((d) => d.indexada),
@@ -873,16 +822,4 @@ export function analisaVigasComPendencias(
   }
   const naoProcessadas = trabalho.filter((_, i) => !feitas.has(i)).map((v) => v.nome);
   return { analises, naoProcessadas, vigas: trabalho };
-}
-
-/** Contrato T3: analisa todas as vigas resolvendo as cargas indexadas na ordem de
- *  dependência (VIGA.BAS:1610-1706). As vigas que não puderam ser processadas viram
- *  aviso em cada análise devolvida (o contrato não tem campo para elas). */
-export const analisaVigas = ((vigas, parametros, modo) => {
-  const { analises, naoProcessadas } = analisaVigasComPendencias(vigas, parametros, modo);
-  if (naoProcessadas.length > 0) {
-    const aviso = `Vigas não processadas (carga indexada sem origem): ${naoProcessadas.join(", ")}.`;
-    for (const a of analises) a.avisos.push(aviso);
-  }
-  return analises;
-}) satisfies AnalisaVigas;
+};
