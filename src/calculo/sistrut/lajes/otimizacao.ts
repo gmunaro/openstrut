@@ -10,8 +10,9 @@
 // Defeito R3: o original reduz o coeficiente com 2 casas e grava o código com 1
 // (CINT(coef·10 + 2), ao par). Se o código não muda, o momento não muda e o mesmo
 // bordo se repete sem fim (ex.: 0,40 × 0,89 → 0,35 → CINT(5,5) = 6 → 0,40).
-// - original: o mesmo algoritmo; onde o original entraria em laço, para no bordo e
-//   avisa.
+// - original: o mesmo algoritmo; onde o original entraria em laço, lança
+//   `NaoConvergeOtimizacao` com o estado da tela (v2par_laje_r3: piso 0,35, CINT(5,4999999)
+//   = 5 = código atual).
 // - corrigido: grava o código 2 + 10·coef sem arredondar (coef com 2 casas, que
 //   sempre cai), então a redução converge.
 import type { Etapa } from "../../tipos";
@@ -28,6 +29,38 @@ import { barraImpostaNaContinuidade } from "./barras";
 import { flexaoLaje } from "./flexao";
 
 const REF = "LAJECALC.BAS:2021-2230; livros_laje.md 1.14";
+
+/** Lado de uma continuidade como a tela da otimização o mostra (LAJECALC.BAS:2059-2097):
+ *  M− em t·cm/m, As (−1 se a seção não passa) e Mneg/Mpos. */
+export interface LadoOtimizacao {
+  laje: string;
+  lado: number;
+  mTcm: number;
+  as: number;
+  relacao: number;
+}
+
+/** Ponto em que o SISTRUT original entra em laço (defeito R3): a relação nova grava o
+ *  mesmo código, o momento não muda e o mesmo bordo se repete sem fim
+ *  (LAJECALC.BAS:2113-2145, 2199-2207). `estado` = o que a tela mostra parada. */
+export class NaoConvergeOtimizacao extends Error {
+  readonly estado: {
+    laje: string;
+    lado: number;
+    relacaoNova: number;
+    codigo: number;
+    lados: LadoOtimizacao[];
+  };
+  constructor(estado: NaoConvergeOtimizacao["estado"]) {
+    super(
+      `Otimização dos negativos não converge: ${estado.laje}, lado ${estado.lado + 1}, relação ` +
+        `Mneg/Mpos alterada para ${estado.relacaoNova}, mas o código gravado continua ${estado.codigo} ` +
+        "(CINT(coef·10 + 2)); o SISTRUT original repete este bordo sem fim (defeito R3).",
+    );
+    this.name = "NaoConvergeOtimizacao";
+    this.estado = estado;
+  }
+}
 /** Teto de passos por bordo: só protege contra laço; o algoritmo converge antes. */
 const MAXIMO_PASSOS = 1000;
 
@@ -41,7 +74,9 @@ const continuidadeDoBordo = (continuidades: readonly Continuidade[], laje: strin
  * Otimização dos negativos sobre os esforços do painel (LAJECALC.BAS:2005-2230).
  * `recalcula(laje)` refaz os momentos da laje com os códigos novos (o
  * `MomentosLaje` da T1). Devolve os esforços com códigos, momentos, coeficientes e
- * fatores atualizados, e uma etapa de memória por alteração.
+ * fatores atualizados, e uma etapa de memória por alteração. No modo original, lança
+ * `NaoConvergeOtimizacao` onde o original travaria (R3).
+ * v2par_laje_assim: L3 lado 3 22 → 16 e L4 lado 1 22 → 15; v2par_laje_otim: 22 → 5 (piso).
  * E2E: os dois lados de cada continuidade têm o mesmo negativo e nada muda
  * (caso_a_laje: As 2,13/1,68 antes e depois).
  */
@@ -75,18 +110,46 @@ export const otimizaNegativos: OtimizaNegativos = (
     const fator = m.bordos[bordo]?.fatorDirecao ?? 1;
     return s((m.mPositivoPrincipalTcm * (codigo - 2) * fator) / 10);
   };
+  /** Lado como a tela o mostra: M−, As da flexão com o H da laje e Mneg/Mpos. */
+  const ladoNaTela = (nome: string, bordo: number): LadoOtimizacao => {
+    const mTcm = momentoNoBordo(nome, bordo);
+    const f = flexaoLaje(
+      { mTcm, h: momentos[nome]!.h, negativa: true },
+      materiais,
+      parametros,
+      modo,
+    );
+    return {
+      laje: nome,
+      lado: bordo,
+      mTcm,
+      as: f.passa ? f.as : -1,
+      relacao: relacao(laje(nome)!.codigos[bordo]!),
+    };
+  };
   /** Grava a relação nova no bordo e recalcula a laje (LAJECALC.BAS:2116-2124, 2144-2161).
-   *  false quando o código não muda (no original, laço sem fim: R3). */
-  const grava = (nome: string, bordo: number, coef: number, formula: string) => {
+   *  Código que não muda: no original, laço sem fim (R3), lança `NaoConvergeOtimizacao`;
+   *  no corrigido (que não chega aqui), para o bordo com aviso. */
+  const grava = (
+    nome: string,
+    bordo: number,
+    coef: number,
+    formula: string,
+    lados: LadoOtimizacao[],
+  ) => {
     const alvo = laje(nome)!;
     const anterior = alvo.codigos[bordo]!;
     const codigo = codigoDe(coef);
     if (codigo === anterior) {
-      avisos.push(
-        `${nome}, lado ${bordo + 1}: a relação Mneg/Mpos ${relacao(anterior)} cairia para ${coef}, ` +
-          `mas o código gravado não muda (CINT(${coef}·10 + 2) = ${codigo}); o SISTRUT original ` +
-          "repetiria este bordo sem fim (defeito R3). A otimização parou neste bordo.",
-      );
+      const erro = new NaoConvergeOtimizacao({
+        laje: nome,
+        lado: bordo,
+        relacaoNova: coef,
+        codigo,
+        lados,
+      });
+      if (modo === "original") throw erro;
+      avisos.push(erro.message);
       return false;
     }
     alvo.codigos[bordo] = codigo;
@@ -124,7 +187,8 @@ export const otimizaNegativos: OtimizaNegativos = (
     if ((maior - menor) / maior < s(0.1) || coef === minimo) return "segue";
     const novo = Math.max(s(qbInt((100 * coef * menor) / maior) / 100), minimo);
     const formula = "INT(100·coef·M2/M1)/100 ≥ mínimo; código = CINT(coef·10 + 2)";
-    return grava(alvo, bordoAlvo, novo, formula) ? "mudou" : "parou";
+    const lados = [ladoNaTela(nome, bordo), ladoNaTela(vizinho, bordoVizinho)];
+    return grava(alvo, bordoAlvo, novo, formula, lados) ? "mudou" : "parou";
   };
 
   /** Armadura imposta na continuidade (LAJECALC.BAS:2165-2221): reduz a relação até
@@ -148,7 +212,7 @@ export const otimizaNegativos: OtimizaNegativos = (
       const fator = Math.max(s(imposta.area / asNecessaria), s(0.85));
       const novo = Math.max(s(qbInt(100 * coef * fator) / 100), minimo);
       const formula = "INT(100·coef·max(As_imp/As_nec; 0,85))/100 ≥ mínimo";
-      if (!grava(nome, bordo, novo, formula)) return "parou";
+      if (!grava(nome, bordo, novo, formula, [ladoNaTela(nome, bordo)])) return "parou";
       mudou = true;
     }
     avisos.push(

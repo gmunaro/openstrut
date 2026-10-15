@@ -16,7 +16,7 @@ import type {
   MomentosDeLaje,
 } from "../base/tipos";
 import { armadurasLaje } from "./armaduras";
-import { otimizaNegativos } from "./otimizacao";
+import { NaoConvergeOtimizacao, otimizaNegativos } from "./otimizacao";
 
 const PARAM = emSingle(PARAMETROS_LAJE);
 const E2E: MateriaisSistrut = {
@@ -194,12 +194,21 @@ describe("armadura imposta na continuidade (LAJECALC.BAS:2165-2221)", () => {
     expect(r.lajes[0]!.codigos[0]).toBe(11);
     expect(r.avisos).toEqual([]);
   });
-  it("R3, original: M− 50,6 → As 2,178, fator 0,964 → coef 0,96 → CINT(11,6) = 12: o código não muda; para e avisa", () => {
+  it("R3, original: M− 50,6 → As 2,178, fator 0,964 → coef 0,96 → CINT(11,6) = 12: o código não muda; erro explícito", () => {
     const { esforcos, recalcula } = imposta(50.6);
-    const r = otimizaNegativos(esforcos, recalcula, E2E, PARAM, "original");
-    expect(r.lajes[0]!.codigos[0]).toBe(12);
-    expect(r.memoria).toEqual([]);
-    expect(r.avisos.join(" ")).toContain("R3");
+    const erro = (() => {
+      try {
+        otimizaNegativos(esforcos, recalcula, E2E, PARAM, "original");
+      } catch (e) {
+        return e;
+      }
+      return undefined;
+    })();
+    expect(erro).toBeInstanceOf(NaoConvergeOtimizacao);
+    if (!(erro instanceof NaoConvergeOtimizacao)) return;
+    expect(erro.message).toContain("R3");
+    expect(erro.estado).toMatchObject({ laje: "A", lado: 0, codigo: 12 });
+    expect(erro.estado.relacaoNova).toBeCloseTo(0.96, 6);
   });
   it("R3, corrigido: grava 2 + 10·0,96 = 11,6; M− 48,58 → As 2,085 ≤ 2,163 e converge", () => {
     const { esforcos, recalcula } = imposta(50.6);

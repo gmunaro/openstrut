@@ -55,7 +55,12 @@ export const flexaoLaje: FlexaoLaje = (secao, materiais, parametros, modo) => {
   const X = (80 * d * s(0.85) * fck) / gamaC;
   const Y = (s(108.8) * fck * secao.mTcm * gamaF) / gamaC;
   if (X ** 2 < Y) return NAO_PASSA;
-  const x = s(((X - Math.sqrt(X ** 2 - Y)) / (fck * s(54.4))) * gamaC);
+  // M = 0 (Y = 0): o BRUN45 calcula X^2 por logaritmo (FYL2X/F2XM1) e X − √(X^2) não
+  // zera: sobra um resíduo positivo, então x > 0 e a seção sai com o mínimo. Prova:
+  // v2par_laje_balanco, As+ principal e secundária 1,50 com M+ = −0,28 (a V1, com o ^
+  // do QB64, sai −1). Em float64 √(X²) = X; o resíduo aqui é 2^-64·X, o ulp do x87.
+  const diferenca = Y === 0 ? X * 2 ** -64 : X - Math.sqrt(X ** 2 - Y);
+  const x = s((diferenca / (fck * s(54.4))) * gamaC);
   if (x / d > xiLim) return NAO_PASSA;
   let as = s((80 / (gamaC * fyk)) * x * s(0.85) * fck * gamaS);
   if (secao.negativa) {

@@ -1,0 +1,51 @@
+{
+  "caso": "v2par_laje_otim",
+  "laj": "C:/tmp/oraculo/runs/v2par_laje_otim-20261015-163215/obra/OTIM.LAJ",
+  "lajes": [
+    {
+      "nome": "L1",
+      "tipo": 0,
+      "poligono": 1,
+      "vertices": [
+        [0.0, 0.0],
+        [0.0, 6.0],
+        [6.0, 6.0],
+        [6.0, 0.0]
+      ],
+      "codigosFinais": [0, 0, 5, 0],
+      "angulo": 0.0,
+      "mu": 0.9,
+      "area": 36.0,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 81.08813
+    },
+    {
+      "nome": "L2",
+      "tipo": 0,
+      "poligono": 2,
+      "vertices": [
+        [7.8, 0.0],
+        [6.0, 0.0],
+        [6.0, 6.0],
+        [7.8, 6.0]
+      ],
+      "codigosFinais": [0, 22, 0, 0],
+      "angulo": 0.0,
+      "mu": 0.5,
+      "area": 10.8,
+      "cargaPermanente": 0.1,
+      "h": 10.0,
+      "mPositivoFinalTcm": 9.386644
+    }
+  ],
+  "continuidades": [
+    {
+      "lajeA": "L1",
+      "bordoA": 2,
+      "lajeB": "L2",
+      "bordoB": 1,
+      "armaduraImposta": 0
+    }
+  ]
+}

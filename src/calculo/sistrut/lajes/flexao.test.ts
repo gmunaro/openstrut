@@ -62,10 +62,14 @@ describe("flexão da laje, E2E H 10 (livros_laje.md 2.3)", () => {
       expect(f.as).toBeCloseTo(c.as, 3);
     });
   }
-  it("M = 0 na positiva dá x = 0 e o mínimo 0,15·H", () => {
-    const f = flexaoLaje({ mTcm: 0, h: 10, negativa: false }, E2E, PARAM, "original");
-    expect(f).toMatchObject({ passa: true, x: 0 });
-    expect(f.as).toBeCloseTo(1.5, 6);
+  it("M = 0 na positiva: x residual > 0 (x87) e o mínimo 0,15·H (v2par_laje_balanco)", () => {
+    for (const modo of ["original", "corrigido"] as const) {
+      const f = flexaoLaje({ mTcm: 0, h: 10, negativa: false }, E2E, PARAM, modo);
+      expect(f.passa).toBe(true);
+      expect(f.x).toBeGreaterThan(0);
+      expect(f.x).toBeLessThan(1e-12);
+      expect(f.as).toBeCloseTo(1.5, 6);
+    }
   });
 });
 

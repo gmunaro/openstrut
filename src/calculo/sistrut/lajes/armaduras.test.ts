@@ -208,14 +208,14 @@ describe("retrad_laje_calc2: sem continuidade, L1 a 90° com um engaste, L2 com 
 });
 
 describe("regras −1 e 0 das colunas (LAJECALC.BAS:663-731)", () => {
-  it("M+ ≤ 0: principal com o mínimo, secundária −1, negativas 0", () => {
+  it("M+ ≤ 0: principal e secundária com o mínimo (x residual > 0), negativas 0", () => {
     const m = {
       ...momentosDeTeste("L", 10, COEF.e2e, 0.8, BORDOS_E2E.L1!),
       mPositivoPrincipalTcm: 0,
     };
     const a = armadurasLaje(m, E2E, PARAM, "original");
     expect(a.asPositivaPrincipal).toBeCloseTo(1.5, 6);
-    expect(a.asPositivaSecundaria).toBe(-1);
+    expect(a.asPositivaSecundaria).toBeCloseTo(1.5, 6);
     expect(a.asNegativaMaior).toBe(0);
     expect(a.asNegativaMenor).toBe(0);
   });

@@ -92,8 +92,9 @@ export function secaoDeMaiorX(
  * modo 4; livros_laje.md 1.13), a partir do M+ gravado (A_12fc(i,1)):
  * - As+ principal com max(M+, 0): As se x ≥ 0, senão −1;
  * - As− maior/menor com |M+|·c_max/c_min: só se M > 0 (senão 0); As se x > 0, senão −1;
- * - As+ secundária com o M+ secundário (0 se M+ ≤ 0): As se x > 0, senão −1 (com
- *   M+ ≤ 0 sai −1, como no original).
+ * - As+ secundária com o M+ secundário (0 se M+ ≤ 0): As se x > 0, senão −1. Com
+ *   M = 0 o x do original é um resíduo positivo e sai o mínimo (flexao.ts;
+ *   v2par_laje_balanco: 1,50 e 1,50 com M+ = −0,28).
  * Mais a seção de maior x e a barra do relatório da imposição (`secaoDeMaiorX`).
  * E2E H 10: 1,50 / 1,50 / 2,13 / 1,68 (livros_laje.md 2.3).
  */
