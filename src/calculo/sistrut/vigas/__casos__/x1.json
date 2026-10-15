@@ -1,0 +1,1163 @@
+{
+  "caso": "x1",
+  "run": "C:/tmp/oraculo/runs/retrad_viga_x1-20261015-065711",
+  "entradaDe": "opção 2: roteiro C:/tmp/oraculo/casos/retrad_viga_x1.txt (F = *1.01 = reação do apoio 1 da posição 1, V20); opção 7: obra/IDX.VIG do run (J com a marca do pilar, F já resolvido)",
+  "descricao": "VIGA com acidentais S fornecidas, reação estática. Opção 2 (V21 só depois da V20, com a reação transferida) e opção 7 na IDX (pilares 1, 2 / 3, *, 4).",
+  "parametros": {
+    "reducaoNegativos": 1,
+    "acidentais": true,
+    "acidentalGerada": false,
+    "porcentagemAcidentalGerada": 30,
+    "momentosExternos": false,
+    "reacaoNoPilar": "estatica",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 100
+  },
+  "vigas": [
+    {
+      "nome": "V20",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.3,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": [null, null]
+    },
+    {
+      "nome": "V21",
+      "tramos": [
+        {
+          "vao": 3,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 3,
+              "f": 0,
+              "pAcidental": 0.2,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 2.5,
+              "f": 1.01,
+              "pAcidental": 0.2,
+              "fAcidental": -100,
+              "indexada": {
+                "viga": "V20",
+                "apoio": 1
+              }
+            },
+            {
+              "p": 1,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.2,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": [null, null, null]
+    }
+  ],
+  "vigasRep": [
+    {
+      "nome": "V20",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000200271606445,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.30000001192092896,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P1", "P2"]
+    },
+    {
+      "nome": "V21",
+      "tramos": [
+        {
+          "vao": 3,
+          "inercia": 1.0047099590301514,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 3,
+              "f": 0,
+              "pAcidental": 0.20000000298023224,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 2.5,
+              "f": 2,
+              "pAcidental": 0.20000000298023224,
+              "fAcidental": 0
+            },
+            {
+              "p": 1,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.20000000298023224,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P3", null, "P4"]
+    }
+  ],
+  "valores": [
+    {
+      "id": "op2.V20.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "op2.V20.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "op2.V20.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "op2.V20.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "op2.V20.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "1.40",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "op2.V20.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "op2.V20.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "op2.V20.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "op2.V20.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "op2.V20.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "1.40",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "op2.V20.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "op2.V20.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.34",
+      "fonte": "impressora.prn:24"
+    },
+    {
+      "id": "op2.V20.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "op2.V20.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "op2.V20.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "op2.V20.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "op2.V20.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "3.33",
+      "fonte": "impressora.prn:25"
+    },
+    {
+      "id": "op2.V20.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "op2.V20.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "op2.V20.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "op2.V20.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "op2.V20.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "3.33",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "op2.V20.MEP1",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.34",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "op2.V21.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "op2.V21.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:52"
+    },
+    {
+      "id": "op2.V21.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "op2.V21.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "op2.V21.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "0.05",
+      "fonte": "impressora.prn:53"
+    },
+    {
+      "id": "op2.V21.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-3.55",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "op2.V21.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "6.89",
+      "fonte": "impressora.prn:54"
+    },
+    {
+      "id": "op2.V21.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-3.55",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "op2.V21.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "6.89",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "op2.V21.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "5.84",
+      "fonte": "impressora.prn:55"
+    },
+    {
+      "id": "op2.V21.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:56"
+    },
+    {
+      "id": "op2.V21.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.79",
+      "fonte": "impressora.prn:56"
+    },
+    {
+      "id": "op2.V21.a2.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:57"
+    },
+    {
+      "id": "op2.V21.a2.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.81",
+      "fonte": "impressora.prn:57"
+    },
+    {
+      "id": "op2.V21.a2.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "2.37",
+      "fonte": "impressora.prn:57"
+    },
+    {
+      "id": "op2.V21.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "10.00",
+      "fonte": "impressora.prn:59"
+    },
+    {
+      "id": "op2.V21.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-.75",
+      "fonte": "impressora.prn:63"
+    },
+    {
+      "id": "op2.V21.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "op2.V21.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "op2.V21.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "0.05",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "op2.V21.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.68",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "op2.V21.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:64"
+    },
+    {
+      "id": "op2.V21.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:65"
+    },
+    {
+      "id": "op2.V21.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:65"
+    },
+    {
+      "id": "op2.V21.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:65"
+    },
+    {
+      "id": "op2.V21.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.68",
+      "fonte": "impressora.prn:65"
+    },
+    {
+      "id": "op2.V21.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:65"
+    },
+    {
+      "id": "op2.V21.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "4.21",
+      "fonte": "impressora.prn:66"
+    },
+    {
+      "id": "op2.V21.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:66"
+    },
+    {
+      "id": "op2.V21.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "3.85",
+      "fonte": "impressora.prn:66"
+    },
+    {
+      "id": "op2.V21.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.79",
+      "fonte": "impressora.prn:66"
+    },
+    {
+      "id": "op2.V21.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "7.80",
+      "fonte": "impressora.prn:66"
+    },
+    {
+      "id": "op2.V21.t2.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "4.21",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "op2.V21.t2.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "op2.V21.t2.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "3.89",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "op2.V21.t2.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.81",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "op2.V21.t2.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "7.94",
+      "fonte": "impressora.prn:67"
+    },
+    {
+      "id": "op2.V21.MEP2",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-3.34",
+      "fonte": "impressora.prn:68"
+    },
+    {
+      "id": "op2.V21.ep1.Ve",
+      "grandeza": "Ve no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "1.13",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "op2.V21.ep1.x",
+      "grandeza": "x no engastamento perfeito",
+      "unidade": "m",
+      "impresso": "1.13",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "op2.V21.ep1.M+",
+      "grandeza": "M+ no engastamento perfeito",
+      "unidade": "tm",
+      "impresso": "0.63",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "op2.V21.ep1.Vd",
+      "grandeza": "Vd no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "1.88",
+      "fonte": "impressora.prn:72"
+    },
+    {
+      "id": "op7.V20.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:91"
+    },
+    {
+      "id": "op7.V20.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:91"
+    },
+    {
+      "id": "op7.V20.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:92"
+    },
+    {
+      "id": "op7.V20.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:92"
+    },
+    {
+      "id": "op7.V20.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "1.40",
+      "fonte": "impressora.prn:92"
+    },
+    {
+      "id": "op7.V20.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:93"
+    },
+    {
+      "id": "op7.V20.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:93"
+    },
+    {
+      "id": "op7.V20.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:94"
+    },
+    {
+      "id": "op7.V20.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:94"
+    },
+    {
+      "id": "op7.V20.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "1.40",
+      "fonte": "impressora.prn:94"
+    },
+    {
+      "id": "op7.V20.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:96"
+    },
+    {
+      "id": "op7.V20.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.34",
+      "fonte": "impressora.prn:100"
+    },
+    {
+      "id": "op7.V20.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "op7.V20.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "op7.V20.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "op7.V20.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "op7.V20.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "3.33",
+      "fonte": "impressora.prn:101"
+    },
+    {
+      "id": "op7.V20.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "op7.V20.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "op7.V20.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "op7.V20.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "op7.V20.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "3.33",
+      "fonte": "impressora.prn:102"
+    },
+    {
+      "id": "op7.V20.MEP1",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-1.34",
+      "fonte": "impressora.prn:103"
+    },
+    {
+      "id": "op7.V21.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:128"
+    },
+    {
+      "id": "op7.V21.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:128"
+    },
+    {
+      "id": "op7.V21.a0.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:129"
+    },
+    {
+      "id": "op7.V21.a0.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:129"
+    },
+    {
+      "id": "op7.V21.a0.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "0.04",
+      "fonte": "impressora.prn:129"
+    },
+    {
+      "id": "op7.V21.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-3.55",
+      "fonte": "impressora.prn:130"
+    },
+    {
+      "id": "op7.V21.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "6.89",
+      "fonte": "impressora.prn:130"
+    },
+    {
+      "id": "op7.V21.a1.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "-3.55",
+      "fonte": "impressora.prn:131"
+    },
+    {
+      "id": "op7.V21.a1.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "6.89",
+      "fonte": "impressora.prn:131"
+    },
+    {
+      "id": "op7.V21.a1.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "5.84",
+      "fonte": "impressora.prn:131"
+    },
+    {
+      "id": "op7.V21.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:132"
+    },
+    {
+      "id": "op7.V21.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "2.79",
+      "fonte": "impressora.prn:132"
+    },
+    {
+      "id": "op7.V21.a2.Mmax",
+      "grandeza": "momento máximo da envoltória",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:133"
+    },
+    {
+      "id": "op7.V21.a2.Rmax",
+      "grandeza": "reação máxima",
+      "unidade": "t",
+      "impresso": "2.81",
+      "fonte": "impressora.prn:133"
+    },
+    {
+      "id": "op7.V21.a2.Rmin",
+      "grandeza": "reação mínima",
+      "unidade": "t",
+      "impresso": "2.37",
+      "fonte": "impressora.prn:133"
+    },
+    {
+      "id": "op7.V21.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "10.00",
+      "fonte": "impressora.prn:135"
+    },
+    {
+      "id": "op7.V21.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-.75",
+      "fonte": "impressora.prn:139"
+    },
+    {
+      "id": "op7.V21.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:140"
+    },
+    {
+      "id": "op7.V21.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "0.32",
+      "fonte": "impressora.prn:140"
+    },
+    {
+      "id": "op7.V21.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "0.05",
+      "fonte": "impressora.prn:140"
+    },
+    {
+      "id": "op7.V21.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.68",
+      "fonte": "impressora.prn:140"
+    },
+    {
+      "id": "op7.V21.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:140"
+    },
+    {
+      "id": "op7.V21.t1.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:141"
+    },
+    {
+      "id": "op7.V21.t1.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "0.45",
+      "fonte": "impressora.prn:141"
+    },
+    {
+      "id": "op7.V21.t1.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "0.10",
+      "fonte": "impressora.prn:141"
+    },
+    {
+      "id": "op7.V21.t1.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.68",
+      "fonte": "impressora.prn:141"
+    },
+    {
+      "id": "op7.V21.t1.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:141"
+    },
+    {
+      "id": "op7.V21.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "4.21",
+      "fonte": "impressora.prn:142"
+    },
+    {
+      "id": "op7.V21.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:142"
+    },
+    {
+      "id": "op7.V21.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "3.85",
+      "fonte": "impressora.prn:142"
+    },
+    {
+      "id": "op7.V21.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "2.79",
+      "fonte": "impressora.prn:142"
+    },
+    {
+      "id": "op7.V21.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "7.80",
+      "fonte": "impressora.prn:142"
+    },
+    {
+      "id": "op7.V21.t2.max.Ve",
+      "grandeza": "Ve da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "4.21",
+      "fonte": "impressora.prn:143"
+    },
+    {
+      "id": "op7.V21.t2.max.x",
+      "grandeza": "x do M+ máximo",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:143"
+    },
+    {
+      "id": "op7.V21.t2.max.M+",
+      "grandeza": "M+ máximo",
+      "unidade": "tm",
+      "impresso": "3.89",
+      "fonte": "impressora.prn:143"
+    },
+    {
+      "id": "op7.V21.t2.max.Vd",
+      "grandeza": "Vd da envoltória (maior módulo)",
+      "unidade": "t",
+      "impresso": "2.81",
+      "fonte": "impressora.prn:143"
+    },
+    {
+      "id": "op7.V21.t2.max.fEJ",
+      "grandeza": "f·EJ da envoltória",
+      "unidade": "",
+      "impresso": "7.93",
+      "fonte": "impressora.prn:143"
+    },
+    {
+      "id": "op7.V21.MEP2",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-3.34",
+      "fonte": "impressora.prn:144"
+    },
+    {
+      "id": "op7.V21.ep1.Ve",
+      "grandeza": "Ve no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "1.13",
+      "fonte": "impressora.prn:148"
+    },
+    {
+      "id": "op7.V21.ep1.x",
+      "grandeza": "x no engastamento perfeito",
+      "unidade": "m",
+      "impresso": "1.13",
+      "fonte": "impressora.prn:148"
+    },
+    {
+      "id": "op7.V21.ep1.M+",
+      "grandeza": "M+ no engastamento perfeito",
+      "unidade": "tm",
+      "impresso": "0.63",
+      "fonte": "impressora.prn:148"
+    },
+    {
+      "id": "op7.V21.ep1.Vd",
+      "grandeza": "Vd no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "1.88",
+      "fonte": "impressora.prn:148"
+    }
+  ],
+  "indexada": {
+    "impresso": "2.00",
+    "fonte": "impressora.prn:45"
+  },
+  "rep": {
+    "cabecalho": {
+      "obra": "IDX",
+      "registros": "1 A 2",
+      "data": "10-14-2026",
+      "hora": "12:00"
+    },
+    "linhas": [
+      {
+        "texto": "SISTRUT Software e Tecnologia s/c Ltda",
+        "fonte": "obra/IDX.REP:1"
+      },
+      {
+        "texto": "Versao 4.0    Abril 1990",
+        "fonte": "obra/IDX.REP:2"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/IDX.REP:3"
+      },
+      {
+        "texto": " SOMATORIA DE REACOES EM PILARES",
+        "fonte": "obra/IDX.REP:4"
+      },
+      {
+        "texto": " OBRA IDX",
+        "fonte": "obra/IDX.REP:5"
+      },
+      {
+        "texto": " GERADO EM 10-14-2026   12:00",
+        "fonte": "obra/IDX.REP:6"
+      },
+      {
+        "texto": " REGISTROS 1 A 2",
+        "fonte": "obra/IDX.REP:7"
+      },
+      {
+        "texto": " Cargas Totais e Acidentais  Reacoes Estaticas",
+        "fonte": "obra/IDX.REP:8"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/IDX.REP:9"
+      },
+      {
+        "texto": "P   1         2.00",
+        "fonte": "obra/IDX.REP:10"
+      },
+      {
+        "texto": "*2 (V20) + ",
+        "fonte": "obra/IDX.REP:11"
+      },
+      {
+        "texto": ">-1.33@1 [4]  (V20) > ",
+        "fonte": "obra/IDX.REP:12"
+      },
+      {
+        "texto": "P   2         2.00",
+        "fonte": "obra/IDX.REP:13"
+      },
+      {
+        "texto": "*2 (V20) + ",
+        "fonte": "obra/IDX.REP:14"
+      },
+      {
+        "texto": ">-1.33@1 [4]  (V20) > ",
+        "fonte": "obra/IDX.REP:15"
+      },
+      {
+        "texto": "P   3         0.31",
+        "fonte": "obra/IDX.REP:16"
+      },
+      {
+        "texto": "*.31 (V21) + ",
+        "fonte": "obra/IDX.REP:17"
+      },
+      {
+        "texto": ">-.75@1 [3]  (V21) > ",
+        "fonte": "obra/IDX.REP:18"
+      },
+      {
+        "texto": "P   4         2.78",
+        "fonte": "obra/IDX.REP:19"
+      },
+      {
+        "texto": "*2.78 (V21) + ",
+        "fonte": "obra/IDX.REP:20"
+      },
+      {
+        "texto": ">-3.33@2 [5]  (V21) > ",
+        "fonte": "obra/IDX.REP:21"
+      }
+    ]
+  }
+}

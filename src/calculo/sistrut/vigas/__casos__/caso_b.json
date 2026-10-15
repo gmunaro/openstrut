@@ -1,0 +1,383 @@
+{
+  "caso": "caso_b",
+  "run": "C:/tmp/oraculo/runs/caso_b_viga-20261014-182718",
+  "entradaDe": "C:/tmp/oraculo/casos/caso_b_viga.dados/E2E.VIG (registros 1-6 decodificados; J com a marca do pilar)",
+  "descricao": "VIGA opção 7 da obra E2E, VIGA.INI de fábrica. Valores impressos em __oraculo__/caso_b_viga.json; aqui só a entrada e as linhas do E2E.REP.",
+  "parametros": {
+    "reducaoNegativos": 1,
+    "acidentais": false,
+    "acidentalGerada": false,
+    "porcentagemAcidentalGerada": 30,
+    "momentosExternos": false,
+    "reacaoNoPilar": "estatica",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 100
+  },
+  "vigas": [
+    {
+      "nome": "V1",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000799894332886,
+          "divisoes": [
+            {
+              "p": 0.48602545261383057,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.10980764031410217,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1.0000900030136108,
+          "divisoes": [
+            {
+              "p": 0.4860254228115082,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.10980763286352158,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P7", "P8", "P9"]
+    },
+    {
+      "nome": "V2",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 1.3879493474960327,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.38038480281829834,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 1.3879491090774536,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.38038474321365356,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P6", "P5", "P4"]
+    },
+    {
+      "nome": "V3",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000200271606445,
+          "divisoes": [
+            {
+              "p": 0.4860253930091858,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.10980761796236038,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1.0000300407409668,
+          "divisoes": [
+            {
+              "p": 0.4860253632068634,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.10980761051177979,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P1", "P2", "P3"]
+    },
+    {
+      "nome": "V4",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.000059962272644,
+          "divisoes": [
+            {
+              "p": 0.589230477809906,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.13176915049552917,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.0000699758529663,
+          "divisoes": [
+            {
+              "p": 0.589230477809906,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.13176915049552917,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P1", "P6", "P7"]
+    },
+    {
+      "nome": "V5",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 1.671539068222046,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.45646172761917114,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.0000799894332886,
+          "divisoes": [
+            {
+              "p": 1.6715391874313354,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.45646175742149353,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P2", "P5", "P8"]
+    },
+    {
+      "nome": "V6",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 0.5892303586006165,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.1317691057920456,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.0000900030136108,
+          "divisoes": [
+            {
+              "p": 0.5892307758331299,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.13176922500133514,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P3", "P4", "P9"]
+    }
+  ],
+  "rep": {
+    "cabecalho": {
+      "obra": "E2E",
+      "registros": "1 A 6",
+      "data": "10-14-2026",
+      "hora": "21:27"
+    },
+    "linhas": [
+      {
+        "texto": "SISTRUT Software e Tecnologia s/c Ltda",
+        "fonte": "obra/E2E.REP:1"
+      },
+      {
+        "texto": "Versao 4.0    Abril 1990",
+        "fonte": "obra/E2E.REP:2"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/E2E.REP:3"
+      },
+      {
+        "texto": " SOMATORIA DE REACOES EM PILARES",
+        "fonte": "obra/E2E.REP:4"
+      },
+      {
+        "texto": " OBRA E2E",
+        "fonte": "obra/E2E.REP:5"
+      },
+      {
+        "texto": " GERADO EM 10-14-2026   21:27",
+        "fonte": "obra/E2E.REP:6"
+      },
+      {
+        "texto": " REGISTROS 1 A 6",
+        "fonte": "obra/E2E.REP:7"
+      },
+      {
+        "texto": " Cargas Totais  Reacoes Estaticas",
+        "fonte": "obra/E2E.REP:8"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/E2E.REP:9"
+      },
+      {
+        "texto": "P   7         1.82",
+        "fonte": "obra/E2E.REP:10"
+      },
+      {
+        "texto": "*.72 (V1) + 1.1 (V4) + ",
+        "fonte": "obra/E2E.REP:11"
+      },
+      {
+        "texto": ">-.64@1 [4]  (V1) > -1.22@2 [5]  (V4) > ",
+        "fonte": "obra/E2E.REP:12"
+      },
+      {
+        "texto": "P   8         5.56",
+        "fonte": "obra/E2E.REP:13"
+      },
+      {
+        "texto": "*2.43 (V1) + 3.13 (V5) + ",
+        "fonte": "obra/E2E.REP:14"
+      },
+      {
+        "texto": ">-3.48@2 [5]  (V5) > ",
+        "fonte": "obra/E2E.REP:15"
+      },
+      {
+        "texto": "P   9         1.82",
+        "fonte": "obra/E2E.REP:16"
+      },
+      {
+        "texto": "*.72 (V1) + 1.1 (V6) + ",
+        "fonte": "obra/E2E.REP:17"
+      },
+      {
+        "texto": ">-.64@2 [4]  (V1) > -1.22@2 [5]  (V6) > ",
+        "fonte": "obra/E2E.REP:18"
+      },
+      {
+        "texto": "P   6         5.76",
+        "fonte": "obra/E2E.REP:19"
+      },
+      {
+        "texto": "*2.08 (V2) + 3.68 (V4) + ",
+        "fonte": "obra/E2E.REP:20"
+      },
+      {
+        "texto": ">-1.85@1 [4]  (V2) > ",
+        "fonte": "obra/E2E.REP:21"
+      },
+      {
+        "texto": "P   5        17.37",
+        "fonte": "obra/E2E.REP:22"
+      },
+      {
+        "texto": "*6.93 (V2) + 10.44 (V5) + ",
+        "fonte": "obra/E2E.REP:23"
+      },
+      {
+        "texto": ">",
+        "fonte": "obra/E2E.REP:24"
+      },
+      {
+        "texto": "P   4         5.76",
+        "fonte": "obra/E2E.REP:25"
+      },
+      {
+        "texto": "*2.08 (V2) + 3.68 (V6) + ",
+        "fonte": "obra/E2E.REP:26"
+      },
+      {
+        "texto": ">-1.85@2 [4]  (V2) > ",
+        "fonte": "obra/E2E.REP:27"
+      },
+      {
+        "texto": "P   1         1.82",
+        "fonte": "obra/E2E.REP:28"
+      },
+      {
+        "texto": "*.72 (V3) + 1.1 (V4) + ",
+        "fonte": "obra/E2E.REP:29"
+      },
+      {
+        "texto": ">-.64@1 [4]  (V3) > -1.22@1 [5]  (V4) > ",
+        "fonte": "obra/E2E.REP:30"
+      },
+      {
+        "texto": "P   2         5.56",
+        "fonte": "obra/E2E.REP:31"
+      },
+      {
+        "texto": "*2.43 (V3) + 3.13 (V5) + ",
+        "fonte": "obra/E2E.REP:32"
+      },
+      {
+        "texto": ">-3.48@1 [5]  (V5) > ",
+        "fonte": "obra/E2E.REP:33"
+      },
+      {
+        "texto": "P   3         1.82",
+        "fonte": "obra/E2E.REP:34"
+      },
+      {
+        "texto": "*.72 (V3) + 1.1 (V6) + ",
+        "fonte": "obra/E2E.REP:35"
+      },
+      {
+        "texto": ">-.64@2 [4]  (V3) > -1.22@1 [5]  (V6) > ",
+        "fonte": "obra/E2E.REP:36"
+      }
+    ]
+  }
+}

@@ -1,0 +1,600 @@
+{
+  "caso": "v2par_des_especial",
+  "run": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646",
+  "entradaDe": "obra/DSX.VIG do run; V2P.DSP com acidentais envoltórias S (redução 100 %, Mext N); valores de C:/tmp/v2-paridade/oraculo-novos/v2par_des_especial.json (só a análise)",
+  "descricao": "Dimensionamento de viga com: seção T (Bf 80, Hf 10) nos tramos; armadura dupla no apoio 1 (x/d no limite do aço A, 0,628; Ast 10,18 e Asc 2,61); aço classe A; balanço à esquerda e à direita; carga concentrada de 3 t a 0,4 m do apoio (alívio do cortante: Vke 8,98 no DESDIM contra Ve 10,98 da análise); flecha com inércia fissurada e deformação lenta (impressa, 1,97 cm no tramo 1); verificação de fissuração (só na tela: janelas 'Fissura(1)' por apoio e por tramo; o original não imprime fissuração); envoltória de acidentais (acidentais S: linhas 'max' na impressão).",
+  "parametros": {
+    "reducaoNegativos": 1,
+    "acidentais": true,
+    "acidentalGerada": false,
+    "porcentagemAcidentalGerada": 30,
+    "momentosExternos": false,
+    "reacaoNoPilar": "estatica",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 100
+  },
+  "vigas": [
+    {
+      "nome": "D1",
+      "tramos": [
+        {
+          "vao": 6,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 3,
+              "d": 0.4000000059604645,
+              "f": 3,
+              "pAcidental": 0.5,
+              "fAcidental": 0
+            },
+            {
+              "p": 3,
+              "d": 6,
+              "f": 0,
+              "pAcidental": 0.5,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 3,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.5,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": [null, null, null],
+      "balancoEsquerdo": {
+        "vao": 1.5,
+        "inercia": 1,
+        "divisoes": [
+          {
+            "p": 3,
+            "d": 1.5,
+            "f": 0,
+            "pAcidental": 0.5,
+            "fAcidental": 0
+          }
+        ]
+      },
+      "balancoDireito": {
+        "vao": 1.2000000476837158,
+        "inercia": 1,
+        "divisoes": [
+          {
+            "p": 3,
+            "d": 1.2000000476837158,
+            "f": 3,
+            "pAcidental": 0.5,
+            "fAcidental": 0
+          }
+        ]
+      }
+    }
+  ],
+  "valores": [
+    {
+      "id": "D1.t0.L",
+      "grandeza": "D1 tramo 0 (balanço): comprimento",
+      "unidade": "m",
+      "impresso": "1.500",
+      "fonte": "impressora.prn:9"
+    },
+    {
+      "id": "D1.t0.J",
+      "grandeza": "D1 tramo 0 (balanço): inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:9"
+    },
+    {
+      "id": "D1.t0.P",
+      "grandeza": "D1 tramo 0: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "3.000",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "D1.t0.D",
+      "grandeza": "D1 tramo 0: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "1.50",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "D1.t0.F",
+      "grandeza": "D1 tramo 0: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:10"
+    },
+    {
+      "id": "D1.t0.Pac",
+      "grandeza": "D1 tramo 0: parcela acidental da carga distribuída",
+      "unidade": "t/m",
+      "impresso": "0.500",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "D1.t0.Fac",
+      "grandeza": "D1 tramo 0: parcela acidental da carga concentrada",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:11"
+    },
+    {
+      "id": "D1.t1.L",
+      "grandeza": "D1 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "6.000",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "D1.t1.J",
+      "grandeza": "D1 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:12"
+    },
+    {
+      "id": "D1.t1.P",
+      "grandeza": "D1 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "3.000",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "D1.t1.D",
+      "grandeza": "D1 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "0.40",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "D1.t1.F",
+      "grandeza": "D1 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "3.00",
+      "fonte": "impressora.prn:13"
+    },
+    {
+      "id": "D1.t1.Pac",
+      "grandeza": "D1 tramo 1: parcela acidental da carga distribuída",
+      "unidade": "t/m",
+      "impresso": "0.500",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "D1.t1.Fac",
+      "grandeza": "D1 tramo 1: parcela acidental da carga concentrada",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:14"
+    },
+    {
+      "id": "D1.t1.d2.P",
+      "grandeza": "D1 tramo 1, divisão 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "3.000",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "D1.t1.d2.D",
+      "grandeza": "D1 tramo 1, divisão 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "D1.t1.d2.F",
+      "grandeza": "D1 tramo 1, divisão 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:15"
+    },
+    {
+      "id": "D1.t1.d2.Pac",
+      "grandeza": "D1 tramo 1, divisão 2: parcela acidental da carga distribuída",
+      "unidade": "t/m",
+      "impresso": "0.500",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "D1.t1.d2.Fac",
+      "grandeza": "D1 tramo 1, divisão 2: parcela acidental da carga concentrada",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:16"
+    },
+    {
+      "id": "D1.t2.L",
+      "grandeza": "D1 tramo 2: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "D1.t2.J",
+      "grandeza": "D1 tramo 2: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:17"
+    },
+    {
+      "id": "D1.t2.P",
+      "grandeza": "D1 tramo 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "3.000",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "D1.t2.D",
+      "grandeza": "D1 tramo 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "D1.t2.F",
+      "grandeza": "D1 tramo 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:18"
+    },
+    {
+      "id": "D1.t2.Pac",
+      "grandeza": "D1 tramo 2: parcela acidental da carga distribuída",
+      "unidade": "t/m",
+      "impresso": "0.500",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "D1.t2.Fac",
+      "grandeza": "D1 tramo 2: parcela acidental da carga concentrada",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:19"
+    },
+    {
+      "id": "D1.t3.L",
+      "grandeza": "D1 tramo 3 (balanço): comprimento",
+      "unidade": "m",
+      "impresso": "1.200",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "D1.t3.J",
+      "grandeza": "D1 tramo 3 (balanço): inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:20"
+    },
+    {
+      "id": "D1.t3.P",
+      "grandeza": "D1 tramo 3: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "3.000",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "D1.t3.D",
+      "grandeza": "D1 tramo 3: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "1.20",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "D1.t3.F",
+      "grandeza": "D1 tramo 3: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "3.00",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "D1.t3.Pac",
+      "grandeza": "D1 tramo 3: parcela acidental da carga distribuída",
+      "unidade": "t/m",
+      "impresso": "0.500",
+      "fonte": "impressora.prn:22"
+    },
+    {
+      "id": "D1.t3.Fac",
+      "grandeza": "D1 tramo 3: parcela acidental da carga concentrada",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:22"
+    },
+    {
+      "id": "D1.a0.M-",
+      "grandeza": "D1 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "-3.38",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "D1.a0.R",
+      "grandeza": "D1 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "15.41",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "D1.a0.max.M-",
+      "grandeza": "D1 apoio 0 (envoltória de acidentais): M− máximo",
+      "unidade": "tm",
+      "impresso": "-3.38",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "D1.a0.max.R",
+      "grandeza": "D1 apoio 0 (envoltória de acidentais): reação máxima",
+      "unidade": "t",
+      "impresso": "15.48",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "D1.a0.min.R",
+      "grandeza": "D1 apoio 0 (envoltória de acidentais): reação mínima",
+      "unidade": "t",
+      "impresso": "13.25",
+      "fonte": "impressora.prn:27"
+    },
+    {
+      "id": "D1.a1.M-",
+      "grandeza": "D1 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "-8.69",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "D1.a1.R",
+      "grandeza": "D1 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "16.82",
+      "fonte": "impressora.prn:28"
+    },
+    {
+      "id": "D1.a1.max.M-",
+      "grandeza": "D1 apoio 1 (envoltória de acidentais): M− máximo",
+      "unidade": "tm",
+      "impresso": "-8.93",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "D1.a1.max.R",
+      "grandeza": "D1 apoio 1 (envoltória de acidentais): reação máxima",
+      "unidade": "t",
+      "impresso": "17.10",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "D1.a1.min.R",
+      "grandeza": "D1 apoio 1 (envoltória de acidentais): reação mínima",
+      "unidade": "t",
+      "impresso": "13.59",
+      "fonte": "impressora.prn:29"
+    },
+    {
+      "id": "D1.a2.M-",
+      "grandeza": "D1 apoio 2 M−",
+      "unidade": "tm",
+      "impresso": "-5.76",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "D1.a2.R",
+      "grandeza": "D1 apoio 2 reação",
+      "unidade": "t",
+      "impresso": "11.87",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "D1.a2.max.M-",
+      "grandeza": "D1 apoio 2 (envoltória de acidentais): M− máximo",
+      "unidade": "tm",
+      "impresso": "-5.76",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "D1.a2.max.R",
+      "grandeza": "D1 apoio 2 (envoltória de acidentais): reação máxima",
+      "unidade": "t",
+      "impresso": "12.20",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "D1.a2.min.R",
+      "grandeza": "D1 apoio 2 (envoltória de acidentais): reação mínima",
+      "unidade": "t",
+      "impresso": "10.22",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "D1.somaR",
+      "grandeza": "D1 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "44.10",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "D1.MEP0",
+      "grandeza": "D1 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-10.05",
+      "fonte": "impressora.prn:37"
+    },
+    {
+      "id": "D1.t0.Vd",
+      "grandeza": "D1 tramo 0 (balanço à esquerda): cortante à direita",
+      "unidade": "t",
+      "impresso": "4.50",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "D1.t1.Ve",
+      "grandeza": "D1 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "10.91",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "D1.t1.x",
+      "grandeza": "D1 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.64",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "D1.t1.M+",
+      "grandeza": "D1 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "8.26",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "D1.t1.Vd",
+      "grandeza": "D1 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "10.09",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "D1.t1.max.Ve",
+      "grandeza": "D1 tramo 1 (envoltória de acidentais, máximos): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "10.98",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "D1.t1.max.x",
+      "grandeza": "D1 tramo 1 (envoltória de acidentais, máximos): posição do M+",
+      "unidade": "m",
+      "impresso": "2.62",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "D1.t1.max.M+",
+      "grandeza": "D1 tramo 1 (envoltória de acidentais, máximos): M+",
+      "unidade": "tm",
+      "impresso": "8.68",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "D1.t1.max.Vd",
+      "grandeza": "D1 tramo 1 (envoltória de acidentais, máximos): cortante à direita",
+      "unidade": "t",
+      "impresso": "10.22",
+      "fonte": "impressora.prn:40"
+    },
+    {
+      "id": "D1.t2.Ve",
+      "grandeza": "D1 tramo 2: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "6.73",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "D1.t2.x",
+      "grandeza": "D1 tramo 2: posição do M+",
+      "unidade": "m",
+      "impresso": "2.24",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "D1.t2.M+",
+      "grandeza": "D1 tramo 2: M+",
+      "unidade": "tm",
+      "impresso": "-1.14",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "D1.t2.Vd",
+      "grandeza": "D1 tramo 2: cortante à direita",
+      "unidade": "t",
+      "impresso": "5.27",
+      "fonte": "impressora.prn:41"
+    },
+    {
+      "id": "D1.t2.max.Ve",
+      "grandeza": "D1 tramo 2 (envoltória de acidentais, máximos): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "6.88",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "D1.t2.max.x",
+      "grandeza": "D1 tramo 2 (envoltória de acidentais, máximos): posição do M+",
+      "unidade": "m",
+      "impresso": "2.17",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "D1.t2.max.M+",
+      "grandeza": "D1 tramo 2 (envoltória de acidentais, máximos): M+",
+      "unidade": "tm",
+      "impresso": "-0.37",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "D1.t2.max.Vd",
+      "grandeza": "D1 tramo 2 (envoltória de acidentais, máximos): cortante à direita",
+      "unidade": "t",
+      "impresso": "5.60",
+      "fonte": "impressora.prn:42"
+    },
+    {
+      "id": "D1.t3.Ve",
+      "grandeza": "D1 tramo 3 (balanço): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "6.60",
+      "fonte": "impressora.prn:43"
+    },
+    {
+      "id": "D1.MEP2",
+      "grandeza": "D1 momento de engastamento perfeito no apoio 2",
+      "unidade": "tm",
+      "impresso": "-4",
+      "fonte": "impressora.prn:44"
+    },
+    {
+      "id": "D1.t2.EEP.Ve",
+      "grandeza": "D1 tramo 2 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "D1.t2.EEP.x",
+      "grandeza": "D1 tramo 2 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "D1.t2.EEP.M+",
+      "grandeza": "D1 tramo 2 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:48"
+    },
+    {
+      "id": "D1.t2.EEP.Vd",
+      "grandeza": "D1 tramo 2 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:48"
+    }
+  ]
+}

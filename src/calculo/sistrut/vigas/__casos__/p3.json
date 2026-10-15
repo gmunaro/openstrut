@@ -1,0 +1,335 @@
+{
+  "caso": "p3",
+  "run": "C:/tmp/oraculo/runs/retrad_viga_p3-20261015-070028",
+  "entradaDe": "roteiro C:/tmp/oraculo/casos/retrad_viga_p3.txt (valores digitados; J do tramo 2 por seções 20x40 e 20x50)",
+  "descricao": "VIGA opção 3: 3 tramos, balanço à esquerda, engaste à direita, J calculado, concentradas; VIGA.INI de fábrica.",
+  "parametros": {
+    "reducaoNegativos": 1,
+    "acidentais": false,
+    "acidentalGerada": false,
+    "porcentagemAcidentalGerada": 30,
+    "momentosExternos": false,
+    "reacaoNoPilar": "estatica",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 100
+  },
+  "vigas": [
+    {
+      "nome": "VT1",
+      "balancoEsquerdo": {
+        "vao": 1.5,
+        "inercia": 1,
+        "divisoes": [
+          {
+            "p": 2,
+            "d": 1.5,
+            "f": 1,
+            "pAcidental": 0,
+            "fAcidental": 0
+          }
+        ]
+      },
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1.2,
+              "d": 2,
+              "f": 3,
+              "pAcidental": 0,
+              "fAcidental": 0
+            },
+            {
+              "p": 1.2,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 5,
+          "inercia": 1.95,
+          "divisoes": [
+            {
+              "p": 1.5,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 3.5,
+          "inercia": 1,
+          "divisoes": [
+            {
+              "p": 1,
+              "d": 3.5,
+              "f": 0,
+              "pAcidental": 0,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": true,
+      "momentosExternos": [0, 0],
+      "pilares": [null, null, null, null]
+    }
+  ],
+  "secaoJ": {
+    "b1": 20,
+    "h1": 40,
+    "b2": 20,
+    "h2": 50,
+    "impresso": "1.95",
+    "fonte": "telas/023_e22.txt:19"
+  },
+  "valores": [
+    {
+      "id": "VT1.a0.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-3.75",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "VT1.a0.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "8.06",
+      "fonte": "impressora.prn:21"
+    },
+    {
+      "id": "VT1.a1.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-3.12",
+      "fonte": "impressora.prn:22"
+    },
+    {
+      "id": "VT1.a1.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "7.70",
+      "fonte": "impressora.prn:22"
+    },
+    {
+      "id": "VT1.a2.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-2.06",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "VT1.a2.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "5.73",
+      "fonte": "impressora.prn:23"
+    },
+    {
+      "id": "VT1.a3.M-",
+      "grandeza": "momento no apoio",
+      "unidade": "tm",
+      "impresso": "-0.50",
+      "fonte": "impressora.prn:24"
+    },
+    {
+      "id": "VT1.a3.R",
+      "grandeza": "reação estática",
+      "unidade": "t",
+      "impresso": "1.30",
+      "fonte": "impressora.prn:24"
+    },
+    {
+      "id": "VT1.somaR",
+      "grandeza": "soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "22.80",
+      "fonte": "impressora.prn:26"
+    },
+    {
+      "id": "VT1.MEP0",
+      "grandeza": "MEP impresso INT(MEP·100)/100",
+      "unidade": "tm",
+      "impresso": "-3.11",
+      "fonte": "impressora.prn:30"
+    },
+    {
+      "id": "VT1.b0.carga",
+      "grandeza": "carga total do balanço",
+      "unidade": "t",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:31"
+    },
+    {
+      "id": "VT1.t1.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "4.06",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "VT1.t1.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "VT1.t1.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "1.97",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "VT1.t1.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "3.74",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "VT1.t1.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "1.13",
+      "fonte": "impressora.prn:32"
+    },
+    {
+      "id": "VT1.t2.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "3.96",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "VT1.t2.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.64",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "VT1.t2.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "2.11",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "VT1.t2.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "3.54",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "VT1.t2.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "4.12",
+      "fonte": "impressora.prn:33"
+    },
+    {
+      "id": "VT1.t3.Ve",
+      "grandeza": "Ve",
+      "unidade": "t",
+      "impresso": "2.20",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "VT1.t3.x",
+      "grandeza": "x do M+",
+      "unidade": "m",
+      "impresso": "2.20",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "VT1.t3.M+",
+      "grandeza": "M+",
+      "unidade": "tm",
+      "impresso": "0.35",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "VT1.t3.Vd",
+      "grandeza": "Vd",
+      "unidade": "t",
+      "impresso": "1.30",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "VT1.t3.fEJ",
+      "grandeza": "f·EJ",
+      "unidade": "",
+      "impresso": "0.06",
+      "fonte": "impressora.prn:34"
+    },
+    {
+      "id": "VT1.ep1.Ve",
+      "grandeza": "Ve no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "3.90",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VT1.ep1.x",
+      "grandeza": "x no engastamento perfeito",
+      "unidade": "m",
+      "impresso": "2.00",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VT1.ep1.M+",
+      "grandeza": "M+ no engastamento perfeito",
+      "unidade": "tm",
+      "impresso": "2.30",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VT1.ep1.Vd",
+      "grandeza": "Vd no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "3.90",
+      "fonte": "impressora.prn:38"
+    },
+    {
+      "id": "VT1.ep3.Ve",
+      "grandeza": "Ve no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "1.75",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VT1.ep3.x",
+      "grandeza": "x no engastamento perfeito",
+      "unidade": "m",
+      "impresso": "1.75",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VT1.ep3.M+",
+      "grandeza": "M+ no engastamento perfeito",
+      "unidade": "tm",
+      "impresso": "0.51",
+      "fonte": "impressora.prn:39"
+    },
+    {
+      "id": "VT1.ep3.Vd",
+      "grandeza": "Vd no engastamento perfeito",
+      "unidade": "t",
+      "impresso": "1.75",
+      "fonte": "impressora.prn:39"
+    }
+  ]
+}

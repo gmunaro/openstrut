@@ -1,0 +1,1374 @@
+{
+  "caso": "v2par_laje_cargas",
+  "run": "C:/tmp/oraculo/runs/v2par_laje_cargas-20261015-164316",
+  "entradaDe": "obra/CAR.VIG do run (pilares pela marca no J); valores de C:/tmp/v2-paridade/oraculo-novos/v2par_laje_cargas.json",
+  "descricao": "Cargas por área (dois polígonos de ocupação sobrepostos, com parcela acidental) e alvenarias sobre viga e sobre laje, do LAJEGEOM ao LAJEMONT (.VIG) e ao VIGA (opção 7, .REP).",
+  "parametros": {
+    "reducaoNegativos": 1,
+    "acidentais": false,
+    "acidentalGerada": false,
+    "porcentagemAcidentalGerada": 30,
+    "momentosExternos": false,
+    "reacaoNoPilar": "estatica",
+    "coeficienteMedida": 1,
+    "coeficienteForca": 1,
+    "multiplicadorMomentosPilar": 100
+  },
+  "vigas": [
+    {
+      "nome": "V1",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 0.7698814868927002,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.2324555367231369,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 0.6314954161643982,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.07320507615804672,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P6", "P5", "P4"]
+    },
+    {
+      "nome": "V2",
+      "tramos": [
+        {
+          "vao": 4,
+          "inercia": 1.0000200271606445,
+          "divisoes": [
+            {
+              "p": 1.2698813676834106,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.2324555218219757,
+              "fAcidental": 0
+            }
+          ]
+        },
+        {
+          "vao": 4,
+          "inercia": 1.0000300407409668,
+          "divisoes": [
+            {
+              "p": 1.1314953565597534,
+              "d": 4,
+              "f": 0,
+              "pAcidental": 0.07320507615804672,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P1", "P2", "P3"]
+    },
+    {
+      "nome": "V3",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.000059962272644,
+          "divisoes": [
+            {
+              "p": 1.005509853363037,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.3208162188529968,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P1", "P6"]
+    },
+    {
+      "nome": "V4",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.0000499486923218,
+          "divisoes": [
+            {
+              "p": 2.614595651626587,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.6865885257720947,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P2", "P5"]
+    },
+    {
+      "nome": "V5",
+      "tramos": [
+        {
+          "vao": 5,
+          "inercia": 1.000040054321289,
+          "divisoes": [
+            {
+              "p": 0.6676914691925049,
+              "d": 5,
+              "f": 0,
+              "pAcidental": 0.10353828966617584,
+              "fAcidental": 0
+            }
+          ]
+        }
+      ],
+      "engasteEsquerdo": false,
+      "engasteDireito": false,
+      "momentosExternos": [0, 0],
+      "pilares": ["P3", "P4"]
+    }
+  ],
+  "valores": [
+    {
+      "id": "V1.t1.L",
+      "grandeza": "V1 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:204"
+    },
+    {
+      "id": "V1.t1.J",
+      "grandeza": "V1 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:204"
+    },
+    {
+      "id": "V1.t1.P",
+      "grandeza": "V1 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.770",
+      "fonte": "impressora.prn:205"
+    },
+    {
+      "id": "V1.t1.D",
+      "grandeza": "V1 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:205"
+    },
+    {
+      "id": "V1.t1.F",
+      "grandeza": "V1 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:205"
+    },
+    {
+      "id": "V1.t2.L",
+      "grandeza": "V1 tramo 2: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:206"
+    },
+    {
+      "id": "V1.t2.J",
+      "grandeza": "V1 tramo 2: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:206"
+    },
+    {
+      "id": "V1.t2.P",
+      "grandeza": "V1 tramo 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.631",
+      "fonte": "impressora.prn:207"
+    },
+    {
+      "id": "V1.t2.D",
+      "grandeza": "V1 tramo 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:207"
+    },
+    {
+      "id": "V1.t2.F",
+      "grandeza": "V1 tramo 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:207"
+    },
+    {
+      "id": "V1.a0.M-",
+      "grandeza": "V1 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:211",
+      "obs": "apoio no pilar P6"
+    },
+    {
+      "id": "V1.a0.R",
+      "grandeza": "V1 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "1.19",
+      "fonte": "impressora.prn:211",
+      "obs": "apoio no pilar P6"
+    },
+    {
+      "id": "V1.a1.M-",
+      "grandeza": "V1 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "-1.40",
+      "fonte": "impressora.prn:212",
+      "obs": "apoio no pilar P5"
+    },
+    {
+      "id": "V1.a1.R",
+      "grandeza": "V1 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "3.50",
+      "fonte": "impressora.prn:212",
+      "obs": "apoio no pilar P5"
+    },
+    {
+      "id": "V1.a2.M-",
+      "grandeza": "V1 apoio 2 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:213",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V1.a2.R",
+      "grandeza": "V1 apoio 2 reação",
+      "unidade": "t",
+      "impresso": "0.91",
+      "fonte": "impressora.prn:213",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V1.somaR",
+      "grandeza": "V1 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "5.61",
+      "fonte": "impressora.prn:215"
+    },
+    {
+      "id": "V1.MEP0",
+      "grandeza": "V1 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-1.03",
+      "fonte": "impressora.prn:219"
+    },
+    {
+      "id": "V1.t1.Ve",
+      "grandeza": "V1 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.19",
+      "fonte": "impressora.prn:220"
+    },
+    {
+      "id": "V1.t1.x",
+      "grandeza": "V1 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "1.54",
+      "fonte": "impressora.prn:220"
+    },
+    {
+      "id": "V1.t1.M+",
+      "grandeza": "V1 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "0.92",
+      "fonte": "impressora.prn:220"
+    },
+    {
+      "id": "V1.t1.Vd",
+      "grandeza": "V1 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.89",
+      "fonte": "impressora.prn:220"
+    },
+    {
+      "id": "V1.t1.fEJ",
+      "grandeza": "V1 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "1.18",
+      "fonte": "impressora.prn:220"
+    },
+    {
+      "id": "V1.t2.Ve",
+      "grandeza": "V1 tramo 2: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.61",
+      "fonte": "impressora.prn:221"
+    },
+    {
+      "id": "V1.t2.x",
+      "grandeza": "V1 tramo 2: posição do M+",
+      "unidade": "m",
+      "impresso": "2.55",
+      "fonte": "impressora.prn:221"
+    },
+    {
+      "id": "V1.t2.M+",
+      "grandeza": "V1 tramo 2: M+",
+      "unidade": "tm",
+      "impresso": "0.66",
+      "fonte": "impressora.prn:221"
+    },
+    {
+      "id": "V1.t2.Vd",
+      "grandeza": "V1 tramo 2: cortante à direita",
+      "unidade": "t",
+      "impresso": "0.91",
+      "fonte": "impressora.prn:221"
+    },
+    {
+      "id": "V1.t2.fEJ",
+      "grandeza": "V1 tramo 2: flecha × EJ",
+      "unidade": "",
+      "impresso": "0.74",
+      "fonte": "impressora.prn:221"
+    },
+    {
+      "id": "V1.MEP2",
+      "grandeza": "V1 momento de engastamento perfeito no apoio 2",
+      "unidade": "tm",
+      "impresso": "-.85",
+      "fonte": "impressora.prn:222"
+    },
+    {
+      "id": "V1.t2.EEP.Ve",
+      "grandeza": "V1 tramo 2 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.58",
+      "fonte": "impressora.prn:226"
+    },
+    {
+      "id": "V1.t2.EEP.x",
+      "grandeza": "V1 tramo 2 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:226"
+    },
+    {
+      "id": "V1.t2.EEP.M+",
+      "grandeza": "V1 tramo 2 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "0.71",
+      "fonte": "impressora.prn:226"
+    },
+    {
+      "id": "V1.t2.EEP.Vd",
+      "grandeza": "V1 tramo 2 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "0.95",
+      "fonte": "impressora.prn:226"
+    },
+    {
+      "id": "V2.t1.L",
+      "grandeza": "V2 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:239"
+    },
+    {
+      "id": "V2.t1.J",
+      "grandeza": "V2 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:239"
+    },
+    {
+      "id": "V2.t1.P",
+      "grandeza": "V2 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "1.270",
+      "fonte": "impressora.prn:240"
+    },
+    {
+      "id": "V2.t1.D",
+      "grandeza": "V2 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:240"
+    },
+    {
+      "id": "V2.t1.F",
+      "grandeza": "V2 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:240"
+    },
+    {
+      "id": "V2.t2.L",
+      "grandeza": "V2 tramo 2: comprimento",
+      "unidade": "m",
+      "impresso": "4.000",
+      "fonte": "impressora.prn:241"
+    },
+    {
+      "id": "V2.t2.J",
+      "grandeza": "V2 tramo 2: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:241"
+    },
+    {
+      "id": "V2.t2.P",
+      "grandeza": "V2 tramo 2: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "1.131",
+      "fonte": "impressora.prn:242"
+    },
+    {
+      "id": "V2.t2.D",
+      "grandeza": "V2 tramo 2: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "4.00",
+      "fonte": "impressora.prn:242"
+    },
+    {
+      "id": "V2.t2.F",
+      "grandeza": "V2 tramo 2: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:242"
+    },
+    {
+      "id": "V2.a0.M-",
+      "grandeza": "V2 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:246",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V2.a0.R",
+      "grandeza": "V2 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "1.94",
+      "fonte": "impressora.prn:246",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V2.a1.M-",
+      "grandeza": "V2 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "-2.40",
+      "fonte": "impressora.prn:247",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V2.a1.R",
+      "grandeza": "V2 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "6.00",
+      "fonte": "impressora.prn:247",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V2.a2.M-",
+      "grandeza": "V2 apoio 2 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:248",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V2.a2.R",
+      "grandeza": "V2 apoio 2 reação",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:248",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V2.somaR",
+      "grandeza": "V2 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "9.61",
+      "fonte": "impressora.prn:250"
+    },
+    {
+      "id": "V2.MEP0",
+      "grandeza": "V2 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-1.7",
+      "fonte": "impressora.prn:254"
+    },
+    {
+      "id": "V2.t1.Ve",
+      "grandeza": "V2 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.94",
+      "fonte": "impressora.prn:255"
+    },
+    {
+      "id": "V2.t1.x",
+      "grandeza": "V2 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "1.53",
+      "fonte": "impressora.prn:255"
+    },
+    {
+      "id": "V2.t1.M+",
+      "grandeza": "V2 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "1.48",
+      "fonte": "impressora.prn:255"
+    },
+    {
+      "id": "V2.t1.Vd",
+      "grandeza": "V2 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "3.14",
+      "fonte": "impressora.prn:255"
+    },
+    {
+      "id": "V2.t1.fEJ",
+      "grandeza": "V2 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "1.86",
+      "fonte": "impressora.prn:255"
+    },
+    {
+      "id": "V2.t2.Ve",
+      "grandeza": "V2 tramo 2: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "2.86",
+      "fonte": "impressora.prn:256"
+    },
+    {
+      "id": "V2.t2.x",
+      "grandeza": "V2 tramo 2: posição do M+",
+      "unidade": "m",
+      "impresso": "2.53",
+      "fonte": "impressora.prn:256"
+    },
+    {
+      "id": "V2.t2.M+",
+      "grandeza": "V2 tramo 2: M+",
+      "unidade": "tm",
+      "impresso": "1.22",
+      "fonte": "impressora.prn:256"
+    },
+    {
+      "id": "V2.t2.Vd",
+      "grandeza": "V2 tramo 2: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:256"
+    },
+    {
+      "id": "V2.t2.fEJ",
+      "grandeza": "V2 tramo 2: flecha × EJ",
+      "unidade": "",
+      "impresso": "1.42",
+      "fonte": "impressora.prn:256"
+    },
+    {
+      "id": "V2.MEP2",
+      "grandeza": "V2 momento de engastamento perfeito no apoio 2",
+      "unidade": "tm",
+      "impresso": "-1.51",
+      "fonte": "impressora.prn:257"
+    },
+    {
+      "id": "V2.t2.EEP.Ve",
+      "grandeza": "V2 tramo 2 (esforços de engastamento perfeito): cortante à esquerda",
+      "unidade": "t",
+      "impresso": "2.83",
+      "fonte": "impressora.prn:261"
+    },
+    {
+      "id": "V2.t2.EEP.x",
+      "grandeza": "V2 tramo 2 (esforços de engastamento perfeito): posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:261"
+    },
+    {
+      "id": "V2.t2.EEP.M+",
+      "grandeza": "V2 tramo 2 (esforços de engastamento perfeito): M+",
+      "unidade": "tm",
+      "impresso": "1.27",
+      "fonte": "impressora.prn:261"
+    },
+    {
+      "id": "V2.t2.EEP.Vd",
+      "grandeza": "V2 tramo 2 (esforços de engastamento perfeito): cortante à direita",
+      "unidade": "t",
+      "impresso": "1.70",
+      "fonte": "impressora.prn:261"
+    },
+    {
+      "id": "V3.t1.L",
+      "grandeza": "V3 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:274"
+    },
+    {
+      "id": "V3.t1.J",
+      "grandeza": "V3 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:274"
+    },
+    {
+      "id": "V3.t1.P",
+      "grandeza": "V3 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "1.006",
+      "fonte": "impressora.prn:275"
+    },
+    {
+      "id": "V3.t1.D",
+      "grandeza": "V3 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:275"
+    },
+    {
+      "id": "V3.t1.F",
+      "grandeza": "V3 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:275"
+    },
+    {
+      "id": "V3.a0.M-",
+      "grandeza": "V3 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:279",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V3.a0.R",
+      "grandeza": "V3 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "2.51",
+      "fonte": "impressora.prn:279",
+      "obs": "apoio no pilar P1"
+    },
+    {
+      "id": "V3.a1.M-",
+      "grandeza": "V3 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:280",
+      "obs": "apoio no pilar P6"
+    },
+    {
+      "id": "V3.a1.R",
+      "grandeza": "V3 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "2.51",
+      "fonte": "impressora.prn:280",
+      "obs": "apoio no pilar P6"
+    },
+    {
+      "id": "V3.somaR",
+      "grandeza": "V3 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "5.03",
+      "fonte": "impressora.prn:282"
+    },
+    {
+      "id": "V3.MEP0",
+      "grandeza": "V3 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-2.1",
+      "fonte": "impressora.prn:286"
+    },
+    {
+      "id": "V3.t1.Ve",
+      "grandeza": "V3 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "2.51",
+      "fonte": "impressora.prn:287"
+    },
+    {
+      "id": "V3.t1.x",
+      "grandeza": "V3 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:287"
+    },
+    {
+      "id": "V3.t1.M+",
+      "grandeza": "V3 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "3.14",
+      "fonte": "impressora.prn:287"
+    },
+    {
+      "id": "V3.t1.Vd",
+      "grandeza": "V3 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "2.51",
+      "fonte": "impressora.prn:287"
+    },
+    {
+      "id": "V3.t1.fEJ",
+      "grandeza": "V3 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "8.18",
+      "fonte": "impressora.prn:287"
+    },
+    {
+      "id": "V3.MEP1",
+      "grandeza": "V3 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-2.1",
+      "fonte": "impressora.prn:288"
+    },
+    {
+      "id": "V4.t1.L",
+      "grandeza": "V4 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:302"
+    },
+    {
+      "id": "V4.t1.J",
+      "grandeza": "V4 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:302"
+    },
+    {
+      "id": "V4.t1.P",
+      "grandeza": "V4 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "2.615",
+      "fonte": "impressora.prn:303"
+    },
+    {
+      "id": "V4.t1.D",
+      "grandeza": "V4 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:303"
+    },
+    {
+      "id": "V4.t1.F",
+      "grandeza": "V4 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:303"
+    },
+    {
+      "id": "V4.a0.M-",
+      "grandeza": "V4 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:307",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V4.a0.R",
+      "grandeza": "V4 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "6.54",
+      "fonte": "impressora.prn:307",
+      "obs": "apoio no pilar P2"
+    },
+    {
+      "id": "V4.a1.M-",
+      "grandeza": "V4 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:308",
+      "obs": "apoio no pilar P5"
+    },
+    {
+      "id": "V4.a1.R",
+      "grandeza": "V4 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "6.54",
+      "fonte": "impressora.prn:308",
+      "obs": "apoio no pilar P5"
+    },
+    {
+      "id": "V4.somaR",
+      "grandeza": "V4 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "13.07",
+      "fonte": "impressora.prn:310"
+    },
+    {
+      "id": "V4.MEP0",
+      "grandeza": "V4 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-5.45",
+      "fonte": "impressora.prn:314"
+    },
+    {
+      "id": "V4.t1.Ve",
+      "grandeza": "V4 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "6.54",
+      "fonte": "impressora.prn:315"
+    },
+    {
+      "id": "V4.t1.x",
+      "grandeza": "V4 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:315"
+    },
+    {
+      "id": "V4.t1.M+",
+      "grandeza": "V4 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "8.17",
+      "fonte": "impressora.prn:315"
+    },
+    {
+      "id": "V4.t1.Vd",
+      "grandeza": "V4 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "6.54",
+      "fonte": "impressora.prn:315"
+    },
+    {
+      "id": "V4.t1.fEJ",
+      "grandeza": "V4 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "21.28",
+      "fonte": "impressora.prn:315"
+    },
+    {
+      "id": "V4.MEP1",
+      "grandeza": "V4 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-5.45",
+      "fonte": "impressora.prn:316"
+    },
+    {
+      "id": "V5.t1.L",
+      "grandeza": "V5 tramo 1: comprimento",
+      "unidade": "m",
+      "impresso": "5.000",
+      "fonte": "impressora.prn:330"
+    },
+    {
+      "id": "V5.t1.J",
+      "grandeza": "V5 tramo 1: inércia relativa J",
+      "unidade": "",
+      "impresso": "1.00",
+      "fonte": "impressora.prn:330"
+    },
+    {
+      "id": "V5.t1.P",
+      "grandeza": "V5 tramo 1: carga distribuída P",
+      "unidade": "t/m",
+      "impresso": "0.668",
+      "fonte": "impressora.prn:331"
+    },
+    {
+      "id": "V5.t1.D",
+      "grandeza": "V5 tramo 1: posição D da divisão / da carga F",
+      "unidade": "m",
+      "impresso": "5.00",
+      "fonte": "impressora.prn:331"
+    },
+    {
+      "id": "V5.t1.F",
+      "grandeza": "V5 tramo 1: carga concentrada F em D (reação indexada quando há viga apoiada)",
+      "unidade": "t",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:331"
+    },
+    {
+      "id": "V5.a0.M-",
+      "grandeza": "V5 apoio 0 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:335",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V5.a0.R",
+      "grandeza": "V5 apoio 0 reação",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:335",
+      "obs": "apoio no pilar P3"
+    },
+    {
+      "id": "V5.a1.M-",
+      "grandeza": "V5 apoio 1 M−",
+      "unidade": "tm",
+      "impresso": "0.00",
+      "fonte": "impressora.prn:336",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V5.a1.R",
+      "grandeza": "V5 apoio 1 reação",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:336",
+      "obs": "apoio no pilar P4"
+    },
+    {
+      "id": "V5.somaR",
+      "grandeza": "V5 soma das reações estáticas",
+      "unidade": "t",
+      "impresso": "3.34",
+      "fonte": "impressora.prn:338"
+    },
+    {
+      "id": "V5.MEP0",
+      "grandeza": "V5 momento de engastamento perfeito no apoio 0",
+      "unidade": "tm",
+      "impresso": "-1.4",
+      "fonte": "impressora.prn:342"
+    },
+    {
+      "id": "V5.t1.Ve",
+      "grandeza": "V5 tramo 1: cortante à esquerda",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:343"
+    },
+    {
+      "id": "V5.t1.x",
+      "grandeza": "V5 tramo 1: posição do M+",
+      "unidade": "m",
+      "impresso": "2.50",
+      "fonte": "impressora.prn:343"
+    },
+    {
+      "id": "V5.t1.M+",
+      "grandeza": "V5 tramo 1: M+",
+      "unidade": "tm",
+      "impresso": "2.09",
+      "fonte": "impressora.prn:343"
+    },
+    {
+      "id": "V5.t1.Vd",
+      "grandeza": "V5 tramo 1: cortante à direita",
+      "unidade": "t",
+      "impresso": "1.67",
+      "fonte": "impressora.prn:343"
+    },
+    {
+      "id": "V5.t1.fEJ",
+      "grandeza": "V5 tramo 1: flecha × EJ",
+      "unidade": "",
+      "impresso": "5.43",
+      "fonte": "impressora.prn:343"
+    },
+    {
+      "id": "V5.MEP1",
+      "grandeza": "V5 momento de engastamento perfeito no apoio 1",
+      "unidade": "tm",
+      "impresso": "-1.4",
+      "fonte": "impressora.prn:344"
+    },
+    {
+      "id": "REP.P6",
+      "grandeza": "P6 carga total no .REP",
+      "unidade": "t",
+      "impresso": "3.69",
+      "fonte": "impressora.prn:360",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P5",
+      "grandeza": "P5 carga total no .REP",
+      "unidade": "t",
+      "impresso": "10.03",
+      "fonte": "impressora.prn:360",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P4",
+      "grandeza": "P4 carga total no .REP",
+      "unidade": "t",
+      "impresso": "2.57",
+      "fonte": "impressora.prn:360",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P1",
+      "grandeza": "P1 carga total no .REP",
+      "unidade": "t",
+      "impresso": "4.44",
+      "fonte": "impressora.prn:361",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P2",
+      "grandeza": "P2 carga total no .REP",
+      "unidade": "t",
+      "impresso": "12.53",
+      "fonte": "impressora.prn:361",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P3",
+      "grandeza": "P3 carga total no .REP",
+      "unidade": "t",
+      "impresso": "3.32",
+      "fonte": "impressora.prn:361",
+      "obs": "soma das parcelas, cada uma truncada na 2ª casa"
+    },
+    {
+      "id": "REP.P6.carga.V1",
+      "grandeza": "P6 parcela da carga vinda de V1",
+      "unidade": "t",
+      "impresso": "1.18",
+      "fonte": "impressora.prn:364",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P6.carga.V3",
+      "grandeza": "P6 parcela da carga vinda de V3",
+      "unidade": "t",
+      "impresso": "2.51",
+      "fonte": "impressora.prn:364",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P6.momento.V1",
+      "grandeza": "P6 momento vindo de V1",
+      "unidade": "tm",
+      "impresso": "-1.02",
+      "fonte": "impressora.prn:365",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.02@1 [4]\""
+    },
+    {
+      "id": "REP.P6.momento.V3",
+      "grandeza": "P6 momento vindo de V3",
+      "unidade": "tm",
+      "impresso": "-2.09",
+      "fonte": "impressora.prn:365",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-2.09@1 [5]\""
+    },
+    {
+      "id": "REP.P5.carga.V1",
+      "grandeza": "P5 parcela da carga vinda de V1",
+      "unidade": "t",
+      "impresso": "3.5",
+      "fonte": "impressora.prn:366",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P5.carga.V4",
+      "grandeza": "P5 parcela da carga vinda de V4",
+      "unidade": "t",
+      "impresso": "6.53",
+      "fonte": "impressora.prn:366",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P5.momento.V4",
+      "grandeza": "P5 momento vindo de V4",
+      "unidade": "tm",
+      "impresso": "-5.44",
+      "fonte": "impressora.prn:367",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-5.44@1 [5]\""
+    },
+    {
+      "id": "REP.P4.carga.V1",
+      "grandeza": "P4 parcela da carga vinda de V1",
+      "unidade": "t",
+      "impresso": ".91",
+      "fonte": "impressora.prn:368",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P4.carga.V5",
+      "grandeza": "P4 parcela da carga vinda de V5",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:368",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P4.momento.V1",
+      "grandeza": "P4 momento vindo de V1",
+      "unidade": "tm",
+      "impresso": "-.84",
+      "fonte": "impressora.prn:369",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-.84@2 [4]\""
+    },
+    {
+      "id": "REP.P4.momento.V5",
+      "grandeza": "P4 momento vindo de V5",
+      "unidade": "tm",
+      "impresso": "-1.39",
+      "fonte": "impressora.prn:369",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.39@1 [5]\""
+    },
+    {
+      "id": "REP.P1.carga.V2",
+      "grandeza": "P1 parcela da carga vinda de V2",
+      "unidade": "t",
+      "impresso": "1.93",
+      "fonte": "impressora.prn:370",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P1.carga.V3",
+      "grandeza": "P1 parcela da carga vinda de V3",
+      "unidade": "t",
+      "impresso": "2.51",
+      "fonte": "impressora.prn:370",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P1.momento.V2",
+      "grandeza": "P1 momento vindo de V2",
+      "unidade": "tm",
+      "impresso": "-1.69",
+      "fonte": "impressora.prn:371",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.69@1 [4]\""
+    },
+    {
+      "id": "REP.P1.momento.V3",
+      "grandeza": "P1 momento vindo de V3",
+      "unidade": "tm",
+      "impresso": "-2.09",
+      "fonte": "impressora.prn:371",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-2.09@1 [5]\""
+    },
+    {
+      "id": "REP.P2.carga.V2",
+      "grandeza": "P2 parcela da carga vinda de V2",
+      "unidade": "t",
+      "impresso": "6",
+      "fonte": "impressora.prn:372",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P2.carga.V4",
+      "grandeza": "P2 parcela da carga vinda de V4",
+      "unidade": "t",
+      "impresso": "6.53",
+      "fonte": "impressora.prn:372",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P2.momento.V4",
+      "grandeza": "P2 momento vindo de V4",
+      "unidade": "tm",
+      "impresso": "-5.44",
+      "fonte": "impressora.prn:373",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-5.44@1 [5]\""
+    },
+    {
+      "id": "REP.P3.carga.V2",
+      "grandeza": "P3 parcela da carga vinda de V2",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:374",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P3.carga.V5",
+      "grandeza": "P3 parcela da carga vinda de V5",
+      "unidade": "t",
+      "impresso": "1.66",
+      "fonte": "impressora.prn:374",
+      "casas": 2,
+      "trunca": true
+    },
+    {
+      "id": "REP.P3.momento.V2",
+      "grandeza": "P3 momento vindo de V2",
+      "unidade": "tm",
+      "impresso": "-1.50",
+      "fonte": "impressora.prn:375",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.50@2 [4]\""
+    },
+    {
+      "id": "REP.P3.momento.V5",
+      "grandeza": "P3 momento vindo de V5",
+      "unidade": "tm",
+      "impresso": "-1.39",
+      "fonte": "impressora.prn:375",
+      "casas": 2,
+      "trunca": true,
+      "obs": "impresso \"-1.39@1 [5]\""
+    }
+  ],
+  "rep": {
+    "cabecalho": {
+      "obra": "CAR",
+      "registros": "1 A 5",
+      "data": "10-14-2026",
+      "hora": "12:00"
+    },
+    "linhas": [
+      {
+        "texto": "SISTRUT Software e Tecnologia s/c Ltda",
+        "fonte": "obra/CAR.REP:1"
+      },
+      {
+        "texto": "Versao 4.0    Abril 1990",
+        "fonte": "obra/CAR.REP:2"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/CAR.REP:3"
+      },
+      {
+        "texto": " SOMATORIA DE REACOES EM PILARES",
+        "fonte": "obra/CAR.REP:4"
+      },
+      {
+        "texto": " OBRA CAR",
+        "fonte": "obra/CAR.REP:5"
+      },
+      {
+        "texto": " GERADO EM 10-14-2026   12:00",
+        "fonte": "obra/CAR.REP:6"
+      },
+      {
+        "texto": " REGISTROS 1 A 5",
+        "fonte": "obra/CAR.REP:7"
+      },
+      {
+        "texto": " Cargas Totais  Reacoes Estaticas",
+        "fonte": "obra/CAR.REP:8"
+      },
+      {
+        "texto": "",
+        "fonte": "obra/CAR.REP:9"
+      },
+      {
+        "texto": "P   6         3.69",
+        "fonte": "obra/CAR.REP:10"
+      },
+      {
+        "texto": "*1.18 (V1) + 2.51 (V3) + ",
+        "fonte": "obra/CAR.REP:11"
+      },
+      {
+        "texto": ">-1.02@1 [4]  (V1) > -2.09@1 [5]  (V3) > ",
+        "fonte": "obra/CAR.REP:12"
+      },
+      {
+        "texto": "P   5        10.03",
+        "fonte": "obra/CAR.REP:13"
+      },
+      {
+        "texto": "*3.5 (V1) + 6.53 (V4) + ",
+        "fonte": "obra/CAR.REP:14"
+      },
+      {
+        "texto": ">-5.44@1 [5]  (V4) > ",
+        "fonte": "obra/CAR.REP:15"
+      },
+      {
+        "texto": "P   4         2.57",
+        "fonte": "obra/CAR.REP:16"
+      },
+      {
+        "texto": "*.91 (V1) + 1.66 (V5) + ",
+        "fonte": "obra/CAR.REP:17"
+      },
+      {
+        "texto": ">-.84@2 [4]  (V1) > -1.39@1 [5]  (V5) > ",
+        "fonte": "obra/CAR.REP:18"
+      },
+      {
+        "texto": "P   1         4.44",
+        "fonte": "obra/CAR.REP:19"
+      },
+      {
+        "texto": "*1.93 (V2) + 2.51 (V3) + ",
+        "fonte": "obra/CAR.REP:20"
+      },
+      {
+        "texto": ">-1.69@1 [4]  (V2) > -2.09@1 [5]  (V3) > ",
+        "fonte": "obra/CAR.REP:21"
+      },
+      {
+        "texto": "P   2        12.53",
+        "fonte": "obra/CAR.REP:22"
+      },
+      {
+        "texto": "*6 (V2) + 6.53 (V4) + ",
+        "fonte": "obra/CAR.REP:23"
+      },
+      {
+        "texto": ">-5.44@1 [5]  (V4) > ",
+        "fonte": "obra/CAR.REP:24"
+      },
+      {
+        "texto": "P   3         3.32",
+        "fonte": "obra/CAR.REP:25"
+      },
+      {
+        "texto": "*1.66 (V2) + 1.66 (V5) + ",
+        "fonte": "obra/CAR.REP:26"
+      },
+      {
+        "texto": ">-1.50@2 [4]  (V2) > -1.39@1 [5]  (V5) > ",
+        "fonte": "obra/CAR.REP:27"
+      }
+    ]
+  }
+}
