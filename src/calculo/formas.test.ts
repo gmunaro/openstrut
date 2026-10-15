@@ -190,28 +190,8 @@ describe("F/G: fôrma da obra E2E pelas três regras", () => {
     expect(p.total).toBeCloseTo(144.752, 9);
   });
 
-  it("editor (FORMEDCA, a tela do original): 146,48 m², como a V1", () => {
-    const p = formasPavimento(pav, "editor");
-    // vigas com a laje de referência (10 cm): 44,88; pilares 9·0,80·3 = 21,6
-    expect(p.vigas).toBeCloseTo(44.88, 9);
-    expect(p.pilares).toBeCloseTo(21.6, 9);
-    expect(p.total).toBeCloseTo(146.48, 9);
-  });
-
-  it("impressão (FORMIMP, o relatório do original): 157,28 m², como a V1", () => {
-    const p = formasPavimento(pav, "impressao");
-    // vigas sem descontar a laje: 3·8·(0,12 + 0,80) + 3·10·(0,12 + 1,00) = 22,08 + 33,6 = 55,68
-    expect(p.vigas).toBeCloseTo(55.68, 9);
-    expect(p.pilares).toBeCloseTo(21.6, 9);
-    expect(p.total).toBeCloseTo(157.28, 9);
-  });
-
-  it("editor: a laje de referência é a primeira com h > 0 e vale para toda viga (V1 FcHLaje#)", () => {
-    const outra = {
-      ...pav,
-      lajes: pav.lajes.map((l, i) => ({ ...l, h: i === 0 ? 12 : 10 })),
-    };
-    // vigas: 3·8·(0,12 + 2·0,28) + 3·10·(0,12 + 2·0,38) = 16,32 + 26,4 = 42,72
-    expect(formasPavimento(outra, "editor").vigas).toBeCloseTo(42.72, 9);
-  });
+  // As regras "editor" (FORMEDCA, 146,48 m²) e "impressao" (FORMIMP, 157,28 m²) da V1
+  // antiga saíram: o FORMEDCA e o FORMIMP do SISTRUT não calculam fôrma (PLANO da
+  // paridade 4.1 G; docs/MODO-CALCULO.md). A fôrma de viga do original sai do DESINIT
+  // (quantitativos.ts, conferida em sistrut/quant/vigas.test.ts contra retrad_des_det).
 });

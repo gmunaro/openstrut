@@ -135,13 +135,15 @@ describe("conta à mão (NB-1/78): vigas verticais de 5 m sobre pilares h = 20",
         "estribo",
       ]);
       expect(pos.reto).toBe(515);
-      expect(pos.comprimento).toBe(515 + 2 * pos.phi);
+      // gancho de 10 φ arredondado para cima em cada ponta (detalhamento/vigas.ts)
+      const gancho = Math.ceil(pos.phi);
+      expect(pos.comprimento).toBe(515 + 2 * gancho);
       expect(porta.comprimento).toBe(515);
       expect(estribo.phi).toBe(5);
       expect(estribo.comprimento).toBe(114);
       const s = estribo.espacamento ?? Number.NaN;
       expect(estribo.quantidade).toBe(Math.ceil(480 / s) + 1);
-      const soma = pos.quantidade * (515 + 2 * pos.phi) + 2 * 515 + estribo.quantidade * 114;
+      const soma = pos.quantidade * (515 + 2 * gancho) + 2 * 515 + estribo.quantidade * 114;
       expect(somaComprimentos(v.detalhamento.posicoes)).toBe(soma);
     }
   });

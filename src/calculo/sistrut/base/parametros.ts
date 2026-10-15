@@ -162,7 +162,7 @@ export const PARAMETROS_DSP = {
   gamaS: 1.15,
   /** Bitolas (mm), áreas (cm²) e massa (kg/m), ordem 0..9 (DESENHO.BAS:4790-4819).
    *  DEFEITO R9 (U04-005): áreas 0,00 nas bitolas 4 e 32, transcritas como estão;
-   *  o modo corrigido usa AREAS_DSP_CORRIGIDAS. */
+   *  o modo corrigido usa AREAS_DSP_CORRIGIDAS para o φ32 (o φ4 fica desativado). */
   bitolas: [
     { bitola: 4, area: 0, kgPorM: 0.1 },
     { bitola: 5, area: 0.2, kgPorM: 0.16 },
@@ -330,9 +330,11 @@ export const PARAMETROS_DSP = {
   comprimentoMaximoBarra: 1050,
 };
 
-/** Áreas certas (cm²) para o modo corrigido no lugar das áreas 0 do φ4 e do φ32
- *  (defeito R9, PLANO.md 4.2): π·φ²/4. */
-export const AREAS_DSP_CORRIGIDAS = { 4: 0.125, 32: 8.04 } as const;
+/** Área certa (cm²) do φ32 no modo corrigido no lugar do 0,00 do .DSP (defeito R9,
+ *  PLANO.md 4.2): π·3,2²/4. O φ4 fica com 0: área 0 é a convenção do original para
+ *  desativar a bitola (como no .LAP), e com área ele viraria estribo de 4 mm, abaixo
+ *  do mínimo de 5 mm (ESTRIBO_PHI_MIN de calculo/barras.ts; decisão da T7). */
+export const AREAS_DSP_CORRIGIDAS = { 32: 8.04 } as const;
 
 // ---------------------------------------------------------------- VIGA (VIGA.INI)
 

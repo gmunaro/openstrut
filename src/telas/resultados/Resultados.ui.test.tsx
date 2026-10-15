@@ -219,8 +219,9 @@ describe.each<NormaId>(["nb1-78", "nbr6118-2023"])("resultados pela %s", (norma)
     const linhasMemoria = within(memoria).getAllByRole("row").slice(1);
     expect(linhasMemoria.length).toBeGreaterThan(3);
     expect(memoria.textContent).not.toMatch(/NaN|Infinity/);
-    // alguma etapa cita a norma (item ou tabela)
-    expect(memoria.textContent).toMatch(/NB-1|NBR|item|tab|Czerny|Bares|charneira/i);
+    // alguma etapa cita a fonte: item ou tabela da norma, ou a linha do SISTRUT original
+    // (NB-1/78 pelo caminho do SISTRUT: "LAJECALC.BAS:8408")
+    expect(memoria.textContent).toMatch(/NB-1|NBR|item|tab|Czerny|Bares|charneira|\.BAS:\d+/i);
 
     await user.click(
       within(tr as HTMLElement).getByRole("button", { name: "Fechar memória de cálculo" }),

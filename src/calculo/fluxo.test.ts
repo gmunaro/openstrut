@@ -14,10 +14,20 @@ import { KN_POR_TF, tfParaKn } from "./unidades";
 /** A NB-1/78 com os valores da V1 em unidades reais. A V1 escreve o CA-50 como
  *  fyk = 5 tf/cm² e Es = 2100 tf/cm² (1 tf/cm² = 98,0665 MPa): fyk = 490,3 MPa,
  *  Es = 205 940 MPa; e o concreto armado com 2,5 tf/m³. A V2 usa 500 MPa,
- *  210 000 MPa e 25 kN/m³; por isso as áreas de aço da V2 são ~2% menores. */
+ *  210 000 MPa e 25 kN/m³; por isso as áreas de aço da V2 são ~2% menores.
+ *
+ *  `caminho: "v2"`: a obra NB-1/78 de verdade passa pelo caminho do SISTRUT
+ *  (fluxoSistrut.ts, testado contra o oráculo em sistrut/obra.test.ts e
+ *  fluxoSistrut.test.ts). Estes testes conferem o FLUXO GENÉRICO da V2 (vinculação,
+ *  compatibilização, montagem, viga contínua, acumulação, falhas), o mesmo que a
+ *  NBR 6118:2023 usa, com os métodos por elemento da V1 antiga em `normas/nb1-78`;
+ *  para essa combinação os números da V1 antiga continuam sendo a referência
+ *  independente. Reancorar no original pede a obra FLUXO rodada no oráculo
+ *  (comparador T9, pendente). */
 const TF_CM2 = 98.0665;
 const nb178V1: Norma = {
   ...nb178,
+  caminho: "v2",
   pesoConcreto: 2.5 * KN_POR_TF,
   materiais: (m) => ({
     ...nb178.materiais(m),

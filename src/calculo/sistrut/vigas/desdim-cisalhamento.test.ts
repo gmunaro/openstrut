@@ -80,10 +80,12 @@ describe("bitolas da viga (L_1661c)", () => {
       minima: 6.3,
     });
   });
-  it("R9: com bw 15 e Asw 2,1, φ4 (0,125 cm²) dá 11,9 cm no corrigido", () => {
+  it("φ4 fica desativado nos dois modos (área 0): com bw 15 e Asw 2,1 o estribo é φ5", () => {
+    // a R9 corrige só o φ32; com a área de 0,125 o φ4 daria 11,9 cm e estribo de 4 mm,
+    // abaixo do mínimo de 5 mm (ESTRIBO_PHI_MIN, calculo/barras.ts)
     const t = [{ bw: 15, aswEsquerda: 2.1, aswDireita: 2.1 }];
     expect(bitolasEstriboViga(t, p, "original")).toEqual({ maxima: 5, minima: 5 });
-    expect(bitolasEstriboViga(t, p, "corrigido")).toEqual({ maxima: 4, minima: 4 });
+    expect(bitolasEstriboViga(t, p, "corrigido")).toEqual({ maxima: 5, minima: 5 });
   });
 });
 

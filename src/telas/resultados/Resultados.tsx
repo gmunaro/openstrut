@@ -21,7 +21,7 @@ import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
 import { TabelasLajes } from "./lajes";
 import { TabelaPilares } from "./pilares";
-import { ResumoQuantitativos, volumeFormaCertos } from "./quantitativos";
+import { ResumoQuantitativos } from "./quantitativos";
 import { TabelaVigas } from "./vigas";
 
 /** Mensagem quando não há resultado: norma sem implementação ou erro do motor. */
@@ -117,9 +117,5 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
 /** Resumo de aço e concreto da obra aberta (a obra traz cobrimentos e geometria). */
 function BlocoQuantitativos({ obra, resultado }: { obra: Obra; resultado: ResultadoObra }) {
   const quant = useMemo(() => calcularQuantitativos(obra, resultado), [obra, resultado]);
-  const certo = useMemo(
-    () => (obra.modoCalculo === "original" ? volumeFormaCertos(obra, resultado) : undefined),
-    [obra, resultado],
-  );
-  return <ResumoQuantitativos quant={quant} certo={certo} />;
+  return <ResumoQuantitativos quant={quant} />;
 }

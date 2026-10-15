@@ -33,12 +33,11 @@ export const TAXA_AS_MAX = 0.04;
  *  CA-30; 0,15 % para CA-40, CA-50 e CA-60); docs/norma/pendencias.md item 7.
  *  [VERIFICAR] texto da norma não lido. */
 export const TAXA_AS_MIN_CA25 = 0.0025;
-/** Taxa de As,min de viga por modo de cálculo (item H de docs/MODO-CALCULO.md):
- *  - "original": 0,15 % para qualquer aço, como o SISTRUT de 1991 (SISTRUT.LAP,
- *    linhas 150-151; V1 VcDimensiona, CcaAsMin#(bw, h, 0,0015));
- *  - "corrigido": 0,25 % com CA-25 e 0,15 % com CA-50 e CA-60 (TAXA_AS_MIN_CA25). */
-export const taxaAsMinNb178 = (mat: Pick<MateriaisCalc, "aco" | "modoCalculo">) =>
-  mat.modoCalculo !== "original" && mat.aco === "CA-25" ? TAXA_AS_MIN_CA25 : TAXA_AS_MIN;
+/** Taxa de As,min de viga: 0,25 % com CA-25 e 0,15 % com CA-50 e CA-60
+ *  (TAXA_AS_MIN_CA25). A regra do SISTRUT (0,15 % do .DSP para qualquer aço) está no
+ *  DESDIM (`sistrut/vigas/desdim-flexao.ts`, item H de docs/MODO-CALCULO.md). */
+export const taxaAsMinNb178 = (mat: Pick<MateriaisCalc, "aco">) =>
+  mat.aco === "CA-25" ? TAXA_AS_MIN_CA25 : TAXA_AS_MIN;
 /** Teto de τwu, MPa (V1 CcaAswEstriboRho). */
 const TAU_WU_MAX = 4.5;
 
@@ -219,10 +218,7 @@ export function vigaFlexaoNb178(
       formula: `As,min = ${taxaMin === TAXA_AS_MIN ? "0,0015" : "0,0025 (CA-25)"} · bw · h`,
       valor: asMin,
       unidade: "cm²",
-      ref:
-        mat.modoCalculo === "original"
-          ? `${VIGCALC} (modo original: SISTRUT.LAP, 0,15 % para todo aço)`
-          : "NB-1/78 segundo Silva e Araújo, Essentia 2015 (0,25 % CA-25/30; 0,15 % CA-40/50/60) [VERIFICAR]",
+      ref: "NB-1/78 segundo Silva e Araújo, Essentia 2015 (0,25 % CA-25/30; 0,15 % CA-40/50/60) [VERIFICAR]",
     });
     as = asMin;
   }

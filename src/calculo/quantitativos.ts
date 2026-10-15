@@ -25,11 +25,17 @@
 //   n = ⌈pé-direito/s⌉ de perímetro 2(b − 2c) + 2(h − 2c), sem ganchos.
 // - Peso por metro de barra: π φ²/4 · 7850 kg/m³ (NBR 6118:2023, 8.3.3).
 //
-// Modo "original" (Obra.modoCalculo; docs/MODO-CALCULO.md, itens E e F): como o
-// SISTRUT de 1991, cada laje conta a negativa de cada bordo inteira, 0,25·lmenor
-// para cada lado (V1 LAJEPROC ImprimeLinha), e a vizinha conta a mesma barra de
-// novo; volume e fôrma por tipo saem pela regra da impressão (FORMIMP) e a tela
-// (FORMEDCA) tem os seus totais em volumeTela e formaTela.
+// NB-1/78 (caminho do SISTRUT, ResultadoObra.sistrut; docs/MODO-CALCULO.md):
+// - vigas: o aço é o do detalhamento do DESINIT (quadro da viga, peso por bitola
+//   CINT(compr·kg/m/100), DESINIT.BAS:763-852), nos dois modos; no modo original o
+//   volume e a fôrma também são os do quadro (Σ bw·h·vão livre e Σ (2h + bw − Hle −
+//   Hld)·vão livre, INT no centésimo); no corrigido, os da regra acima (pelos eixos e
+//   abaixo da laje: o DESINIT conta a faixa da laje sobre a viga, que a laje também
+//   conta);
+// - lajes e pilares: a regra acima nos dois modos, marcada "não existe no SISTRUT"
+//   (o original não calcula volume, fôrma nem aço de laje e de pilar).
+// Os itens E, F e G antigos (negativa contada duas vezes, volume e fôrma da "tela" e
+// do "relatório") reproduziam a V1 antiga, não o SISTRUT, e saíram.
 import type {
   Bordo,
   Laje,
@@ -46,11 +52,10 @@ import {
   espessuraLajeNaViga,
   formaPilar,
   formulaFormaPilar,
-  hLajeDaViga,
   SEM_ENCONTRO,
   type EncontroPilar,
-  type RegraQuantitativo,
 } from "./formas";
+import type { QuadroViga } from "./sistrut/base/tipos";
 export { espessuraLajeNaViga };
 import type { ResultadoObra, ResultadoPavimento, ResultadoTramo, ResultadoViga } from "./fluxo";
 import { BORDO_OPOSTO, contatos, linhaDoBordo, TOL } from "./lajes/vinculacao";
@@ -89,21 +94,22 @@ export interface QuantitativoPavimento extends QuantidadesPorTipo, ComMemoria {
   repeticoes: number;
 }
 
+/** De onde vem cada quantidade de um tipo: o quadro do DESINIT do SISTRUT ou a regra
+ *  da V2 (o SISTRUT não tem a grandeza). */
+export type FonteQuantidade = "sistrut" | "v2";
+
 export interface Quantitativos extends QuantidadesPorTipo, ComMemoria {
   pavimentos: QuantitativoPavimento[];
   /** Modo de cálculo da obra (Obra.modoCalculo). */
   modoCalculo: ModoCalculo;
-  /** Volume de concreto (m³) e área de fôrma (m²) da obra para a TELA e para o
-   *  RELATÓRIO (item F de docs/MODO-CALCULO.md). No modo "corrigido" os dois pares
-   *  são o total certo (= total). No "original", como o SISTRUT de 1991: a tela
-   *  pela regra do editor de formas (FORMEDCA: volume sem os pilares; fôrma com o
-   *  pilar no pé-direito inteiro) e o relatório pela da impressão (FORMIMP: viga
-   *  com a altura inteira, contando de novo a faixa da laje; = total). */
-  volumeTela: number;
-  volumeRelatorio: number;
-  formaTela: number;
-  formaRelatorio: number;
+  /** Fonte por tipo e grandeza. NB-1/78: lajes e pilares "v2" ("não existe no
+   *  SISTRUT"); vigas: aço "sistrut" (DESINIT), concreto e fôrma "sistrut" no modo
+   *  original e "v2" no corrigido. NBR 6118: tudo "v2". */
+  fonte: Record<"lajes" | "vigas" | "pilares", Record<keyof Quantidades, FonteQuantidade>>;
 }
+
+/** Marca das quantidades que o SISTRUT não calcula (NB-1/78). */
+export const NAO_EXISTE_NO_SISTRUT = "não existe no SISTRUT";
 
 const zero = (): Quantidades => ({ concreto: 0, forma: 0, aco: 0 });
 const soma = (...qs: Quantidades[]): Quantidades =>
@@ -153,17 +159,14 @@ const bordoDeBalanco = (v: Record<Bordo, Vinculo>, b: Bordo) =>
   v[b] === "engastado" && v[BORDO_OPOSTO[b]] === "livre";
 
 /** Comprimento da negativa do bordo b contado nesta laje, m, e a regra usada:
- *  - bordo de balanço (D, nos dois modos): da borda livre (vão inteiro na direção
- *    da barra) até 0,25·x dentro da vizinha, x = máx(lmenor; vão da vizinha);
- *  - "corrigido": 0 se a barra é da vizinha em balanço; senão 0,25·lmenor, o lado
- *    desta laje (a vizinha conta o dela);
- *  - "original" (E): 2 · 0,25·lmenor, a barra inteira, como a V1 LAJEPROC; a
- *    vizinha conta a mesma barra de novo. */
+ *  - bordo de balanço (item D): da borda livre (vão inteiro na direção da barra) até
+ *    0,25·x dentro da vizinha, x = máx(lmenor; vão da vizinha);
+ *  - 0 se a barra é da vizinha em balanço; senão 0,25·lmenor, o lado desta laje (a
+ *    vizinha conta o dela). */
 function comprimentoNegativa(
   laje: Pick<Laje, "lx" | "ly">,
   b: Bordo,
   viz: VizinhancaLaje | undefined,
-  modo: ModoCalculo,
 ) {
   const lMenor = Math.min(laje.lx, laje.ly);
   if (viz && bordoDeBalanco(viz.vinculos, b)) {
@@ -171,7 +174,6 @@ function comprimentoNegativa(
     const x = Math.max(lMenor, viz.vaoMenorVizinha[b] ?? 0);
     return { l: vao + FRACAO_NEGATIVO * x, regra: `balanço ${f(vao)} + 0,25·${f(x)}` };
   }
-  if (modo === "original") return { l: 2 * FRACAO_NEGATIVO * lMenor, regra: "2·0,25·lmenor" };
   if (viz?.negativaNoBalanco.includes(b)) return { l: 0, regra: "na laje em balanço" };
   return { l: FRACAO_NEGATIVO * lMenor, regra: "0,25·lmenor" };
 }
@@ -182,7 +184,6 @@ export function quantLaje(
   laje: Pick<Laje, "nome" | "lx" | "ly" | "h">,
   armadura: Pick<LajeArmadura, "barrasX" | "barrasY" | "barrasNegativos"> | undefined,
   vizinhanca?: VizinhancaLaje,
-  modo: ModoCalculo = "corrigido",
 ): QuantElemento {
   const { nome, lx, ly } = laje;
   const h = laje.h / 100;
@@ -221,7 +222,7 @@ export function quantLaje(
       avisos.push(`${nome}: negativa do bordo ${b} sem barra adotada; aço subestimado.`);
       continue;
     }
-    const { l, regra } = comprimentoNegativa(laje, b, vizinhanca, modo);
+    const { l, regra } = comprimentoNegativa(laje, b, vizinhanca);
     bruto += pesoMalha(barra, comprimentoBordo(laje, b), l);
     negativos.push(`${b} ${f(l)} m (${regra})`);
   }
@@ -312,6 +313,45 @@ export function quantViga(
     });
   });
   return { concreto, forma, aco, avisos: [...new Set(avisos)], memoria };
+}
+
+/** Viga pelo quadro do DESINIT (o .TAB, DESINIT.BAS:763-852), uma ocorrência: volume
+ *  e fôrma em centésimos de m³ e de m² (INT no centésimo) e peso por bitola
+ *  CINT(compr·kg/m/100) do .DSP (sem perda). */
+export function quantVigaDesinit(nome: string, quadro: QuadroViga): QuantElemento {
+  const concreto = quadro.volumeCentesimos / 100;
+  const forma = quadro.formaCentesimos / 100;
+  let aco = 0;
+  quadro.comprimentoPorBitola.forEach((c, i) => {
+    if (c !== 0) aco += quadro.pesoPorBitola[i] ?? 0;
+  });
+  const ref = "DESINIT.BAS:763-852 (quadro da viga, .TAB)";
+  return {
+    concreto,
+    forma,
+    aco,
+    avisos: [],
+    memoria: [
+      {
+        descricao: `${nome}: concreto do DESINIT (Σ bw·h·vão livre/10⁴, INT no centésimo)`,
+        valor: concreto,
+        unidade: "m³",
+        ref,
+      },
+      {
+        descricao: `${nome}: fôrma do DESINIT (Σ (2h + bw − Hle − Hld)·vão livre/100, INT no centésimo)`,
+        valor: forma,
+        unidade: "m²",
+        ref,
+      },
+      {
+        descricao: `${nome}: aço do detalhamento do DESINIT (Σ peso por bitola, CINT(compr·kg/m/100))`,
+        valor: aco,
+        unidade: "kg",
+        ref,
+      },
+    ],
+  };
 }
 
 /** O que a estimativa usa do dimensionamento do pilar num nível. */
@@ -411,18 +451,17 @@ export function vizinhancaLajes(rp: Pick<ResultadoPavimento, "lajes">) {
   return viz;
 }
 
-/** Quantitativos de um pavimento, já multiplicados pelas repetições, pela regra
- *  de volume e fôrma (formas.ts). Lajes e vigas são iguais em todas as
- *  repetições; o aço dos pilares vem de cada nível. Na regra "editor" (FORMEDCA)
- *  os pilares não entram no volume. */
+/** Quantitativos de um pavimento, já multiplicados pelas repetições. Lajes e vigas
+ *  são iguais em todas as repetições; o aço dos pilares vem de cada nível. NB-1/78:
+ *  vigas pelo DESINIT (ver o cabeçalho). */
 function quantPavimento(
   pav: Pavimento,
   obra: Obra,
   r: ResultadoObra,
   rp: ResultadoObra["pavimentos"][number] | undefined,
-  regra: RegraQuantitativo,
 ): QuantitativoPavimento {
   const modo = obra.modoCalculo ?? "corrigido";
+  const ps = r.sistrut?.pavimentos.find((p) => p.pavimentoId === pav.id);
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
   const rep = Number.isInteger(pav.repeticoes) && pav.repeticoes >= 1 ? pav.repeticoes : 0;
@@ -433,25 +472,50 @@ function quantPavimento(
     memoria.push(...q.memoria);
     return q;
   };
+  /** Marca a memória das grandezas que o SISTRUT não calcula. */
+  const semSistrut = (q: QuantElemento): QuantElemento =>
+    ps
+      ? {
+          ...q,
+          memoria: q.memoria.map((m) => ({
+            ...m,
+            descricao: `${m.descricao} (${NAO_EXISTE_NO_SISTRUT})`,
+          })),
+        }
+      : q;
 
   const viz = rp ? vizinhancaLajes(rp) : new Map<string, VizinhancaLaje>();
   const lajes = soma(
     ...pav.lajes.map((l) =>
-      junta(quantLaje(l, rp?.lajes.find((x) => x.laje.id === l.id)?.armadura, viz.get(l.id), modo)),
-    ),
-  );
-  const vigasCalc = new Map<string, ResultadoViga>(rp?.vigas.map((v) => [v.viga.id, v]) ?? []);
-  const vigas = soma(
-    ...pav.vigas.map((v) =>
       junta(
-        quantViga(
-          v,
-          hLajeDaViga(regra, v, pav.lajes),
-          vigasCalc.get(v.id),
-          obra.materiais.cobrimentoViga,
+        semSistrut(
+          quantLaje(l, rp?.lajes.find((x) => x.laje.id === l.id)?.armadura, viz.get(l.id)),
         ),
       ),
     ),
+  );
+  const vigasCalc = new Map<string, ResultadoViga>(rp?.vigas.map((v) => [v.viga.id, v]) ?? []);
+  const cob = obra.materiais.cobrimentoViga;
+  const vigas = soma(
+    ...pav.vigas.map((v) => {
+      const hLaje = espessuraLajeNaViga(v, pav.lajes);
+      if (!ps) return junta(quantViga(v, hLaje, vigasCalc.get(v.id), cob));
+      const quadro = ps.vigas.find((x) => x.id === v.id)?.quadro;
+      // pelos eixos e abaixo da laje, sem o aço estimado (o aço é o do DESINIT)
+      const eixos = quantViga(v, hLaje, undefined, cob);
+      if (!quadro) {
+        const aviso = `${v.nome}: sem detalhamento do DESINIT; aço não calculado.`;
+        return junta({ ...eixos, avisos: [aviso] });
+      }
+      const d = quantVigaDesinit(v.nome, quadro);
+      if (modo === "original") return junta(d);
+      return junta({
+        ...eixos,
+        aco: d.aco,
+        avisos: [],
+        memoria: [...eixos.memoria, ...d.memoria.slice(2)],
+      });
+    }),
   );
   let pilares = zero();
   for (const p of pav.pilares)
@@ -461,15 +525,17 @@ function quantPavimento(
       )?.resultado;
       const nome = rep > 1 ? `${p.nome} (${k}/${rep})` : p.nome;
       const q = junta(
-        quantPilar(
-          { ...p, nome },
-          pav.peDireito,
-          res,
-          obra.materiais.cobrimentoPilar,
-          regra === "certa" ? encontroNoPilar(p, pav) : SEM_ENCONTRO,
+        semSistrut(
+          quantPilar(
+            { ...p, nome },
+            pav.peDireito,
+            res,
+            obra.materiais.cobrimentoPilar,
+            encontroNoPilar(p, pav),
+          ),
         ),
       );
-      pilares = soma(pilares, regra === "editor" ? { ...q, concreto: 0 } : q);
+      pilares = soma(pilares, q);
     }
 
   const porTipo = {
@@ -493,30 +559,34 @@ function quantPavimento(
   };
 }
 
-/** Quantitativos de concreto, forma e aço (estimado) da obra calculada. */
+/** Quantitativos de concreto, forma e aço da obra calculada. */
 export function calcularQuantitativos(obra: Obra, r: ResultadoObra): Quantitativos {
   const modo = obra.modoCalculo ?? "corrigido";
-  const porRegra = (regra: RegraQuantitativo) =>
-    obra.pavimentos.map((p) =>
-      quantPavimento(
-        p,
-        obra,
-        r,
-        r.pavimentos.find((rp) => rp.pavimento.id === p.id),
-        regra,
-      ),
-    );
-  // por tipo: a regra certa ou, no original, a do relatório do SISTRUT (FORMIMP)
-  const pavimentos = porRegra(modo === "original" ? "impressao" : "certa");
+  const pavimentos = obra.pavimentos.map((p) =>
+    quantPavimento(
+      p,
+      obra,
+      r,
+      r.pavimentos.find((rp) => rp.pavimento.id === p.id),
+    ),
+  );
   const lajes = soma(...pavimentos.map((p) => p.lajes));
   const vigas = soma(...pavimentos.map((p) => p.vigas));
   const pilares = soma(...pavimentos.map((p) => p.pilares));
   const total = soma(lajes, vigas, pilares);
-  const tela = modo === "original" ? soma(...porRegra("editor").map((p) => p.total)) : total;
+  const sistrut = r.sistrut !== undefined;
+  const todas = (fonte: FonteQuantidade) => ({ concreto: fonte, forma: fonte, aco: fonte });
+  const geometriaViga: FonteQuantidade = sistrut && modo === "original" ? "sistrut" : "v2";
+  const fonte: Quantitativos["fonte"] = {
+    lajes: todas("v2"),
+    vigas: { concreto: geometriaViga, forma: geometriaViga, aco: sistrut ? "sistrut" : "v2" },
+    pilares: todas("v2"),
+  };
   const memoria: Etapa[] = [
     {
-      descricao:
-        "O peso de aço é ESTIMATIVA: barras adotadas com comprimentos convencionais; o detalhamento de barras é fase 2",
+      descricao: sistrut
+        ? `Peso de aço: vigas pelo detalhamento do DESINIT; lajes e pilares ESTIMADOS com comprimentos convencionais (${NAO_EXISTE_NO_SISTRUT})`
+        : "O peso de aço é ESTIMATIVA: barras adotadas com comprimentos convencionais; o detalhamento de barras é fase 2",
       ref: REF,
     },
     {
@@ -529,25 +599,27 @@ export function calcularQuantitativos(obra: Obra, r: ResultadoObra): Quantitativ
       descricao: `Lajes: + ${ACRESCIMO_LAJE * 100} % de ancoragens e emendas; negativas entram ${FRACAO_NEGATIVO}·lmenor na laje; a de balanço vai da borda livre a ${FRACAO_NEGATIVO}·x dentro da vizinha (x = maior dos menores vãos) e só a laje em balanço a conta`,
       ref: REF,
     },
-    {
-      descricao: `Vigas: negativas × ${FRACAO_NEGATIVO}·vão de cada lado do apoio (balanço: vão inteiro); estribos sem ganchos; sem porta-estribos`,
-      ref: REF,
-    },
+    sistrut
+      ? {
+          descricao:
+            modo === "original"
+              ? "Vigas: volume, fôrma e aço do quadro do DESINIT (vão livre, altura inteira, INT no centésimo)"
+              : "Vigas: volume e fôrma pelos eixos e abaixo da laje; aço do quadro do DESINIT",
+          ref: "DESINIT.BAS:763-852",
+        }
+      : {
+          descricao: `Vigas: negativas × ${FRACAO_NEGATIVO}·vão de cada lado do apoio (balanço: vão inteiro); estribos sem ganchos; sem porta-estribos`,
+          ref: REF,
+        },
     {
       descricao: `Pilares: barras × (pé-direito + ${EMENDA_PILAR}φ de emenda); estribos sem ganchos`,
       ref: REF,
     },
-    modo === "original"
-      ? {
-          descricao:
-            "Modo original (SISTRUT de 1991): concreto e forma por tipo como a impressão (FORMIMP: viga com a altura inteira, pilar no pé-direito inteiro); a tela usa a regra do editor (FORMEDCA: volume sem pilares, viga sem a laje de referência); negativas das lajes contadas em cada laje do bordo (2·0,25·lmenor)",
-          ref: "V1 FORMIMP.BAS, FORMCALC.BM e LAJEPROC.BAS (docs/MODO-CALCULO.md)",
-        }
-      : {
-          descricao:
-            "Concreto e forma pelos eixos; viga abaixo da laje mais espessa que se apoia nela; forma de viga = fundo + 2 laterais; pilar até o fundo da laje, descontada a faixa de cada viga que chega",
-          ref: REF,
-        },
+    {
+      descricao:
+        "Concreto e forma pelos eixos; viga abaixo da laje mais espessa que se apoia nela; forma de viga = fundo + 2 laterais; pilar até o fundo da laje, descontada a faixa de cada viga que chega",
+      ref: REF,
+    },
   ];
   return {
     pavimentos,
@@ -556,10 +628,7 @@ export function calcularQuantitativos(obra: Obra, r: ResultadoObra): Quantitativ
     pilares,
     total,
     modoCalculo: modo,
-    volumeTela: tela.concreto,
-    volumeRelatorio: total.concreto,
-    formaTela: tela.forma,
-    formaRelatorio: total.forma,
+    fonte,
     avisos: pavimentos.flatMap((p) => p.avisos.map((a) => `${p.nome}: ${a}`)),
     memoria,
   };

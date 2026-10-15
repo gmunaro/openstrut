@@ -346,7 +346,8 @@ function SeletorAco({
 }
 
 /** Switch do modo de cálculo (Obra.modoCalculo): desligado = corrigido, ligado = como o
- *  SISTRUT original. A dica cita cada item que muda (docs/MODO-CALCULO.md, E, F e H). */
+ *  SISTRUT original. A dica resume o que muda (a lista completa está em
+ *  docs/MODO-CALCULO.md). */
 function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCalculo) => void }) {
   return (
     <div className="col-span-2 grid gap-1.5">
@@ -356,18 +357,21 @@ function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCal
         </span>
         <Dica id="mat-modo-dica" rotulo="O que muda com o modo de cálculo">
           <span className="block">
-            Corrigido calcula certo. {NOME_MODO.original} repete três erros do programa de 1991,
-            para conferir com a V1:
+            Só na NB-1/78, que nos dois modos calcula pelo método do SISTRUT 4.0.{" "}
+            {NOME_MODO.original} repete o programa de 1991 número a número (CA-50 = 5 t/cm²,
+            concreto 2,5 t/m³, cobrimentos do SISTRUT, precisão simples), inclusive os erros.
+            Corrigido usa 500 MPa, 25 kN/m³ e os cobrimentos da obra, e corrige os erros, entre
+            eles:
           </span>
-          <span className="mt-1 block">
-            · negativas das lajes contadas duas vezes (em torno de +23 % no aço das lajes);
+          <span className="mt-1 block">· flecha das lajes nunca verificada;</span>
+          <span className="block">
+            · armadura mínima de viga com CA-25 de 0,15 % em vez de 0,25 %;
           </span>
           <span className="block">
-            · volume e fôrma: a tela esquece os pilares e o relatório conta duas vezes a laje sobre
-            as vigas (no exemplo da V1, volume 9 % menor na tela e 6 % maior no relatório);
+            · reações truncadas no .REP e momento da viga no pilar sem rigidez nem direção;
           </span>
           <span className="block">
-            · só na NB-1/78: armadura mínima de viga com CA-25 de 0,15 % em vez de 0,25 %.
+            · volume e fôrma de viga pelo DESINIT, que conta de novo a faixa da laje.
           </span>
         </Dica>
       </div>

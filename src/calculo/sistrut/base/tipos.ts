@@ -675,8 +675,19 @@ export interface LinhaRep {
   /** Momento de extremidade (VIGA.BAS:2416-2419): `valor` = A_0fc4 com 4 casas (tm,
    *  ex.: −0,6481); `texto` = STR$(valor) cortado 2 casas depois do ponto ("-.64"),
    *  que é o que vai ao .REP e o que o PILGEEDI lê, como ABS(VAL(texto))
-   *  (PILGEEDI.BAS:606); apoio extremo (1 = esquerdo, n = direito); vão adjacente (m). */
-  momentos: { viga: string; valor: number; texto: string; apoio: number; vao: number }[];
+   *  (PILGEEDI.BAS:606); apoio extremo (1 = esquerdo, n = direito); vão adjacente (m).
+   *  `inclinacao` (graus) e `rigidez` (numerador da rigidez da viga, cm⁴) não vão ao
+   *  .REP: o PILGEEDI começa com 0 nos dois e o usuário os edita na tela
+   *  (PILGEEDI.BAS:597-640). Ausentes = 0, como no original. */
+  momentos: {
+    viga: string;
+    valor: number;
+    texto: string;
+    apoio: number;
+    vao: number;
+    inclinacao?: number;
+    rigidez?: number;
+  }[];
 }
 export type SomaReacoesPilares = (
   analises: readonly AnaliseViga[],
@@ -688,7 +699,7 @@ export type SomaReacoesPilares = (
 // ============================================================== T4 VIGA: dimensionamento e detalhamento (DESDIM, DESINIT, DESENHO)
 // Arquivos: sistrut/vigas/desdim.ts, sistrut/vigas/desinit.ts, sistrut/quant/vigas.ts.
 // Especificação: livros_arm_forma_des.md 1-2 e 4.3; PLANO D1-D8, Q2-Q5. Modo
-// corrigido: R8 (σs elástico sem ÷ γs), R9 (áreas de φ4 e φ32, AREAS_DSP_CORRIGIDAS),
+// corrigido: R8 (σs elástico sem ÷ γs), R9 (área do φ32, AREAS_DSP_CORRIGIDAS; o φ4 fica desativado),
 // R11 (salto do ramo "barra longa demais"), H (As,mín 0,25 % com CA-25).
 
 /** Seção de viga num tramo ou apoio (DESDIM.BAS:2930): bw, hw, mesa bf/hf (0 = sem), cm. */

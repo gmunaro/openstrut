@@ -83,11 +83,8 @@ export function analisaDescalc(entrada: EntradaDesdim, modo: ModoSistrut) {
   for (const [i, b] of p.bitolas.entries()) {
     c.bitola.p(i, b.bitola);
     let area = b.area;
-    // R9 (dado do .DSP): as áreas 0,00 de φ4 e φ32 valem também no detalhamento
-    if (modo === "corrigido" && area === 0) {
-      area =
-        b.bitola === 4 ? AREAS_DSP_CORRIGIDAS[4] : b.bitola === 32 ? AREAS_DSP_CORRIGIDAS[32] : 0;
-    }
+    // R9 (dado do .DSP): a área do φ32 vale também no detalhamento (φ4 fica 0)
+    if (modo === "corrigido" && area === 0 && b.bitola === 32) area = AREAS_DSP_CORRIGIDAS[32];
     c.area.p(i, area);
     c.a1488.p(i, b.kgPorM);
   }

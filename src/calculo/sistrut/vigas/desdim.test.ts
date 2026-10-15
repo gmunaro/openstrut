@@ -399,3 +399,33 @@ describe("fontes dos JSONs de __desdim__", () => {
     });
   }
 });
+
+describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado de 4 m, q = 8 t/m", () => {
+  // Vk com alívio = qL/2 − q·h/2 = 16 − 8·0,25 = 14 t; bw 20, h 50, d 46; fck 0,15, fyk 5.
+  // Asw = (Vk/(bw·d)·γs·γf − ψ·√(1000·fck)/1000)/fyk·bw·100·γs (DESDIM.BAS:3176-3207).
+  const asw = (rho: number) =>
+    (((14 / (20 * 46)) * 1.15 * 1.4 - ((0.225 + 15 * rho) * Math.sqrt(150)) / 1000) / 5) *
+    20 *
+    100 *
+    1.15;
+  const entrada = entradaUmTramo([{ p: 8, d: 4, f: 0 }]);
+
+  it("original: a coluna 5 de A_128e ainda é 0 e ρ fica no piso 0,001 (Asw 9,92 à mão)", () => {
+    const r = dimensionaVigaDesdim(
+      { ...entrada, parametros: emSingle(PARAMETROS_DSP) },
+      "original",
+    );
+    expect(r.tramos[0]!.cisalhamento.aswEsquerda).toBeCloseTo(asw(0.001), 2);
+    expect(asw(0.001)).toBeCloseTo(9.918, 3);
+  });
+
+  it("corrigido: ρ = As/(3·bw·h) com a As de flexão do tramo, ψ maior e Asw menor", () => {
+    const r = dimensionaVigaDesdim(entrada, "corrigido");
+    const as = r.tramos[0]!.flexao.as;
+    // M+ = qL²/8 = 16 tm: As de flexão bem acima do mínimo 0,0015·20·50 = 1,5
+    expect(as).toBeGreaterThan(10);
+    const rho = Math.min(0.015, Math.max(0.001, as / (3 * 20 * 50)));
+    expect(r.tramos[0]!.cisalhamento.aswEsquerda).toBeCloseTo(asw(rho), 6);
+    expect(r.tramos[0]!.cisalhamento.aswEsquerda).toBeLessThan(asw(0.001) - 0.1);
+  });
+});

@@ -150,9 +150,9 @@ export function leCargasRep(
           const v = qbVal(mo.texto);
           slots[k] = {
             m: s(Math.abs(v)),
-            inclinacao: 0,
+            inclinacao: s(mo.inclinacao ?? 0),
             vao: s(mo.vao * -Math.sign(v)),
-            rigidez: 0,
+            rigidez: s(mo.rigidez ?? 0),
           };
           if (slots[k]!.m > k001) k += 1;
           if (k > 3 && i < linha.momentos.length - 1) break;

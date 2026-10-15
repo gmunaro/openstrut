@@ -238,13 +238,50 @@ export interface ResultadoSistrut {
 
 const BORDOS_ORIGINAL: readonly Bordo[] = ["esquerdo", "superior", "direito", "inferior"];
 
-/** Vértices horários do retângulo, do canto inferior esquerdo (bordo k = k → k+1). */
-const verticesDaLaje = (l: Laje) => [
+/** Cantos horários do retângulo, do canto inferior esquerdo (bordo k = k → k+1). */
+const cantosDaLaje = (l: Laje) => [
   { x: l.x, y: l.y },
   { x: l.x, y: l.y + l.ly },
   { x: l.x + l.lx, y: l.y + l.ly },
   { x: l.x + l.lx, y: l.y },
 ];
+
+const TOL_VERTICE = 1e-6;
+const dentro = (v: number, a: number, b: number) =>
+  v > Math.min(a, b) + TOL_VERTICE && v < Math.max(a, b) - TOL_VERTICE;
+
+/** Polígono da laje como o usuário do LAJEGEOM o desenharia: os cantos e, em cada
+ *  bordo, os cantos das outras lajes que caem dentro dele (vértice compartilhado). Só
+ *  assim um bordo encostado em parte numa vizinha vira continuidade no original, que
+ *  compara os dois vértices do lado (LAJECALC.BAS:3714-3720). `bordos[k]` = bordo da
+ *  V2 do lado k → k+1. */
+function poligonoDaLaje(l: Laje, outras: readonly Laje[]) {
+  const cantos = cantosDaLaje(l);
+  const vertices: { x: number; y: number }[] = [];
+  const bordos: Bordo[] = [];
+  cantos.forEach((a, k) => {
+    const b = cantos[(k + 1) % 4]!;
+    const horizontal = a.y === b.y;
+    const sentido = horizontal ? Math.sign(b.x - a.x) : Math.sign(b.y - a.y);
+    const meio = outras
+      .flatMap(cantosDaLaje)
+      .filter((p) =>
+        horizontal
+          ? Math.abs(p.y - a.y) < TOL_VERTICE && dentro(p.x, a.x, b.x)
+          : Math.abs(p.x - a.x) < TOL_VERTICE && dentro(p.y, a.y, b.y),
+      )
+      .sort((p, q) => (horizontal ? p.x - q.x : p.y - q.y) * sentido)
+      .filter(
+        (p, i, lista) =>
+          i === 0 || Math.hypot(p.x - lista[i - 1]!.x, p.y - lista[i - 1]!.y) > TOL_VERTICE,
+      );
+    for (const p of [a, ...meio]) {
+      vertices.push(p);
+      bordos.push(BORDOS_ORIGINAL[k]!);
+    }
+  });
+  return { vertices, bordos };
+}
 
 const CODIGO_ENGASTE = 22;
 const codigoForcado = (v: Vinculo) => (v === "livre" ? 1 : v === "apoiado" ? 0 : CODIGO_ENGASTE);
@@ -270,8 +307,12 @@ function painelDoPavimento(
     if (nomes.has(l.nome))
       avisos.push(`Laje ${l.nome} com nome repetido no pavimento ${pav.nome}.`);
     nomes.add(l.nome);
-    const vertices = verticesDaLaje(l).map((p) => ({ x: s(p.x), y: s(p.y) }));
-    lajesDoPainel.push({ id: l.id, nome: l.nome, bordos: BORDOS_ORIGINAL });
+    const poligono = poligonoDaLaje(
+      l,
+      pav.lajes.filter((o) => o.id !== l.id),
+    );
+    const vertices = poligono.vertices.map((p) => ({ x: s(p.x), y: s(p.y) }));
+    lajesDoPainel.push({ id: l.id, nome: l.nome, bordos: poligono.bordos });
     if (l.sobrecarga > 0) {
       const q = s(knPorM2ParaTPorM2(l.sobrecarga));
       cargasPorArea.push({ vertices, total: q, acidental: q });
@@ -283,7 +324,7 @@ function painelDoPavimento(
       indicesVertices: vertices.map(indice),
       grupo: 0,
       // código 1 (livre) antes da automática: ela preserva o 1 e zera o resto
-      codigos: BORDOS_ORIGINAL.map((b) => (l.vinculos[b] === "livre" ? 1 : 0)),
+      codigos: poligono.bordos.map((b) => (l.vinculos[b] === "livre" ? 1 : 0)),
       angulo: 0,
       mu: l.mu === 1 ? 0 : s(l.mu),
       cargaPermanente: s(knPorM2ParaTPorM2(l.revestimento)),
@@ -297,7 +338,7 @@ function painelDoPavimento(
   let continuidades: Continuidade[] = auto.continuidades;
   pav.lajes.forEach((l, i) => {
     const sl = lajes[i]!;
-    BORDOS_ORIGINAL.forEach((b, k) => {
+    lajesDoPainel[i]!.bordos.forEach((b, k) => {
       const v = l.vinculos[b];
       if (v === undefined) return;
       const doBordo = (c: Continuidade) =>
@@ -336,14 +377,20 @@ function painelDoPavimento(
   return { painel, lajesDoPainel };
 }
 
-/** Vínculos da V2 a partir dos códigos (para a flecha do corrigido, R1). */
-const vinculosDosCodigos = (codigos: readonly number[]) =>
-  Object.fromEntries(
-    BORDOS_ORIGINAL.map((b, k) => {
-      const c = codigos[k] ?? 0;
-      return [b, c === 1 ? "livre" : c > 2 ? "engastado" : "apoiado"];
-    }),
-  ) as Record<Bordo, Vinculo>;
+/** Vínculo da V2 de cada bordo a partir dos códigos dos lados do original: engastado
+ *  se algum lado do bordo é engastado, livre se todos são livres, senão apoiado. */
+export function vinculosDosCodigos(codigos: readonly number[], bordos: readonly Bordo[]) {
+  const v = {} as Record<Bordo, Vinculo>;
+  for (const b of BORDOS_ORIGINAL) {
+    const cs = codigos.filter((_, k) => bordos[k] === b);
+    v[b] = cs.some((c) => c > 2)
+      ? "engastado"
+      : cs.length > 0 && cs.every((c) => c === 1)
+        ? "livre"
+        : "apoiado";
+  }
+  return v;
+}
 
 // ---------------------------------------------------------------- vigas
 
@@ -485,7 +532,10 @@ function calcularPavimentoSistrut(
     const flecha: DadosFlechaLaje | undefined = pv && {
       lx: pv.lx,
       ly: pv.ly,
-      vinculos: vinculosDosCodigos(l.codigos),
+      vinculos: vinculosDosCodigos(
+        l.codigos,
+        lajesDoPainel.find((d) => d.nome === l.nome)?.bordos ?? BORDOS_ORIGINAL,
+      ),
       acidental: knPorM2ParaTPorM2(pv.sobrecarga),
     };
     try {
@@ -689,7 +739,21 @@ function calcularPilaresSistrut(
       const c = p
         ? colunas.find((_, i) => lancesDasColunas[i]!.some((l) => l.pilar.id === p.id))
         : undefined;
-      return c ? [{ ...linha, pilar: c.nome }] : [];
+      if (!c) return [];
+      // Corrigido: a inclinação e a rigidez da viga, que o original deixa em 0 até o
+      // usuário digitar no PILGEEDI (PILGEEDI.BAS:597-640): com 0, o momento de uma viga
+      // vertical entra na direção x e o pilar leva 100 % do MEP (kViga = 0 na
+      // repartição por rigidez de PILAREDI.BAS:7470-7520).
+      const momentos =
+        modo === "original"
+          ? linha.momentos
+          : linha.momentos.map((m) => {
+              const v = pav.vigas.find((x) => x.nome === m.viga);
+              if (!v) return m;
+              const horizontal = Math.abs(v.y1 - v.y2) < 1e-9;
+              return { ...m, inclinacao: horizontal ? 0 : 90, rigidez: (v.bw * v.h ** 3) / 12 };
+            });
+      return [{ ...linha, pilar: c.nome, momentos }];
     });
     // o nível k do .REP é o topo do lance k − 1: carga no nível k + 1 da coluna
     reps.push({ linhas, nivelInicial: k + 1, nivelFinal: k + 1, modo: "substitui" });

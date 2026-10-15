@@ -141,8 +141,9 @@ describe("importar a obra FLUXO da V1", () => {
 
 describe("obra FLUXO importada calculada pela NB-1/78", () => {
   // Mesma norma de src/calculo/fluxo.test.ts: a NB-1/78 com o concreto de 2,5 tf/m³ da V1
-  // (os momentos das lajes dependem só da carga).
-  const nb178V1: Norma = { ...nb178, pesoConcreto: 2.5 * KN_POR_TF };
+  // (os momentos das lajes dependem só da carga), pelo fluxo genérico da V2
+  // (`caminho: "v2"`; ver nb178V1 em src/calculo/fluxo.test.ts).
+  const nb178V1: Norma = { ...nb178, caminho: "v2", pesoConcreto: 2.5 * KN_POR_TF };
   const r = importada(importarV1([LAJ, VIG, COL]));
   const c = calcularObra(r.obra, nb178V1);
   const rp = c.pavimentos[0]!;

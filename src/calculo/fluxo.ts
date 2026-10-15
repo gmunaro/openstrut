@@ -2,6 +2,8 @@
 // com verificação de equilíbrio. Orquestra as peças comuns (vinculação,
 // compatibilização, montagem, viga contínua, acumulação) e as da norma.
 import type { Laje, Obra, Pavimento, Pilar } from "../dominio/obra";
+import { calcularObraPeloSistrut } from "./fluxoSistrut";
+import type { ResultadoSistrut } from "./sistrut/obra";
 import { escolheBarrasAlma, escolheEstribo, type BarrasNaAlma } from "./barras";
 import { compatibilizaLajes } from "./lajes/compatibilizacao";
 import { vinculacao } from "./lajes/vinculacao";
@@ -125,6 +127,9 @@ export interface ResultadoObra {
   pavimentos: ResultadoPavimento[];
   pilares: ResultadoPilar[];
   avisos: string[];
+  /** NB-1/78: o resultado do caminho do SISTRUT nas unidades do original (t, m, cm,
+   *  t/cm², t·m), do qual os campos acima são a projeção em SI (fluxoSistrut.ts). */
+  sistrut?: ResultadoSistrut;
 }
 
 /** Pilares de pavimentos diferentes são o mesmo quando estão na mesma posição. */
@@ -144,11 +149,12 @@ function marcarFalha(rp: ResultadoPavimento, falha: string) {
     if (!v.avisos.includes(AVISO_VIGA_FALHA)) v.avisos.push(AVISO_VIGA_FALHA);
 }
 
+/** Calcula a obra pela norma. A NB-1/78 (`norma.caminho === "sistrut"`) passa pelo
+ *  caminho do SISTRUT 4.0 no modo da obra (`obra.modoCalculo`, docs/MODO-CALCULO.md);
+ *  as outras, pelo fluxo da V2 abaixo. */
 export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
-  const mat: MateriaisCalc = {
-    ...norma.materiais(obra.materiais),
-    modoCalculo: obra.modoCalculo ?? "corrigido",
-  };
+  if (norma.caminho === "sistrut") return calcularObraPeloSistrut(obra, norma);
+  const mat = norma.materiais(obra.materiais);
   const avisos: string[] = [];
   const pavimentos = obra.pavimentos.map((p) => calcularPavimento(p, obra, norma, mat));
 

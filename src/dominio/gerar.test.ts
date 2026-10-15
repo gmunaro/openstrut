@@ -1,6 +1,7 @@
 // Geração de vigas e pilares. Esperados derivados à mão das regras da V1
 // (LAJEGEOT.BM, LAJMONT.BM) e dos testes T_LAJEGEOM.BAS e T_LAJMONT.BAS.
 import { describe, expect, it } from "vitest";
+import { tfParaKn } from "../calculo/unidades";
 import { calcularObra } from "../calculo/fluxo";
 import { nb178 } from "../calculo/normas";
 import { lajeNova, obraNova, pavimentoNovo } from "./criar";
@@ -206,8 +207,9 @@ describe("pilares removidos pelo usuário", () => {
 // Montagem com um pilar removido: o nó (4; 5) deixa de ser apoio. A viga do topo
 // (y = 5, 0..7 m) fica com um tramo só de 7 m, e a viga vertical x = 4 termina no
 // ponto e se apoia nela (regra da montagem: a que termina se apoia na que passa).
-// Esperado à mão: viga biapoiada de 7 m com carga w e concentrada P em a = 4 m:
-// R(0) = 7w/2 + 3P/7, R(7) = 7w/2 + 4P/7.
+// Esperado à mão: viga biapoiada de 7 m com as divisões de carga do .VIG (q·A/L de
+// cada laje no trecho dela, LAJEMONT) e a concentrada P (reação da viga x = 4) em
+// a = 4 m: R(7) = Σ(cargas × braço)/7 e R(0) = Σ cargas − R(7) (estática).
 describe("montagem com pilar removido", () => {
   const obra = obraNova("R", "nb1-78");
   const base = { ...obra.pavimentos[0]!, nome: "T" };
@@ -218,7 +220,8 @@ describe("montagem com pilar removido", () => {
     lajes: [l1, l2],
     pilaresRemovidos: [{ x: 4, y: 5 }],
   });
-  const r = calcularObra({ ...obra, pavimentos: [pavimento] }, nb178).pavimentos[0]!;
+  const resultado = calcularObra({ ...obra, pavimentos: [pavimento] }, nb178);
+  const r = resultado.pavimentos[0]!;
   const montada = (nome: string) => {
     const v = r.montagem.vigas.find((x) => x.nome === nome);
     if (!v) throw new Error(`sem ${nome}`);
@@ -242,11 +245,24 @@ describe("montagem com pilar removido", () => {
     const reacaoTopo = vertical.analise.reacoes[1]!;
     expect(c.g + c.q).toBeCloseTo(reacaoTopo.g + reacaoTopo.q, 9);
 
-    const w = t.g + t.q;
-    const P = c.g + c.q;
+    const vig = resultado.sistrut!.pavimentos[0]!.vigasVig.find((x) => x.nome === "V1")!;
+    let anterior = 0;
+    let soma = 0;
+    let momento = 0;
+    for (const d of vig.tramos[0]!.divisoes) {
+      const w = d.p * (d.d - anterior);
+      soma += w + d.f;
+      momento += (w * (anterior + d.d)) / 2 + d.f * d.d;
+      anterior = d.d;
+    }
+    expect(tfParaKn(vig.tramos[0]!.divisoes.reduce((x, d) => x + d.f, 0))).toBeCloseTo(
+      c.g + c.q,
+      9,
+    );
     const [ra, rb] = v1.analise.reacoes;
-    expect(ra!.g + ra!.q).toBeCloseTo((7 * w) / 2 + (3 * P) / 7, 6);
-    expect(rb!.g + rb!.q).toBeCloseTo((7 * w) / 2 + (4 * P) / 7, 6);
+    expect(rb!.g + rb!.q).toBeCloseTo(tfParaKn(momento / 7), 4);
+    expect(ra!.g + ra!.q).toBeCloseTo(tfParaKn(soma - momento / 7), 4);
+    expect(t.vao).toBe(7);
   });
 
   it("5 pilares recebem toda a carga das vigas (equilíbrio fecha)", () => {

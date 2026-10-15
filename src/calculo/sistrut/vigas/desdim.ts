@@ -264,10 +264,26 @@ export function dimensionaVigaDesdim(
     ejfPorTramo.set(t.indice, flechaEJ({ ...t, ve: t.veFlecha }, modo));
   }
 
-  // Asw de cada lado (com ρ = 0,001: a coluna 5 de A_128e ainda é 0) e bitolas da viga.
-  const asRho = 0;
+  // Asw de cada lado e bitolas da viga. ρ do ψ: no original a coluna 5 de A_128e, que
+  // o DESAUXDI só grava depois do dimensionamento (DESDIM.BAS:5004), ainda é 0 e ρ fica
+  // no piso 0,001 (defeito D-ψ, T7). Corrigido: ρ = As/(3·bw·h) com a As de flexão do
+  // tramo (o terço da positiva que chega ao apoio) ou, no balanço, a do apoio vizinho
+  // (NB-1/78: τc = ψ·√fck cresce com a taxa da armadura longitudinal de tração;
+  // U03-026, livros_arm_forma_des.md 4.3).
+  const asDeFlexao = (m: number, sec: SecaoCalculo) => {
+    const r = flexaoSecao(m, sec, materiais, mult, modo);
+    return Math.max(r.as, taxaMin * sec.bw * sec.h);
+  };
+  const asRhoDo = (t: EsforcosTramoDesdim, sec: SecaoCalculo) => {
+    if (modo === "original") return 0;
+    if (t.indice >= 1 && t.indice <= n)
+      return asDeFlexao(t.mPositivo * 100 * COEFICIENTE_MEDIDA * COEFICIENTE_FORCA, sec);
+    const mApoio = esforcos.momentosApoio[t.indice === 0 ? 0 : n] ?? 0;
+    return mApoio < 0 ? asDeFlexao(-mApoio * 100 * COEFICIENTE_MEDIDA * COEFICIENTE_FORCA, sec) : 0;
+  };
   const aswDos = (t: EsforcosTramoDesdim) => {
     const sec = secaoCalculo(secaoDoTramo(entrada, t.indice));
+    const asRho = asRhoDo(t, sec);
     return {
       sec,
       aswEsquerda: aswCortante(t.vkEsquerda, sec, asRho, materiais, p, COEFICIENTE_FORCA, modo),

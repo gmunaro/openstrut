@@ -18,8 +18,9 @@ describe("área da bitola (S_40141) e R9", () => {
     expect(areaBitola(4, p, "original")).toBe(0);
     expect(areaBitola(32, p, "original")).toBe(0);
   });
-  it("corrigido (R9, PLANO 4.2): φ4 = 0,125 e φ32 = 8,04 cm² (π·φ²/4 arredondado)", () => {
-    expect(areaBitola(4, p, "corrigido")).toBe(0.125);
+  it("corrigido (R9, PLANO 4.2): φ32 = 8,04 cm² (π·φ²/4 arredondado); φ4 continua 0", () => {
+    // área 0 desativa a bitola; com 0,125 o φ4 viraria estribo de 4 mm (< 5 mm, decisão T7)
+    expect(areaBitola(4, p, "corrigido")).toBe(0);
     expect(areaBitola(32, p, "corrigido")).toBe(8.04);
     expect(Math.abs(areaBitola(32, p, "corrigido") - (Math.PI * 3.2 ** 2) / 4)).toBeLessThan(0.005);
     expect(areaBitola(10, p, "corrigido")).toBe(0.8);

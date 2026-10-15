@@ -61,6 +61,7 @@ const avisoMu = (nome: string, mu: number) =>
 export const nb178: Norma = {
   id: "nb1-78",
   nome: "NB-1/78 (NBR 6118:1978)",
+  caminho: "sistrut",
   gamaG: GAMA_F,
   gamaQ: GAMA_F,
   pesoConcreto: 25,
@@ -91,6 +92,7 @@ export const nb178: Norma = {
 export const nbr6118: Norma = {
   id: "nbr6118-2023",
   nome: "NBR 6118:2023",
+  caminho: "v2",
   gamaG: GAMA_G,
   gamaQ: GAMA_Q,
   pesoConcreto: 25,

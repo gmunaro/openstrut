@@ -111,12 +111,11 @@ describe("modo de cálculo: switch", () => {
     expect(document.activeElement).toBe(botao);
 
     const dica = screen.getByRole("tooltip");
-    expect(dica.textContent).toContain("negativas das lajes contadas duas vezes");
-    expect(dica.textContent).toContain("+23 %");
-    expect(dica.textContent).toContain("volume e fôrma");
-    expect(dica.textContent).toContain("esquece os pilares");
-    expect(dica.textContent).toContain("só na NB-1/78");
+    expect(dica.textContent).toContain("Só na NB-1/78");
+    expect(dica.textContent).toContain("número a número");
+    expect(dica.textContent).toContain("flecha das lajes");
     expect(dica.textContent).toContain("CA-25 de 0,15 % em vez de 0,25 %");
+    expect(dica.textContent).toContain("DESINIT");
     // o switch também é descrito pela dica (leitor de tela)
     expect(switchModo(dialogo).getAttribute("aria-describedby")).toBe(dica.id);
     expect(botao.getAttribute("aria-describedby")).toBe(dica.id);
@@ -144,23 +143,23 @@ describe("modo de cálculo: switch", () => {
 });
 
 describe("modo de cálculo: resultados e relatório", () => {
-  it("alternar o modo recalcula o aço das lajes e mostra o selo só no original", async () => {
+  it("alternar o modo recalcula as vigas e mostra o selo só no original", async () => {
     const { user } = await abrirTela();
     let painel = await abrirAba(user, "Resultados");
-    const acoCorrigido = lerNumeroBr(linhaTotalDaObra(painel, "Lajes")[3] ?? "");
+    const concretoCorrigido = lerNumeroBr(linhaTotalDaObra(painel, "Vigas")[1] ?? "");
     expect(within(painel).queryByText(SELO_MODO_ORIGINAL)).toBeNull();
 
     await trocarModo(user);
     painel = await abrirAba(user, "Resultados");
-    const acoOriginal = lerNumeroBr(linhaTotalDaObra(painel, "Lajes")[3] ?? "");
+    const concretoOriginal = lerNumeroBr(linhaTotalDaObra(painel, "Vigas")[1] ?? "");
     expect(within(painel).getByText(SELO_MODO_ORIGINAL)).toBeTruthy();
-    // item E: a negativa do bordo comum entra 2·0,25·lmenor em cada laje, em vez de
-    // 0,25·lmenor: o aço das lajes cresce
-    expect(acoOriginal).toBeGreaterThan(acoCorrigido);
+    // no original o concreto das vigas é o do DESINIT (altura inteira, vão livre); no
+    // corrigido, abaixo da laje e pelos eixos
+    expect(concretoOriginal).not.toBe(concretoCorrigido);
 
     await trocarModo(user);
     painel = await abrirAba(user, "Resultados");
-    expect(lerNumeroBr(linhaTotalDaObra(painel, "Lajes")[3] ?? "")).toBe(acoCorrigido);
+    expect(lerNumeroBr(linhaTotalDaObra(painel, "Vigas")[1] ?? "")).toBe(concretoCorrigido);
     expect(within(painel).queryByText(SELO_MODO_ORIGINAL)).toBeNull();
   });
 
@@ -173,37 +172,26 @@ describe("modo de cálculo: resultados e relatório", () => {
     expect(within(painel).getByText(/^Modo de cálculo: Como o SISTRUT original/)).toBeTruthy();
   });
 
-  it("no original, tela e relatório dão volume e forma diferentes, com aviso do valor certo", async () => {
-    // o certo é o total do modo corrigido, na tela e no relatório
+  it("tela e relatório dão o mesmo total; a nota diz o que vem do DESINIT e o que é da V2", async () => {
+    // os itens F e G antigos (tela e relatório diferentes) eram da V1 antiga e saíram
     const { user } = await abrirTela();
-    let painel = await abrirAba(user, "Resultados");
-    const [, concretoCerto, formaCerta] = linhaTotalDaObra(painel, "Total");
-    painel = await abrirAba(user, "Relatório");
-    expect(linhaTotalRelatorio(painel).slice(1, 3)).toEqual([concretoCerto, formaCerta]);
-    expect(within(painel).queryByRole("note")).toBeNull();
-
-    await trocarModo(user);
-    painel = await abrirAba(user, "Resultados");
-    const [, concretoTela, formaTela] = linhaTotalDaObra(painel, "Total");
-    const notaTela = within(painel).getByRole("note");
-    painel = await abrirAba(user, "Relatório");
-    const [, concretoRel, formaRel] = linhaTotalRelatorio(painel);
-    const notaRel = within(painel).getByRole("note");
-
-    // tela (FORMEDCA) sem os pilares: menos concreto que o certo; relatório (FORMIMP)
-    // com a laje sobre as vigas duas vezes: mais
-    const n = (t: string | undefined) => lerNumeroBr(t ?? "");
-    expect(n(concretoTela)).toBeLessThan(n(concretoCerto));
-    expect(n(concretoRel)).toBeGreaterThan(n(concretoCerto));
-    expect(n(formaRel)).toBeGreaterThan(n(formaTela));
-
-    for (const nota of [notaTela, notaRel]) {
-      expect(nota.textContent).toContain("diferem de propósito");
-      expect(nota.textContent).toContain(`${concretoTela} m³ e ${formaTela} m²`);
-      expect(nota.textContent).toContain(`${concretoRel} m³ e ${formaRel} m²`);
-      expect(nota.textContent).toContain(
-        `O certo (modo corrigido) é ${concretoCerto} m³ e ${formaCerta} m²`,
-      );
+    for (const trocar of [false, true]) {
+      if (trocar) await trocarModo(user);
+      let painel = await abrirAba(user, "Resultados");
+      const [, concretoTela, formaTela] = linhaTotalDaObra(painel, "Total");
+      const notaTela = within(painel).getByRole("note");
+      painel = await abrirAba(user, "Relatório");
+      expect(linhaTotalRelatorio(painel).slice(1, 3)).toEqual([concretoTela, formaTela]);
+      const notaRel = within(painel).getByRole("note");
+      for (const nota of [notaTela, notaRel]) {
+        expect(nota.textContent).toContain("DESINIT");
+        expect(nota.textContent).toContain("aço de vigas");
+        expect(nota.textContent).toContain("não existe no SISTRUT");
+        // concreto de vigas: do DESINIT só no original
+        expect(nota.textContent?.split("Regra da V2")[0]).toContain(
+          trocar ? "concreto de vigas" : "aço de vigas",
+        );
+      }
     }
   });
 });

@@ -825,8 +825,8 @@ export interface AnaliseDeVigas {
  *  lista, calcula cada viga sem carga indexada pendente e, logo depois, resolve as
  *  cargas das outras vigas que apontam para ela (L_15d8a, VIGA.BAS:1670-1706):
  *  F = INT(R·1000)/1000 (estática) ou, com acidentais "S" e reação "M",
- *  F = INT(Rmax·1000)/1000 e Fac = INT((Rmax − Rmin)·1000)/1000. Apoio inexistente na
- *  viga de origem deixa a carga pendente (U61-019). */
+ *  F = INT(Rmax·1000)/1000 e Fac = INT((Rmax − Rmin)·1000)/1000; no corrigido, sem o
+ *  INT (como o R5). Apoio inexistente na viga de origem deixa a carga pendente (U61-019). */
 export function analisaVigasComPendencias(
   vigas: readonly DadosViga[],
   parametros: ParametrosVicalc,
@@ -855,11 +855,14 @@ export function analisaVigasComPendencias(
             if (d.indexada?.viga !== viga.nome) continue;
             const apoio = analise.apoios[d.indexada.apoio];
             if (viga.tramos.length < d.indexada.apoio || !apoio) continue;
+            // Original: INT(R·1000)/1000, perde até 1 kg por transferência. Corrigido
+            // (mesma correção do R5): a reação inteira, para o equilíbrio fechar.
+            const corta = (x: number) => (modo === "original" ? s(qbInt(x * 1000) / 1000) : x);
             if (parametros.acidentais && parametros.reacaoNoPilar === "maxima") {
-              d.f = s(qbInt(apoio.rMax * 1000) / 1000);
-              d.fAcidental = s(qbInt((apoio.rMax - apoio.rMin) * 1000) / 1000);
+              d.f = corta(apoio.rMax);
+              d.fAcidental = corta(apoio.rMax - apoio.rMin);
             } else {
-              d.f = s(qbInt(apoio.r * 1000) / 1000);
+              d.f = corta(apoio.r);
               d.fAcidental = 0;
             }
             delete d.indexada;

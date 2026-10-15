@@ -17,14 +17,12 @@ export interface BarrasArranjo {
 
 /** Área (cm²) da bitola pela tabela do .DSP (S_40141, DESDIM.BAS:4933-4970; U04-005).
  *  Bitola fora da tabela devolve a própria bitola, como o original (V_0e44 não muda).
- *  Modo corrigido: R9, áreas certas de φ4 e φ32 (AREAS_DSP_CORRIGIDAS) no lugar de 0. */
+ *  Modo corrigido: R9, área certa do φ32 (AREAS_DSP_CORRIGIDAS) no lugar de 0; o φ4
+ *  continua desativado (área 0). */
 export function areaBitola(bitola: number, parametros: ParametrosDsp, modo: ModoSistrut) {
   const linha = parametros.bitolas.find((b) => b.bitola === bitola);
   if (!linha) return bitola;
-  if (modo === "corrigido" && linha.area === 0) {
-    if (bitola === 4) return AREAS_DSP_CORRIGIDAS[4];
-    if (bitola === 32) return AREAS_DSP_CORRIGIDAS[32];
-  }
+  if (modo === "corrigido" && linha.area === 0 && bitola === 32) return AREAS_DSP_CORRIGIDAS[32];
   return linha.area;
 }
 

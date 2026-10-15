@@ -107,14 +107,23 @@ describe("ligação viga-pilar no fluxo pela 6118: um pavimento", () => {
     expect(v1.analise.memoria.some((e) => e.formula === "M = mín(Menv; Mvig)")).toBe(true);
   });
 
-  it("NB-1/78: sem ligação (paridade com a V1)", () => {
+  it("NB-1/78 (caminho do SISTRUT): sem ligação na viga; o pilar recebe o MEP do .REP", () => {
     const nb = calcularObra(obra, nb178);
-    for (const p of nb.pilares)
-      expect(p.momentos).toEqual({ mxTopo: 0, mxBase: 0, myTopo: 0, myBase: 0 });
+    // a viga continua rotulada nos apoios extremos (VICALC)
     for (const v of nb.pavimentos[0]!.vigas) {
       if (!v.analise.ok) continue;
       expect(v.analise.tramos[0]!.mNegEsq).toBe(0);
       expect(v.tramos[0]!.negativoEsq.flexao).toBeNull();
+    }
+    // o .REP leva aos pilares extremos o momento de engastamento perfeito das vigas
+    // (VIGA.BAS:7642-7656, 2416-2419; PLANO P12), que o PILGEEDI lê como Mk inicial
+    const rep = nb.sistrut!.pavimentos[0]!.rep;
+    const comMomento = rep.filter((l) => l.momentos.length > 0).map((l) => l.pilar);
+    expect(comMomento.length).toBeGreaterThan(0);
+    for (const p of nb.pilares) {
+      const m = Math.abs(p.momentos.mxTopo) + Math.abs(p.momentos.myTopo);
+      if (comMomento.includes(p.pilar.nome)) expect(m).toBeGreaterThan(0);
+      else expect(m).toBe(0);
     }
   });
 });

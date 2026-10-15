@@ -5,6 +5,9 @@
 // V1 (mesma pasta). Para comparar número a número, a norma usa os materiais e o
 // peso específico da V1 em kN (0,15 tf/cm² = 14,71 MPa; 2,5 tf/cm² = 245,2 MPa;
 // Es 2100 tf/cm²; 2,5 tf/m³), como _rev5/difnb/comum.ts normaV1.
+// `caminho: "v2"`: confere o fluxo genérico da V2 com os métodos NB-1/78 da V1 antiga
+// contra a V1 antiga (ver nb178V1 em src/calculo/fluxo.test.ts). A obra NB-1/78 de
+// verdade passa pelo caminho do SISTRUT (fluxoSistrut.ts).
 import { describe, expect, it } from "vitest";
 import { calcularObra } from "../calculo/fluxo";
 import { nb178 } from "../calculo/normas";
@@ -20,6 +23,7 @@ import { importarV1 } from "./importarV1";
 const tfcm2 = (x: number) => x * 98.0665;
 const normaV1: Norma = {
   ...nb178,
+  caminho: "v2",
   pesoConcreto: 2.5 * KN_POR_TF,
   materiais: (m) => {
     const fck = tfcm2(0.15);
@@ -96,18 +100,14 @@ describe("C: viga da V1 com balanço importada com balanço", () => {
   });
 });
 
-describe("H na obra BALC (CA-25): negativo de 0,9350 tf·m na V2", () => {
-  const asNeg = (modo: ModoCalculo) => {
-    const { obra } = importaBalc(modo);
+// Item H (As,mín de viga 0,15 % no original × 0,25 % com CA-25 no corrigido): saiu
+// daqui. O fluxo genérico da V2 não tem mais modo (a regra do original está no
+// DESDIM, sistrut/vigas/desdim-flexao.ts); o H é conferido em
+// src/calculo/fluxoSistrut.test.ts e em sistrut/vigas/desdim*.test.ts.
+describe("As,mín de viga na obra BALC (CA-25) pelo fluxo genérico", () => {
+  it("negativo de 0,9350 tf·m: a mínima de 0,25 % com CA-25 prevalece, 12·50·0,0025 = 1,5 cm²", () => {
+    const { obra } = importaBalc("corrigido");
     const v = calcularObra(obra, normaV1).pavimentos[0]!.vigas.find((x) => x.viga.nome === "V2")!;
-    return v.tramos[0]!.negativoDir.flexao!.as;
-  };
-
-  it('"original": a As calculada, 1,3483 cm², como a V1 (BALC.SEC; mínima 0,15 % = 0,9)', () => {
-    expect(asNeg("original")).toBeCloseTo(1.348333, 4);
-  });
-
-  it('"corrigido": a mínima de 0,25 % com CA-25 prevalece, 12·50·0,0025 = 1,5 cm²', () => {
-    expect(asNeg("corrigido")).toBeCloseTo(1.5, 9);
+    expect(v.tramos[0]!.negativoDir.flexao!.as).toBeCloseTo(1.5, 9);
   });
 });

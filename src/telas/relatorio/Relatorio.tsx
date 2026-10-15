@@ -20,7 +20,7 @@ import { formatarGrandeza, formatarNumero, unidade } from "../formato";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "../marca";
 import { ListaAvisos, ListaFalhas } from "../resultados/avisos";
 import { DetalhamentoContexto, detalharObra } from "../detalhamento";
-import { TabelaQuantitativos, TabelasAco, volumeFormaCertos } from "../resultados/quantitativos";
+import { TabelaQuantitativos, TabelasAco } from "../resultados/quantitativos";
 import { SemCalculo, TabelasObra } from "../resultados/Resultados";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "../resultados/tabela";
 import { useUnidades } from "../sessao";
@@ -32,13 +32,6 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
   const uT = unidade("tensao", s);
   const quant = useMemo(
     () => (calculo.tipo === "ok" ? calcularQuantitativos(obra, calculo.resultado) : null),
-    [obra, calculo],
-  );
-  const certo = useMemo(
-    () =>
-      calculo.tipo === "ok" && obra.modoCalculo === "original"
-        ? volumeFormaCertos(obra, calculo.resultado)
-        : undefined,
     [obra, calculo],
   );
   // o detalhamento da obra fica no contexto (preenchido pela tela da obra); o
@@ -204,7 +197,7 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
 
         {calculo.tipo === "ok" && <TabelasObra resultado={calculo.resultado} comMemoria={false} />}
 
-        {quant && <TabelaQuantitativos quant={quant} certo={certo} />}
+        {quant && <TabelaQuantitativos quant={quant} />}
 
         {detalhamento && (
           <section className="mt-6 break-inside-avoid">

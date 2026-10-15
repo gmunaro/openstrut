@@ -1,6 +1,8 @@
 // Área de fôrma (m²) por elemento, por pavimento e da obra. Função pura.
 //
-// Regra "certa" (modo corrigido; geometria pelos eixos, como em quantitativos.ts):
+// Geometria pelos eixos, como em quantitativos.ts, nos dois modos de cálculo (o
+// SISTRUT não calcula fôrma de laje nem de pilar; a de viga, no modo original, sai do
+// DESINIT em quantitativos.ts):
 // - Laje: fundo lx·ly.
 // - Viga: fundo L·bw + 2 laterais L·(h − hlaje), com hlaje = a maior espessura
 //   das lajes com bordo sobre a viga (0 se nenhuma): a lateral acima do fundo da
@@ -12,12 +14,9 @@
 //   menos na obra de revisão (L1 4×5 + balanço 1,5×5): 52,46 m² em vez de 53,72.
 // - Pavimento: soma dos elementos × repetições do pavimento-tipo.
 //
-// Regras do SISTRUT de 1991 (modo original; docs/MODO-CALCULO.md, item G):
-// - "editor" (FORMEDCA, a tela; V1 FcAreaForma#): viga com L·(bw + 2(h − hl)),
-//   hl = a primeira laje do pavimento com h > 0, em TODAS as vigas; pilar com o
-//   perímetro × pé-direito inteiro.
-// - "impressao" (FORMIMP, o relatório): viga com L·(bw + 2h), sem descontar a
-//   laje; pilar com o perímetro × pé-direito.
+// As regras "editor" (FORMEDCA) e "impressao" (FORMIMP) que a V2 tinha como "modo
+// original" vinham da V1 antiga: o FORMEDCA e o FORMIMP do SISTRUT não calculam fôrma
+// (PLANO da paridade, 4.1 item G; docs/MODO-CALCULO.md). Saíram.
 import {
   colineares,
   eixoDaViga,
@@ -34,10 +33,6 @@ import {
   type Pilar,
   type Viga,
 } from "../dominio/obra";
-
-/** Regra de volume e fôrma: "certa" no modo corrigido; no original, "editor"
- *  (FORMEDCA, o que a tela mostra) e "impressao" (FORMIMP, o relatório). */
-export type RegraQuantitativo = "certa" | "editor" | "impressao";
 
 export interface FormaElemento {
   tipo: "laje" | "viga" | "pilar";
@@ -143,19 +138,6 @@ export function encontroNoPilar(
   return { hLaje, vigas };
 }
 
-/** Espessura de referência do pavimento no SISTRUT (V1 FcHLaje#): a da primeira
- *  laje com h > 0, cm (0 sem laje). O editor de formas a desconta de toda viga. */
-export function espessuraReferencia(lajes: readonly Pick<Laje, "h">[]) {
-  return lajes.find((l) => l.h > 0)?.h ?? 0;
-}
-
-/** hlaje (cm) descontado da viga pela regra: a maior laje sobre ela (certa), a
- *  de referência do pavimento (editor) ou nenhuma (impressao). */
-export function hLajeDaViga(regra: RegraQuantitativo, viga: Viga, lajes: readonly Laje[]) {
-  if (regra === "certa") return espessuraLajeNaViga(viga, lajes);
-  return regra === "editor" ? espessuraReferencia(lajes) : 0;
-}
-
 /** Espessura descontada da viga: a maior das lajes com bordo sobre o eixo dela, cm. */
 export function espessuraLajeNaViga(viga: Viga, lajes: readonly Laje[]) {
   const eixo = eixoDaViga(viga);
@@ -182,8 +164,8 @@ export function formulaFormaPilar(p: Pick<Pilar, "b" | "h">, peDireito: number, 
 }
 
 /** Fôrma de um pavimento: elementos, somas de uma ocorrência e total com as
- *  repetições, pela regra (padrão: a certa). */
-export function formasPavimento(p: Pavimento, regra: RegraQuantitativo = "certa"): FormaPavimento {
+ *  repetições. */
+export function formasPavimento(p: Pavimento): FormaPavimento {
   const elementos: FormaElemento[] = [
     ...p.lajes.map((l): FormaElemento => ({
       tipo: "laje",
@@ -193,7 +175,7 @@ export function formasPavimento(p: Pavimento, regra: RegraQuantitativo = "certa"
       formula: `lx·ly = ${f(l.lx)}·${f(l.ly)}`,
     })),
     ...p.vigas.map((v): FormaElemento => {
-      const hLaje = hLajeDaViga(regra, v, p.lajes);
+      const hLaje = espessuraLajeNaViga(v, p.lajes);
       const L = Math.hypot(v.x2 - v.x1, v.y2 - v.y1);
       return {
         tipo: "viga",
@@ -204,7 +186,7 @@ export function formasPavimento(p: Pavimento, regra: RegraQuantitativo = "certa"
       };
     }),
     ...p.pilares.map((q): FormaElemento => {
-      const e = regra === "certa" ? encontroNoPilar(q, p) : SEM_ENCONTRO;
+      const e = encontroNoPilar(q, p);
       return {
         tipo: "pilar",
         id: q.id,
@@ -233,8 +215,8 @@ export function formasPavimento(p: Pavimento, regra: RegraQuantitativo = "certa"
   };
 }
 
-/** Fôrma da obra inteira, pavimento a pavimento (na ordem da obra), pela regra. */
-export function formasObra(obra: Obra, regra: RegraQuantitativo = "certa"): FormasObra {
-  const pavimentos = obra.pavimentos.map((p) => formasPavimento(p, regra));
+/** Fôrma da obra inteira, pavimento a pavimento (na ordem da obra). */
+export function formasObra(obra: Obra): FormasObra {
+  const pavimentos = obra.pavimentos.map(formasPavimento);
   return { pavimentos, total: pavimentos.reduce((s, p) => s + p.total, 0) };
 }

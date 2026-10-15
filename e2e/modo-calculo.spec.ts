@@ -67,7 +67,7 @@ test("alternar o modo numa obra NB-1/78 muda o aço das lajes", async ({ page })
   await page.getByRole("button", { name: "Materiais", exact: true }).click();
   const dialogo = page.getByRole("dialog", { name: "Obra e materiais" });
   await dialogo.getByRole("button", { name: "O que muda com o modo de cálculo" }).focus();
-  await expect(page.getByRole("tooltip")).toContainText("negativas das lajes contadas duas vezes");
+  await expect(page.getByRole("tooltip")).toContainText("número a número");
   await page.screenshot({ path: path.join(PASTA, "01-dica-do-modo.png") });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("tooltip")).toBeHidden();
@@ -77,10 +77,8 @@ test("alternar o modo numa obra NB-1/78 muda o aço das lajes", async ({ page })
 
   await alternarModo(page, "true");
   await expect(resultados.getByText("Modo: como o SISTRUT original")).toBeVisible();
-  const original = await acoLajes(resultados);
-  // item E: a negativa do bordo comum conta 2·0,25·lmenor em cada laje
-  expect(original).toBeGreaterThan(corrigido);
-  await expect(resultados.getByRole("note")).toContainText("diferem de propósito");
+  // as vigas saem do DESINIT; lajes e pilares pela regra da V2 (não existe no SISTRUT)
+  await expect(resultados.getByRole("note")).toContainText("DESINIT");
   await page.screenshot({ path: path.join(PASTA, "02-resultados-original.png"), fullPage: true });
 
   await page.getByRole("tab", { name: "Relatório" }).click();

@@ -115,8 +115,10 @@ describe("obra de duas lajes pela NBR 6118:2023", () => {
 
   it("ordens de grandeza contra a NB-1/78 da mesma obra", () => {
     const [a, b] = [laje("L1").esforcos, lajeNb("L1").esforcos];
-    // positivo elástico (Bares) acima do plástico (charneiras): 3,64 contra ~2,9
-    expect(a.mx / b.mx).toBeGreaterThan(1.1);
+    // positivo elástico (Bares) acima do plástico: 3,64 contra ~3,4 da NB-1/78 pelo
+    // SISTRUT (padrão de charneiras com termos de canto e μ da tabela; a V1 antiga, com
+    // Johansen e i = 2, dava ~2,9)
+    expect(a.mx / b.mx).toBeGreaterThan(1.0);
     expect(a.mx / b.mx).toBeLessThan(1.5);
     // negativo elástico bem acima do plástico com i = 2: 8,05 contra ~5,0
     expect(a.negativos.direito / b.negativos.direito).toBeGreaterThan(1.3);
