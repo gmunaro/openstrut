@@ -653,4 +653,113 @@ describe('apoiosEmVigaDoVig: o "apoia em" do LAJEMONT pelos vãos do .VIG', () =
       'Viga V1: os vãos do .VIG não caem nos nós do eixo do .LAJ; o "apoia em" dela fica com a regra da V2.',
     ]);
   });
+
+  /** Registro com balanços: `vaos` = [balanço esquerdo, tramos..., balanço direito]. */
+  const comBalancos = (nome: string, vaos: number[]): RegistroVigLido => ({
+    ...registro(nome, vaos.slice(1, -1)),
+    balancoEsquerdo: true,
+    balancoDireito: true,
+    trechos: Array.from({ length: 14 }, (_, t) => ({
+      divisoes: 0,
+      acumulado: 0,
+      vao: vaos[t] ?? 0,
+      inercia: 1,
+    })),
+  });
+  // V3 horizontal de (0; 5) a (10; 5), com V4 (x = 1) e V5 (x = 7) cruzando sem pilar e
+  // pilares em x = 3 e x = 9
+  const comBalanco = (ordem: "crescente" | "decrescente") => {
+    const pontos: [number, number][] = [
+      [0, 5],
+      [1, 5],
+      [3, 5],
+      [7, 5],
+      [9, 5],
+      [10, 5],
+    ];
+    return {
+      eixos: [
+        eixo("V3", ordem === "crescente" ? pontos : [...pontos].reverse()),
+        eixo("V4", [
+          [1, 3],
+          [1, 5],
+          [1, 7],
+        ]),
+        eixo("V5", [
+          [7, 3],
+          [7, 5],
+          [7, 7],
+        ]),
+      ],
+      pilares: [
+        { nome: "P5", x: 3, y: 5 },
+        { nome: "P6", x: 9, y: 5 },
+      ],
+    };
+  };
+
+  it("com balanço esquerdo: o 1º apoio fica depois do balanço", () => {
+    // balanço de 1 m até V4, tramos de 2 m (até P5), 4 m (até V5) e 2 m (até P6),
+    // balanço de 1 m: V3 se apoia em V4 e V5
+    const avisos: string[] = [];
+    const r = apoiosEmVigaDoVig(
+      comBalanco("crescente"),
+      [comBalancos("V3", [1, 2, 4, 2, 1])],
+      avisos,
+    );
+    expect(r).toEqual({ V3: ["V4", "V5"] });
+    expect(avisos).toEqual([]);
+  });
+
+  it("eixo em ordem decrescente: o LAJEMONT anda na ordem gravada, do x = 10 para o 0", () => {
+    // do x = 10: balanço de 1 m até P6, 2 m até V5, 4 m até P5, 2 m até V4, balanço de 1 m
+    // (LAJEMONT.BAS:4179-4213); na ordem crescente esses vãos não cairiam nos nós
+    const avisos: string[] = [];
+    const desce = apoiosEmVigaDoVig(
+      comBalanco("decrescente"),
+      [comBalancos("V3", [1, 2, 4, 2, 1])],
+      avisos,
+    );
+    expect(desce).toEqual({ V3: ["V5", "V4"] });
+    // vãos assimétricos, do x = 10: 1 (P6, x = 9), 6 (P5, x = 3), 2 (V4, x = 1) e balanço de 1
+    const assim = apoiosEmVigaDoVig(
+      comBalanco("decrescente"),
+      [comBalancos("V3", [1, 6, 2, 1])],
+      avisos,
+    );
+    expect(assim).toEqual({ V3: ["V4"] });
+    // os mesmos vãos lidos de x = 0 cairiam em 1 (V4), 7 (V5) e 9 (P6): outra escolha
+    const sobe = apoiosEmVigaDoVig(comBalanco("crescente"), [comBalancos("V3", [1, 6, 2, 1])], []);
+    expect(sobe).toEqual({ V3: ["V4", "V5"] });
+    expect(avisos).toEqual([]);
+  });
+
+  it("eixo inclinado: sem escolha, com aviso", () => {
+    const avisos: string[] = [];
+    const inclinado = {
+      eixos: [
+        eixo("V7", [
+          [0, 0],
+          [3, 4],
+        ]),
+      ],
+      pilares: [],
+    };
+    expect(apoiosEmVigaDoVig(inclinado, [registro("V7", [5])], avisos)).toEqual({});
+    expect(avisos).toEqual([
+      'Viga V7: eixo inclinado no .LAJ; o "apoia em" dela não é lido do .VIG.',
+    ]);
+  });
+});
+
+describe('importarLaj: "apoia em" numa viga que não entrou', () => {
+  it("a escolha sai com aviso, e o pavimento entra", () => {
+    const r = importarLaj(laj("caso_a_laje"), { apoiosEmViga: { V2: ["V9"] } });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.obra.pavimentos[0]!.vigas.find((v) => v.nome === "V2")!.apoiaEm).toBeUndefined();
+    expect(r.avisos).toContain(
+      "Viga V2: apoia em V9, que não entrou (eixo inclinado ou não reto); essa escolha ficou de fora.",
+    );
+  });
 });

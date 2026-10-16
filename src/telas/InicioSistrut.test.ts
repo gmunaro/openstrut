@@ -6,7 +6,7 @@
 // A_1014 com o fechamento da última área, pavimento só com buracos) e um .COL montado
 // aqui no formato do PIGRAEDI.
 import { describe, expect, it } from "vitest";
-import { lerCol } from "../armazenamento/sistrut/pilar";
+import { KN_POR_TF } from "../calculo/sistrut/base/unidades";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
 import {
   arquivo,
@@ -22,6 +22,19 @@ import {
 import { calcular } from "./calculo";
 import { detalharObra } from "./detalhamento";
 import { importarObraSistrut, type ArquivoEntrada } from "./InicioSistrut";
+
+/** .COL com um nível MEIO sem .LAJ entre BASE e TETO; seção 20, 25 e 30 cm nos lances
+ *  1→2, 2→3 e 3→4. */
+const COL_COM_MEIO = colPredio(
+  [
+    ["FUND", 0],
+    ["BASE", 0.4],
+    ["MEIO", 3.4],
+    ["TETO", 6.4],
+  ],
+  9,
+  [20, 25, 30],
+);
 
 const importa = (arquivos: readonly ArquivoEntrada[]) => {
   const r = importarObraSistrut(arquivos);
@@ -158,30 +171,192 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
   });
 
   it("o .COL liga os pilares de cada pavimento ao nível de mesmo nome", () => {
-    // um nível MEIO sem .LAJ entre BASE e TETO; seção 20, 25 e 30 cm nos lances 1→2, 2→3
-    // e 3→4: o TETO (nível 4) fica com 30 (de baixo para cima, sem os nomes, ficaria com 25)
-    const col = colPredio(
-      [
-        ["FUND", 0],
-        ["BASE", 0.4],
-        ["MEIO", 3.4],
-        ["TETO", 6.4],
-      ],
-      9,
-      [20, 25, 30],
-    );
-    expect(lerCol(col).ok).toBe(true);
+    // seção 20, 25 e 30 cm nos lances 1→2, 2→3 e 3→4: o TETO (nível 4) fica com 30 (de
+    // baixo para cima, sem os nomes, ficaria com 25)
     const r = importa([
       comNome("TETO.LAJ", COM_VAGA_SUJA),
       comNome("BASE.LAJ", SO_BURACOS),
-      comNome("PREDIO.COL", col),
+      comNome("PREDIO.COL", COL_COM_MEIO),
     ]);
     const lado = (pav: string) =>
       r.obra.pavimentos.find((p) => p.id === pav)!.pilares.map((p) => p.b);
     expect(new Set(lado("TETO"))).toEqual(new Set([30]));
     expect(new Set(lado("BASE"))).toEqual(new Set([20]));
     expect(r.obra.pavimentos.find((p) => p.id === "TETO")!.peDireito).toBe(3);
-    expect(r.avisos.filter((a) => /lances|sem nível|não casou/.test(a))).toEqual([]);
+    expect(r.avisos.filter((a) => /lances|não casou/.test(a))).toEqual([]);
+  });
+
+  it("nível do .COL sem .LAJ: pavimento sem planta, com os pilares, o lance e a carga do .REP dele", () => {
+    // MEIO (nível 3) não tem .LAJ: sem ele, o lance 2→3 sumia com as cargas do MEIO.REP
+    const arquivos = [
+      comNome("TETO.LAJ", COM_VAGA_SUJA),
+      comNome("BASE.LAJ", SO_BURACOS),
+      comNome("PREDIO.COL", COL_COM_MEIO),
+    ];
+    const sem = importa(arquivos);
+    const com = importa([...arquivos, comNome("MEIO.REP", arquivo("E2E.REP"))]);
+    expect(com.obra.pavimentos.map((p) => [p.nome, p.peDireito, p.lajes.length])).toEqual([
+      ["TETO", 3, 4],
+      ["MEIO", 3, 0],
+      ["BASE", 0.4, 0],
+    ]);
+    const meio = com.obra.pavimentos.find((p) => p.nome === "MEIO")!;
+    // os pilares do .COL, nas posições dos de mesmo número nos outros pavimentos, com a
+    // seção do lance 2→3
+    expect(meio.pilares.map((p) => [p.nome, p.x, p.y, p.b])).toContainEqual(["P5", 4, 5, 25]);
+    // a carga do P5 no E2E.REP é 17,37 t (o PILGEEDI a grava em A_1280 do nível)
+    expect(meio.pilares.find((p) => p.nome === "P5")!.cargaTopo?.normal).toBeCloseTo(
+      17.37 * KN_POR_TF,
+      6,
+    );
+    expect(com.avisos).toContain(
+      "Nível 3 do .COL (MEIO, cota 3,4 m) sem .LAJ de mesmo nome: entrou como pavimento sem planta, só com os 9 pilares do .COL, e as cargas dos pilares nesse nível são as do MEIO.REP. As vigas desse nível não estão na obra.",
+    );
+    expect(com.resumo.lidos).toContain("MEIO.REP");
+    // a fundação do P5 recebe os 17,37 t a mais, e as colunas vão de BASE a TETO
+    const fundacao = (obra: typeof sem.obra) => {
+      const r = calcularObraSistrut(obra, { modo: "original" });
+      expect(r.falhas).toEqual([]);
+      return r.fundacoes.find((f) => f.pilarId.endsWith("/P5"))!.cargaAcumulada;
+    };
+    expect(fundacao(com.obra) - fundacao(sem.obra)).toBeCloseTo(17.37, 2);
+  });
+
+  it(".REP sem pavimento nem nível de mesmo nome: ignorado, com o motivo", () => {
+    const r = importa([
+      comNome("TETO.LAJ", COM_VAGA_SUJA),
+      comNome("PREDIO.COL", COL_COM_MEIO),
+      comNome("OUTRO.REP", arquivo("E2E.REP")),
+    ]);
+    expect(r.resumo.ignorados).toContainEqual({
+      arquivo: "OUTRO.REP",
+      motivo: expect.stringContaining(
+        "não há pavimento nem nível do .COL chamado OUTRO (níveis: 1 FUND, 2 BASE, 3 MEIO, 4 TETO)",
+      ),
+    });
+  });
+
+  it(".LAJ com o nome do nível 1 do .COL (a base dos pilares): na base da obra, com aviso", () => {
+    const r = importa([
+      comNome("TETO.LAJ", COM_VAGA_SUJA),
+      comNome("BALD.LAJ", SO_BURACOS),
+      comNome(
+        "P.COL",
+        colPredio(
+          [
+            ["BALD", 0],
+            ["TETO", 3],
+          ],
+          9,
+        ),
+      ),
+    ]);
+    expect(r.obra.pavimentos.map((p) => p.nome)).toEqual(["TETO", "BALD"]);
+    expect(r.avisos).toContainEqual(
+      expect.stringContaining("BALD.LAJ: é o nível 1 do .COL (1 BALD, 2 TETO), a base dos pilares"),
+    );
+  });
+
+  it("níveis seguidos com o mesmo nome: o .LAJ é um pavimento-tipo, com as repetições", () => {
+    const r = importa([
+      comNome("TIPO.LAJ", COM_VAGA_SUJA),
+      comNome("COB.LAJ", COM_VAGA_SUJA),
+      comNome(
+        "P.COL",
+        colPredio(
+          [
+            ["FUND", 0],
+            ["TIPO", 3],
+            ["TIPO", 6],
+            ["TIPO", 9],
+            ["COB", 12],
+          ],
+          9,
+        ),
+      ),
+    ]);
+    expect(r.obra.pavimentos.map((p) => [p.nome, p.repeticoes])).toEqual([
+      ["COB", 1],
+      ["TIPO", 3],
+    ]);
+    expect(r.avisos.filter((a) => /sem planta|lances|não casou/.test(a))).toEqual([]);
+    const c = calcularObraSistrut(r.obra, { modo: "original" });
+    expect(c.falhas).toEqual([]);
+    expect(new Set(c.lances.map((l) => l.nivel))).toEqual(new Set([0, 1, 2, 3]));
+  });
+
+  it(".LAJ que não abre: o .VIG dele fica avulso com o motivo, e o nível entra sem planta", () => {
+    const r = importa([
+      comNome("TETO.LAJ", COM_VAGA_SUJA),
+      { nome: "BASE.LAJ", dados: new Uint8Array([65]) },
+      comNome("BASE.VIG", arquivo("E2E.VIG")),
+      comNome("BASE.REP", arquivo("E2E.REP")),
+      comNome("PREDIO.COL", COL_COM_MEIO),
+    ]);
+    expect(r.avisos).toContainEqual(
+      expect.stringContaining(
+        "BASE.VIG: o BASE.LAJ não pôde ser lido (ficou de fora), e as vigas não têm a planta.",
+      ),
+    );
+    expect(r.avisos.join("\n")).not.toContain("não há BASE.LAJ");
+    const base = r.obra.pavimentos.find((p) => p.nome === "BASE")!;
+    expect(base.lajes).toEqual([]);
+    expect(base.pilares.find((p) => p.nome === "P5")!.cargaTopo?.normal).toBeCloseTo(
+      17.37 * KN_POR_TF,
+      6,
+    );
+  });
+
+  it("obra só de vigas com .COL: os pilares saem do .COL, nível a nível, com a carga calculada pelas vigas", () => {
+    const r = importa([
+      comNome("A.VIG", arquivo("E2E.VIG")),
+      comNome("B.VIG", arquivo("E2E.VIG")),
+      comNome(
+        "P.COL",
+        colPredio(
+          [
+            ["FUND", 0],
+            ["A", 3],
+            ["B", 6],
+          ],
+          9,
+        ),
+      ),
+    ]);
+    const doCol = r.obra.pavimentos.filter((p) => p.vigas.length === 0);
+    expect(doCol.map((p) => p.nome)).toEqual(["B", "A"]);
+    // o motor refaz o E2E.REP pelas vigas do E2E.VIG: P5 com 17,37 t em cada nível
+    for (const p of doCol)
+      expect(p.pilares.find((q) => q.nome === "P5")!.cargaTopo?.normal).toBeCloseTo(
+        17.37 * KN_POR_TF,
+        4,
+      );
+    expect(r.obra.pavimentos.filter((p) => p.vigas.length > 0).map((p) => p.nome)).toEqual([
+      "B (vigas)",
+      "A (vigas)",
+    ]);
+    const c = calcularObraSistrut(r.obra, { modo: "original" });
+    expect(c.falhas).toEqual([]);
+    expect(c.fundacoes.find((f) => f.coluna === "P 5")!.cargaAcumulada).toBeCloseTo(2 * 17.37, 2);
+  });
+
+  it("o .TAB de um pavimento grava as repetições só nas vigas dele", () => {
+    const nomes = ["V1", "V2", "V3", "V4", "V5", "V6"];
+    const tab = new Uint8Array(70 * nomes.length);
+    nomes.forEach((n, i) => {
+      tab.set(Buffer.from(`~${n}`.padEnd(10), "latin1"), i * 70);
+      new DataView(tab.buffer).setFloat32(i * 70 + 10, 3, true);
+    });
+    const r = importa([
+      comNome("BASE.LAJ", COM_VAGA_SUJA),
+      comNome("TETO.LAJ", COM_VAGA_SUJA),
+      comNome("TETO.VIG", arquivo("E2E.VIG")),
+      { nome: "TETO.TAB", dados: tab },
+    ]);
+    const rept = (pav: string) =>
+      r.obra.pavimentos.find((p) => p.nome === pav)!.vigas.map((v) => v.repeticoes);
+    expect(new Set(rept("TETO"))).toEqual(new Set([3]));
+    expect(new Set(rept("BASE"))).toEqual(new Set([undefined]));
   });
 
   it("sem .COL, a ordem é a alfabética, e o aviso a mostra", () => {

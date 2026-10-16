@@ -148,11 +148,14 @@ function envolvente(p: readonly Ponto[]) {
 }
 
 /** O "Vx apoia em Vy" do LAJEMONT a partir do .VIG: o LAJEMONT grava no .VIG os trechos
- *  de cada viga com os apoios que o usuário escolheu (LAJEMONT.BAS:5170-5393), e o vão
- *  de cada trecho é a distância entre dois nós do eixo. Andando pelos vãos desde o
- *  início do eixo (depois do balanço esquerdo), cada apoio cai num nó; um apoio num
+ *  de cada viga com os apoios que o usuário escolheu (LAJEMONT.BAS:5170-5393). Ele
+ *  percorre os pontos do eixo na ordem gravada no .LAJ, e o vão de cada trecho é a
+ *  distância entre dois nós (LAJEMONT.BAS:4179-4213); o balanço esquerdo é o do primeiro
+ *  ponto gravado, mesmo num eixo em ordem decrescente. Andando pelos vãos desde o
+ *  primeiro ponto (depois do balanço esquerdo), cada apoio cai num nó; um apoio num
  *  cruzamento sem pilar diz que a viga se apoia nas que cruzam ali. Viga cujos vãos não
- *  caem em nós do eixo (vão editado no VIGA) fica sem a escolha e com aviso. */
+ *  caem em nós do eixo (vão editado no VIGA) ou de eixo inclinado fica sem a escolha,
+ *  com aviso. */
 export function apoiosEmVigaDoVig(
   lida: Pick<ObraLaj, "eixos" | "pilares">,
   registros: readonly RegistroVigLido[],
@@ -164,18 +167,25 @@ export function apoiosEmVigaDoVig(
   for (const reg of registros) {
     const e = lida.eixos.find((x) => x.nome === reg.nome);
     if (!e || e.pontos.length < 2) continue;
-    const horizontal = e.pontos.every((p) => p.y === e.pontos[0]!.y);
-    const s = (p: Ponto) => (horizontal ? p.x : p.y);
-    const nos = [...e.pontos].sort((a, b) => s(a) - s(b));
-    const inicio = s(nos[0]!);
-    const fim = s(nos.at(-1)!);
+    const [p0] = e.pontos;
+    const horizontal = e.pontos.every((p) => p.y === p0!.y);
+    const vertical = e.pontos.every((p) => p.x === p0!.x);
+    if (!horizontal && !vertical) {
+      avisos.push(
+        `Viga ${reg.nome}: eixo inclinado no .LAJ; o "apoia em" dela não é lido do .VIG.`,
+      );
+      continue;
+    }
+    // distância ao primeiro ponto gravado, na ordem em que o LAJEMONT anda
+    const d = (p: Ponto) => Math.abs(horizontal ? p.x - p0!.x : p.y - p0!.y);
+    const fim = Math.max(...e.pontos.map(d));
     const n = reg.tramos;
     const vao = (t: number) => sng(reg.trechos[t]?.vao ?? 0);
     // posições dos apoios 0..n ao longo do eixo
-    const apoios = [inicio + (reg.balancoEsquerdo ? vao(0) : 0)];
+    const apoios = [reg.balancoEsquerdo ? vao(0) : 0];
     for (let t = 1; t <= n; t++) apoios.push(apoios.at(-1)! + vao(t));
     const ponta = apoios.at(-1)! + (reg.balancoDireito ? vao(n + 1) : 0);
-    const noDe = apoios.map((a) => nos.find((p) => perto(s(p), a)));
+    const noDe = apoios.map((a) => e.pontos.find((p) => perto(d(p), a)));
     if (n < 1 || !perto(ponta, fim) || noDe.some((p) => !p)) {
       avisos.push(
         `Viga ${reg.nome}: os vãos do .VIG não caem nos nós do eixo do .LAJ; o "apoia em" dela fica com a regra da V2.`,
@@ -377,6 +387,20 @@ export function importarLaj(
       ...(extra.pesoProprio !== undefined ? { pesoProprio: extra.pesoProprio } : {}),
       ...(apoiaEm ? { apoiaEm } : {}),
     });
+  }
+
+  // "apoia em" numa viga que não entrou (eixo inclinado ou não reto): a escolha sai, senão
+  // a validação do arquivo recusa o pavimento inteiro
+  const idsVigas = new Set(vigas.map((v) => v.id));
+  for (const v of vigas) {
+    const semViga = (v.apoiaEm ?? []).filter((id) => !idsVigas.has(id));
+    if (semViga.length === 0) continue;
+    avisos.push(
+      `Viga ${v.nome}: apoia em ${semViga.map((id) => id.replace(/^.*\//, "")).join(", ")}, que não entrou (eixo inclinado ou não reto); essa escolha ficou de fora.`,
+    );
+    const resto = v.apoiaEm!.filter((id) => idsVigas.has(id));
+    if (resto.length > 0) v.apoiaEm = resto;
+    else delete v.apoiaEm;
   }
 
   // pilares: o pontual no ponto; o pilar-parede no centro do trecho, com o comprimento

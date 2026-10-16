@@ -14,8 +14,9 @@
 // Robustez: a importação nunca lança. O que um arquivo não deixa ler vira aviso com o
 // nome dele, e o resto entra; só não há obra quando nada de entrada (.LAJ, .VIG, .COL)
 // pôde ser lido. Textos são lidos como o QuickBASIC os lê: windows-1252, ^Z (0x1A) é o
-// fim do arquivo e CR sozinho é fim de linha. Os binários (.VIG, .SEC, .FOR, .TAB, .DSP,
-// .INI) vão como bytes.
+// fim do arquivo e CR sozinho é fim de linha. Os binários (.VIG, .SEC, .FOR, .TAB) vão
+// como bytes; o .DSP e os .INI, que são texto, também vão como bytes ao importador de
+// vigas, que os lê com o leitor do DESENHO (^Z e CR inclusive).
 import { lerObra, serializarObra } from "../armazenamento/arquivo";
 import { importarV1 } from "../armazenamento/importarV1";
 import { importarLaj } from "../armazenamento/sistrut/laje";
@@ -28,11 +29,15 @@ import {
   type RepPilarSistrut,
 } from "../armazenamento/sistrut/pilar";
 import { importarVigasSistrut, lerVig } from "../armazenamento/sistrut/viga";
-import type { Obra, Pavimento } from "../dominio/obra";
+import { calcularObraSistrut } from "../calculo/sistrut/obra";
+import { casaNome } from "../calculo/sistrut/pilares/carga";
+import type { Obra, Pavimento, Pilar } from "../dominio/obra";
 
 export interface ArquivoEntrada {
   nome: string;
   dados: Uint8Array;
+  /** Caminho dentro da pasta escolhida (só nas mensagens). */
+  caminho?: string;
 }
 
 /** O que a importação reconheceu, para a tela mostrar antes de abrir a obra. */
@@ -104,6 +109,17 @@ const INI_NAO_LIDOS: Record<string, string> = {
 /** Cabeçalho do formato de entrada da OpenStrut V1 (texto gravado com WRITE #). */
 const CABECALHO_V1 = '"SISTRUT40"';
 const DECODIFICADOR = new TextDecoder("windows-1252");
+
+/** A importação lê o conteúdo de um arquivo com este nome (a tela não precisa carregar os
+ *  outros: eles só entram no resumo, com o motivo). */
+export function extensaoLida(nome: string): boolean {
+  const ext = extensaoDe(nome);
+  return TEXTO.has(ext) || VIGAS.has(ext) || LEITORES_EXTRA.some((l) => l.extensao === ext);
+}
+
+/** O arquivo é de uma obra do SISTRUT (lido ou ignorado com motivo próprio). */
+export const extensaoDoSistrut = (nome: string) =>
+  extensaoLida(nome) || NAO_LIDOS[extensaoDe(nome)] !== undefined;
 
 /** Extensão em maiúsculas, sem o ponto; "" quando o nome não tem extensão. */
 function extensaoDe(nome: string): string {
@@ -208,43 +224,55 @@ function agrupar(arquivos: readonly ArquivoEntrada[], c: Coleta): Map<string, Ar
 interface PavimentoDoLaj {
   laj: ArquivoEntrada;
   base: string;
+  /** O nível do .COL (o de baixo, num pavimento-tipo). */
   nivel?: number;
+  /** Níveis seguidos do .COL com o nome do .LAJ: o pavimento-tipo. */
+  repeticoes: number;
+  /** O .LAJ tem o nome do nível 1 do .COL, a base dos pilares (o baldrame). */
+  fundacao?: true;
 }
 
+/** "1 FUND, 2 TER, 3 SUP": os níveis do .COL para as mensagens. */
+const nomesDosNiveis = (niveis: readonly NivelCol[]) =>
+  niveis.map((n, i) => `${i + 1} ${n.nome.trim()}`).join(", ");
+
 /** Ordem dos pavimentos, do topo para a base: os que têm nível no .COL pela cota; os
- *  outros, em ordem alfabética, no topo. Sem nenhum nível casado, o k-ésimo de baixo é
- *  o nível k + 1 do .COL (a regra antiga do importador de pilares). A ordem vai num aviso. */
+ *  outros, em ordem alfabética, no topo; o do nível 1 (a base dos pilares), na base. Sem
+ *  nenhum nível casado, o k-ésimo de baixo é o nível k + 1 do .COL (a regra antiga do
+ *  importador de pilares). Níveis seguidos com o mesmo nome são um pavimento-tipo. A
+ *  ordem vai num aviso. */
 function ordenarPavimentos(
   lajes: readonly ArquivoEntrada[],
   niveis: readonly NivelCol[] | undefined,
   avisos: string[],
 ): PavimentoDoLaj[] {
-  const nivelDoNome = (base: string) => {
-    const i = niveis?.findIndex((n) => n.nome.trim().toUpperCase() === base) ?? -1;
-    // o nível 1 é a base dos pilares (fundação): não é pavimento
-    return i >= 1 ? i + 1 : undefined;
-  };
+  const nomeDo = (k: number) => niveis?.[k]?.nome.trim().toUpperCase();
   const pavs: PavimentoDoLaj[] = lajes.map((laj) => {
     const base = baseDe(laj.nome);
-    const nivel = nivelDoNome(base);
-    return { laj, base, ...(nivel !== undefined ? { nivel } : {}) };
+    const i = niveis?.findIndex((n) => n.nome.trim().toUpperCase() === base) ?? -1;
+    if (i === 0) return { laj, base, repeticoes: 1, fundacao: true };
+    if (i < 0) return { laj, base, repeticoes: 1 };
+    let repeticoes = 1;
+    while (nomeDo(i + repeticoes) === base) repeticoes++;
+    return { laj, base, nivel: i + 1, repeticoes };
   });
   const comNivel = pavs.filter((p) => p.nivel !== undefined).sort((a, b) => b.nivel! - a.nivel!);
-  const semNivel = pavs.filter((p) => p.nivel === undefined);
-  const ordem = [...semNivel, ...comNivel];
-  if (pavs.length > 1 || (niveis && semNivel.length > 0)) {
+  const semNivel = pavs.filter((p) => p.nivel === undefined && !p.fundacao);
+  const fundacao = pavs.filter((p) => p.fundacao);
+  const ordem = [...semNivel, ...comNivel, ...fundacao];
+  if (pavs.length > 1 || (niveis && (semNivel.length > 0 || fundacao.length > 0))) {
     const descricao = ordem
-      .map((p) =>
-        p.nivel !== undefined && niveis
-          ? `${p.base} (nível ${p.nivel} do .COL, cota ${fmt(niveis[p.nivel - 1]!.cota)} m)`
-          : p.base,
-      )
+      .map((p) => {
+        if (p.fundacao) return `${p.base} (nível 1 do .COL, a base dos pilares)`;
+        if (p.nivel === undefined || !niveis) return p.base;
+        const faixa =
+          p.repeticoes > 1
+            ? `níveis ${p.nivel} a ${p.nivel + p.repeticoes - 1} do .COL, ${p.repeticoes} repetições`
+            : `nível ${p.nivel} do .COL`;
+        return `${p.base} (${faixa}, cota ${fmt(niveis[p.nivel - 1]!.cota)} m)`;
+      })
       .join(", ");
-    const nomes =
-      niveis
-        ?.slice(1)
-        .map((n) => n.nome.trim())
-        .join(", ") ?? "";
+    const nomes = niveis ? nomesDosNiveis(niveis) : "";
     const regra =
       semNivel.length === 0
         ? "pelas cotas do .COL"
@@ -255,6 +283,20 @@ function ordenarPavimentos(
             : `${semNivel.map((p) => p.base).join(", ")} sem nível de mesmo nome no .COL (${nomes}): ${semNivel.length > 1 ? "ficaram" : "ficou"} no topo, em ordem alfabética, com pé-direito de 3 m e os pilares do .LAJ; confira`;
     avisos.push(`Pavimentos, do topo para a base: ${descricao} (${regra}).`);
   }
+  for (const p of fundacao)
+    avisos.push(
+      `${p.laj.nome}: é o nível 1 do .COL (${niveis ? nomesDosNiveis(niveis) : ""}), a base dos pilares, onde fica o baldrame. A V2 não tem pavimento sem lance de pilar: ${p.base} entrou na base da obra com pé-direito de 3 m e os pilares do .LAJ, um lance abaixo do nível 1 que não existe no original. As vigas dele carregam esse lance e a fundação; confira.`,
+    );
+  for (const p of comNivel)
+    if (p.repeticoes > 1 && niveis) {
+      const alturas = Array.from({ length: p.repeticoes }, (_, r) =>
+        peDireitoDoNivel(niveis, p.nivel! + r),
+      );
+      if (alturas.some((h) => h !== alturas[0]))
+        avisos.push(
+          `${p.laj.nome}: pavimento-tipo nos níveis ${p.nivel} a ${p.nivel! + p.repeticoes - 1} do .COL com pés-direitos diferentes (${alturas.map((h) => fmt(h ?? 0)).join(", ")} m); ficou o do nível ${p.nivel}.`,
+        );
+    }
   return ordem;
 }
 
@@ -309,8 +351,13 @@ function pavimentoDeVigasAvulsas(
   base: string,
   arquivos: readonly ArquivoEntrada[],
   c: Coleta,
+  /** Por que as vigas não entram num pavimento do prédio (padrão: não há .LAJ). */
+  porque = `não há ${base}.LAJ e o .VIG não diz de que pavimento elas são`,
+  /** Para onde vai a carga delas (padrão: a lugar nenhum, com o conselho da escada). */
+  destino = "a reação não vai a pilar nem a viga nenhuma. Se as vigas carregam o prédio, lance as reações como carga nas vigas de apoio.",
+  obraJaLida?: Obra,
 ): Pavimento | undefined {
-  const pav = obraDeVigas(base, arquivos, c)?.pavimentos[0];
+  const pav = (obraJaLida ?? obraDeVigas(base, arquivos, c))?.pavimentos[0];
   if (!pav) return undefined;
   const apoiosEmViga: string[] = [];
   for (const v of pav.vigas) {
@@ -322,7 +369,7 @@ function pavimentoDeVigasAvulsas(
     if (titulos.length > 0) apoiosEmViga.push(`${v.nome} em ${titulos.join(" e ")}`);
   }
   c.avisos.push(
-    `${base}.VIG: não há ${base}.LAJ e o .VIG não diz de que pavimento são as vigas ${pav.vigas.map((v) => v.nome).join(", ")}. Elas entraram como vigas avulsas, no pavimento "${base}" no topo da obra, fora da planta do prédio, cada uma com um apoio em cada ponta; a reação não vai a pilar nem a viga nenhuma${apoiosEmViga.length > 0 ? ` (pelo .FOR, ${apoiosEmViga.join("; ")})` : ""}. Se a escada carrega o prédio, lance as reações como carga nas vigas de apoio.`,
+    `${base}.VIG: ${porque}. As vigas ${pav.vigas.map((v) => v.nome).join(", ")} entraram como vigas avulsas, no pavimento "${base}" no topo da obra, fora da planta do prédio, cada uma com um apoio em cada ponta${apoiosEmViga.length > 0 ? ` (pelo .FOR, ${apoiosEmViga.join("; ")})` : ""}; ${destino}`,
   );
   return { ...pav, pilares: pav.pilares.map((p) => ({ ...p, transicao: true as const })) };
 }
@@ -352,10 +399,6 @@ function abaixoDe(pav: Pavimento, limite: number): Pavimento {
     pilares: pav.pilares.map((q) => ({ ...q, y: desce(q.y) })),
   };
 }
-
-/** O .COL tem cargas gravadas (A_1280, que o PILGEEDI grava a partir dos .REP lidos). */
-const temCargas = (col: ArquivoCol) =>
-  col.temCargas && col.colunas.some((c) => c.niveis.some((n) => (n.carga?.normal ?? 0) !== 0));
 
 /** O pavimento de um .LAJ no formato de entrada da V1, com o .VIG e o .COL desse formato. */
 function pavimentoDaV1(
@@ -399,6 +442,54 @@ const resumoDe = (obra: Obra | undefined, c: Coleta): ResumoImportacao => ({
   ignorados: c.ignorados,
 });
 
+/** Pavimento de um nível do .COL que não tem .LAJ: sem planta, só com os pilares das
+ *  colunas do .COL que têm lance até ele. Cada pilar fica na posição do pilar de mesmo
+ *  número no pavimento mais próximo (o motor liga os lances pela posição), ou, sem
+ *  nenhum, abaixo da planta. As cargas do nível vêm do .COL ou do .REP dele. */
+function pavimentoSemPlanta(
+  k: number,
+  col: ArquivoCol,
+  pavimentos: readonly { pav: Pavimento; nivel: number }[],
+): Pavimento {
+  const nivel = col.niveis[k - 1]!;
+  const id = `nivel${k}`;
+  const porDistancia = [...pavimentos].sort(
+    (a, b) => Math.abs(a.nivel - k) - Math.abs(b.nivel - k),
+  );
+  const yLivre = menorY(pavimentos.map((p) => p.pav)) - ENTRE_PLANTAS;
+  const pilares: Pilar[] = col.colunas.flatMap((coluna, ci) => {
+    if (!(coluna.nivelInferior <= k - 1 && coluna.nivelSuperior >= k)) return [];
+    const vizinho = porDistancia
+      .flatMap((p) => p.pav.pilares)
+      .find((q) => {
+        const n = /\d+/.exec(q.nome);
+        return n !== null && casaNome(coluna.nome, Number(n[0]));
+      });
+    const nome = vizinho?.nome ?? (coluna.nome.replace(/\s+/g, "") || `C${ci + 1}`);
+    return [
+      {
+        id: `${id}/${nome}`,
+        nome,
+        x: vizinho?.x ?? ci,
+        y: vizinho?.y ?? yLivre,
+        b: vizinho?.b ?? 20,
+        h: vizinho?.h ?? 20,
+        ...(vizinho?.rotacao !== undefined ? { rotacao: vizinho.rotacao } : {}),
+      },
+    ];
+  });
+  return {
+    id,
+    nome: nivel.nome.trim() || `Nível ${k}`,
+    peDireito: peDireitoDoNivel(col.niveis, k) ?? 3,
+    repeticoes: 1,
+    lajes: [],
+    vigas: [],
+    pilares,
+    pilaresRemovidos: [],
+  };
+}
+
 /**
  * Monta uma obra a partir dos arquivos de uma obra do SISTRUT. Cada .LAJ vira um
  * pavimento; sem .LAJ, a obra sai do .VIG ou do .COL. Nunca lança: o que um arquivo não
@@ -425,6 +516,25 @@ export function importarObraSistrut(
 
 function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImportacaoSistrut {
   const { avisos } = c;
+  // dois arquivos com o mesmo nome (de pastas diferentes, ou só na caixa): qual valeria
+  // seria escolha arbitrária
+  const porNomeIgual = new Map<string, ArquivoEntrada[]>();
+  for (const a of arquivos) {
+    const k = a.nome
+      .replace(/^.*[\\/]/, "")
+      .trim()
+      .toUpperCase();
+    porNomeIgual.set(k, [...(porNomeIgual.get(k) ?? []), a]);
+  }
+  const repetidos = [...porNomeIgual.values()].filter((x) => x.length > 1);
+  if (repetidos.length > 0)
+    return {
+      ok: false,
+      erros: [
+        `Arquivos com o mesmo nome: ${repetidos.map((x) => x.map((a) => a.caminho ?? a.nome).join(" e ")).join("; ")}. Eles vêm de obras diferentes? Importe uma pasta de cada vez, com os arquivos de uma obra só.`,
+      ],
+      resumo: resumoDe(undefined, c),
+    };
   const grupos = agrupar(arquivos, c);
   const grupo = (ext: string) => grupos.get(ext) ?? [];
 
@@ -462,6 +572,12 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
     c.ignora([col], `${colLido.erros.join(" ")} Os pilares do .COL ficaram de fora.`);
   const colOk = colLido?.ok ? { arq: col!, valor: colLido.valor } : undefined;
   const niveis = colOk?.valor.niveis;
+  const nomeDoNivel = (k: number) => niveis?.[k - 1]?.nome.trim().toUpperCase();
+  /** Nível do .COL (1-based) com o nome dado, ou -1. */
+  const nivelDoNome = (nome: string) => {
+    const i = niveis?.findIndex((n) => n.nome.trim().toUpperCase() === nome) ?? -1;
+    return i < 0 ? -1 : i + 1;
+  };
 
   // 1. Lajes: um pavimento por .LAJ (de base única), na ordem do prédio
   const lajes: ArquivoEntrada[] = [];
@@ -474,7 +590,12 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
   const comNivel = pavs.some((p) => p.nivel !== undefined);
   const vigs = grupo("VIG");
   let obra: Obra | undefined;
+  /** Bases dos pavimentos com planta (o .REP deles é o que o motor recalcula). */
   const bases = new Set<string>();
+  /** Bases dos .LAJ que não abriram: o .VIG fica avulso e o nível, sem planta. */
+  const lajesFalhas = new Set<string>();
+  /** Nível do .COL de cada pavimento (id), o de baixo num pavimento-tipo. */
+  const nivelDoPavimento = new Map<string, number>();
   const junta = (nova: Obra) => {
     obra = obra ? { ...obra, pavimentos: [...obra.pavimentos, ...nova.pavimentos] } : nova;
   };
@@ -489,7 +610,7 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
     }
     const registrosVig = registrosDoVig(vigs.find((v) => baseDe(v.nome) === p.base));
     // nível: o do nome; sem nenhum casado, de baixo para cima (o de baixo é o nível 2)
-    const nivel = comNivel ? p.nivel : niveis ? pavs.length - i + 1 : undefined;
+    const nivel = comNivel ? p.nivel : niveis && !p.fundacao ? pavs.length - i + 1 : undefined;
     const peDireito = nivel !== undefined && niveis ? peDireitoDoNivel(niveis, nivel) : undefined;
     const lida = c.seguro([p.laj], () =>
       importarLaj(
@@ -502,18 +623,21 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
         p.laj.nome,
       ),
     );
-    if (!lida) continue;
-    if (!lida.ok) {
-      c.ignora(
-        [p.laj],
-        `${lida.erros.map((e) => semArquivo(p.laj.nome, e)).join(" ")} O pavimento ${p.base} ficou de fora.`,
-      );
+    if (!lida?.ok) {
+      if (lida)
+        c.ignora(
+          [p.laj],
+          `${lida.erros.map((e) => semArquivo(p.laj.nome, e)).join(" ")} O pavimento ${p.base} ficou de fora.`,
+        );
+      lajesFalhas.add(p.base);
       continue;
     }
     c.le(p.laj);
     avisos.push(...lida.avisos.map((a) => comArquivo(p.laj.nome, a)));
-    junta(lida.obra);
+    const pavimentos = lida.obra.pavimentos.map((q) => ({ ...q, repeticoes: p.repeticoes }));
+    junta({ ...lida.obra, pavimentos });
     bases.add(p.base);
+    if (comNivel && p.nivel !== undefined) nivelDoPavimento.set(p.base, p.nivel);
   }
   if (obra && colOk?.valor.obra) obra.nome = colOk.valor.obra;
 
@@ -534,6 +658,11 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
   const daObra = familia.filter((a) => VIGAS_DA_OBRA.has(extensaoDe(a.nome)) && ehIniDeViga(a));
   const doBase = (b: string) =>
     familia.filter((a) => !VIGAS_DA_OBRA.has(extensaoDe(a.nome)) && baseDe(a.nome) === b);
+  // a montagem de cada pavimento só depende da planta dele: a obra é calculada uma vez
+  const daPlanta = obra;
+  const montagens = daPlanta
+    ? c.seguro([], () => calcularObraSistrut(daPlanta, { modo: "original" }).pavimentos)
+    : undefined;
   for (const b of bases) {
     const doPav = doBase(b);
     if (doPav.length === 0 || !obra) continue;
@@ -546,7 +675,10 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       continue;
     }
     const base: Obra = obra;
-    const vigas = c.seguro(doPav, () => importarVigasSistrut([...doPav, ...daObra], base, b));
+    const montagem = montagens?.find((p) => p.pavimentoId === b)?.montagem.vigas;
+    const vigas = c.seguro(doPav, () =>
+      importarVigasSistrut([...doPav, ...daObra], base, b, montagem),
+    );
     if (!vigas) continue;
     if (!vigas.ok) {
       c.ignora(doPav, `${vigas.erros.join(" ")} As vigas do pavimento ${b} ficaram as do .LAJ.`);
@@ -557,8 +689,11 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
     obra = vigas.obra;
   }
 
-  // .VIG sem .LAJ de mesmo nome: com prédio, vigas avulsas num pavimento à parte; sem
-  // .LAJ, a obra é a de vigas (cada .VIG um pavimento, como cada obra do VIGA)
+  // .VIG sem .LAJ de mesmo nome. Com prédio: vigas avulsas num pavimento à parte. Sem
+  // .LAJ e com .COL que nomeia os níveis delas: os pilares saem do .COL, e a carga de
+  // cada nível é a do .REP dele ou a que o motor calcula pelas vigas do .VIG (o PILGEEDI
+  // lê o .REP de cada obra do VIGA no nível dela). Sem nada disso, a obra é a de vigas
+  // (cada .VIG um pavimento, como cada obra do VIGA).
   const semLaj = new Map<string, ArquivoEntrada[]>();
   for (const a of familia) {
     const b = baseDe(a.nome);
@@ -567,13 +702,42 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
   }
   const pavimentosAvulsos: Pavimento[] = [];
   const temPredio = obra !== undefined;
+  const vigasPeloCol =
+    !temPredio && colOk !== undefined && [...semLaj.keys()].some((b) => nivelDoNome(b) >= 2);
+  /** .REP calculado pelas vigas de um .VIG, por nível do .COL (obra só de vigas). */
+  const repsDasVigas = new Map<number, RepPilarSistrut>();
   for (const [b, arqs] of semLaj) {
     if (!arqs.some((a) => extensaoDe(a.nome) === "VIG")) {
       c.ignora(arqs, `sem ${b}.VIG nem ${b}.LAJ; ${arqs.length > 1 ? "ignorados" : "ignorado"}.`);
       continue;
     }
-    if (temPredio) {
-      const pav = pavimentoDeVigasAvulsas(b, [...arqs, ...daObra], c);
+    if (temPredio || vigasPeloCol) {
+      const k = nivelDoNome(b);
+      const deVigas = obraDeVigas(b, [...arqs, ...daObra], c);
+      if (!deVigas) continue;
+      if (vigasPeloCol && k >= 2) {
+        const calculo = c.seguro([], () => calcularObraSistrut(deVigas, { modo: "original" }));
+        const linhas = calculo?.pavimentos[0]?.rep;
+        if (linhas)
+          repsDasVigas.set(k, { linhas, nivelInicial: k, nivelFinal: k, nome: `${b}.VIG` });
+      }
+      const temRep = grupo("REP").some((r) => baseDe(r.nome) === b);
+      const pav = pavimentoDeVigasAvulsas(
+        b,
+        arqs,
+        c,
+        lajesFalhas.has(b)
+          ? `o ${b}.LAJ não pôde ser lido (ficou de fora), e as vigas não têm a planta`
+          : vigasPeloCol
+            ? "obra sem .LAJ: as vigas não têm planta"
+            : undefined,
+        vigasPeloCol && k >= 2
+          ? `a reação delas chega aos pilares do .COL no nível ${k} (${nomeDoNivel(k)}) pelo ${temRep ? `${b}.REP` : ".REP que o motor calcula por elas"}.`
+          : lajesFalhas.has(b) && k >= 2 && colOk
+            ? `nos pilares do nível ${k} (${nomeDoNivel(k)}) entra a carga do ${temRep ? `${b}.REP` : ".COL"}.`
+            : undefined,
+        deVigas,
+      );
       if (pav) pavimentosAvulsos.push(pav);
       continue;
     }
@@ -596,11 +760,51 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       `Sem .LAJ, cada .VIG virou um pavimento (${[...bases].join(", ")}), em ordem alfabética do topo para a base; confira a ordem.`,
     );
 
-  // 3. Pilares. O .REP de um pavimento importado é o que o motor recalcula pelas vigas
+  // níveis do .COL sem pavimento (sem .LAJ, ou com o .LAJ que não abriu): pavimento sem
+  // planta, com os pilares e as cargas do nível. Sem eles, o lance some com as cargas.
+  const niveisSemPlanta: number[] = [];
+  if (obra && colOk && comNivel && niveis) {
+    const cobertos = new Set<number>();
+    for (const p of pavs)
+      if (p.nivel !== undefined && nivelDoPavimento.has(p.base))
+        for (let r = 0; r < p.repeticoes; r++) cobertos.add(p.nivel + r);
+    const comPlanta = obra.pavimentos.flatMap((pav) => {
+      const nivel = nivelDoPavimento.get(pav.id);
+      return nivel === undefined ? [] : [{ pav, nivel }];
+    });
+    const novos: Pavimento[] = [];
+    for (let k = 2; k <= niveis.length; k++) {
+      if (cobertos.has(k)) continue;
+      const pav = pavimentoSemPlanta(k, colOk.valor, comPlanta);
+      nivelDoPavimento.set(pav.id, k);
+      niveisSemPlanta.push(k);
+      novos.push(pav);
+      const nome = nomeDoNivel(k) ?? "";
+      const doNivel = grupo("REP").some((r) => baseDe(r.nome) === nome);
+      avisos.push(
+        `Nível ${k} do .COL (${niveis[k - 1]!.nome.trim()}, cota ${fmt(niveis[k - 1]!.cota)} m) sem ${lajesFalhas.has(nome) ? "o .LAJ, que não abriu" : ".LAJ de mesmo nome"}: entrou como pavimento sem planta, só com os ${pav.pilares.length} pilares do .COL, e as cargas dos pilares nesse nível são ${doNivel ? `as do ${nome}.REP` : "as que o .COL guarda"}. As vigas desse nível não estão na obra.`,
+      );
+    }
+    // a ordem do prédio: os sem nível no topo, depois pelo nível, de cima para baixo, e o
+    // do nível 1 na base
+    const ordem = (p: Pavimento) => nivelDoPavimento.get(p.id) ?? 0;
+    const fundacao = new Set(pavs.filter((p) => p.fundacao).map((p) => p.base));
+    const todos = [...obra.pavimentos, ...novos];
+    obra = {
+      ...obra,
+      pavimentos: [
+        ...todos.filter((p) => !nivelDoPavimento.has(p.id) && !fundacao.has(p.id)),
+        ...todos.filter((p) => nivelDoPavimento.has(p.id)).sort((a, b) => ordem(b) - ordem(a)),
+        ...todos.filter((p) => fundacao.has(p.id)),
+      ],
+    };
+  }
+
+  // 3. Pilares. O .REP de um pavimento com planta é o que o motor recalcula pelas vigas
   // dele: entrar com ele somaria a carga duas vezes (`Pilar.cargaTopo` soma com o .REP
-  // do pavimento). Um .REP de outra obra entra como carga no nível do .COL de mesmo nome,
-  // como o PILGEEDI o leria; numa obra só de pilares, valem as cargas do .COL, que o
-  // PILGEEDI grava dos .REP lidos, e o .REP só entra se o .COL não as tem.
+  // do pavimento). O .REP de um nível sem planta (ou de uma obra só de pilares) entra
+  // como carga nesse nível, como o PILGEEDI o leria, no lugar das cargas que o .COL
+  // guarda para o nível; nos outros níveis sem planta valem as do .COL.
   const repArqs = grupo("REP");
   const rlps = grupo("RLP");
   c.ignora(
@@ -647,20 +851,19 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
     const [pil, ...pilsExtras] = pils;
     c.ignora(pilsExtras, "mais de um .PIL; valeu o primeiro, em ordem de nome.");
     const soPilares = obra === undefined;
-    const usaReps = !soPilares || !temCargas(colOk.valor);
-    if (soPilares && !usaReps)
-      c.ignora(
-        repsDeFora,
-        "as cargas dos pilares são as que o .COL guarda (o PILGEEDI as grava dos .REP lidos); o .REP não entra de novo.",
-      );
+    // níveis sem planta: os criados acima e o 1, a base dos pilares, se nenhum .LAJ é dele
+    const temFundacao = pavs.some((p) => p.fundacao && bases.has(p.base));
+    const niveisComCarga = [...niveisSemPlanta, ...(temFundacao ? [] : [1])];
     const reps: RepPilarSistrut[] = [];
     const repsLidos: ArquivoEntrada[] = [];
-    for (const rep of usaReps ? repsDeFora : []) {
-      const k = niveis?.findIndex((n) => n.nome.trim().toUpperCase() === baseDe(rep.nome)) ?? -1;
-      if (k < 0) {
+    for (const rep of repsDeFora) {
+      const k = nivelDoNome(baseDe(rep.nome));
+      if (!(k >= 1 && (soPilares || niveisComCarga.includes(k)))) {
         c.ignora(
           [rep],
-          `não há pavimento nem nível do .COL chamado ${baseDe(rep.nome)}; as cargas não foram importadas. Lance-as como carga no topo dos pilares do nível certo.`,
+          k >= 1
+            ? `o nível ${k} do .COL (${nomeDoNivel(k)}) tem planta, e o motor recalcula as cargas dele pelas vigas; o .REP não entra como carga.`
+            : `não há pavimento nem nível do .COL chamado ${baseDe(rep.nome)} (níveis: ${nomesDosNiveis(colOk.valor.niveis)}); as cargas não foram importadas. Lance-as como carga no topo dos pilares do nível certo.`,
         );
         continue;
       }
@@ -668,14 +871,16 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       repsLidos.push(rep, ...(rlp ? [rlp] : []));
       reps.push({
         texto: textoDe(rep),
-        nivelInicial: k + 1,
-        nivelFinal: k + 1,
+        nivelInicial: k,
+        nivelFinal: k,
+        nome: rep.nome,
         ...(rlp ? { rlp: textoDe(rlp) } : {}),
       });
     }
-    const niveisDosPavimentos = comNivel
-      ? Object.fromEntries(pavs.flatMap((p) => (p.nivel !== undefined ? [[p.base, p.nivel]] : [])))
-      : undefined;
+    // o .REP calculado pelas vigas de um .VIG só vale onde o .REP não veio
+    for (const [k, r] of repsDasVigas) if (!reps.some((x) => x.nivelInicial === k)) reps.push(r);
+    const niveisDosPavimentos =
+      nivelDoPavimento.size > 0 ? Object.fromEntries(nivelDoPavimento) : undefined;
     const doCol = [colOk.arq, pip, pil, ...repsLidos].filter((a) => a !== undefined);
     const base = obra;
     const pilares = c.seguro(doCol, () =>
@@ -689,8 +894,8 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
         base
           ? {
               base,
-              cargas: reps.length > 0,
               ...(niveisDosPavimentos ? { niveis: niveisDosPavimentos } : {}),
+              niveisComCarga,
             }
           : {},
       ),
@@ -714,11 +919,18 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       resumo: resumoDe(undefined, c),
     };
   let final: Obra = obra;
-  for (const pav of pavimentosAvulsos)
+  for (const pav of pavimentosAvulsos) {
+    // id e nome únicos: o nível do .COL pode ter o mesmo nome do .VIG
+    const repetido = (x: string) =>
+      final.pavimentos.some((p) => p.id === x || p.nome.toUpperCase() === x.toUpperCase());
+    const avulso = repetido(pav.id)
+      ? { ...pav, id: `${pav.id}-vigas`, nome: `${pav.nome} (vigas)` }
+      : pav;
     final = {
       ...final,
-      pavimentos: [abaixoDe(pav, menorY(final.pavimentos)), ...final.pavimentos],
+      pavimentos: [abaixoDe(avulso, menorY(final.pavimentos)), ...final.pavimentos],
     };
+  }
 
   // 4. Leitores que completam a obra montada (LEITORES_EXTRA), cada um com os arquivos
   // da extensão dele
