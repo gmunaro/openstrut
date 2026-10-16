@@ -1032,10 +1032,18 @@ function calcularPavimentoSistrut(
         paraNaFalha,
       )(painel, par.laje, modo);
     } catch (e) {
-      if (e instanceof ErroNaoConverge && ehOtimizacaoParada(e.estado)) otimizacaoParada = e.estado;
-      avisos.push(
-        `Otimização dos negativos não feita: ${mensagem(e)} Valem os momentos antes da otimização.`,
-      );
+      if (e instanceof ErroNaoConverge && ehOtimizacaoParada(e.estado)) {
+        // a situação sai uma vez, em `otimizacaoParada` (a tela marca a laje); aqui só
+        // a referência técnica, na memória
+        otimizacaoParada = e.estado;
+        memoria.push({
+          descricao: `Otimização dos negativos parada: ${mensagem(e)} Valem os momentos antes da otimização.`,
+          ref: "LAJECALC.BAS:2113-2145 (R3)",
+        });
+      } else
+        avisos.push(
+          `Otimização dos negativos não feita: ${mensagem(e)} Valem os momentos antes da otimização.`,
+        );
     }
   }
   const armadurasDe = (e: EsforcosLajes) =>

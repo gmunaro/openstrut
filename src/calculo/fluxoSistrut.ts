@@ -787,7 +787,7 @@ function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavim
     if (!pav || !pilar) continue;
     const d = l.dimensionamento;
     const avisos = [...l.avisos, ...(d?.avisos ?? [])];
-    if (d?.recusa) avisos.push(`${pilar.nome}: PILAREDI recusa o pilar (${d.recusa}).`);
+    // a recusa (d.recusa) já vem explicada em d.avisos, uma vez
     const mx = d ? Math.max(0, ...d.casos.map((c) => Math.abs(c.mx))) : 0;
     const my = d ? Math.max(0, ...d.casos.map((c) => Math.abs(c.my))) : 0;
     const resultado: PilarResultado = {

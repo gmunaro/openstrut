@@ -274,12 +274,12 @@ describe("PILAR opção 6 pelo motor: laço sem fim do original vira erro explí
   it.each([
     ["retrad_pil_trava", 2],
     ["v2par_pilar_trava", 5],
-  ] as const)("%s: caso 2/2 com erro e aviso", (nome, i) => {
+  ] as const)("%s: caso 2/2 com erro, sem aviso repetido", (nome, i) => {
     const r = calcularObraSistrut(CASOS_PILAR6[i]![2](), { modo: "original" });
     const v = r.verificacoes[0]!;
     expect(CASOS_PILAR6[i]![1].caso).toBe(nome);
     expect(v.resultado!.casos[1]!.erro).toBe("nao-converge");
-    expect(v.avisos.some((a) => a.includes("2/2") && a.includes("D-2"))).toBe(true);
+    expect(v.avisos.some((a) => a.includes("2/2"))).toBe(false);
   });
 });
 
@@ -1040,7 +1040,11 @@ describe("armadura dada que não resiste: recusa NAO (REDEFINE, PILAREDI.BAS:580
   it("recusa NAO com o motivo, sem armadura aceita", () => {
     const d = lanceP5(r)!.dimensionamento!;
     expect(d.recusa).toBe("NAO");
-    expect(d.avisos.some((a) => a.includes("não resiste") && a.includes("REDEFINE"))).toBe(true);
+    // o motivo no aviso, em pt-BR; a referência ao PILAREDI na memória
+    expect(
+      d.avisos.some((a) => a.startsWith("Lance não dimensionado: a armadura dada não resiste")),
+    ).toBe(true);
+    expect(d.memoria.some((m) => m.ref === "PILAREDI.BAS:5800-5808 (REDEFINE)")).toBe(true);
   });
 });
 

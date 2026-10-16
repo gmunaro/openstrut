@@ -136,9 +136,12 @@ describe.each(CASOS.map((c) => [c.caso.caso, c] as const))(
     });
 
     if (caso.caso === "v2par_laje_r3") {
-      it("a otimização não converge no original (R3): aviso e a tela parada", () => {
+      it("a otimização não converge no original (R3): a tela parada, uma vez, e a referência na memória", () => {
         const p = r.pavimentos[0]!;
-        expect(p.avisos.some((a) => a.includes("não converge"))).toBe(true);
+        expect(p.avisos.some((a) => a.includes("Otimização"))).toBe(false);
+        expect(p.memoria.find((m) => m.ref?.includes("R3"))?.descricao).toMatch(
+          /^Otimização dos negativos parada: L1, lado 3: a relação Mneg\/Mpos passa a 0,35,/,
+        );
         expect(p.otimizacaoParada).toMatchObject({ laje: "L1", lado: 2, codigo: 5 });
         expect(p.esforcos).toBe(p.esforcosAntesOtimizacao);
       });

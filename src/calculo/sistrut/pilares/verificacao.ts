@@ -123,12 +123,8 @@ export const verificaPilar: VerificaPilar = (entrada, modo) => {
       lambda2a: par.lambda2aOrdem,
     });
     const rotulo = `${i + 1}/${sinais.length}`;
-    if (r.erro === "nao-converge")
-      avisos.push(
-        `Caso ${rotulo}: a busca do equilíbrio não converge; o original fica em laço (D-2).`,
-      );
-    if (r.erro === "nk-nulo")
-      avisos.push(`Caso ${rotulo}: Nk = 0, o original divide por zero (D-3); caso não verificado.`);
+    // onde o original trava (D-2) ou divide por Nk = 0 (D-3), o caso sai com `erro`, e só
+    // ali: a tela escreve a situação na linha do caso
     resultado.casos.push({
       rotulo,
       mxa: x.ma + x.mc,

@@ -221,7 +221,7 @@ describe("retrad_pil_trava: flexão oblíqua com laço sem fim no caso 2/2 (D-2)
     confere(caso, "c2.Mtotal", c2!.mTotal);
     confere(caso, "c2.incl", c2!.anguloAtuante);
     expect(c2!.erro).toBe("nao-converge");
-    expect(r.avisos.some((a) => a.includes("2/2") && a.includes("D-2"))).toBe(true);
+    expect(r.avisos.some((a) => a.includes("2/2"))).toBe(false);
   });
 
   it("corrigido também termina", () => {

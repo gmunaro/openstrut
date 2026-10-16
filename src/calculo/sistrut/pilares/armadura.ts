@@ -5,6 +5,7 @@
 // Fonte: PILAREDI.BAS:6599-6944 (L_5675c, PISECEDI), 4666-4955 (S_45f89),
 // 1999-2136 (S_24f4a), 5711-6310 (L_50cef: As, taxa, estribo). Livro:
 // livros_viga_pilar.md 2.13 itens 4-9 (U53-051..062, U54-008..026). PLANO P8-P10, P14, P15.
+import { numAte } from "../../texto";
 import type { Etapa } from "../../tipos";
 import { ErroNaoConverge, qbClng, qbInt } from "../base/f32";
 import { PARAMETROS_PILAR } from "../base/parametros";
@@ -34,6 +35,10 @@ import {
   posiciona,
   verticesRetangulo,
 } from "./secao";
+
+/** Motivo da recusa por esbeltez (P15): λ acima do limite do processo exato do .PIP. */
+const textoLambda = (limite: number) =>
+  `λ acima de ${numAte(limite, 1)}, o limite do processo exato; o original recusa o nível.`;
 
 /** Geometria do original para o arranjo: polígono horário com o fecho, ou círculo. */
 type Geometria =
@@ -463,8 +468,9 @@ export const dimensionaPilar: DimensionaPilar = (
   };
   if (modo === "original" && dados.nk === 0) {
     avisos.push(
-      "Nk = 0: o original divide por zero na busca do equilíbrio (D-3); nível não dimensionado.",
+      "Lance não dimensionado: Nk = 0; no original a busca do equilíbrio divide por zero.",
     );
+    memoria.push({ descricao: "Recusa NKNULO: Nk = 0", ref: "PILAREDI.BAS:5105 (D-3)" });
     return { ...resultado, recusa: "NKNULO" };
   }
   const secaoDe = (barras: BarraCalculo[]): SecaoCalculo =>
@@ -518,8 +524,10 @@ export const dimensionaPilar: DimensionaPilar = (
   let casosE: CasoPilar[] = [];
   let casosF: CasoPilar[] = [];
   let lambdas = { lambdaX: 0, lambdaY: 0 };
-  const recusa = (r: RecusaPilar, texto: string) => {
-    avisos.push(texto);
+  /** Recusa do nível: o motivo em pt-BR no aviso; a referência ao original na memória. */
+  const recusa = (r: RecusaPilar, texto: string, ref: string) => {
+    avisos.push(`Lance não dimensionado: ${texto}`);
+    memoria.push({ descricao: `Recusa ${r}: ${texto}`, ref });
     return { ...resultado, casos: [...casosE, ...casosF], recusa: r };
   };
   /** Estribo pela tabela do .PIP, limitado a MIN(B, H) e a D − Dint (PILAREDI.BAS:5876-5885). */
@@ -552,26 +560,28 @@ export const dimensionaPilar: DimensionaPilar = (
       const naoResiste = (caso: string) =>
         recusa(
           "NAO",
-          `A armadura dada não resiste no caso "${caso}": o PILAREDI volta à redefinição da armadura (REDEFINE, PILAREDI.BAS:5800-5808).`,
+          `a armadura dada não resiste no caso "${caso}"; no original o programa volta à edição da armadura.`,
+          "PILAREDI.BAS:5800-5808 (REDEFINE)",
         );
       const e = verificaArranjo(ctx, secaoDe(calc), false, dados, par, ctl);
       casosE = e.casos;
       if (e.recusa === "LAMBDA")
-        return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+        return recusa("LAMBDA", textoLambda(par.lambdaProcessoExato), "PILAREDI (P15)");
       if (sinalDe(ctl) === "NAO") return naoResiste("e");
       ctl.anguloInicial = -1;
       const f = verificaArranjo(ctx, secaoDe(calc), true, dadosF, par, ctl);
       casosF = f.casos;
       lambdas = { lambdaX: f.lambdaX, lambdaY: f.lambdaY };
       if (f.recusa === "LAMBDA")
-        return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+        return recusa("LAMBDA", textoLambda(par.lambdaProcessoExato), "PILAREDI (P15)");
       // verificaArranjo regrava ctl.sinal: lido de novo depois da 2ª chamada
       if (sinalDe(ctl) === "NAO") return naoResiste("f");
     } catch (erro) {
       if (erro instanceof ErroNaoConverge)
         return recusa(
           "NAOCONVERGE",
-          "A busca do equilíbrio não converge; o original fica em laço (D-2).",
+          "a busca do equilíbrio não converge; no original o programa fica em laço sem fim.",
+          "PILAREDI (D-2)",
         );
       throw erro;
     }
@@ -610,7 +620,8 @@ export const dimensionaPilar: DimensionaPilar = (
         if (marca === "ESGOTADO" && limite < as)
           return recusa(
             "NAOSUPORTA",
-            "A seção não suporta os esforços com a taxa máxima de armadura configurada.",
+            "a seção não suporta os esforços com a taxa máxima de armadura configurada.",
+            "PILAREDI.BAS:6649-6663 (NAOSUPORTA)",
           );
         let i2 = i1;
         if (pip.misturaBitolas && i1 > pip.ordemBitolaMinima) i2 = i1 - 1;
@@ -642,7 +653,8 @@ export const dimensionaPilar: DimensionaPilar = (
           if (prox === null)
             return recusa(
               "NAOBARRA",
-              "Número máximo de barras ou perímetro insuficiente para a armadura necessária.",
+              "o número máximo de barras ou o perímetro não bastam para a armadura necessária.",
+              "PILAREDI (NAOBARRA)",
             );
           i1 = prox;
           continue;
@@ -659,7 +671,7 @@ export const dimensionaPilar: DimensionaPilar = (
         ctl,
       );
       if (v.recusa === "LAMBDA")
-        return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+        return recusa("LAMBDA", textoLambda(par.lambdaProcessoExato), "PILAREDI (P15)");
       if (flambagem) {
         casosF = v.casos;
         lambdas = { lambdaX: v.lambdaX, lambdaY: v.lambdaY };
@@ -710,7 +722,8 @@ export const dimensionaPilar: DimensionaPilar = (
     if (e instanceof ErroNaoConverge)
       return recusa(
         "NAOCONVERGE",
-        "A busca do equilíbrio não converge; o original fica em laço (D-2).",
+        "a busca do equilíbrio não converge; no original o programa fica em laço sem fim.",
+        "PILAREDI (D-2)",
       );
     throw e;
   }

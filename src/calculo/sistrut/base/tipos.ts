@@ -1271,7 +1271,8 @@ export type SituacaoPilar =
 
 /** Veredito de um caso (PILAR.BAS:5342-5360, 5534; PILAREDI.BAS:5361-5425). Onde o
  *  original fica em laço (D-2) ou divide por Nk = 0 (D-3), o caso sai "NAO" com
- *  `CasoPilar.erro` ("nao-converge" ou "nk-nulo") e um aviso. */
+ *  `CasoPilar.erro` ("nao-converge" ou "nk-nulo"); na verificação (PILAR opção 6) o
+ *  erro do caso é o único registro, sem aviso repetido. */
 export type VereditoPilar =
   | "ok"
   | "NAO"
