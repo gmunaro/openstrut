@@ -394,7 +394,9 @@ function vigaMontada(
     const L = tramo.vao;
     const total = c.distribuidas.reduce((s, d) => s + d.p * (d.b - d.a), 0) / L;
     const acid = c.distribuidas.reduce((s, d) => s + d.pac * (d.b - d.a), 0) / L;
-    const alv = pesoKg?.alvenariasSobreViga ?? [];
+    // viga digitada no VIGA (somenteCargasProprias): o .VIG não tem o peso nem a alvenaria
+    // da montagem, que só entram no LAJEMONT
+    const alv = g.viga.somenteCargasProprias ? [] : (pesoKg?.alvenariasSobreViga ?? []);
     const pp = alv[0]?.peso ?? 0;
     const linear = alv.length ? alv.reduce((s, a) => s + a.alvenaria, 0) / alv.length : 0;
     const lajesG = total - acid - pp - linear;
@@ -610,10 +612,13 @@ function equilibrio(ps: PavimentoSistrut, pilares: CargaPilar[]): Equilibrio {
     if (rb.apoio.tipo === "viga") lajesNasVigas += kn(t);
   }
   let cargaVigas = 0;
-  for (const d of ps.vigasVig)
+  // o .VIG antes do VIGA: as concentradas que ele tem são as digitadas na viga (a reação
+  // de viga apoiada, indexada, ainda está com F = 0 e não é carga nova)
+  for (const d of ps.vig)
     for (const { tramo, tipo } of tramosVig(d)) {
       const c = cargasDoTramo(tramo, tipo);
       cargaVigas += kn(c.distribuidas.reduce((s, x) => s + x.p * (x.b - x.a), 0));
+      cargaVigas += kn(c.concentradas.reduce((s, f) => s + f.f, 0));
     }
   const cargaPilares = pilares.reduce((s, p) => s + p.n, 0);
   const cargaPilaresProjeto = pilares.reduce((s, p) => s + p.nProjeto, 0);
