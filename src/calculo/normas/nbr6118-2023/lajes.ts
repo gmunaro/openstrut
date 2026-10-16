@@ -759,7 +759,7 @@ export function lajeArmadura6118(
     const phiPor = { x: phiX, y: phiY };
     memoria.push({
       descricao: `Alturas úteis das positivas: camada de baixo em ${inf} d${inf} = ${fmt(dPor[inf])} cm; camada de cima em ${sup} d${sup} = ${fmt(dPor[sup])} cm`,
-      formula: `d${inf} = h − c − φ${inf}/2; d${sup} = d${inf} − φ${inf}/2 − φ${sup}/2 (φ${inf} = ${phiPor[inf]} mm, φ${sup} = ${phiPor[sup]} mm: malhas da 1ª passada, feita com φ ${PHI_PADRAO} mm)`,
+      formula: `d${inf} = h − c − φ${inf}/2; d${sup} = d${inf} − φ${inf}/2 − φ${sup}/2 (φ${inf} = ${fmt(phiPor[inf])} mm, φ${sup} = ${fmt(phiPor[sup])} mm: malhas da 1ª passada, feita com φ ${fmt(PHI_PADRAO)} mm)`,
       valor: dPor[inf],
       unidade: "cm",
       ref: LAJES,

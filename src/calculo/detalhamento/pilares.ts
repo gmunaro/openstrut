@@ -5,7 +5,7 @@
 // (REGRAS_PILAR_6118 e REGRAS_PILAR_NB178); lb e ganchos vêm de ancoragem.ts
 // via RegrasDetalhamento (vigas.ts).
 // Unidades: comprimentos e cotas em cm, φ em mm.
-import { num } from "../texto";
+import { num, numAte } from "../texto";
 import type { NormaId, Pilar } from "../../dominio/obra";
 import { geometriaPilar } from "../secaoPilar";
 import { arranjoBarras } from "../normas/nb1-78/pilares";
@@ -67,7 +67,7 @@ export function traspasse6118(phi: number, mat: MateriaisCalc): Traspasse {
       ...basica.memoria,
       ...nec.memoria,
       {
-        descricao: `Traspasse das barras φ ${phi} mm (todas na mesma seção)`,
+        descricao: `Traspasse das barras φ ${fmt(phi)} mm (todas na mesma seção)`,
         formula: `l0t = α0t lb,nec = ${ALFA_0T_TODAS} · ${num(nec.lbNec, 1)} ≥ máx(0,3 α0t lb; 15 φ; 20 cm) = ${num(minimo, 1)}`,
         valor: l0,
         unidade: "cm",
@@ -89,7 +89,7 @@ export function traspasseNb178(phi: number, mat: MateriaisCalc): Traspasse {
     memoria: [
       ...basica.memoria,
       {
-        descricao: `Traspasse das barras φ ${phi} mm`,
+        descricao: `Traspasse das barras φ ${fmt(phi)} mm`,
         formula: "l0 = lb (arredondado para cima)",
         valor: l0,
         unidade: "cm",
@@ -198,7 +198,7 @@ export interface PilarDetalhamento extends ComMemoria {
 }
 
 const arredonda = (v: number) => Math.max(0, Math.ceil(v - 1e-6));
-const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+const fmt = (v: number) => numAte(v, 2);
 
 // ---- detalhamento -----------------------------------------------------------------
 
@@ -300,7 +300,7 @@ export function detalharPilar(
     const minimo = regras.estriboMinimo?.(barras.phi, bMin, mat);
     if (minimo) {
       memoria.push({
-        descricao: `${rotulo}: estribo mínimo φ ${minimo.phi} mm c/ ${minimo.espacamento} cm; adotado φ ${estribo.phi} c/ ${estribo.espacamento}`,
+        descricao: `${rotulo}: estribo mínimo φ ${fmt(minimo.phi)} mm c/ ${fmt(minimo.espacamento)} cm; adotado φ ${fmt(estribo.phi)} c/ ${fmt(estribo.espacamento)}`,
         formula: "φt ≥ máx(5 mm; φ/4); s ≤ mín(20 cm; b; 12 φ, 24 φ no CA-25)",
         valor: minimo.espacamento,
         unidade: "cm",

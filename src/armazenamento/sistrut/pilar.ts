@@ -379,7 +379,7 @@ function leCol(l: LeitorQB, avisos: string[]): ArquivoCol {
           ],
         };
       }
-    l.numero("o indicador V_11b4 depois das cargas");
+    l.numero("o indicador de fim das cargas");
   }
   // seções: até [1] + 1 por coluna, terminadas por 0 (PIGRAEDI.BAS:532-552, 920-962)
   const temSecoes = l.numero("o indicador de seções") === 1;
@@ -619,7 +619,7 @@ function lePil(l: LeitorQB, avisos: string[]): SecaoPil {
     // círculo com V_0fbc (1662, 3843), o da seção anterior da sessão; o PILAR (opção 6)
     // lê certo. A obra fica com o D gravado.
     avisos.push(
-      `.PIL: seção circular D ${fmt(d)} cm. No PILAREDI (seção de coluna lida do .PIL) o original usaria o diâmetro da seção anterior da sessão, não este (defeito D-19); a obra usa o D do arquivo, como o PILAR.`,
+      `.PIL: seção circular D ${fmt(d)} cm. No PILAREDI (seção de coluna lida do .PIL) o original usaria o diâmetro da seção que ficou da sessão anterior, não este, e esse valor não fica em arquivo nenhum; a obra usa o D do arquivo, como o PILAR (opção 6).`,
     );
     return {
       b: d,

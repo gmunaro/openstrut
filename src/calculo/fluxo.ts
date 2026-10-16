@@ -256,7 +256,7 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
       if (phi > PHI_MAX_ALTURA_UTIL) {
         const real = obra.materiais.cobrimentoPilar + resultado.estribo.phi / 10 + phi / 20;
         extras.push(
-          `Barras de φ ${phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d' real = c + φt + φ/2 = ${num(real, 2)} cm, maior que o adotado (${num(dLinha, 2)} cm); confira.`,
+          `Barras de φ ${numAte(phi, 1)} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d' real = c + φt + φ/2 = ${num(real, 2)} cm, maior que o adotado (${num(dLinha, 2)} cm); confira.`,
         );
       }
       const soSistrut = camposSoDoSistrut(pilar);

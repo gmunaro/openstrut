@@ -402,7 +402,7 @@ export function pilarNb178(
   const estribo = escolheEstribo(phi, b, h);
   memoria.push(
     {
-      descricao: `Barras: ${n} φ ${phi} mm; ${faces.nfx} por face ⟂ x e ${faces.nfy} por face ⟂ y (cantos incluídos)`,
+      descricao: `Barras: ${n} φ ${numAte(phi, 1)} mm; ${faces.nfx} por face ⟂ x e ${faces.nfy} por face ⟂ y (cantos incluídos)`,
       formula: obliqua
         ? "φ ≥ 10 mm, n par ≥ 4, n ≤ 20; (Mxd/MRx)^1,2 + (Myd/MRy)^1,2 ≤ 1 com as barras nas posições reais"
         : "φ ≥ 10 mm, n par ≥ 4, n ≤ 20; MR ≥ Md com as barras nas posições reais",
@@ -411,7 +411,7 @@ export function pilarNb178(
       ref: REF_DIM,
     },
     {
-      descricao: `Estribo φ ${estribo.phi} mm`,
+      descricao: `Estribo φ ${numAte(estribo.phi, 1)} mm`,
       formula: "φt ≥ max(φ/4; 5 mm); s ≤ min(30 cm; menor lado; 12φ)",
       valor: estribo.espacamento,
       unidade: "cm",

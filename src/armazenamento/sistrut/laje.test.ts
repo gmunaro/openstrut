@@ -296,7 +296,9 @@ describe("importarLaj: o que o .LAJ tem e a obra representa", () => {
     expect(laje("L4").anguloArmadura).toBeUndefined();
     expect(p.painel.lajes[3]).toMatchObject({ angulo: -1, mu: 0 });
     expect(p.esforcos.momentos.L4).toBeUndefined();
-    expect(p.esforcos.avisos.join()).toContain("Division by zero: 1/√μ com μ = 0");
+    expect(p.esforcos.avisos.join()).toContain(
+      "divisão por zero em 1/√μ: a laje está sem a relação μ (μ = 0)",
+    );
   });
 
   it("comum não calculada com μ 0,8 por <R>: fatores de direção a −1° e M+ secundário = 0,8·M+ (momentos.ts:63)", () => {

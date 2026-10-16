@@ -805,14 +805,14 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
   const estribo = estriboPilar(barras.phi, bMin, mat.aco);
   memoria.push(
     {
-      descricao: `Barras: ${n} φ ${barras.phi} mm`,
+      descricao: `Barras: ${n} φ ${numAte(barras.phi, 1)} mm`,
       formula: "10 mm ≤ φ ≤ b/8, n par ≥ 4",
       valor: barras.area,
       unidade: "cm²",
       ref: REF_PHI,
     },
     {
-      descricao: `Estribo φ ${estribo.phi} mm`,
+      descricao: `Estribo φ ${numAte(estribo.phi, 1)} mm`,
       formula: `φt ≥ max(5 mm; φ/4); s ≤ min(20 cm; b; ${mat.aco === "CA-25" ? 24 : 12}φ)`,
       valor: estribo.espacamento,
       unidade: "cm",

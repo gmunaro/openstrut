@@ -37,7 +37,7 @@
 //   (o original não calcula volume, fôrma nem aço de laje e de pilar).
 // Os itens E, F e G antigos (negativa contada duas vezes, volume e fôrma da "tela" e
 // do "relatório") reproduziam a V1 antiga, não o SISTRUT, e saíram.
-import { num } from "./texto";
+import { num, numAte } from "./texto";
 import { geometriaPilar } from "./secaoPilar";
 import type {
   Bordo,
@@ -438,7 +438,7 @@ export function quantPilar(
   if (!(e.phi > 0 && e.espacamento > 0))
     avisos.push(`${nome}: sem estribo adotado; aço subestimado.`);
   memoria.push({
-    descricao: `${nome}: aço estimado (${n} φ${phi} × ${f(lBarra)} m com emenda 40φ, ${nEstribos} estribos de ${f(perimetro, 1)} cm)`,
+    descricao: `${nome}: aço estimado (${n} φ${numAte(phi, 1)} × ${f(lBarra)} m com emenda 40φ, ${nEstribos} estribos de ${f(perimetro, 1)} cm)`,
     formula: `${f(longitudinal)} + ${f(estribos)}`,
     valor: longitudinal + estribos,
     unidade: "kg",

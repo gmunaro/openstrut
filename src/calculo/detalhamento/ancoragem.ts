@@ -8,7 +8,7 @@
 //   DcComprEstribo#): τbu = 0,42 fcd^(2/3), fator 1,5 nas barras superiores
 //   de peças com h ≥ 30 cm, ganchos de 10 φ. Barra lisa (CA-25):
 //   τbu = 0,28 fcd^(1/2) (Fiorin, 1998, item 5.1, que cita a NBR 6118:1978).
-import { num } from "../texto";
+import { num, numAte } from "../texto";
 import type { Aco } from "../../dominio/obra";
 import { fctm, GAMA_C } from "../normas/nbr6118-2023/materiais";
 import type { Etapa, MateriaisCalc } from "../tipos";
@@ -102,14 +102,14 @@ export function ancoragemBasica6118(
     lb,
     memoria: [
       {
-        descricao: `Resistência de aderência, φ ${phi} mm, ${ad === "boa" ? "boa" : "má"} aderência`,
+        descricao: `Resistência de aderência, φ ${numAte(phi, 1)} mm, ${ad === "boa" ? "boa" : "má"} aderência`,
         formula: `fbd = η1 η2 η3 fctd = ${eta1} · ${eta2} · ${num(eta3, 2)} · ${num(fctd, 3)}`,
         valor: fbd,
         unidade: "MPa",
         ref: ref("9.3.2.1", "Eq. 1"),
       },
       {
-        descricao: `Comprimento de ancoragem básico, φ ${phi} mm`,
+        descricao: `Comprimento de ancoragem básico, φ ${numAte(phi, 1)} mm`,
         formula: "lb = φ/4 · fyd/fbd ≥ 25 φ",
         valor: lb,
         unidade: "cm",
@@ -140,7 +140,7 @@ export function ancoragemNecessaria6118(
     lbMin,
     memoria: [
       {
-        descricao: `Ancoragem necessária, φ ${anc.phi} mm${gancho ? " com gancho" : ""}`,
+        descricao: `Ancoragem necessária, φ ${numAte(anc.phi, 1)} mm${gancho ? " com gancho" : ""}`,
         formula: `lb,nec = α lb As,calc/As,ef = ${alfa} · ${num(anc.lb, 1)} · ${num(razao, 3)} ≥ lb,mín = máx(0,3 lb; 10 φ; 10 cm) = ${num(lbMin, 1)}`,
         valor: lbNec,
         unidade: "cm",
@@ -176,7 +176,7 @@ export function ancoragemBasicaNb178(
     lb,
     memoria: [
       {
-        descricao: `Tensão última de aderência, φ ${phi} mm, ${ad === "boa" ? "boa" : "má (× 2/3)"} aderência`,
+        descricao: `Tensão última de aderência, φ ${numAte(phi, 1)} mm, ${ad === "boa" ? "boa" : "má (× 2/3)"} aderência`,
         formula: ad === "boa" ? formula : `${formula} · 2/3`,
         valor: fbd,
         unidade: "MPa",
@@ -185,7 +185,7 @@ export function ancoragemBasicaNb178(
           : `NB-1/78 (${V1} DcAncoragem#) [VERIFICAR item da NB-1/78]`,
       },
       {
-        descricao: `Comprimento de ancoragem básico, φ ${phi} mm`,
+        descricao: `Comprimento de ancoragem básico, φ ${numAte(phi, 1)} mm`,
         formula: "lb = φ/4 · fyd/τbu",
         valor: lb,
         unidade: "cm",
@@ -207,7 +207,7 @@ export function ancoragemNecessariaNb178(anc: AncoragemBasica): AncoragemNecessa
     lbMin: 0,
     memoria: [
       {
-        descricao: `Ancoragem necessária, φ ${anc.phi} mm (sem reduções, como a V1)`,
+        descricao: `Ancoragem necessária, φ ${numAte(anc.phi, 1)} mm (sem reduções)`,
         formula: "lb,nec = lb",
         valor: anc.lb,
         unidade: "cm",
