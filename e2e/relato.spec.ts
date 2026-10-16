@@ -239,3 +239,78 @@ test.describe("relato: atalho, impressão e arquivo", () => {
     await download.saveAs(path.join(PASTA, "relato-exemplo.zip"));
   });
 });
+
+/**
+ * Controles visíveis do diálogo aberto que o botão de relatar cobre (recortados pela
+ * área visível do diálogo, que rola). Lista vazia = o botão não cobre nada.
+ */
+function controlesCobertos(seletor: string) {
+  const botao = document.querySelector('[aria-label="Relatar problema"]')?.getBoundingClientRect();
+  const dialogos = [...document.querySelectorAll('[role="dialog"][data-state="open"]')];
+  const dialogo = dialogos.at(-1);
+  if (!botao || !dialogo) throw new Error("sem botão ou sem diálogo");
+  const area = dialogo.getBoundingClientRect();
+  const cobre = (r: DOMRect) => {
+    const left = Math.max(r.left, area.left);
+    const right = Math.min(r.right, area.right);
+    const top = Math.max(r.top, area.top);
+    const bottom = Math.min(r.bottom, area.bottom);
+    if (right <= left || bottom <= top) return false; // fora da parte visível
+    return left < botao.right && right > botao.left && top < botao.bottom && bottom > botao.top;
+  };
+  return [...dialogo.querySelectorAll(seletor)]
+    .filter((el) => el.getClientRects().length > 0 && cobre(el.getBoundingClientRect()))
+    .map((el) => `${el.tagName} ${el.textContent?.trim().slice(0, 30) ?? ""}`);
+}
+
+test.describe("relato no celular com o editor de viga aberto", () => {
+  test.use({ viewport: { width: 360, height: 800 }, deviceScaleFactor: 3 });
+
+  test("o botão não cobre controle do diálogo, no topo e no fim da rolagem", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.addInitScript(() => {
+      const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
+      delete w.showOpenFilePicker;
+      delete w.showSaveFilePicker;
+    });
+    await page.goto("/");
+    const [escolha] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.getByRole("button", { name: /Abrir arquivo \.openstrut\.json/ }).click(),
+    ]);
+    await escolha.setFiles(
+      path.resolve(process.cwd(), "e2e/fixtures/laje-r3-original.openstrut.json"),
+    );
+    await expect(page.getByRole("heading", { name: "Laje R3 original" })).toBeVisible();
+
+    // seleciona a V4 pelas setas na planta e abre o editor da viga
+    const painel = page.getByRole("complementary", { name: "Propriedades" });
+    await page.getByRole("application", { name: "Planta do pavimento" }).focus();
+    const nome = painel.getByRole("textbox", { name: "Nome" });
+    for (let i = 0; i < 30; i++) {
+      await page.keyboard.press("ArrowRight");
+      if ((await nome.count()) > 0 && (await nome.inputValue()) === "V4") break;
+    }
+    await expect(nome).toHaveValue("V4");
+    await painel.getByRole("button", { name: "Dados do SISTRUT da viga…" }).click();
+    const dialogo = page.getByRole("dialog", { name: "Viga V4: entrada do VIGA e do DESENHO" });
+    await expect(dialogo).toBeVisible();
+
+    const SELETOR =
+      'button, a[href], input, select, textarea, [role="tab"], [role="checkbox"], [role="switch"], [role="combobox"]';
+    await expect.poll(() => page.evaluate(controlesCobertos, SELETOR)).toEqual([]);
+    await page.screenshot({ path: path.join(PASTA, "celular-06-viga-topo.png") });
+
+    // rola o diálogo até o fim, onde ficam Aplicar e Cancelar
+    await dialogo.evaluate((el) => {
+      const rolaveis = [el, ...el.querySelectorAll("*")].filter(
+        (e) =>
+          e.scrollHeight > e.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(e).overflowY),
+      );
+      for (const e of rolaveis) e.scrollTop = e.scrollHeight;
+    });
+    await expect.poll(() => page.evaluate(controlesCobertos, SELETOR)).toEqual([]);
+    await expect(page.getByRole("button", { name: "Relatar problema" })).toBeInViewport();
+    await page.screenshot({ path: path.join(PASTA, "celular-07-viga-fim.png") });
+  });
+});

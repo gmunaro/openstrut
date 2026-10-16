@@ -8,18 +8,21 @@ instalarColetorErros();
 
 export const Route = createRootRoute({ component: Raiz });
 
-/** Moldura do app: conteúdo da rota, o rodapé com o aviso de conferência e o botão de
- *  relatar problema, por cima de todas as telas. */
+/** Moldura do app (conteúdo da rota e o rodapé com o aviso de conferência) e, fora dela,
+ *  o botão de relatar problema, por cima de todas as telas. O botão fica fora da moldura
+ *  para não mexer nos seletores `#root > div:first-child` e `> footer` do index.css. */
 function Raiz() {
   return (
-    <div className="flex h-screen flex-col print:block print:h-auto">
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto print:overflow-visible">
-        <Outlet />
+    <>
+      <div className="flex h-screen flex-col print:block print:h-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto print:overflow-visible">
+          <Outlet />
+        </div>
+        <footer className="text-aviso border-t px-4 py-1 text-center text-xs print:hidden">
+          {AVISO_CONFERENCIA}
+        </footer>
       </div>
-      <footer className="text-aviso border-t px-4 py-1 text-center text-xs print:hidden">
-        {AVISO_CONFERENCIA}
-      </footer>
       <BotaoRelatar />
-    </div>
+    </>
   );
 }
