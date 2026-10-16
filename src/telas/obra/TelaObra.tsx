@@ -222,8 +222,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
       className={
         compacto
           ? paisagem
-            ? "h-12! shrink-0 print:hidden"
-            : "h-12! w-full shrink-0 border-b px-1 print:hidden"
+            ? "h-auto! shrink-0 p-0 print:hidden [&>button]:min-h-11"
+            : "h-auto! w-full shrink-0 border-b px-1 py-0.5 print:hidden [&>button]:min-h-11"
           : "mx-4 mt-2 print:hidden"
       }
     >
@@ -515,7 +515,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
           {...(calculo.tipo === "ok" ? { pilares: calculo.resultado.pilares } : {})}
         />
       </TabsContent>
-      <TabsContent value="resultados" className="compacto:px-3 overflow-auto px-4 py-3">
+      <TabsContent value="resultados" className="compacto:px-3 overflow-auto px-4 pt-3 pb-20">
         {/* largura máxima de leitura: em tela larga as colunas não se espalham */}
         <div className="mx-auto max-w-[110rem]">
           <DetalhamentoContexto value={detalhamento}>
@@ -525,7 +525,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
       </TabsContent>
       <TabsContent
         value="relatorio"
-        className="compacto:px-3 overflow-auto px-4 py-3 print:overflow-visible print:p-0"
+        className="compacto:px-3 overflow-auto px-4 pt-3 pb-20 print:overflow-visible print:p-0"
       >
         <DetalhamentoContexto value={detalhamento}>
           <Relatorio obra={obra} calculo={calculo} />

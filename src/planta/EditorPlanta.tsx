@@ -678,7 +678,7 @@ function Editor({
                   <X className="size-5" />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+4rem)]">
                 {painel}
               </div>
             </aside>
@@ -688,7 +688,8 @@ function Editor({
 
       <div
         className={cn(
-          "flex items-center gap-x-4 border-t border-slate-800 px-2 py-0.5 font-mono text-xs text-slate-400",
+          // pr-16: o canto de baixo à direita fica livre para o botão flutuante do app
+          "flex items-center gap-x-4 border-t border-slate-800 py-0.5 pr-16 pl-2 font-mono text-xs text-slate-400",
           compacto && "flex-wrap gap-x-2 leading-tight",
         )}
       >
@@ -803,7 +804,8 @@ function Legenda({ compacta }: { compacta: boolean }) {
     <div
       className={cn(
         "pointer-events-none absolute right-2 bottom-2 rounded border border-slate-700 bg-slate-950/85 px-2 py-1 text-xs text-slate-300",
-        compacta && "left-2 flex flex-wrap justify-end gap-x-3 text-[11px]",
+        // celular: no alto do desenho, longe do canto de baixo (botão flutuante do app)
+        compacta && "top-2 bottom-auto left-2 flex flex-wrap justify-end gap-x-3 text-[11px]",
       )}
     >
       {itens.map((s) => (
