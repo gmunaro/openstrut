@@ -53,6 +53,7 @@ describe("coletarMarcasMotor", () => {
     ]);
     const textos = marcas.map((m) => m.texto).join("\n");
     expect(textos).toContain("lado 2");
+    expect(textos).toContain("relação 1,50");
     expect(textos).toContain('"Continuo com o processamento desta Viga S/N"');
     expect(textos).toContain("tabela de apoios e tramos já impressa");
     expect(textos).toContain("caso 1/2: não converge");

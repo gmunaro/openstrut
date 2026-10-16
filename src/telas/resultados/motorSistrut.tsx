@@ -3,6 +3,7 @@
 // sem resultado e avisos da verificação de seção. Só a NB-1/78 tem `sistrut`.
 import type { ResultadoObra } from "../../calculo/fluxo";
 import type { Aviso } from "../calculo";
+import { formatarNumero } from "../formato";
 import { ListaAvisos } from "./avisos";
 
 const TEXTO_ERRO: Record<string, string> = {
@@ -26,7 +27,7 @@ export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
         elemento: parada.laje,
         texto:
           `otimização dos negativos parada no lado ${parada.lado + 1} (relação ` +
-          `${parada.relacaoNova}, código ${parada.codigo} repetido); os esforços ficam os de ` +
+          `${formatarNumero(parada.relacaoNova, 2)}, código ${parada.codigo} repetido); os esforços ficam os de ` +
           "antes da otimização.",
       });
     for (const v of ps.vigas) {
