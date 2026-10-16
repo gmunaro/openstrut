@@ -336,9 +336,13 @@ test("pavimentos: criar, renomear, recusar nome repetido, repetir e apagar", asy
   // a lista vai do topo à base: o último é o pavimento original, com a planta desenhada
   await pavimentos.last().click();
   await page.getByRole("button", { name: "Apagar pavimento", exact: true }).click();
+  // a confirmação é um diálogo da página (não o confirm nativo) e diz o que vai junto
+  const confirmacao = page.getByRole("dialog", { name: /^Apagar o pavimento/ });
+  await expect(confirmacao).toContainText("lajes");
+  anotar("pavimentos-confirmacao", [await confirmacao.innerText(), ...dialogos]);
+  await confirmacao.getByRole("button", { name: "Apagar pavimento", exact: true }).click();
   await expect(pavimentos).toHaveCount(2);
-  anotar("pavimentos-confirmacao", dialogos);
-  expect(dialogos.join("\n")).toMatch(/lajes/);
+  expect(dialogos).toEqual([]);
   expect(erros).toEqual([]);
 });
 

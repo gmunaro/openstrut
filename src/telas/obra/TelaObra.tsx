@@ -36,7 +36,7 @@ import { useSessao } from "../sessao";
 import { BarraPavimentos } from "./BarraPavimentos";
 import { DialogoMateriais } from "./DialogoMateriais";
 import { DialogoUnidades } from "./DialogoUnidades";
-import { useConfirmacao } from "./useConfirmacao";
+import { useConfirmacao } from "../useConfirmacao";
 
 export function TelaObra() {
   const obra = useObra((e) => e.obra);

@@ -1,7 +1,7 @@
 // Barra de pavimentos na tela da obra: criar, renomear, pé-direito, repetições,
 // mover, copiar planta e apagar (nunca o último), sempre pela interface.
 import { screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { obraNova } from "../../dominio/criar";
 import { useObra } from "../../estado/obra";
 import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
@@ -115,13 +115,17 @@ describe("barra de pavimentos", () => {
     await user.click(within(nav).getByRole("button", { name: "Novo pavimento" }));
     expect(apagar()).toHaveProperty("disabled", false);
 
-    const confirmar = vi.spyOn(window, "confirm").mockReturnValue(false);
+    // Cancelar no diálogo mantém o pavimento e devolve o foco à lixeira
     await user.click(apagar());
-    expect(confirmar).toHaveBeenCalledOnce();
+    let dialogo = await screen.findByRole("dialog", { name: 'Apagar o pavimento "Pavimento 2"?' });
+    await user.click(within(dialogo).getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(nomes()).toEqual(["Pavimento 2", "Pavimento 1"]);
+    expect(document.activeElement).toBe(apagar());
 
-    confirmar.mockReturnValue(true);
     await user.click(apagar());
+    dialogo = await screen.findByRole("dialog", { name: 'Apagar o pavimento "Pavimento 2"?' });
+    await user.click(within(dialogo).getByRole("button", { name: "Apagar pavimento" }));
     expect(nomes()).toEqual(["Pavimento 1"]);
     expect(ativo()?.nome).toBe("Pavimento 1");
     expect(apagar()).toHaveProperty("disabled", true);
@@ -142,5 +146,12 @@ describe("barra de pavimentos", () => {
     expect(novo?.vigas.length).toBe(original?.vigas.length);
     // ids novos: editar a cópia não mexe no original
     expect(novo?.lajes[0]?.id).not.toBe(original?.lajes[0]?.id);
+
+    // com planta, copiar de novo pergunta antes de substituir
+    await user.click(screen.getByRole("combobox", { name: "Copiar planta de outro pavimento" }));
+    await user.click(await screen.findByRole("option", { name: "Pavimento 1" }));
+    const dialogo = await screen.findByRole("dialog", { name: /^Substituir a planta de/ });
+    await user.click(within(dialogo).getByRole("button", { name: "Cancelar" }));
+    expect(obra().pavimentos[0]?.lajes[0]?.id).toBe(novo?.lajes[0]?.id);
   });
 });

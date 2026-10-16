@@ -38,6 +38,7 @@ import {
 } from "./instalar";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "./marca";
 import { importarObraSistrut } from "./InicioSistrut";
+import { useConfirmacao } from "./useConfirmacao";
 
 const NORMAS: { id: NormaId; rotulo: string }[] = [
   { id: "nb1-78", rotulo: "NB-1/78 (NBR 6118:1978)" },
@@ -77,6 +78,7 @@ export function Inicio() {
     origem: "V1" | "SISTRUT";
   } | null>(null);
   const [errosImportacao, setErrosImportacao] = useState<string[]>([]);
+  const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao();
 
   const recarregar = () =>
     listarRascunhos()
@@ -147,12 +149,14 @@ export function Inicio() {
   };
 
   const apagar = async (r: ResumoRascunho) => {
-    if (
-      !window.confirm(
-        `Apagar o rascunho "${r.nome}" do navegador? O arquivo em disco, se houver, não é afetado.`,
-      )
-    )
-      return;
+    const ok = await confirmar({
+      titulo: `Apagar o rascunho "${r.nome}"?`,
+      descricao:
+        "O rascunho sai do navegador e não dá para desfazer. O arquivo em disco, se houver, não é afetado.",
+      acao: "Apagar rascunho",
+      destrutiva: true,
+    });
+    if (!ok) return;
     await apagarRascunho(r.id);
     await recarregar();
   };
@@ -344,6 +348,7 @@ export function Inicio() {
       <Instalar />
 
       <p className="text-muted-foreground border-t pt-3 text-xs">{AVISO_RECONSTRUCAO}</p>
+      {dialogoConfirmacao}
     </main>
   );
 }

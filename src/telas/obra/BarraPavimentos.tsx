@@ -24,6 +24,7 @@ import {
   problemaRepeticoes,
   renomearPavimento,
 } from "../pavimentos";
+import { useConfirmacao } from "../useConfirmacao";
 import { CampoTexto } from "./campos";
 import { CampoPavimentoNumero } from "./BarraPavimentosNumero";
 
@@ -32,6 +33,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
   const selecionarPavimento = useObra((e) => e.selecionarPavimento);
   const indice = obra.pavimentos.findIndex((p) => p.id === ativoId);
   const ativo = obra.pavimentos[indice];
+  const { confirmar, dialogo } = useConfirmacao();
 
   const novo = () => {
     // a criação precisa do id do pavimento novo para selecioná-lo depois
@@ -40,25 +42,36 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
     selecionarPavimento(r.pavimento.id);
   };
 
-  const apagar = () => {
+  const apagar = async () => {
     if (!ativo) return;
     const conteudo = ativo.lajes.length + ativo.vigas.length + ativo.pilares.length;
-    const msg = `Apagar o pavimento "${ativo.nome}"${conteudo > 0 ? ` e a planta dele (${ativo.lajes.length} lajes, ${ativo.vigas.length} vigas, ${ativo.pilares.length} pilares)` : ""}? Dá para desfazer.`;
-    if (window.confirm(msg)) editar((o) => apagarPavimento(o, ativo.id));
+    const planta =
+      conteudo > 0
+        ? ` A planta dele vai junto (${ativo.lajes.length} lajes, ${ativo.vigas.length} vigas, ${ativo.pilares.length} pilares).`
+        : "";
+    const ok = await confirmar({
+      titulo: `Apagar o pavimento "${ativo.nome}"?`,
+      descricao: `${planta} Dá para desfazer (Ctrl+Z).`.trim(),
+      acao: "Apagar pavimento",
+      destrutiva: true,
+    });
+    if (ok) editar((o) => apagarPavimento(o, ativo.id));
   };
 
-  const copiarDe = (origemId: string) => {
+  const copiarDe = async (origemId: string) => {
     if (!ativo) return;
     const origem = obra.pavimentos.find((p) => p.id === origemId);
     if (!origem) return;
     const vazio = ativo.lajes.length + ativo.vigas.length + ativo.pilares.length === 0;
-    if (
+    const ok =
       vazio ||
-      window.confirm(
-        `Substituir a planta de "${ativo.nome}" pela de "${origem.nome}"? Dá para desfazer.`,
-      )
-    )
-      editar((o) => copiarPlanta(o, origemId, ativo.id));
+      (await confirmar({
+        titulo: `Substituir a planta de "${ativo.nome}"?`,
+        descricao: `A planta atual dá lugar à de "${origem.nome}". Dá para desfazer (Ctrl+Z).`,
+        acao: "Substituir planta",
+        destrutiva: true,
+      }));
+    if (ok) editar((o) => copiarPlanta(o, origemId, ativo.id));
   };
 
   return (
@@ -144,7 +157,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
             <ArrowDown />
           </Button>
           {obra.pavimentos.length > 1 && (
-            <Select value="" onValueChange={copiarDe}>
+            <Select value="" onValueChange={(id) => void copiarDe(id)}>
               <SelectTrigger
                 size="sm"
                 className="h-7 text-xs"
@@ -170,13 +183,14 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
             title="Apagar pavimento"
             aria-label="Apagar pavimento"
             disabled={obra.pavimentos.length <= 1}
-            onClick={apagar}
+            onClick={() => void apagar()}
             className="hover:text-destructive"
           >
             <Trash2 />
           </Button>
         </div>
       )}
+      {dialogo}
     </div>
   );
 }

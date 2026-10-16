@@ -184,8 +184,9 @@ describe("tela inicial", () => {
     await user.click(within(aviso).getByRole("button", { name: "Sair sem salvar" }));
     const lista = await screen.findByRole("list");
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     await user.click(within(lista).getByRole("button", { name: "Apagar rascunho Para apagar" }));
+    const dialogo = await screen.findByRole("dialog", { name: 'Apagar o rascunho "Para apagar"?' });
+    await user.click(within(dialogo).getByRole("button", { name: "Apagar rascunho" }));
     expect(await screen.findByText("Nenhum rascunho.")).toBeTruthy();
     expect(await listarRascunhos()).toEqual([]);
   });
