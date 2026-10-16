@@ -174,8 +174,8 @@ describe("ligação viga-pilar no fluxo pela 6118: pavimento-tipo repetido 3 vez
 
 describe("laje ao lado de balanço curto pela 6118: refeita com o bordo apoiado", () => {
   // L1 4 × 4 com o superior engastado no balanço L2 (0,2 m) = tipo 2A, λ = 1:
-  // μx 2,91 (Bares A-8). O X do balanço (p·0,2²/2) é bem menor que o de L1 e a
-  // compatibilização o impõe; com o bordo apoiado L1 é tipo 1: μx = 4,23.
+  // μx 2,91 (tabelasBares). O X do balanço (p·0,2²/2) é bem menor que o de L1 e a
+  // compatibilização o impõe; com o bordo apoiado L1 é tipo 1: μx = 4,24.
   // p = 0,10·25 + 1 + 1,5 = 5 kN/m²; m = μ·p·lx²/100.
   function obraBalanco(norma: Obra["norma"]): Obra {
     const obra = obraNova("BAL", norma);
@@ -192,10 +192,10 @@ describe("laje ao lado de balanço curto pela 6118: refeita com o bordo apoiado"
   }
   const base = (5 * 16) / 100;
 
-  it("mx sobe de 2,91 para 4,23 (Bares A-8) só na 6118", () => {
+  it("mx sobe de 2,91 para 4,24 só na 6118", () => {
     const r = calcularObra(obraBalanco("nbr6118-2023"), nbr6118);
     const l1 = r.pavimentos[0]!.lajes.find((l) => l.laje.nome === "L1")!;
-    expect(l1.esforcos.mx).toBeCloseTo(4.23 * base, 9);
+    expect(l1.esforcos.mx).toBeCloseTo(4.24 * base, 9);
     expect(l1.esforcos.negativos.superior).toBeCloseTo((5 * 0.2 ** 2) / 2, 9);
     // sem o recálculo (a mesma 6118 sem a flag) fica o tipo 2A
     const sem = calcularObra(obraBalanco("nbr6118-2023"), {

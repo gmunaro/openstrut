@@ -1,7 +1,7 @@
 // Lajes maciças pela NBR 6118:2023. Exemplos E02 e E03 de docs/norma/exemplos.md
 // (Bastos, Lajes de Concreto, ex. 3.17, pp. 45-59) e casos com conta à mão a
-// partir dos coeficientes impressos nas tabelas de Bares (valores literais aqui,
-// não lidos de tabelasBares.ts).
+// partir dos coeficientes de tabelasBares.ts, gerados por scripts/bares (valores
+// literais aqui, não lidos do arquivo).
 // E01 (ex. 3.16.2, laje com borda livre) não vira teste: usa as tabelas A-22 e
 // A-24 de outra coleção (P/coef.), não transcritas, e o esquema de vinculação
 // é figura não verificada; o motor não calcula laje com um bordo livre.
@@ -74,11 +74,11 @@ const ECS_C25 = 0.8625 * 5600 * 5;
 const eiBruta = (h: number) => (ECS_C25 * 1000 * (h / 100) ** 3) / 12;
 
 describe("tabelas de Bares: interpolação e classificação", () => {
-  it("interpola linearmente em λ; λ > 2 usa a linha '> 2,00' (tipo 3, A-9)", () => {
+  it("interpola linearmente em λ; λ > 2 usa a linha '> 2,00' (tipo 3)", () => {
     const mx3 = BARES["3"].mx;
-    // μx(1,00) = 2,69; μx(1,05) = 2,94 → λ = 1,03: 2,69 + 0,6 · 0,25 = 2,84
-    expect(coeficienteBares(mx3, 1.03)).toBeCloseTo(2.84, 9);
-    expect(coeficienteBares(mx3, 2)).toBeCloseTo(5.7, 9);
+    // μx(1,00) = 2,69; μx(1,05) = 2,95 → λ = 1,03: 2,69 + 0,6 · 0,26 = 2,846
+    expect(coeficienteBares(mx3, 1.03)).toBeCloseTo(2.846, 9);
+    expect(coeficienteBares(mx3, 2)).toBeCloseTo(5.71, 9);
     expect(coeficienteBares(mx3, 2.5)).toBeCloseTo(7.03, 9);
   });
 
@@ -109,10 +109,13 @@ describe("E02: laje L2, tipo 3 (Bastos, Lajes, ex. 3.17, pp. 45-57)", () => {
   const r = lajeEsforcos6118(e, mat());
 
   it("momentos da Tabela 18 (p. 52): Mx 5,84; M'x 14,75; My 5,32; M'y 14,25 kN·m/m", () => {
-    perto(r.mx, 5.84, 0.01);
-    perto(r.negativos.direito, 14.75, 0.01);
-    perto(r.my, 5.32, 0.01);
-    perto(r.negativos.inferior, 14.25, 0.01);
+    // Bastos multiplica p lx²/100 = 1,985 pelos coeficientes impressos de Bares
+    // (μx 2,94; μ'x 7,43; μy 2,68; μ'y 7,18). A tabela gerada pela teoria de placas
+    // dá 2,95; 7,40; 2,70; 7,15: diferença ≤ 0,03 em μ, ≤ 0,06 kN·m/m aqui.
+    perto(r.mx, 5.84, 0.07);
+    perto(r.negativos.direito, 14.75, 0.07);
+    perto(r.my, 5.32, 0.07);
+    perto(r.negativos.inferior, 14.25, 0.07);
     expect(r.negativos.esquerdo).toBe(0);
     expect(r.negativos.superior).toBe(0);
   });
@@ -136,8 +139,8 @@ describe("E02: laje L2, tipo 3 (Bastos, Lajes, ex. 3.17, pp. 45-57)", () => {
     const real = lajeEsforcos6118(laje(5.86, 6.06, 12, 4.28, 1.5, v), mat());
     const t = (6.06 / 5.86 - 1) / 0.05;
     const base = (5.78 * 5.86 ** 2) / 100;
-    perto(real.mx, (2.69 + t * (2.94 - 2.69)) * base, 1e-9);
-    perto(real.negativos.inferior, (6.99 + t * (7.18 - 6.99)) * base, 1e-9);
+    perto(real.mx, (2.69 + t * (2.95 - 2.69)) * base, 1e-9);
+    perto(real.negativos.inferior, (6.94 + t * (7.15 - 6.94)) * base, 1e-9);
   });
 
   it("Mr = 1,5 · 0,2565 · 14 400 / 6 = 923 kN·cm (p. 56)", () => {
@@ -234,30 +237,30 @@ describe("E03: laje L1 em balanço (Bastos, Lajes, ex. 3.17, pp. 45-59)", () => 
   });
 });
 
-describe("casos com conta à mão (coeficientes impressos nas tabelas)", () => {
-  it("tipo 1, λ = 1 (4 × 4, h 10, p = 6): m = 4,23 p l²/100; V = 2,5 p l/10; flecha α = 4,76", () => {
+describe("casos com conta à mão (coeficientes de tabelasBares)", () => {
+  it("tipo 1, λ = 1 (4 × 4, h 10, p = 6): m = 4,24 p l²/100; V = 2,5 p l/10; flecha α = 4,77", () => {
     const r = lajeEsforcos6118(laje(4, 4, 10, 4, 2, vinc()), mat());
-    perto(r.mx, (4.23 * 6 * 16) / 100, 1e-9);
-    perto(r.my, (4.23 * 6 * 16) / 100, 1e-9);
+    perto(r.mx, (4.24 * 6 * 16) / 100, 1e-9);
+    perto(r.my, (4.24 * 6 * 16) / 100, 1e-9);
     for (const b of ["esquerdo", "inferior", "direito", "superior"] as const) {
       perto(r.reacoes[b], (2.5 * 6 * 4) / 10, 1e-9);
       expect(r.negativos[b]).toBe(0);
     }
     // Ma = 4,06 < Mr = 1,5 · 2,565 · 10²/6 = 6,41 kN·m/m: estádio I
-    const ai = flechaImediata(4.76, 4 + 0.3 * 2, 4, eiBruta(10));
-    perto(ai, ((4.76 / 1200) * 4.6 * 256 * 100) / eiBruta(10), 1e-12);
+    const ai = flechaImediata(4.77, 4 + 0.3 * 2, 4, eiBruta(10));
+    perto(ai, ((4.77 / 1200) * 4.6 * 256 * 100) / eiBruta(10), 1e-12);
     perto(r.flecha, ai * 2.32, 1e-9);
     perto(r.flechaLimite, 1.6, 1e-9);
   });
 
   it("tipo 2B transposto (5 × 4, superior engastado, λ = 1,25): μx da tabela vai para my", () => {
-    // A-8 2B, λ = 1,25: μx 4,55; μ'x 10,06; μy 2,51. A-5: νx 3,06; ν'x 4,48; νy 1,83.
+    // 2B, λ = 1,25: μx 4,56; μ'x 10,07; μy 2,51; νx 3,06; ν'x 4,48; νy 1,83.
     const r = lajeEsforcos6118(laje(5, 4, 10, 4, 2, vinc(["superior"])), mat());
     const m = (6 * 16) / 100;
     const v = (6 * 4) / 10;
-    perto(r.my, 4.55 * m, 1e-9);
+    perto(r.my, 4.56 * m, 1e-9);
     perto(r.mx, 2.51 * m, 1e-9);
-    perto(r.negativos.superior, 10.06 * m, 1e-9);
+    perto(r.negativos.superior, 10.07 * m, 1e-9);
     perto(r.reacoes.superior, 4.48 * v, 1e-9);
     perto(r.reacoes.inferior, 3.06 * v, 1e-9);
     perto(r.reacoes.esquerdo, 1.83 * v, 1e-9);
@@ -269,12 +272,12 @@ describe("casos com conta à mão (coeficientes impressos nas tabelas)", () => {
     // viga apoiada-engastada: M+ = 9 p l²/128 = 1,6875; X = p l²/8 = 3,0
     perto(r.mx, (9 * 6 * 4) / 128, 0.001);
     perto(r.negativos.esquerdo, (6 * 4) / 8, 1e-9);
-    // reações da linha "> 2,00" (A-5 2B): ν'x 6,25 = 5/8 p l; νx 4,38 (viga: 3/8 = 3,75,
+    // reações da linha "> 2,00" (2B): ν'x 6,25 = 5/8 p l; νx 4,38 (viga: 3/8 = 3,75,
     // mais metade do alívio); νy 1,83 nos bordos curtos
     perto(r.reacoes.esquerdo, (5 / 8) * 6 * 2, 1e-9);
     perto(r.reacoes.direito, (4.38 * 6 * 2) / 10, 1e-9);
     perto(r.reacoes.inferior, (1.83 * 6 * 2) / 10, 1e-9);
-    // flecha: α = 6,50 (A-1 2B, ∞) ≈ 1200/185 da viga apoiada-engastada
+    // flecha: α = 6,50 (2B, "> 2,00") ≈ 1200/185 da viga apoiada-engastada
     perto(r.flecha, flechaImediata(6.5, 4.6, 2, eiBruta(10)) * 2.32, 1e-9);
 
     // armadura (c = 2,5, d = 7): principal Md = 1,4 · 1,6875 → As 0,79 < ρmín 100h = 1,5;
@@ -312,7 +315,7 @@ describe("casos com conta à mão (coeficientes impressos nas tabelas)", () => {
   });
 
   it("avisos: h abaixo do mínimo; seção que não resiste a Ma; flecha acima de l/250", () => {
-    // 6 × 6, h 7: Ma = 4,23 · 9 · 36/100 = 13,7 kN·m/m; com d = 4 cm, μ > 0,5
+    // 6 × 6, h 7: Ma = 4,24 · 9 · 36/100 = 13,7 kN·m/m; com d = 4 cm, μ > 0,5
     const fina = lajeEsforcos6118(laje(6, 6, 7, 6, 3, vinc()), mat());
     expect(fina.avisos.some((a) => a.includes("abaixo do mínimo de 8 cm"))).toBe(true);
     expect(fina.avisos.some((a) => a.includes("flecha não calculada"))).toBe(true);
@@ -325,7 +328,8 @@ describe("casos com conta à mão (coeficientes impressos nas tabelas)", () => {
 });
 
 describe("reações: Σ V · comprimento contra p · lx · ly", () => {
-  // Rodapé de A-5 a A-7: "os alívios foram considerados pela metade". Nos tipos
+  // O bordo apoiado oposto a um engastado recebe de volta metade do alívio
+  // (scripts/bares/reacoes.ts). Nos tipos
   // simétricos (1, 4A, 4B, 6) a soma fecha com a carga (arredondamento das
   // tabelas); nos outros passa dela, até ~7 % (tipo 3 em λ = 1: 2 · (2,17 +
   // 3,17) = 10,68 contra 10).
@@ -360,25 +364,17 @@ describe("reações: Σ V · comprimento contra p · lx · ly", () => {
   }
 });
 
-describe("células suspeitas das tabelas de Bares (CELULAS_SUSPEITAS)", () => {
-  it("celulasSuspeitasUsadas: só as células com peso não nulo na interpolação", () => {
-    // 2A μx: 1,70 → 7,49 (normal); 1,75 → 7,53, 1,80 → 7,56, 1,85 → 8,10 (suspeitas)
-    expect(celulasSuspeitasUsadas("2A", "mx", 1.7)).toEqual([]);
-    expect(celulasSuspeitasUsadas("2A", "mx", 1.72).map((s) => s.valor)).toEqual([7.53]);
-    expect(celulasSuspeitasUsadas("2A", "mx", 1.8).map((s) => s.valor)).toEqual([7.56]);
-    expect(celulasSuspeitasUsadas("2A", "mx", 1.82).map((s) => s.valor)).toEqual([7.56, 8.1]);
-    expect(celulasSuspeitasUsadas("2A", "my", 1.8)).toEqual([]);
-    expect(celulasSuspeitasUsadas("2A", "mx", 2.5)).toEqual([]);
-    expect(celulasSuspeitasUsadas("5A", "mxNeg", 1.27).map((s) => s.valor)).toEqual([8.81]);
+describe("células suspeitas (CELULAS_SUSPEITAS)", () => {
+  // A tabela impressa tinha células fora da tendência (ex.: 2A μx 7,53; 7,56; 8,10
+  // em λ = 1,75 a 1,85), que o motor avisava. A tabela gerada não tem nenhuma; o
+  // mecanismo de aviso fica para tabelas futuras.
+  it("a tabela gerada não marca célula nenhuma", () => {
+    expect(celulasSuspeitasUsadas("2A", "mx", 1.8)).toEqual([]);
+    expect(celulasSuspeitasUsadas("5A", "mxNeg", 1.27)).toEqual([]);
   });
-  it("laje 2A 4 × 7,2 (λ = 1,80): aviso e memória com a célula μx = 7,56; os valores não mudam", () => {
+  it("laje 2A 4 × 7,2 (λ = 1,80): μx = 8,19 da teoria de placas (a impressa dava 7,56), sem aviso", () => {
     const r = lajeEsforcos6118(laje(4, 7.2, 10, 4, 2, vinc(["inferior"])), mat());
-    perto(r.mx, (7.56 * 6 * 16) / 100, 1e-9);
-    expect(r.avisos.some((a) => a.includes("célula suspeita") && a.includes("7,56"))).toBe(true);
-    expect(r.memoria.some((m) => m.descricao.startsWith("Célula suspeita"))).toBe(true);
-  });
-  it("laje 2A com λ = 1,50: sem aviso", () => {
-    const r = lajeEsforcos6118(laje(4, 6, 10, 4, 2, vinc(["inferior"])), mat());
+    perto(r.mx, (8.19 * 6 * 16) / 100, 1e-9);
     expect(r.avisos.some((a) => a.includes("célula suspeita"))).toBe(false);
   });
 });

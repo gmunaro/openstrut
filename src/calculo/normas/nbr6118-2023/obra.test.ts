@@ -5,7 +5,7 @@
 //
 // Diferenças esperadas em relação à NB-1/78 (o mesmo carregamento, p = 5 kN/m²):
 // - momentos: a NB-1/78 usa charneiras plásticas com i = X/m = 2 e vãos
-//   reduzidos; a 6118 usa a teoria elástica (Bares). O positivo elástico do
+//   reduzidos; a 6118 usa a teoria elástica (tabelasBares). O positivo elástico do
 //   tipo 2B fica ~25 % acima e o negativo ~60 % acima do plástico;
 // - compatibilização: a NB-1/78 toma max(média; 0,8 maior); a 6118, o maior;
 // - reações: as duas repartem pelo bordo engastado, mas as tabelas de Pinheiro
@@ -46,23 +46,23 @@ describe("obra de duas lajes pela NBR 6118:2023", () => {
     expect(normaPorId("nbr6118-2023")).toBe(nbr6118);
   });
 
-  it("lajes: tipo 2B de Bares, com os coeficientes impressos (conta à mão)", () => {
-    // p = 0,10 · 25 + 1 + 1,5 = 5 kN/m². L1: λ = 1,25 → μx 4,55; μ'x 10,06; μy 2,51;
-    // νx 3,06; ν'x 4,48; νy 1,83 (A-8 e A-5).
+  it("lajes: tipo 2B, com os coeficientes da tabela (conta à mão)", () => {
+    // p = 0,10 · 25 + 1 + 1,5 = 5 kN/m². L1: λ = 1,25 → μx 4,56; μ'x 10,07; μy 2,51;
+    // νx 3,06; ν'x 4,48; νy 1,83 (tabelasBares).
     const l1 = laje("L1").esforcos;
-    perto(l1.mx, 4.55 * 0.8, 1e-9);
+    perto(l1.mx, 4.56 * 0.8, 1e-9);
     perto(l1.my, 2.51 * 0.8, 1e-9);
     perto(l1.reacoes.direito, 4.48 * 2, 1e-9);
     perto(l1.reacoes.esquerdo, 3.06 * 2, 1e-9);
     perto(l1.reacoes.inferior, 1.83 * 2, 1e-9);
-    // L2: λ = 5/3,5 = 1,4286, entre 1,40 (μ'x 10,75) e 1,45 (10,92): X = 6,64 < 8,05 de L1.
-    // Compatibilizado: o maior, 10,06 · 0,8 = 8,048, nas duas.
-    perto(l1.negativos.direito, 10.06 * 0.8, 1e-9);
-    perto(laje("L2").esforcos.negativos.esquerdo, 10.06 * 0.8, 1e-9);
-    // flecha L1: Ma = 3,64 < Mr = 6,41 (estádio I); α = 4,26 (A-1 2B, λ 1,25);
-    // ai = 4,26/1200 · (3,5 + 0,3 · 1,5) · 4⁴ / (24 150 · 10³ · 0,1³/12) = 0,1784 cm;
-    // at = 2,32 ai = 0,414 cm < 400/250 = 1,6 cm
-    perto(l1.flecha, ((4.26 / 1200) * 3.95 * 256 * 100 * 2.32) / ((24150e3 * 0.001) / 12), 1e-9);
+    // L2: λ = 5/3,5 = 1,4286, entre 1,40 (μ'x 10,76) e 1,45 (10,95): X = 6,66 < 8,06 de L1.
+    // Compatibilizado: o maior, 10,07 · 0,8 = 8,056, nas duas.
+    perto(l1.negativos.direito, 10.07 * 0.8, 1e-9);
+    perto(laje("L2").esforcos.negativos.esquerdo, 10.07 * 0.8, 1e-9);
+    // flecha L1: Ma = 3,64 < Mr = 6,41 (estádio I); α = 4,29 (2B, λ 1,25);
+    // ai = 4,29/1200 · (3,5 + 0,3 · 1,5) · 4⁴ / (24 150 · 10³ · 0,1³/12) = 0,1797 cm;
+    // at = 2,32 ai = 0,417 cm < 400/250 = 1,6 cm
+    perto(l1.flecha, ((4.29 / 1200) * 3.95 * 256 * 100 * 2.32) / ((24150e3 * 0.001) / 12), 1e-9);
     expect(l1.flecha).toBeLessThan(l1.flechaLimite);
   });
 
@@ -90,7 +90,7 @@ describe("obra de duas lajes pela NBR 6118:2023", () => {
     // L1: (6,12 + 8,96) · 5 + 3,66 · 2 · 4 = 104,68 kN; L2: (νx 3,2229 + ν'x 4,7143)
     // · 1,75 · 5 + 1,83 · 1,75 · 2 · 3,5 = 91,87 kN (interpolados em λ = 1,4286)
     perto(eq.reacoesLajes, 104.68 + 91.87, 0.02);
-    // ~5 % acima da carga (alívios pela metade das tabelas A-5 a A-7): folga a favor
+    // ~5 % acima da carga (alívios pela metade, scripts/bares/reacoes.ts): folga a favor
     // da segurança, aceita até 8 % por montagem.ts; o restante da cadeia fecha exato
     expect(eq.avisos).toEqual([]);
     expect(eq.ok).toBe(true);
@@ -115,12 +115,12 @@ describe("obra de duas lajes pela NBR 6118:2023", () => {
 
   it("ordens de grandeza contra a NB-1/78 da mesma obra", () => {
     const [a, b] = [laje("L1").esforcos, lajeNb("L1").esforcos];
-    // positivo elástico (Bares) acima do plástico: 3,64 contra ~3,4 da NB-1/78 pelo
-    // SISTRUT (padrão de charneiras com termos de canto e μ da tabela; a V1 antiga, com
-    // Johansen e i = 2, dava ~2,9)
+    // positivo elástico (teoria de placas) acima do plástico: 3,65 contra ~3,4 da NB-1/78
+    // pelo SISTRUT (padrão de charneiras com termos de canto e μ da tabela; a V1 antiga,
+    // com Johansen e i = 2, dava ~2,9)
     expect(a.mx / b.mx).toBeGreaterThan(1.0);
     expect(a.mx / b.mx).toBeLessThan(1.5);
-    // negativo elástico bem acima do plástico com i = 2: 8,05 contra ~5,0
+    // negativo elástico bem acima do plástico com i = 2: 8,06 contra ~5,0
     expect(a.negativos.direito / b.negativos.direito).toBeGreaterThan(1.3);
     expect(a.negativos.direito / b.negativos.direito).toBeLessThan(2);
     // reação no bordo engastado: as duas ~9 kN/m

@@ -1,18 +1,19 @@
 // Lajes maciças retangulares pela NBR 6118:2023, análise elástica por tabelas:
-// - momentos e reações pelas tabelas de Bares/Pinheiro (tabelasBares.ts),
+// - momentos e reações pelas tabelas dos tipos de Bares/Pinheiro (tabelasBares.ts,
+//   geradas por scripts/bares: teoria de placas e processo das áreas),
 //   interpoladas linearmente em λ = ly/lx; λ > 2 usa a linha "> 2,00", que no
 //   vão principal é a faixa como viga (pl²/8, 9pl²/128 e −pl²/8, pl²/24 e
 //   −pl²/12);
 // - balanço (três bordos livres e o quarto engastado): faixa engastada, pl²/2;
 // - outras vinculações com bordo livre não têm tabela de reações transcrita:
 //   esforços nulos e aviso (o fluxo trata como laje sem cálculo);
-// - flecha imediata pelo α da Tabela A-1 com a rigidez de Branson quando
+// - flecha imediata pelo α de tabelasBares com a rigidez de Branson quando
 //   Ma > Mr, diferida por αf, limite l/250;
 // - armaduras por flexão simples com o bloco retangular e as taxas mínimas da
 //   Tabela 19.1.
-// Fontes: docs/norma/durabilidade-lajes.md (seções 4 a 6) e
-// bares-reacoes-flechas.md, da apostila de Bastos, *Lajes de Concreto*
-// (UNESP, out/2023; "Bastos, Lajes", páginas impressas). A apostila declara a
+// Fontes: docs/norma/bares-reacoes-flechas.md (como as tabelas são calculadas)
+// e docs/norma/durabilidade-lajes.md (seções 4 a 6), da apostila de Bastos,
+// *Lajes de Concreto* (UNESP, out/2023; "Bastos, Lajes", páginas impressas). A apostila declara a
 // NBR 6118:2023 mas cita a numeração de 2014; nenhum item foi lido no texto de
 // 2023, então todos os itens desta seção são [VERIFICAR] na edição 2023.
 // Contas internas em kN, m e MPa (momentos em kN·m/m, faixa de 1 m); seções
@@ -32,16 +33,17 @@ import { BARES, CELULAS_SUSPEITAS, type ColunasBares, type TipoBares } from "./t
 import { lambda6118, rhoMin6118, xdLimite6118 } from "./vigas";
 
 const LAJES = "Bastos, Lajes";
-const TAB = `Bares/Pinheiro (1994), ${LAJES}, Anexo`;
+const TAB =
+  "Tabelas de lajes do app, tipos de Bares/Pinheiro (docs/norma/bares-reacoes-flechas.md)";
 const REF_ESPESSURA = `6118 13.2.4.1 (${LAJES}, item 3.5, p. 11)`;
 const REF_GAMA_N = `6118 Tabela 13.2 (${LAJES}, Tabela 4, p. 11)`;
-const REF_MOMENTOS = `${TAB}, Tabelas A-8 a A-10, pp. 90-92; Eq. 21, p. 18`;
-const REF_REACOES = `${TAB}, Tabelas A-5 a A-7, pp. 87-89`;
+const REF_MOMENTOS = `${TAB}, teoria de placas, seção 3; ${LAJES}, Eq. 21, p. 18`;
+const REF_REACOES = `6118 14.7.6.1, processo das áreas (${TAB}, seção 4)`;
 const REF_BALANCO = `${LAJES}, ex. 3.17, L1, pp. 45 e 58-59`;
 const REF_MR = `6118 17.3.1 (${LAJES}, Eq. 25 e 26, p. 22)`;
 const REF_BRANSON = `6118 17.3.2.1.1 (${LAJES}, Eq. 31, p. 23)`;
 const REF_ESTADIO_II = `${LAJES}, Eq. 37 e 38, p. 24`;
-const REF_FLECHA = `${TAB}, Tabela A-1, p. 83; Eq. 46 e 48, p. 27`;
+const REF_FLECHA = `${TAB}, teoria de placas, seção 3; ${LAJES}, Eq. 46 e 48, p. 27`;
 const REF_DIFERIDA = `6118 17.3.2.1.2 (${LAJES}, Eq. 39 e 49, pp. 24 e 27; Tabela 8, p. 25)`;
 const REF_LIMITE = `6118 13.3, Tabela 13.3 (${LAJES}, Tabela 9 e notas 1, 2 e 5, pp. 26-27)`;
 const REF_PSI2 = "6118:2023 11.8.3, Tabela 11.2 (docs/norma/vigas-pilares.md)";
@@ -430,7 +432,7 @@ function calculaEsforcos(e: LajeEntrada, mat: MateriaisCalc, d: number): LajeEsf
       );
       memoria.push({
         descricao: `Célula suspeita usada na interpolação [VERIFICAR]: ${s}`,
-        ref: `${TAB} (valor impresso fora da tendência das vizinhas)`,
+        ref: `${TAB} (valor fora da tendência das vizinhas)`,
       });
     }
     vaoFlecha = c.lx;

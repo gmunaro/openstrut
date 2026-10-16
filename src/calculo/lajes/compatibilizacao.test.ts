@@ -149,9 +149,9 @@ describe("compatibilização dos negativos (V1 LcCalculaTodas)", () => {
   });
 
   it("balanço curto com recalcular (6118): laje 2A 4 × 4 vira apoiada no bordo do balanço", () => {
-    // L1 4 × 4 com o superior engastado = tipo 2A, λ = 1 (A-8): μx 2,91; μy 3,54; μ'y 8,40.
-    // L2: balanço de 0,2 m engastado no inferior: X = p · 0,2²/2 = 0,02 p ≪ 8,40 · 0,16 p.
-    // Com o bordo apoiado L1 é tipo 1, λ = 1: μx = μy = 4,23 (A-8); m = μ p lx²/100.
+    // L1 4 × 4 com o superior engastado = tipo 2A, λ = 1 (tabelasBares): μx 2,91; μy 3,55; μ'y 8,39.
+    // L2: balanço de 0,2 m engastado no inferior: X = p · 0,2²/2 = 0,02 p ≪ 8,39 · 0,16 p.
+    // Com o bordo apoiado L1 é tipo 1, λ = 1: μx = μy = 4,24; m = μ p lx²/100.
     const mat6118 = materiais6118(obraNova("x", "nbr6118-2023").materiais);
     const entrada = (nome: string, lx: number, ly: number, vinculos: Record<Bordo, Vinculo>) => ({
       nome,
@@ -177,7 +177,7 @@ describe("compatibilização dos negativos (V1 LcCalculaTodas)", () => {
     const p = 6;
     const base = (p * 16) / 100;
     expect(l1.esforcos.mx).toBeCloseTo(2.91 * base, 9);
-    expect(l1.esforcos.negativos.superior).toBeCloseTo(8.4 * base, 9);
+    expect(l1.esforcos.negativos.superior).toBeCloseTo(8.39 * base, 9);
     const xb = (p * 0.2 ** 2) / 2;
     expect(l2.esforcos.negativos.inferior).toBeCloseTo(xb, 9);
 
@@ -191,10 +191,10 @@ describe("compatibilização dos negativos (V1 LcCalculaTodas)", () => {
     // o bordo mantém o X do balanço
     expect(r1!.negativos.superior).toBeCloseTo(xb, 9);
     expect(r2!.negativos.inferior).toBeCloseTo(xb, 9);
-    // mx sobe de 2,91 para 4,23 (laje apoiada); my fica com o maior entre o corrigido
-    // 3,54 · base + (8,40 · base − xb)/2 e o apoiado 4,23 · base
-    expect(r1!.mx).toBeCloseTo(4.23 * base, 9);
-    expect(r1!.my).toBeCloseTo(Math.max(3.54 * base + (8.4 * base - xb) / 2, 4.23 * base), 9);
+    // mx sobe de 2,91 para 4,24 (laje apoiada); my fica com o maior entre o corrigido
+    // 3,55 · base + (8,39 · base − xb)/2 e o apoiado 4,24 · base
+    expect(r1!.mx).toBeCloseTo(4.24 * base, 9);
+    expect(r1!.my).toBeCloseTo(Math.max(3.55 * base + (8.39 * base - xb) / 2, 4.24 * base), 9);
     // reações: o maior de cada bordo (2A: νx 1,83, νy 2,75; tipo 1: ν = 2,50; V = ν p lx/10)
     expect(r1!.reacoes.esquerdo).toBeCloseTo((2.5 * p * 4) / 10, 9);
     expect(r1!.reacoes.inferior).toBeCloseTo((2.75 * p * 4) / 10, 9);
