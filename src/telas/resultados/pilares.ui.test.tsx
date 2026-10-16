@@ -70,7 +70,9 @@ describe("VerificacoesPilares", () => {
   it("mostra cada caso, traduz o erro do motor e lista os avisos da verificação", () => {
     render(<VerificacoesPilares resultado={resultadoCom([pilarVerificado])} />);
     expect(screen.getByText("Verificações de seção")).toBeTruthy();
-    expect(screen.getByText(/a busca do equilíbrio não converge; o original fica em laço/)).toBeTruthy();
+    expect(
+      screen.getByText(/a busca do equilíbrio não converge; o original fica em laço/),
+    ).toBeTruthy();
     expect(screen.getByText("atende")).toBeTruthy();
     expect(screen.getByText("PILAR opção 6: barras dadas na obra.")).toBeTruthy();
     expect(screen.getAllByText("P3 · Pavimento 1")).toHaveLength(2);

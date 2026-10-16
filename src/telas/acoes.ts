@@ -17,7 +17,7 @@ import { useSessao } from "./sessao";
 export function abrirNaSessao(
   obra: Obra,
   rascunhoId: string,
-  arquivo?: { handle: FileSystemFileHandle | null; nome: string },
+  arquivo?: { handle: FileSystemFileHandle | null; nome: string; versaoMigrada?: number },
 ) {
   useObra.getState().abrir(obra);
   useSessao.getState().iniciar(rascunhoId, arquivo ? { ...arquivo, salva: obra } : undefined);
@@ -73,7 +73,11 @@ export function useAbrirObra() {
         setFalha({ erros: [`Não foi possível abrir ${a.nome}:`, ...lida.erros], detalhe: null });
         return;
       }
-      abrirNaSessao(lida.obra, novoIdRascunho(), { handle: a.handle, nome: a.nome });
+      abrirNaSessao(lida.obra, novoIdRascunho(), {
+        handle: a.handle,
+        nome: a.nome,
+        ...(lida.migrada ? { versaoMigrada: lida.versaoOrigem } : {}),
+      });
       await navigate({ to: "/obra" });
     } catch (e) {
       setFalha(falhaDe(e, "Não foi possível abrir o arquivo", "ler"));

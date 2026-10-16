@@ -152,6 +152,32 @@ describe("tela da obra: arquivo", () => {
     },
   );
 
+  it("arquivo de versão antiga: avisa a versão de origem e some ao salvar", async () => {
+    const obra = obraDuasLajes("nb1-78", "Antiga");
+    // a versão 2 não tinha classeAco nem Laje.mu (a migração 2 → 3 põe "A" e 1)
+    const v2 = JSON.parse(serializarObra(obra)) as Record<string, unknown> & {
+      materiais: Record<string, unknown>;
+      pavimentos: { lajes: Record<string, unknown>[] }[];
+    };
+    v2.versao = 2;
+    delete v2.materiais.classeAco;
+    for (const p of v2.pavimentos) for (const l of p.lajes) delete l.mu;
+    const disco = arquivoFalso("antiga.openstrut.json", JSON.stringify(v2));
+    instalar("showOpenFilePicker", async () => [disco.handle]);
+    instalar("showSaveFilePicker", async () => disco.handle);
+    const { user, router } = renderizarApp("/");
+    await user.click(await screen.findByRole("button", { name: /Abrir arquivo/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
+    const aviso = await screen.findByText(/era da versão 2 do formato da obra/);
+    expect(aviso.closest("[role=status]")?.textContent).toContain(
+      "Ao salvar, ele será gravado na versão 3",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    await waitFor(() => expect(screen.queryByText(/era da versão 2/)).toBeNull());
+    expect(lerObra(disco.gravado.at(-1) ?? "")).toMatchObject({ ok: true, migrada: false });
+  });
+
   it("arquivo inválido mostra os erros e fica na tela inicial", async () => {
     const disco = arquivoFalso("ruim.openstrut.json", '{"versao": 1, "nome": 3}');
     instalar("showOpenFilePicker", async () => [disco.handle]);

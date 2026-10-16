@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VERSAO_ATUAL } from "../../armazenamento/arquivo";
 import { criarSalvadorRascunho } from "../../armazenamento/rascunho";
 import type { Obra } from "../../dominio/obra";
 import { useObra } from "../../estado/obra";
@@ -142,6 +143,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const refazer = useObra((e) => e.refazer);
   const obraSalva = useSessao((s) => s.obraSalva);
   const nomeArquivo = useSessao((s) => s.nomeArquivo);
+  const versaoMigrada = useSessao((s) => s.versaoMigrada);
+  const dispensarMigracao = useSessao((s) => s.dispensarMigracao);
   const unidades = useSessao((s) => s.unidades);
   const { abrirArquivo, erros, limparErros } = useAbrirObra();
   const { salvar, mensagem } = useSalvarArquivo();
@@ -299,8 +302,20 @@ function ObraAberta({ obra }: { obra: Obra }) {
         )}
       </header>
 
-      {(mensagem || bloqueio || erroRascunho || falhaDxf || erros.length > 0) && (
+      {(mensagem ||
+        bloqueio ||
+        erroRascunho ||
+        falhaDxf ||
+        erros.length > 0 ||
+        versaoMigrada !== null) && (
         <div className="grid gap-2 px-4 pt-2 print:hidden">
+          {versaoMigrada !== null && (
+            <AvisoMigracao
+              arquivo={nomeArquivo}
+              versao={versaoMigrada}
+              aoFechar={dispensarMigracao}
+            />
+          )}
           {mensagem && (
             <Recado
               role={mensagem.tipo === "ok" ? "status" : "alert"}
@@ -367,6 +382,37 @@ function ObraAberta({ obra }: { obra: Obra }) {
         botaoOrigem={botaoUnidades}
       />
       {dialogoConfirmacao}
+    </div>
+  );
+}
+
+/** Arquivo de versão antiga, convertido ao abrir: diz de que versão ele veio e que salvar
+ *  grava na versão atual (que as versões antigas do OpenStrut não abrem). */
+function AvisoMigracao({
+  arquivo,
+  versao,
+  aoFechar,
+}: {
+  arquivo: string | null;
+  versao: number;
+  aoFechar: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="border-aviso/50 bg-aviso/10 flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-xs"
+    >
+      <p>
+        <span className="font-semibold">
+          O arquivo {arquivo ?? "aberto"} era da versão {versao} do formato da obra
+        </span>{" "}
+        e foi convertido para a versão {VERSAO_ATUAL} ao abrir. Ao salvar, ele será gravado na
+        versão {VERSAO_ATUAL}; versões antigas do OpenStrut não o abrirão mais. Para guardar o
+        original, use "Salvar como…" com outro nome.
+      </p>
+      <Button variant="ghost" size="xs" onClick={aoFechar} aria-label="Fechar aviso de versão">
+        Fechar
+      </Button>
     </div>
   );
 }

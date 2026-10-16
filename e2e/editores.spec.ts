@@ -199,3 +199,41 @@ test("aviso com opção: o botão da V4 liga 'Continuar mesmo acima do limite' e
   await page.getByRole("button", { name: "Desfazer", exact: true }).click();
   await expect(parou).toBeVisible();
 });
+
+test("arquivo da versão 2: a tela da obra avisa a versão de origem e a gravação na atual", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  // a obra do R3 como a versão 2 a gravaria: sem classeAco nem Laje.mu (a migração põe A e 1)
+  const v2 = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as {
+    versao: number;
+    nome: string;
+    materiais: Record<string, unknown>;
+    pavimentos: { lajes: Record<string, unknown>[] }[];
+  };
+  v2.versao = 2;
+  v2.nome = "Obra antiga";
+  delete v2.materiais.classeAco;
+  for (const p of v2.pavimentos) for (const l of p.lajes) delete l.mu;
+  const arquivo = path.join(PASTA, "obra-antiga.openstrut.json");
+  fs.writeFileSync(arquivo, JSON.stringify(v2));
+
+  await page.addInitScript(() => {
+    const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
+    delete w.showOpenFilePicker;
+    delete w.showSaveFilePicker;
+  });
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/");
+  const [escolha] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: /Abrir arquivo \.openstrut\.json/ }).click(),
+  ]);
+  await escolha.setFiles(arquivo);
+  await expect(page.getByRole("heading", { name: "Obra antiga" })).toBeVisible();
+  const aviso = page.getByRole("status").filter({ hasText: "era da versão 2 do formato da obra" });
+  await expect(aviso).toContainText("Ao salvar, ele será gravado na versão 3");
+  await foto(page, "14-arquivo-migrado");
+  await aviso.getByRole("button", { name: "Fechar aviso de versão" }).click();
+  await expect(aviso).toHaveCount(0);
+});

@@ -13,13 +13,23 @@ interface Sessao {
   nomeArquivo: string | null;
   /** A obra como estava no último salvamento em arquivo (para marcar "não salvo"). */
   obraSalva: Obra | null;
+  /** Versão do formato do arquivo aberto, quando ele foi migrado para a atual ao abrir
+   *  (a tela avisa até salvar); null = arquivo já na versão atual, ou nenhum. */
+  versaoMigrada: number | null;
   unidades: SistemaUnidades;
   /** Começa a sessão de uma obra recém-aberta. `salva` = obra que veio do arquivo. */
   iniciar: (
     rascunhoId: string,
-    arquivo?: { handle: FileSystemFileHandle | null; nome: string; salva: Obra },
+    arquivo?: {
+      handle: FileSystemFileHandle | null;
+      nome: string;
+      salva: Obra;
+      versaoMigrada?: number;
+    },
   ) => void;
   marcarSalvo: (obra: Obra, nome: string, handle: FileSystemFileHandle | null) => void;
+  /** Fecha o aviso de arquivo migrado. */
+  dispensarMigracao: () => void;
   definirUnidades: (u: SistemaUnidades) => void;
 }
 
@@ -30,6 +40,7 @@ export const useSessao = create<Sessao>()(
       arquivo: null,
       nomeArquivo: null,
       obraSalva: null,
+      versaoMigrada: null,
       unidades: "si",
       iniciar: (rascunhoId, arquivo) =>
         set({
@@ -37,9 +48,17 @@ export const useSessao = create<Sessao>()(
           arquivo: arquivo?.handle ?? null,
           nomeArquivo: arquivo?.nome ?? null,
           obraSalva: arquivo?.salva ?? null,
+          versaoMigrada: arquivo?.versaoMigrada ?? null,
         }),
+      // salvo, o arquivo já está na versão atual: o aviso de migração sai
       marcarSalvo: (obra, nome, handle) =>
-        set((s) => ({ obraSalva: obra, nomeArquivo: nome, arquivo: handle ?? s.arquivo })),
+        set((s) => ({
+          obraSalva: obra,
+          nomeArquivo: nome,
+          arquivo: handle ?? s.arquivo,
+          versaoMigrada: null,
+        })),
+      dispensarMigracao: () => set({ versaoMigrada: null }),
       definirUnidades: (unidades) => set({ unidades }),
     }),
     { name: "sistrut-v2:preferencias", partialize: (s) => ({ unidades: s.unidades }) },
