@@ -227,9 +227,10 @@ export interface VerificacaoPilarResultado {
   /** true = esforços do lance calculado; false = os digitados. */
   esforcosDoLance: boolean;
   nk: number;
-  lambdaX: number;
-  lambdaY: number;
-  situacao: string;
+  /** Ausentes quando a verificação não concluiu (ver `avisos`). */
+  lambdaX?: number;
+  lambdaY?: number;
+  situacao?: string;
   /** Um por caso de excentricidade acidental: atuante (com ea) e resistente reduzido
    *  da 2ª ordem; veredito como o PILAR imprime; `erro` onde o original trava (D-2)
    *  ou divide por zero (D-3). */
@@ -252,11 +253,14 @@ export interface PredimensionamentoPilarResultado {
   modo: "tensoes" | "secao";
   /** Lado do quadrado escolhido, cm; ausente com a seção da obra. */
   lado?: number;
-  tensaoNormal: number;
-  tensaoNormalAdmissivel: number;
-  tensaoFlexao: number;
-  tensaoFlexaoAdmissivel: number;
-  /** "CARGA" da tela, kN. */
-  carga: number;
+  /** Ausentes quando o predimensionamento não concluiu (ver `avisos`). */
+  tensoes?: {
+    normal: number;
+    normalAdmissivel: number;
+    flexao: number;
+    flexaoAdmissivel: number;
+  };
+  /** "CARGA" da tela, kN; ausente quando não concluiu. */
+  carga?: number;
   avisos: string[];
 }

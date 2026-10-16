@@ -56,8 +56,8 @@ describe("projeção em SI dos pilares pela NB-1/78", () => {
     const p = p5.predimensionamento!;
     expect(p.modo).toBe("tensoes");
     expect(p.lado).toBeUndefined();
-    expect(p.tensaoNormalAdmissivel).toBeCloseTo(0.09 * MPA_POR_TCM2, 2);
-    expect(p.tensaoFlexaoAdmissivel).toBeCloseTo(0.1125 * MPA_POR_TCM2, 2);
+    expect(p.tensoes!.normalAdmissivel).toBeCloseTo(0.09 * MPA_POR_TCM2, 2);
+    expect(p.tensoes!.flexaoAdmissivel).toBeCloseTo(0.1125 * MPA_POR_TCM2, 2);
     expect(p.carga).toBeCloseTo(17.67 * KN_POR_TF, 2);
   });
 

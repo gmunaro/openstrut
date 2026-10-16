@@ -268,7 +268,11 @@ class Validador {
       };
     const ini = (x: Dados, campo: string, cx: string) =>
       this.parcial<IniPilar>(this.objeto(x[campo], `${cx}.${campo}`), `${cx}.${campo}`, {
-        maximoBarras: num("positivo"),
+        maximoBarras: (y, k, cy) => {
+          const v = this.numero(y, k, cy, "positivo");
+          if (!Number.isInteger(v)) this.erro(`${cy}.${k}`, "esperado um número inteiro", v);
+          return v;
+        },
         coeficienteMedida: num("positivo"),
         coeficienteForca: num("positivo"),
         coeficienteTensao: num("positivo"),
@@ -330,7 +334,11 @@ class Validador {
           return l.map((linha, i) => {
             const v = this.lista(linha, `${cy}.${k}[${i}]`);
             if (v.length !== 4) this.erro(`${cy}.${k}[${i}]`, "esperada uma linha de 4", v.length);
-            return v.map((n, j) => this.numero({ n }, "n", `${cy}.${k}[${i}][${j}]`, "positivo"));
+            return v.map((n, j) => {
+              if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
+              this.erro(`${cy}.${k}[${i}][${j}]`, "esperado um número maior que zero", n);
+              return 0;
+            });
           });
         },
         estriboPorBitola: tabela(13, (y, cy) => ({
@@ -384,6 +392,13 @@ class Validador {
     const r: Partial<Pilar> = {};
     if (d.secao !== undefined)
       r.secao = this.secaoPilar(this.objeto(d.secao, `${c}.secao`), `${c}.secao`);
+    if (d.rotacao !== undefined) {
+      r.rotacao = this.numero(d, "rotacao", c, "naoNegativo");
+      if (r.rotacao > 360)
+        this.erro(`${c}.rotacao`, "esperado um ângulo de 0 a 360 graus", r.rotacao);
+      if (d.secao !== undefined)
+        this.erro(`${c}.rotacao`, "a rotação só vale na seção retangular", r.rotacao);
+    }
     if (d.vinculos !== undefined)
       r.vinculos = this.vinculosPilar(this.objeto(d.vinculos, `${c}.vinculos`), `${c}.vinculos`);
     if (d.vinculosTopo !== undefined)
@@ -409,10 +424,9 @@ class Validador {
     if (d.cargaTopo !== undefined) {
       const cc = `${c}.cargaTopo`;
       const v = this.objeto(d.cargaTopo, cc);
+      // vão com sinal: o .REP lido grava vão·(−SGN(M)) (PILGEEDI.BAS:606-608)
       const momentos = this.momentos(v, cc, ["m", "inclinacao", "vao", "rigidez"], 4);
       momentos.forEach((m, i) => {
-        if (m.vao < 0)
-          this.erro(`${cc}.momentos[${i}].vao`, "esperado um número maior ou igual a zero", m.vao);
         if (m.rigidez < 0)
           this.erro(
             `${cc}.momentos[${i}].rigidez`,
@@ -435,19 +449,22 @@ class Validador {
             bitola: this.numero(o, "bitola", cb, "positivo"),
           };
         });
-        if (v.esforcos === undefined) return { barras };
-        const ce = `${cv}.esforcos`;
-        const e = this.objeto(v.esforcos, ce);
-        return {
-          barras,
-          esforcos: {
-            nk: this.numero(e, "nk", ce),
-            mxk: this.numero(e, "mxk", ce),
-            myk: this.numero(e, "myk", ce),
-            lex: this.numero(e, "lex", ce, "positivo"),
-            ley: this.numero(e, "ley", ce, "positivo"),
-          },
+        const ces = `${cv}.estribo`;
+        const es = v.estribo === undefined ? undefined : this.objeto(v.estribo, ces);
+        const estribo = es && {
+          bitola: this.numero(es, "bitola", ces, "positivo"),
+          espacamento: this.numero(es, "espacamento", ces, "positivo"),
         };
+        const ce = `${cv}.esforcos`;
+        const e = v.esforcos === undefined ? undefined : this.objeto(v.esforcos, ce);
+        const esforcos = e && {
+          nk: this.numero(e, "nk", ce),
+          mxk: this.numero(e, "mxk", ce),
+          myk: this.numero(e, "myk", ce),
+          lex: this.numero(e, "lex", ce, "positivo"),
+          ley: this.numero(e, "ley", ce, "positivo"),
+        };
+        return { barras, ...(estribo ? { estribo } : {}), ...(esforcos ? { esforcos } : {}) };
       });
     return r;
   }

@@ -1226,7 +1226,16 @@ export interface BarraPilar {
 
 /** Seção do pilar (PILDADOS): retangular, circular (com vazado) ou poligonal. */
 export type SecaoPilar =
-  | { tipo: "retangular"; b: number; h: number; barras: BarraPilar[] }
+  | {
+      tipo: "retangular";
+      b: number;
+      h: number;
+      barras: BarraPilar[];
+      /** Rotação da seção, graus (A_1338(c, s, 3), 0..360): os vértices (0,0) (0,h)
+       *  (b,h) (b,0) giram em torno da origem ao carregar a seção, x' = cos·x − sin·y,
+       *  y' = sin·x + cos·y (PILAREDI.BAS:1630-1631, 2579-2580). Ausente = 0. */
+      rotacao?: number;
+    }
   | { tipo: "circular"; d: number; dInterno: number; barras: BarraPilar[] }
   | { tipo: "poligonal"; vertices: Ponto[]; barras: BarraPilar[] };
 
@@ -1345,6 +1354,15 @@ export interface NivelColuna {
   excentricidade?: { x: number; y: number };
   /** Até dois momentos de vento com ângulo, tm e graus (A_12dc 1..4). */
   ventos?: { m: number; angulo: number }[];
+  /** Carga do nível como o PILGEEDI a guarda (A_1280), além da lida dos .REP: a
+   *  normal (t) soma e os momentos (tm, graus, m, cm⁴) ocupam os slots livres (m = 0)
+   *  depois dos do .REP, sem o ABS da leitura do .REP: o PILAREDI usa o sinal de
+   *  A_1280(k) (PILAREDI.BAS:7505-7506), e a "Normal + Momento" grava o VAL digitado,
+   *  com vão 1 e rigidez Jvig/Lvig (PILGEEDI.BAS:2407-2413). */
+  cargaAdicional?: {
+    normal: number;
+    momentos: { m: number; inclinacao: number; vao: number; rigidez: number }[];
+  };
 }
 
 /** Coluna de edifício com os níveis (PILGEEDI). Níveis pelo índice em `niveis` (0 = o
@@ -1354,6 +1372,11 @@ export interface ColunaEdificio {
   /** Pilar do .REP associado pelo número no nome. */
   pilarRep: string;
   niveis: NivelColuna[];
+  /** Índice do nível mais baixo da coluna para a leitura do .REP: o PILGEEDI leva o
+   *  registro à primeira coluna com o número no nome cujo nível inferior ≤ nível ≤
+   *  superior (PILGEEDI.BAS:556); o superior é `niveis.length − 1`. Ausente = 0 (o
+   *  motor monta toda coluna desde a fundação; o importador de .COL usa o campo). */
+  nivelInferior?: number;
 }
 
 /** Carga por coluna e nível (PILGEEDI.BAS:530-660; PILAREDI.BAS:4066-4077, 4721-4773,
@@ -1443,6 +1466,10 @@ export interface ParametrosPredimensionamento {
   verificaH30: boolean;
   coeficienteMedida: number;
   coeficienteForca: number;
+  /** Multiplicador da unidade de fck e fyk para t/cm² (V_0dec, PILAR.INI; o [12] do
+   *  .COL). Multiplica as admissíveis e o σs a 2 ‰; a tela divide as tensões por ele
+   *  (PILAREDI.BAS:3671-3677, 4196-4214). Ausente = 1. */
+  coeficienteTensao?: number;
 }
 
 /** Predimensionamento (PILAREDI opção 3.1): tensões Nk/A e Nk/A + Mk/W contra

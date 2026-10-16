@@ -12,6 +12,8 @@
 //   predimensionamento com `parametrosPilar.predimensionamento = "tensoes"`.
 // Runs: C:/tmp/oraculo/runs/ (o `run` de cada JSON). Os números estão nos JSONs; o
 // teste não precisa dos runs.
+/// <reference types="node" />
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { BarraPilarObra, Obra, Pilar } from "../../dominio/obra";
 import { obraE2E } from "./__e2e__/obraE2E";
@@ -20,6 +22,7 @@ import { KN_POR_TF } from "./base/unidades";
 import type { CasoPilar, VerificacaoPilar } from "./base/tipos";
 import { calcularObraSistrut, type LancePilarSistrut, type ResultadoSistrut } from "./obra";
 import { CASOS_PILAR } from "./pilares/__casos__";
+import { importarPilaresSistrut } from "../../armazenamento/sistrut/pilar";
 
 type Valor = number | string | undefined;
 
@@ -640,5 +643,175 @@ describe("modo corrigido com os campos novos", () => {
     expect(r.lances.flatMap((l) => l.avisos)).toEqual([]);
     expect(lanceP5(r)!.dimensionamento?.recusa).toBeUndefined();
     expect(r.predimensionamentos.find((p) => p.pilarId === "P5")?.resultado).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------- resumo na fundação
+
+/** Id `fund.*` do resumo na fundação do P5 (PILAREDI.BAS:960-1000). `secao` e
+ *  `armadura` são o tipo e as barras do lance de baixo como a linha os imprime
+ *  ("R", "4#10"; PILAREDI.BAS:993-995). */
+function campoFundacao(r: ResultadoSistrut, resto: string): Valor {
+  const f = r.fundacoes.find((x) => x.pilarId === "P5");
+  const d = lanceP5(r)?.dimensionamento;
+  if (!f || !d) return undefined;
+  const [g1, g2] = d.barras;
+  const armadura =
+    g1 &&
+    (g2
+      ? `${g1.quantidade}#${g1.bitola}+${g2.quantidade}#${g2.bitola}`
+      : `${g1.quantidade}#${g1.bitola}`);
+  const mapa: Record<string, Valor> = {
+    cargaAcum: f.cargaAcumulada,
+    pesoProprio: f.pesoProprio,
+    carga: f.fundacao,
+    Mx: f.mx,
+    My: f.my,
+    secao: d.secao.tipo === "retangular" ? "R" : undefined,
+    armadura,
+  };
+  return mapa[resto];
+}
+
+describe("PILAREDI pelo motor: retrad_pil_dim (caso c com o resumo na fundação)", () => {
+  const r = calcularObraSistrut(obraE2EComP5({}), { modo: "original" });
+  it("todos os valores impressos", () => {
+    const { faltando, difere } = confere(CASOS_ORACULO.retrad_pil_dim!, (id) => {
+      const resto = id.replace(/^P5\./, "");
+      const fund = /^fund\.(.+)$/.exec(resto);
+      return fund ? campoFundacao(r, fund[1]!) : campoP5(r, resto);
+    });
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------- obra importada do original
+
+const ORACULO = "C:/tmp/oraculo";
+const COL_NOVE = `${ORACULO}/runs/retrad_frm_sonda_pil-20261014-202358/obra/E2E.COL`;
+const COL_SONDA = `${ORACULO}/runs/sonda-20261013-221414/obra/E2E.COL`;
+const REP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.REP`;
+const le = (p: string) => readFileSync(p, "latin1");
+
+/** Obra gerada pelo importador, com o P5 do pavimento de cima renomeado para "P5" (o
+ *  id do importador é "P5@pav2") e o predimensionamento com a seção do .COL. */
+function importada(arquivos: Parameters<typeof importarPilaresSistrut>[0]): Obra {
+  const r = importarPilaresSistrut(arquivos);
+  if ("erros" in r) throw new Error(r.erros.join("\n"));
+  return {
+    ...r.obra,
+    parametrosPilar: { ...r.obra.parametrosPilar, predimensionamento: "tensoes" },
+    pavimentos: r.obra.pavimentos.map((pav) => ({
+      ...pav,
+      pilares: pav.pilares.map((p) => (p.nome === "P5" ? { ...p, id: "P5" } : p)),
+    })),
+  };
+}
+
+/** caso_c_pilaredi sobre uma obra só de pilares: cargaREP (o .REP lido) = a carga
+ *  acumulada do lance. */
+function confereCasoC(r: ResultadoSistrut) {
+  return confere(CASOS_ORACULO.caso_c_pilaredi!, (id) => {
+    const resto = id.replace(/^P5\./, "");
+    if (resto === "cargaREP") return lanceP5(r)?.carga.cargaAcumulada;
+    return campoP5(r, resto);
+  });
+}
+
+describe("obra importada dos arquivos do original reproduz o caso_c_pilaredi", () => {
+  it.skipIf(!existsSync(COL_NOVE))(
+    "E2E.COL de 9 colunas (retrad_frm_sonda_pil): P5 com 17,37 t e 20 × 20 do .COL",
+    () => {
+      const r = calcularObraSistrut(importada({ col: le(COL_NOVE) }), { modo: "original" });
+      const { faltando, difere } = confereCasoC(r);
+      expect(faltando).toEqual([]);
+      expect(difere).toEqual([]);
+    },
+  );
+
+  it.skipIf(!existsSync(COL_SONDA) || !existsSync(REP_E2E))(
+    "E2E.COL da sonda (17,52 t) com o E2E.REP lido no nível 2: o .REP substitui, 17,37 t",
+    () => {
+      const obra = importada({
+        col: le(COL_SONDA),
+        reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2 }],
+      });
+      const r = calcularObraSistrut(obra, { modo: "original" });
+      const { faltando, difere } = confereCasoC(r);
+      expect(faltando).toEqual([]);
+      expect(difere).toEqual([]);
+    },
+  );
+});
+
+// ---------------------------------------------------------------- decisões do original
+
+describe("momento digitado com sinal (PILGEEDI.BAS:2407; PILAREDI.BAS:7505-7506)", () => {
+  // Coluna 0-3-6 m, seção constante, 1 tm no nível do meio repartido meio a meio pelas
+  // rigidezes J/L iguais (conta em pilares/carga.test.ts): com M = +1 (o |M| que o
+  // PILGEEDI grava do .REP) o lance de baixo leva −0,5 no topo e +0,25 na base; com
+  // M = −1 digitado, o PILAREDI usa o sinal: +0,5 e −0,25, e −0,5 na base do de cima.
+  const coluna = (m: number) =>
+    calcularObraSistrut(
+      obraDePilares([
+        cargaTopo(0),
+        {
+          cargaTopo: { normal: t(10), momentos: [{ m: t(m), inclinacao: 0, vao: 0, rigidez: 0 }] },
+        },
+      ]),
+      { modo: "corrigido" },
+    );
+  it("M = +1: lance de baixo −0,50 no topo e +0,25 na base", () => {
+    const r = coluna(1);
+    expect(lanceP5(r, 0)!.carga.mkx).toBeCloseTo(-0.5, 5);
+    expect(lanceP5(r, 0)!.carga.momentosBase.mkx).toBeCloseTo(0.25, 5);
+    expect(lanceP5(r, 1)!.carga.mkx).toBeCloseTo(0.5, 5);
+  });
+  it("M = −1: os mesmos com o sinal trocado", () => {
+    const r = coluna(-1);
+    expect(lanceP5(r, 0)!.carga.mkx).toBeCloseTo(0.5, 5);
+    expect(lanceP5(r, 0)!.carga.momentosBase.mkx).toBeCloseTo(-0.25, 5);
+    expect(lanceP5(r, 1)!.carga.mkx).toBeCloseTo(-0.5, 5);
+  });
+});
+
+describe("Pilar.rotacao: o retângulo gira em torno do canto (PILAREDI.BAS:1630-1631)", () => {
+  // 20 × 40 girado 90°: (0,0) (0,40) (20,40) (20,0) → (0,0) (−40,0) (−40,20) (0,20), um
+  // retângulo 40 em x por 20 em y. Sem giro, λx = CINT(300/(20/√12)) = 52 e
+  // λy = CINT(300/(40/√12)) = CINT(25,98) = 26; girado, trocam.
+  const lance = (p: Partial<Pilar>) =>
+    lanceP5(
+      calcularObraSistrut(obraDePilares([{ ...cargaTopo(30), ...p }]), { modo: "corrigido" }),
+    )!;
+  it("λ trocados e a mesma armadura do 40 × 20", () => {
+    const reto = lance({ b: 20, h: 40 });
+    const girado = lance({ b: 20, h: 40, rotacao: 90 });
+    const deitado = lance({ b: 40, h: 20 });
+    expect([reto.dimensionamento?.lambdaX, reto.dimensionamento?.lambdaY]).toEqual([52, 26]);
+    expect([girado.dimensionamento?.lambdaX, girado.dimensionamento?.lambdaY]).toEqual([26, 52]);
+    expect(girado.dimensionamento?.as).toBeCloseTo(deitado.dimensionamento!.as, 6);
+    expect(girado.dimensionamento?.barras).toEqual(deitado.dimensionamento?.barras);
+  });
+});
+
+describe("PILAR.INI coeficienteTensao (o [12] do .COL) no predimensionamento", () => {
+  // fck 0,015 e fyk 0,5 "na unidade" × 10 = 0,15 e 5 t/cm²: o mesmo pilar do caso c. O
+  // PILAREDI multiplica as admissíveis por V_0dec e a tela divide por ele
+  // (PILAREDI.BAS:3671-3677, 4196-4214): 0,090/10 = 0,0090 e 0,027/10 = 0,0027.
+  const o = obraE2EComP5({});
+  o.parametrosPilar = {
+    predimensionamento: "tensoes",
+    ini: { coeficienteTensao: 10, fck: 1.5, fyk: 50 },
+  };
+  const r = calcularObraSistrut(o, { modo: "original" });
+  it("tensões da tela ÷ 10 e o dimensionamento do caso c", () => {
+    const p = r.predimensionamentos.find((x) => x.pilarId === "P5")!.resultado!;
+    expect(p.tensaoNormalAdmissivel).toBeCloseTo(0.009, 5);
+    expect(p.tensaoFlexaoAdmissivel).toBeCloseTo(0.01125, 5);
+    expect(p.tensaoFlexao).toBeCloseTo(0.0027, 4);
+    const d = lanceP5(r)!.dimensionamento!;
+    expect(d.as).toBeCloseTo(3.2, 2);
+    expect(d.barras).toEqual([{ quantidade: 4, bitola: 10 }]);
   });
 });

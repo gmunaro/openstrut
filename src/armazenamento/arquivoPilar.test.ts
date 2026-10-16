@@ -41,10 +41,14 @@ function obraCompleta(): Obra {
                 vento: { normal: 9.8, momentos: [{ m: 2.9, angulo: 90 }] },
                 cargaTopo: {
                   normal: 170.3,
-                  momentos: [{ m: -6.3, inclinacao: 0, vao: 4, rigidez: 64000 }],
+                  // vão com sinal: o .REP lido grava vão·(−SGN(M))
+                  momentos: [{ m: 6.3, inclinacao: 0, vao: -4, rigidez: 64000 }],
                 },
                 verificacoes: [
-                  { barras: [{ x: 3, y: 3, bitola: 12.5 }] },
+                  {
+                    barras: [{ x: 3, y: 3, bitola: 12.5 }],
+                    estribo: { bitola: 6.3, espacamento: 12 },
+                  },
                   {
                     barras: [{ x: 17, y: 3, bitola: 16 }],
                     esforcos: { nk: 170.3, mxk: 1, myk: 0, lex: 3, ley: 3 },
@@ -88,6 +92,21 @@ describe("arquivo: campos de pilar da NB-1/78", () => {
     expect(erros.some((e) => e.includes("pilares[4].secao.dInterno"))).toBe(true);
     expect(erros.some((e) => e.includes('campo desconhecido "barrasMaximas"'))).toBe(true);
     expect(erros.some((e) => e.includes("parametrosPilar.predimensionamento"))).toBe(true);
+  });
+
+  it("rotação só na retangular, de 0 a 360 graus", () => {
+    const o = obraCompleta();
+    const pilares = o.pavimentos[0]!.pilares;
+    pilares[0] = { ...pilares[0]!, rotacao: 30 };
+    expect(lerObra(serializarObra(o)).ok).toBe(true);
+    pilares[0] = { ...pilares[0]!, rotacao: 400 };
+    pilares[4] = { ...pilares[4]!, rotacao: 10 };
+    const r = lerObra(serializarObra(o));
+    const erros = r.ok ? [] : r.erros;
+    expect(erros.some((e) => e.includes("pilares[0].rotacao") && e.includes("0 a 360"))).toBe(true);
+    expect(erros.some((e) => e.includes("pilares[4].rotacao") && e.includes("retangular"))).toBe(
+      true,
+    );
   });
 
   it("tabelas com o tamanho do original: 13 bitolas, matriz 4 × 4, até 2 ventos e 4 momentos", () => {

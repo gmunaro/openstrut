@@ -829,9 +829,13 @@ function extrasDoLance(
       indice: v.indice,
       esforcosDoLance: v.repeticao !== undefined,
       nk: tParaKn(v.entrada.nk),
-      lambdaX: v.resultado?.lambdaX ?? 0,
-      lambdaY: v.resultado?.lambdaY ?? 0,
-      situacao: v.resultado?.situacao ?? "",
+      ...(v.resultado
+        ? {
+            lambdaX: v.resultado.lambdaX,
+            lambdaY: v.resultado.lambdaY,
+            situacao: v.resultado.situacao,
+          }
+        : {}),
       casos: (v.resultado?.casos ?? []).map((c) => ({
         rotulo: c.rotulo,
         mx: tmParaKnm(c.mx),
@@ -850,11 +854,17 @@ function extrasDoLance(
   const predimensionamento: PredimensionamentoPilarResultado | undefined = p && {
     modo: p.modo,
     ...(pr && Number.isFinite(pr.b) ? { lado: pr.b } : {}),
-    tensaoNormal: pr ? tcm2ParaMpa(pr.tensaoNormal) : 0,
-    tensaoNormalAdmissivel: pr ? tcm2ParaMpa(pr.tensaoNormalAdmissivel) : 0,
-    tensaoFlexao: pr ? tcm2ParaMpa(pr.tensaoFlexao) : 0,
-    tensaoFlexaoAdmissivel: pr ? tcm2ParaMpa(pr.tensaoFlexaoAdmissivel) : 0,
-    carga: pr ? tParaKn(pr.carga) : 0,
+    ...(pr
+      ? {
+          tensoes: {
+            normal: tcm2ParaMpa(pr.tensaoNormal),
+            normalAdmissivel: tcm2ParaMpa(pr.tensaoNormalAdmissivel),
+            flexao: tcm2ParaMpa(pr.tensaoFlexao),
+            flexaoAdmissivel: tcm2ParaMpa(pr.tensaoFlexaoAdmissivel),
+          },
+          carga: tParaKn(pr.carga),
+        }
+      : {}),
     avisos: p.avisos,
   };
   return {

@@ -32,6 +32,7 @@ import {
   leiAco,
   novoEstado,
   posiciona,
+  verticesRetangulo,
 } from "./secao";
 
 /** Geometria do original para o arranjo: polígono horário com o fecho, ou círculo. */
@@ -44,18 +45,8 @@ function geometria(secao: SecaoPilar, s: (x: number) => number, modo: ModoSistru
   if (secao.tipo === "retangular") {
     const b = s(Math.abs(secao.b));
     const h = s(Math.abs(secao.h));
-    return {
-      tipo: 1,
-      b,
-      h,
-      vertices: [
-        { x: 0, y: 0 },
-        { x: 0, y: h },
-        { x: b, y: h },
-        { x: b, y: 0 },
-        { x: 0, y: 0 },
-      ],
-    };
+    // rotação da seção: os vértices giram antes do arranjo (PILAREDI.BAS:2579-2580)
+    return { tipo: 1, b, h, vertices: verticesRetangulo(b, h, secao.rotacao ?? 0, modo) };
   }
   const v = secao.vertices.map((p) => ({ x: s(p.x), y: s(p.y) }));
   const fechado = [...v, v[0]!];

@@ -90,6 +90,9 @@ export interface Pilar {
   /** Seção circular ou poligonal (PILDADOS). Ausente = retângulo b × h. b e h ficam
    *  como a caixa da seção, para a planta e para o fluxo da V2. */
   secao?: SecaoNaoRetangular;
+  /** Rotação da seção retangular, graus (0..360, A_1338(c, s, 3)): o retângulo b × h
+   *  gira em torno do canto (0, 0). Ausente = 0. Não vale com `secao`. */
+  rotacao?: number;
   /** Vínculo na base do lance (A_130a do PILGEEDI). Ausente = continuidade. */
   vinculos?: VinculosPilar;
   /** Vínculo no topo; só vale no último lance da coluna (nos outros, o topo de um
@@ -101,8 +104,9 @@ export interface Pilar {
   /** Vento do lance (A_12dc): normal, kN, e até dois momentos, kN·m, com o ângulo em
    *  graus (0 = direção x). */
   vento?: VentoPilar;
-  /** Carga no topo do lance além da que vem das vigas do pavimento: a "Normal +
-   *  Momento" do PILGEEDI (A_1280), ou a de um .REP de outra obra. Soma com o .REP. */
+  /** Carga no nível do topo do lance além da que vem das vigas do pavimento, como o
+   *  PILGEEDI a guarda (A_1280): a "Normal + Momento" digitada ou a de um .REP de
+   *  outra obra. A normal soma com o .REP; os momentos vão aos slots livres. */
   cargaTopo?: CargaTopoPilar;
   /** PILAR opção 6: verificações da seção do lance com a armadura dada. */
   verificacoes?: VerificacaoPilarObra[];
@@ -144,9 +148,13 @@ export interface VentoPilar {
 export interface CargaTopoPilar {
   /** kN. */
   normal: number;
-  /** Até quatro momentos de viga: M (kN·m, sinal como no .REP), inclinação da viga
-   *  (graus), vão adjacente (m) e numerador da rigidez da viga (cm⁴, 0 = o pilar leva
-   *  todo o momento). */
+  /** Até quatro momentos, como o slot A_1280(k..k+3) que o PILAREDI usa: M (kN·m,
+   *  com sinal; o PILAREDI reparte M com o sinal, PILAREDI.BAS:7505-7506), inclinação
+   *  (graus), vão (m) e numerador da rigidez da viga (cm⁴). A rigidez só conta com vão
+   *  > 0 (rigidez/vão, PILAREDI.BAS:7502-7503). Lido de um .REP, o PILGEEDI grava
+   *  M = |M| e vão = vão·(−SGN(M)) (PILGEEDI.BAS:606-608): com M > 0 no .REP a
+   *  rigidez não conta. Digitado, M com sinal, vão 1 e rigidez = Jvig/Lvig
+   *  (PILGEEDI.BAS:2407-2413). */
   momentos: { m: number; inclinacao: number; vao: number; rigidez: number }[];
 }
 
@@ -161,6 +169,9 @@ export interface BarraPilarObra {
 /** Verificação da seção do lance com armadura dada (PILAR opção 6). */
 export interface VerificacaoPilarObra {
   barras: BarraPilarObra[];
+  /** Estribo da armadura (A_141e(c, v, 5..6) do .COL): bitola, mm, e espaçamento,
+   *  cm. Não entra na verificação: o PILAR opção 6 não verifica estribo. */
+  estribo?: { bitola: number; espacamento: number };
   /** Esforços característicos e comprimentos de flambagem digitados: kN, kN·m, m.
    *  Ausentes = os do lance calculado (Nk, Mk do caso "e" e le do PILAREDI). */
   esforcos?: { nk: number; mxk: number; myk: number; lex: number; ley: number };

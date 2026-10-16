@@ -113,7 +113,8 @@ export function leCargasRep(
       const numero = qbVal(linha.pilar.slice(1, 11));
       for (let nivel = rep.nivelInicial; nivel <= rep.nivelFinal; nivel++) {
         const ci = colunas.findIndex(
-          (c) => nivel >= 0 && nivel < c.niveis.length && casaNome(c.nome, numero),
+          (c) =>
+            nivel >= (c.nivelInferior ?? 0) && nivel < c.niveis.length && casaNome(c.nome, numero),
         );
         if (ci < 0) continue;
         const alvo = lidas[ci]!;
@@ -145,6 +146,28 @@ export function leCargasRep(
       }
     }
   }
+  // carga do nível guardada direto (NivelColuna.cargaAdicional), depois dos .REP
+  colunas.forEach((c, ci) =>
+    c.niveis.forEach((n, i) => {
+      const a = n.cargaAdicional;
+      if (!a) return;
+      const alvo = lidas[ci]!;
+      alvo.normal[i] = s(alvo.normal[i]! + a.normal);
+      const slots = alvo.slots[i]!;
+      let k = slots.findIndex((x) => x.m === 0);
+      for (const mo of a.momentos) {
+        if (k < 0 || k > 3) break;
+        if (mo.m === 0) continue;
+        slots[k] = {
+          m: s(mo.m),
+          inclinacao: s(mo.inclinacao),
+          vao: s(mo.vao),
+          rigidez: s(mo.rigidez),
+        };
+        k += 1;
+      }
+    }),
+  );
   return lidas;
 }
 
@@ -429,7 +452,7 @@ function reducao(
   return s((base * qbCint(pip.porcentagemAcidental) * fator) / 100);
 }
 
-function contextoCarga(modo: ModoSistrut, materiais?: MateriaisSistrut) {
+function contextoCarga(modo: ModoSistrut, materiais?: MateriaisSistrut, coefTensao = 1) {
   return criaContexto(modo, {
     fck: materiais?.fck ?? 0,
     fyk: materiais?.fyk ?? 0,
@@ -437,7 +460,7 @@ function contextoCarga(modo: ModoSistrut, materiais?: MateriaisSistrut) {
     csf: materiais?.gamaF ?? 1,
     csc: materiais?.gamaC ?? 1,
     csa: materiais?.gamaS ?? 1,
-    coefTensao: 1,
+    coefTensao,
   });
 }
 
@@ -589,15 +612,21 @@ export const predimensionaPilar: PredimensionaPilar = (
   modo,
   opcoes = {},
 ) => {
-  const ctx = contextoCarga(modo, materiais);
+  const ct = opcoes.parametros?.coeficienteTensao ?? 1;
+  const ctx = contextoCarga(modo, materiais, ct);
   const { s } = ctx;
   const par = opcoes.parametros ?? PADRAO_PREDIM;
   const [lidas] = leCargasRep(reps, [coluna], modo);
   const topo = coluna.niveis.length - 1;
   let somaAcima = 0;
   for (let j = topo; j >= nivelBase + 1; j--) somaAcima = s(lidas!.normal[j]! + somaAcima);
-  const admN = s(pip.tensaoAdmissivelNormal * materiais.fck);
-  const admM = s(pip.tensaoAdmissivelFlexao * materiais.fck);
+  // PILAREDI.BAS:3671-3677: multiplicador de fck × fck × V_0dec; negativo = a tensão
+  // admissível em si (× V_0dec)
+  const admissivel = (m: number) => s(m < 0 ? -m * ct : m * materiais.fck * ct);
+  const admN = admissivel(pip.tensaoAdmissivelNormal);
+  const admM = admissivel(pip.tensaoAdmissivelFlexao);
+  // a tela mostra as tensões ÷ V_0dec (PILAREDI.BAS:4196-4214)
+  const tela = (x: number) => (ct === 1 ? x : s(x / ct));
   const quadrado = (l: number): SecaoPilar => ({ tipo: "retangular", b: l, h: l, barras: [] });
   const sigmaS = tensaoAco2(ctx, opcoes.secao ?? quadrado(20), pip);
   const areaIdeal = s(
@@ -628,7 +657,11 @@ export const predimensionaPilar: PredimensionaPilar = (
       const red = reducao(ctx, pip.reduzAcidentalDimensionamento, topo - L, acima, c.pp, pip);
       const n = s(c.pp - red + acima);
       // PILAREDI.BAS:4248: PRINT INT((V_10b6 − V_10ba + V_0f88)·100)/100, sem SINGLE no meio
-      if (L === nivelBase) carga = s(Math.floor((c.pp - red + acima) * 100) / 100);
+      // no corrigido, com a folga de 1e-9 do INT (17,6699999… não perde 0,01)
+      const x = (c.pp - red + acima) * 100;
+      const piso =
+        modo === "original" ? Math.floor(x) : Math.floor(x + 1e-9 * Math.max(1, Math.abs(x)));
+      if (L === nivelBase) carga = s(piso / 100);
       const t = tensoesNivel(ctx, secao, n, c.e, sigmaS, pip, par);
       tentativas.push({ lado, nivel: L, ...t });
       if (!opcoes.secao && (t.tensaoFlexao > admM || t.tensaoNormal > admN)) {
@@ -645,10 +678,10 @@ export const predimensionaPilar: PredimensionaPilar = (
         h: opcoes.secao ? Number.NaN : lado,
         secao,
         areaIdeal,
-        tensaoNormal: maxN,
-        tensaoNormalAdmissivel: admN,
-        tensaoFlexao: maxM,
-        tensaoFlexaoAdmissivel: admM,
+        tensaoNormal: tela(maxN),
+        tensaoNormalAdmissivel: tela(admN),
+        tensaoFlexao: tela(maxM),
+        tensaoFlexaoAdmissivel: tela(admM),
         tentativas,
         carga,
       };

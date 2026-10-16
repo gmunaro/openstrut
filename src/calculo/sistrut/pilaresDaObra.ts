@@ -6,8 +6,8 @@
 // - Nível k da coluna = base do lance k (o pilar do k-ésimo pavimento de baixo para
 //   cima): seção, vínculos, excentricidade e vento do pilar desse lance. Topo da
 //   coluna: a seção do último lance e `vinculosTopo`.
-// - `cargaTopo` vira um registro "soma" no nível do topo do lance, como uma segunda
-//   leitura de .REP (ou a "Normal + Momento") no PILGEEDI (PILGEEDI.BAS:595, 644-670).
+// - `cargaTopo` vai ao slot A_1280 do nível do topo do lance (`cargaAdicional`), com
+//   o sinal do momento, como a "Normal + Momento" do PILGEEDI (PILGEEDI.BAS:2407).
 // - PILAR.INI e .PIP: os de fábrica com os campos de `obra.parametrosPilar` por cima,
 //   nos dois modos (SINGLE no original).
 import {
@@ -24,7 +24,6 @@ import type {
   ColunaEdificio,
   EntradaVerificacaoPilar,
   LeituraRep,
-  LinhaRep,
   MateriaisSistrut,
   ModoSistrut,
   NivelColuna,
@@ -102,6 +101,7 @@ export const parametrosPredimensionamento = (
   verificaH30: par.verificaH30,
   coeficienteMedida: par.coeficienteMedida,
   coeficienteForca: par.coeficienteForca,
+  coeficienteTensao: par.coeficienteTensao,
 });
 
 // ---------------------------------------------------------------- seção e níveis
@@ -110,7 +110,14 @@ export const parametrosPredimensionamento = (
 export function secaoDoPilar(p: Pilar, modo: ModoSistrut, barras: BarraPilar[] = []): SecaoPilar {
   const s = atribuicao(modo);
   const sec = p.secao;
-  if (!sec) return { tipo: "retangular", b: s(p.b), h: s(p.h), barras };
+  if (!sec)
+    return {
+      tipo: "retangular",
+      b: s(p.b),
+      h: s(p.h),
+      barras,
+      ...(p.rotacao ? { rotacao: s(p.rotacao) } : {}),
+    };
   if (sec.tipo === "circular")
     return { tipo: "circular", d: s(sec.d), dInterno: s(sec.dInterno), barras };
   return {
@@ -149,38 +156,23 @@ export function nivelDoPilar(p: Pilar, cota: number, modo: ModoSistrut, topo = f
   return nivel;
 }
 
-/** Linha de .REP com a `cargaTopo` do pilar, para a coluna `coluna` (o PILGEEDI casa
- *  pelo número no nome). Momento: texto = o valor em tm, como o .REP grava. */
-export function linhaCargaTopo(p: Pilar, coluna: string, modo: ModoSistrut): LinhaRep | undefined {
+/** `cargaTopo` do pilar como o slot A_1280 do nível do topo do lance
+ *  (`NivelColuna.cargaAdicional`, t e tm): normal e momentos com o sinal, sem passar
+ *  pelo ABS da leitura do .REP. */
+export function cargaDoNivel(p: Pilar, modo: ModoSistrut): NivelColuna["cargaAdicional"] {
   const c = p.cargaTopo;
   if (!c) return undefined;
   const s = atribuicao(modo);
   return {
-    pilar: coluna,
-    total: s(c.normal / KN_POR_TF),
-    parcelas: [],
-    momentos: c.momentos.map((m) => {
-      const valor = s(m.m / KN_POR_TF);
-      return {
-        viga: "",
-        valor,
-        texto: String(valor),
-        apoio: 0,
-        vao: s(m.vao),
-        inclinacao: s(m.inclinacao),
-        rigidez: s(m.rigidez),
-      };
-    }),
+    normal: s(c.normal / KN_POR_TF),
+    momentos: c.momentos.map((m) => ({
+      m: s(m.m / KN_POR_TF),
+      inclinacao: s(m.inclinacao),
+      vao: s(m.vao),
+      rigidez: s(m.rigidez),
+    })),
   };
 }
-
-/** Registro "soma" das cargas no topo de um nível, depois do .REP do pavimento. */
-export const leituraCargasTopo = (linhas: LinhaRep[], nivel: number): LeituraRep => ({
-  linhas,
-  nivelInicial: nivel,
-  nivelFinal: nivel,
-  modo: "soma",
-});
 
 // ---------------------------------------------------------------- predimensionamento
 
@@ -232,12 +224,18 @@ export interface VerificacaoPilarSistrut {
   avisos: string[];
 }
 
-/** Verifica as `verificacoes` de um pilar: com os esforços digitados, uma vez; sem
- *  eles, uma por lance do pilar, com Nk, Mk do caso "e" e le do PILAREDI. */
+/** Verifica as `verificacoes` de um pilar: com os esforços digitados, uma vez, na
+ *  seção do pilar; sem eles, uma por lance do pilar, com Nk, Mk do caso "e" e le do
+ *  PILAREDI, na seção que o lance usou (`secao`; a do predimensionamento com "secao"). */
 export function verificacoesDoPilar(
   p: Pilar,
   pavimentoId: string,
-  lances: readonly { repeticao: number; nivel: number; carga: CargaPilarNivel }[],
+  lances: readonly {
+    repeticao: number;
+    nivel: number;
+    carga: CargaPilarNivel;
+    secao: SecaoPilar;
+  }[],
   mat: MateriaisSistrut,
   par: ParametrosPilar,
   modo: ModoSistrut,
@@ -246,10 +244,11 @@ export function verificacoesDoPilar(
   const saida: VerificacaoPilarSistrut[] = [];
   (p.verificacoes ?? []).forEach((v, indice) => {
     const barras = v.barras.map((b) => ({ x: s(b.x), y: s(b.y), bitola: b.bitola }));
-    const secao = secaoDoPilar(p, modo, barras);
+    const secaoDigitada = secaoDoPilar(p, modo, barras);
     const casos = v.esforcos
       ? [
           {
+            secao: secaoDigitada,
             entrada: {
               nk: s(v.esforcos.nk / KN_POR_TF),
               mxk: s(v.esforcos.mxk / KN_POR_TF),
@@ -262,6 +261,7 @@ export function verificacoesDoPilar(
       : lances.map((l) => ({
           repeticao: l.repeticao,
           nivel: l.nivel,
+          secao: { ...l.secao, barras },
           entrada: {
             nk: l.carga.nk,
             mxk: l.carga.mkx,
@@ -272,7 +272,7 @@ export function verificacoesDoPilar(
         }));
     for (const caso of casos) {
       const entrada: EntradaVerificacaoPilar = {
-        secao,
+        secao: caso.secao,
         ...caso.entrada,
         materiais: mat,
         parametros: par,

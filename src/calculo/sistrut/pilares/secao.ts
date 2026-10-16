@@ -461,6 +461,31 @@ function areaHoraria(v: readonly Ponto[]) {
   return a;
 }
 
+/** Vértices do retângulo b × h como o PILDADOS grava, (0,0) (0,h) (b,h) (b,0) e o
+ *  fecho, girados de `rotacao` graus em torno da origem (PILAREDI.BAS:1630-1631):
+ *  x' = cos·x − sin·y, y' = sin·x + cos·y, com o π em SINGLE e cada vértice em SINGLE. */
+export function verticesRetangulo(b: number, h: number, rotacao: number, modo: ModoSistrut) {
+  const v = [
+    { x: 0, y: 0 },
+    { x: 0, y: h },
+    { x: b, y: h },
+    { x: b, y: 0 },
+    { x: 0, y: 0 },
+  ];
+  if (!rotacao) return v;
+  return v.map((p) => girado(p, rotacao, modo));
+}
+
+/** Um ponto girado de `rotacao` graus em torno da origem (PILAREDI.BAS:1630-1631). */
+export function girado(p: Ponto, rotacao: number, modo: ModoSistrut): Ponto {
+  const s = atribuicao(modo);
+  const a = (constantes(modo).pi * rotacao) / 180;
+  return {
+    x: s(Math.cos(a) * p.x - Math.sin(a) * p.y),
+    y: s(Math.sin(a) * p.x + Math.cos(a) * p.y),
+  };
+}
+
 /** Converte a seção do contrato para a do original: retangular vira o polígono
  *  (0,0) (0,h) (b,h) (b,0), como o PILDADOS grava (horário); a área de cada barra
  *  vem da tabela pela bitola (PILAR.BAS:3340-3346). Poligonal anti-horária: no
@@ -480,16 +505,12 @@ export function secaoCalculo(
   if (secao.tipo === "circular")
     return { tipo: 2, diametro: s(secao.d), diametroInterno: s(secao.dInterno), barras };
   if (secao.tipo === "retangular") {
-    const b = s(secao.b);
-    const h = s(secao.h);
-    const vertices = [
-      { x: 0, y: 0 },
-      { x: 0, y: h },
-      { x: b, y: h },
-      { x: b, y: 0 },
-      { x: 0, y: 0 },
-    ];
-    return { tipo: 1, vertices, barras };
+    // girada: as barras dadas no retângulo sem giro giram com ele
+    const rotacao = secao.rotacao ?? 0;
+    const vertices = verticesRetangulo(s(secao.b), s(secao.h), rotacao, modo);
+    if (!rotacao) return { tipo: 1, vertices, barras };
+    const giradas = barras.map((b) => ({ ...girado(b, rotacao, modo), area: b.area }));
+    return { tipo: 1, vertices, barras: giradas };
   }
   let vertices = secao.vertices.map((p) => ({ x: s(p.x), y: s(p.y) }));
   vertices.push(vertices[0]!);
