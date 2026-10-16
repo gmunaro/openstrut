@@ -10,6 +10,7 @@
 // montado pelos números (STR$, 2862-2873 e 3027-3037) e calcula a flecha (L_19577) com
 // as barras novas. O que a tela recusaria ("BITOLA NAO PADRONIZADA", "ARMADURA
 // INSUFICIENTE", "CORTADAS CADA") vira aviso e a alteração não entra.
+import { num } from "../../texto";
 import type { AlteracaoArmadura, BarrasArranjo, ModoSistrut, ParametrosDsp } from "../base/tipos";
 import { atribuicao, ErroQB, qbInt, qbStr } from "../base/f32";
 import { areaBitola } from "./desdim-barras";
@@ -164,7 +165,7 @@ export function aplicaAlteracoes(
           aviso(`${onde}: "+m" barras sem a bitola de mistura; vale só n.`);
         if (n * a1 + m * a2 < As) {
           aviso(
-            `${onde}: ${n}#${t.bitola ?? b1}${m ? `+${m}` : ""} não cobre As = ${As.toFixed(2)} cm² ("ARMADURA INSUFICIENTE"); alteração ignorada.`,
+            `${onde}: ${n}#${t.bitola ?? b1}${m ? `+${m}` : ""} não cobre As = ${num(As, 2)} cm² ("ARMADURA INSUFICIENTE"); alteração ignorada.`,
           );
           continue;
         }
@@ -225,7 +226,7 @@ export function aplicaAlteracoes(
       }
       if (ar * f.quantidade < e.as) {
         aviso(
-          `${onde}: ${f.quantidade} barras de ${b} mm não cobrem As = ${e.as.toFixed(2)} cm²; alteração ignorada.`,
+          `${onde}: ${f.quantidade} barras de ${b} mm não cobrem As = ${num(e.as, 2)} cm²; alteração ignorada.`,
         );
         continue;
       }

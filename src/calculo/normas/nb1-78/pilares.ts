@@ -3,6 +3,7 @@
 // cuja altura é b (λx = 3,464·lex/b); My flete na direção y, altura h.
 // A V1 trata 0,15 tf/cm² como 15 MPa (1 tf = 10 kN); com tensões em MPa e Es =
 // 210 000 MPa a física é a mesma.
+import { num } from "../../texto";
 import type {
   Barra,
   BarrasPilar,
@@ -234,9 +235,7 @@ export function pilarNb178(
     );
 
   if (lambda > LAMBDA_MAXIMO) {
-    avisos.push(
-      `${e.nome}: esbeltez máxima excedida (λ = ${lambda.toFixed(1)} > ${LAMBDA_MAXIMO})`,
-    );
+    avisos.push(`${e.nome}: esbeltez máxima excedida (λ = ${num(lambda, 1)} > ${LAMBDA_MAXIMO})`);
     return semSolucao(NaN, NaN);
   }
 

@@ -1,6 +1,7 @@
 // Cálculo da obra inteira: lajes → vigas → pilares, pavimento por pavimento,
 // com verificação de equilíbrio. Orquestra as peças comuns (vinculação,
 // compatibilização, montagem, viga contínua, acumulação) e as da norma.
+import { num } from "./texto";
 import type { AvisoComOpcao } from "./avisos";
 import type { Laje, Obra, Pavimento, Pilar } from "../dominio/obra";
 import { calcularObraPeloSistrut } from "./fluxoSistrut";
@@ -255,7 +256,7 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
       if (phi > PHI_MAX_ALTURA_UTIL) {
         const real = obra.materiais.cobrimentoPilar + resultado.estribo.phi / 10 + phi / 20;
         extras.push(
-          `Barras de φ ${phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d' real = c + φt + φ/2 = ${real.toFixed(2)} cm, maior que o adotado (${dLinha.toFixed(2)} cm); confira.`,
+          `Barras de φ ${phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d' real = c + φt + φ/2 = ${num(real, 2)} cm, maior que o adotado (${num(dLinha, 2)} cm); confira.`,
         );
       }
       const soSistrut = camposSoDoSistrut(pilar);
@@ -392,7 +393,7 @@ function analiseComLigacao(
     mNegDir: i === n - 1 ? Math.min(t.mNegDir, dir) : t.mNegDir,
   }));
   const adotado = (descricao: string, envoltoria: number, valor: number): Etapa => ({
-    descricao: `${viga.nome}: negativo no ${descricao}, o maior em módulo entre a envoltória (${envoltoria.toFixed(2)}) e Mvig`,
+    descricao: `${viga.nome}: negativo no ${descricao}, o maior em módulo entre a envoltória (${num(envoltoria, 2)}) e Mvig`,
     formula: "M = mín(Menv; Mvig)",
     valor,
     unidade: "kN·m",
@@ -460,14 +461,14 @@ function momentosLigacao(ligacoes: readonly (NivelLigacao | null)[], k: number, 
     memoria.push(
       {
         descricao: `M${d},topo: ligação com as vigas do nível e metade da base`,
-        formula: `Mtopo = Σ Minf − Σ Msup,baixo/2 = ${topo.toFixed(2)} − ${base.toFixed(2)}/2`,
+        formula: `Mtopo = Σ Minf − Σ Msup,baixo/2 = ${num(topo, 2)} − ${num(base, 2)}/2`,
         valor: m.topo,
         unidade: "kN·m",
         ref: REF_LANCE,
       },
       {
         descricao: `M${d},base: ligação com as vigas do nível de baixo e metade do topo`,
-        formula: `Mbase = Σ Msup,baixo − Σ Minf/2 = ${base.toFixed(2)} − ${topo.toFixed(2)}/2`,
+        formula: `Mbase = Σ Msup,baixo − Σ Minf/2 = ${num(base, 2)} − ${num(topo, 2)}/2`,
         valor: m.base,
         unidade: "kN·m",
         ref: REF_LANCE,
@@ -560,7 +561,7 @@ export function calcularPavimento(
     const carga = (c.g + c.q) * r.laje.lx * r.laje.ly;
     marcarFalha(
       resultado,
-      `Laje ${r.laje.nome} sem cálculo: a carga dela (${carga.toFixed(2)} kN) NÃO chegou às vigas nem aos pilares; vigas e pilares deste pavimento e dos de baixo estão incompletos.`,
+      `Laje ${r.laje.nome} sem cálculo: a carga dela (${num(carga, 2)} kN) NÃO chegou às vigas nem aos pilares; vigas e pilares deste pavimento e dos de baixo estão incompletos.`,
     );
   }
   return resultado;
@@ -653,14 +654,14 @@ export function dimensionarViga(
       if (s.barras && s.barras.phi > PHI_MAX_ALTURA_UTIL) {
         const real = viga.h - cobrimento - (estribo?.phi ?? 5) / 10 - s.barras.phi / 20;
         avisos.push(
-          `${nome}: barras de φ ${s.barras.phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d real = h − c − φt − φ/2 = ${real.toFixed(2)} cm, menor que o d adotado (${d.toFixed(2)} cm); confira.`,
+          `${nome}: barras de φ ${s.barras.phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d real = h − c − φt − φ/2 = ${num(real, 2)} cm, menor que o d adotado (${num(d, 2)} cm); confira.`,
         );
       }
     }
     avisos.push(...cEsq.avisos.map((a) => `${nome}: ${a}`));
     if (cDir !== cEsq) avisos.push(...cDir.avisos.map((a) => `${nome}: ${a}`));
     if (!estribo)
-      avisos.push(`${nome}: sem estribo possível para Asw = ${cortante.asw.toFixed(2)} cm²/m.`);
+      avisos.push(`${nome}: sem estribo possível para Asw = ${num(cortante.asw, 2)} cm²/m.`);
     return { positivo, negativoEsq, negativoDir, cortante, estribo };
   });
   return { viga, analise, d, tramos, avisos: [...new Set(avisos)] };

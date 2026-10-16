@@ -2,6 +2,7 @@
 // Comum às duas normas. Portado de V1 PILGECAL.BM (PgSomaPavimento, PgAcumula):
 // Nk(nível) = Nk(nível de cima) + carga das vigas no nível + peso próprio do lance.
 // Só a normal acumula; momentos de ligação viga-pilar são locais ao nível.
+import { num } from "../texto";
 import type { ComMemoria, Etapa } from "../tipos";
 
 /** Seção do pilar, cm. */
@@ -124,7 +125,7 @@ export function cargaAcumulada(
         if (doNivel.has(pilar)) continue;
         if (!semLance.has(pilar)) {
           const nome = nomes.get(pilar) ?? pilar;
-          const aviso = `Pilar ${nome} termina no pavimento ${nivel}: a carga (${nk.toFixed(2)} kN) NÃO foi transferida a viga de transição — modele a transição.`;
+          const aviso = `Pilar ${nome} termina no pavimento ${nivel}: a carga (${num(nk, 2)} kN) NÃO foi transferida a viga de transição — modele a transição.`;
           avisos.push(aviso);
           transicoes.push({ pilar, nome, pavimentoId: pav.id, repeticao: r, nk, aviso });
           semLance.add(pilar);
@@ -135,7 +136,7 @@ export function cargaAcumulada(
         const nkAcima = p.nk - p.carga - p.pesoProprio;
         memoria.push({
           descricao: `${nomes.get(p.pilar) ?? p.pilar} em ${nivel}`,
-          formula: `Nk = Nk,acima + carga + pp = ${nkAcima.toFixed(2)} + ${p.carga.toFixed(2)} + ${p.pesoProprio.toFixed(2)}`,
+          formula: `Nk = Nk,acima + carga + pp = ${num(nkAcima, 2)} + ${num(p.carga, 2)} + ${num(p.pesoProprio, 2)}`,
           valor: p.nk,
           unidade: "kN",
           ref: "V1 PILGECAL.BM",

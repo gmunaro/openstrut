@@ -27,6 +27,7 @@
 //   `acidental` (as digitadas); a carga com a `acidental` informada (a do .VIG gravado, ou
 //   o Pac/Fac digitado com "F") a soma à da montagem.
 // O que o original recusa vira aviso e não entra no registro.
+import { num } from "../texto";
 import type { CargaViga, Viga } from "../../dominio/obra";
 import { atribuicao, qbCint } from "./base/f32";
 import type {
@@ -188,7 +189,7 @@ export function editaVig(
       const novo = s(viga.vaos![i]!);
       if (Math.abs(novo - vao) > TOL_VAO)
         aviso(
-          `o vão ${viga.vaos![i]} m do trecho ${i} não bate com a planta (${vao.toFixed(3)} m): vale o da planta.`,
+          `o vão ${viga.vaos![i]} m do trecho ${i} não bate com a planta (${num(vao, 3)} m): vale o da planta.`,
         );
       else {
         vao = novo;
@@ -280,7 +281,7 @@ export function editaVig(
     const proxima = listas[i + 1];
     if (!proxima) {
       aviso(
-        `F de ${ultima.f.toFixed(3)} t no fim do trecho ${i}, em cima do último apoio: o VIGA não aceita F na última divisão de um tramo (VIGA.BAS:1279) e não há trecho depois. Carga ignorada: ela vai direto ao pilar.`,
+        `F de ${num(ultima.f, 3)} t no fim do trecho ${i}, em cima do último apoio: o VIGA não aceita F na última divisão de um tramo (VIGA.BAS:1279) e não há trecho depois. Carga ignorada: ela vai direto ao pilar.`,
       );
     } else {
       aviso(

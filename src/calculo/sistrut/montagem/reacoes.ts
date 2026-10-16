@@ -8,6 +8,7 @@
 //
 // Modo corrigido: o mesmo algoritmo em float64 (o PLANO 4.2 não lista defeito da
 // montagem; R4, peso digitado ≠ H, não se aplica na V2).
+import { num } from "../../texto";
 import type { MontaPavimento, ReacaoDeBordo } from "../base/tipos";
 import { atribuicao, sng } from "../base/f32";
 import type { Etapa } from "../../tipos";
@@ -254,15 +255,15 @@ export const montaPavimento: MontaPavimento = (
       } else {
         avisos.push(
           `Laje ${laje.nome}, bordo ${k}: nenhuma viga com trecho igual ao bordo; a carga ` +
-            `(${s(alv + cargaArea + perm * A + pp * A).toFixed(2)} t) foi para o total dos pilares, como no original.`,
+            `(${num(s(alv + cargaArea + perm * A + pp * A), 2)} t) foi para o total dos pilares, como no original.`,
         );
       }
     }
     const areaLaje = esforcos.preparadas[laje.nome]?.area ?? areaPoligono(laje.vertices, s);
     if (Math.abs(somaAreas - areaLaje) / areaLaje > TRES_POR_CENTO)
       avisos.push(
-        `A soma das áreas parciais da laje ${laje.nome} (${somaAreas.toFixed(2)} m²) difere ` +
-          `em mais de 3 % da área total (${areaLaje.toFixed(2)} m²) (LAJEMONT.BAS:2742).`,
+        `A soma das áreas parciais da laje ${laje.nome} (${num(somaAreas, 2)} m²) difere ` +
+          `em mais de 3 % da área total (${num(areaLaje, 2)} m²) (LAJEMONT.BAS:2742).`,
       );
     memoria.push({
       descricao: `Laje ${laje.nome}: soma das áreas de influência`,
@@ -280,8 +281,8 @@ export const montaPavimento: MontaPavimento = (
     alvNominal = s(distancia(a.x1, a.y1, a.x2, a.y2) * a.carga + alvNominal);
   if (alvNominal > 0 && Math.abs((totAlv - alvNominal) / alvNominal) > TRES_POR_CENTO)
     avisos.push(
-      `A soma das cargas de alvenaria consideradas nas lajes e nas vigas (${totAlv.toFixed(2)} t) ` +
-        `difere em mais de 3 % da carga total das alvenarias (${alvNominal.toFixed(2)} t).`,
+      `A soma das cargas de alvenaria consideradas nas lajes e nas vigas (${num(totAlv, 2)} t) ` +
+        `difere em mais de 3 % da carga total das alvenarias (${num(alvNominal, 2)} t).`,
     );
   let cargaNominal = 0;
   for (const c of cargas) {
@@ -295,8 +296,8 @@ export const montaPavimento: MontaPavimento = (
   }
   if (cargaNominal > 0 && Math.abs((totCargaArea - cargaNominal) / cargaNominal) > TRES_POR_CENTO)
     avisos.push(
-      `A soma das cargas por área aplicadas nas lajes (${totCargaArea.toFixed(2)} t) difere em ` +
-        `mais de 3 % da carga total por área (${cargaNominal.toFixed(2)} t).`,
+      `A soma das cargas por área aplicadas nas lajes (${num(totCargaArea, 2)} t) difere em ` +
+        `mais de 3 % da carga total por área (${num(cargaNominal, 2)} t).`,
     );
   const painelTotal = s(totAlv + totCargaArea + ppVigas + ppLajes + estrutura);
   const totais = {

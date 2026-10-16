@@ -6,6 +6,7 @@
 // livros_arm_forma_des.md 1 e 4.3 (U03, U04-005, U05-007/010); PLANO D1-D6, R8, R9, H.
 // Unidades do original: m e t nos esforços, cm e t/cm² nas seções, M em t·cm dentro
 // do dimensionamento.
+import { num } from "../../texto";
 import { atribuicao } from "../base/f32";
 import type {
   ApoioDimensionado,
@@ -296,7 +297,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
         avisos.push(`${viga.nome} apoio ${k}: abertura de fissuras acima do limite.`);
     }
     memoria.push({
-      descricao: `Apoio ${k}: x/d ${r.xd.toFixed(3)}, Mk ${apoio.mk.toFixed(2)} tm, ${apoio.arranjo}`,
+      descricao: `Apoio ${k}: x/d ${num(r.xd, 3)}, Mk ${num(apoio.mk, 2)} tm, ${apoio.arranjo}`,
       formula: "As = máx(As flexão; taxa·bw·hw)",
       valor: as,
       unidade: "cm²",
@@ -402,7 +403,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
           avisos.push(`${viga.nome} tramo ${t.indice}: abertura de fissuras acima do limite.`);
       }
       memoria.push({
-        descricao: `Tramo ${t.indice}: x/d ${flexao.xd.toFixed(3)}, Mk ${flexao.mk.toFixed(2)} tm, ${flexao.arranjo}; estribos ${esq.texto} / ${dir.texto}; flecha ${flechaTexto.trim()} cm`,
+        descricao: `Tramo ${t.indice}: x/d ${num(flexao.xd, 3)}, Mk ${num(flexao.mk, 2)} tm, ${flexao.arranjo}; estribos ${esq.texto} / ${dir.texto}; flecha ${flechaTexto.trim()} cm`,
         formula: "Asw = (|V|/(bw·d)·γs·γf − (0,225 + 15ρ)·√(1000 fck)/1000)/fyk·bw·100·γs",
         valor: flexao.as,
         unidade: "cm²",

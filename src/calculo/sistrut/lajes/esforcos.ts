@@ -1,5 +1,6 @@
 // Esforços de todas as lajes de um pavimento (LAJECALC opções 1, 2 e 5 e, se
 // injetada, a otimização dos negativos da opção 6).
+import { num } from "../../texto";
 import type { Etapa } from "../../tipos";
 import type {
   CoeficienteCarga,
@@ -85,7 +86,7 @@ export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza, paraNaPrimeira
       if (l.tipo !== 0 || l.mu > 0) return l;
       const { razao, mu } = direcaoMu(l.vertices, l.angulo, parametros, modo);
       memoria.push({
-        descricao: `${l.nome}: relação das cordas ${razao.toFixed(3)} → μ`,
+        descricao: `${l.nome}: relação das cordas ${num(razao, 3)} → μ`,
         valor: mu,
         ref: "LAJECALC.BAS:4801-4971",
       });

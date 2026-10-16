@@ -8,6 +8,7 @@
 //   DcComprEstribo#): τbu = 0,42 fcd^(2/3), fator 1,5 nas barras superiores
 //   de peças com h ≥ 30 cm, ganchos de 10 φ. Barra lisa (CA-25):
 //   τbu = 0,28 fcd^(1/2) (Fiorin, 1998, item 5.1, que cita a NBR 6118:1978).
+import { num } from "../texto";
 import type { Aco } from "../../dominio/obra";
 import { fctm, GAMA_C } from "../normas/nbr6118-2023/materiais";
 import type { Etapa, MateriaisCalc } from "../tipos";
@@ -102,7 +103,7 @@ export function ancoragemBasica6118(
     memoria: [
       {
         descricao: `Resistência de aderência, φ ${phi} mm, ${ad === "boa" ? "boa" : "má"} aderência`,
-        formula: `fbd = η1 η2 η3 fctd = ${eta1} · ${eta2} · ${eta3.toFixed(2)} · ${fctd.toFixed(3)}`,
+        formula: `fbd = η1 η2 η3 fctd = ${eta1} · ${eta2} · ${num(eta3, 2)} · ${num(fctd, 3)}`,
         valor: fbd,
         unidade: "MPa",
         ref: ref("9.3.2.1", "Eq. 1"),
@@ -140,7 +141,7 @@ export function ancoragemNecessaria6118(
     memoria: [
       {
         descricao: `Ancoragem necessária, φ ${anc.phi} mm${gancho ? " com gancho" : ""}`,
-        formula: `lb,nec = α lb As,calc/As,ef = ${alfa} · ${anc.lb.toFixed(1)} · ${razao.toFixed(3)} ≥ lb,mín = máx(0,3 lb; 10 φ; 10 cm) = ${lbMin.toFixed(1)}`,
+        formula: `lb,nec = α lb As,calc/As,ef = ${alfa} · ${num(anc.lb, 1)} · ${num(razao, 3)} ≥ lb,mín = máx(0,3 lb; 10 φ; 10 cm) = ${num(lbMin, 1)}`,
         valor: lbNec,
         unidade: "cm",
         ref: `6118:2023 9.4.2.5 (${F4}, Eq. 4 e 5)`,

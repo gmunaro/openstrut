@@ -4,6 +4,7 @@
 // Fontes: docs/norma/vigas-pilares.md, seções 2 e 3 (apostilas de Bastos,
 // UNESP: F1 = Flexão Normal Simples out/2023; F3 = Cortante mar/2025).
 // Contas internas em kN, cm e kN/cm² (1 MPa = 0,1 kN/cm²).
+import { num } from "../../texto";
 import type { CortanteResultado, Etapa, FlexaoResultado, MateriaisCalc } from "../../tipos";
 import { FYK, fctm, GAMA_C } from "./materiais";
 
@@ -168,7 +169,7 @@ export function vigaFlexao6118(
     asComprimida = m2 / (sigmaLinha * (d - dLinha));
     as = as1 + as2;
     avisos.push(
-      `x/d = ${xdLivre.toFixed(3)} passaria do limite ${xdLim}: armadura dupla com x = ${xdLim} d (A's = ${asComprimida.toFixed(2)} cm²).`,
+      `x/d = ${num(xdLivre, 3)} passaria do limite ${xdLim}: armadura dupla com x = ${xdLim} d (A's = ${num(asComprimida, 2)} cm²).`,
     );
     memoria.push(
       {
@@ -236,7 +237,7 @@ export function vigaFlexao6118(
   });
   if (as + asComprimida > asMax) {
     avisos.push(
-      `As + A's = ${(as + asComprimida).toFixed(2)} cm² > 4 % Ac = ${asMax.toFixed(2)} cm²: aumente a seção.`,
+      `As + A's = ${num(as + asComprimida, 2)} cm² > 4 % Ac = ${num(asMax, 2)} cm²: aumente a seção.`,
     );
   }
 
@@ -249,7 +250,7 @@ export function vigaFlexao6118(
       unidade: "cm²",
       ref: `6118:2023 17.3.5.2.3 (${F1}, Eq. 11) [VERIFICAR taxa]`,
     });
-    avisos.push(`h = ${h} cm > 60 cm: armadura de pele de ${asPele.toFixed(2)} cm² em cada face.`);
+    avisos.push(`h = ${h} cm > 60 cm: armadura de pele de ${num(asPele, 2)} cm² em cada face.`);
   }
   return { as, asComprimida, xd, avisos, memoria };
 }
@@ -356,7 +357,7 @@ export function vigaCortante6118(
   ];
   if (!bielaOk) {
     avisos.push(
-      `Biela comprimida esmagada: Vsd = ${vsd.toFixed(1)} kN > VRd2 = ${vrd2.toFixed(1)} kN; aumente a seção.`,
+      `Biela comprimida esmagada: Vsd = ${num(vsd, 1)} kN > VRd2 = ${num(vrd2, 1)} kN; aumente a seção.`,
     );
   }
   if (mat.fck > 50) {

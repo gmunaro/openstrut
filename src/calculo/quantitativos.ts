@@ -37,6 +37,7 @@
 //   (o original não calcula volume, fôrma nem aço de laje e de pilar).
 // Os itens E, F e G antigos (negativa contada duas vezes, volume e fôrma da "tela" e
 // do "relatório") reproduziam a V1 antiga, não o SISTRUT, e saíram.
+import { num } from "./texto";
 import { geometriaPilar } from "./secaoPilar";
 import type {
   Bordo,
@@ -154,7 +155,7 @@ const pesoMalha = (b: Barra, largura: number, comprimento: number) =>
   (areaPorMetro(b) / 10_000) * largura * comprimento * MASSA_ACO;
 
 const temBarra = (b: Barra) => b.phi > 0 && b.espacamento > 0;
-const f = (x: number, casas = 2) => x.toFixed(casas);
+const f = (x: number, casas = 2) => num(x, casas);
 
 /** Resultado de um elemento (uma ocorrência, sem repetições). */
 export interface QuantElemento extends Quantidades, ComMemoria {

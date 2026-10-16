@@ -5,6 +5,7 @@
 // (REGRAS_PILAR_6118 e REGRAS_PILAR_NB178); lb e ganchos vêm de ancoragem.ts
 // via RegrasDetalhamento (vigas.ts).
 // Unidades: comprimentos e cotas em cm, φ em mm.
+import { num } from "../texto";
 import type { NormaId, Pilar } from "../../dominio/obra";
 import { geometriaPilar } from "../secaoPilar";
 import { arranjoBarras } from "../normas/nb1-78/pilares";
@@ -67,7 +68,7 @@ export function traspasse6118(phi: number, mat: MateriaisCalc): Traspasse {
       ...nec.memoria,
       {
         descricao: `Traspasse das barras φ ${phi} mm (todas na mesma seção)`,
-        formula: `l0t = α0t lb,nec = ${ALFA_0T_TODAS} · ${nec.lbNec.toFixed(1)} ≥ máx(0,3 α0t lb; 15 φ; 20 cm) = ${minimo.toFixed(1)}`,
+        formula: `l0t = α0t lb,nec = ${ALFA_0T_TODAS} · ${num(nec.lbNec, 1)} ≥ máx(0,3 α0t lb; 15 φ; 20 cm) = ${num(minimo, 1)}`,
         valor: l0,
         unidade: "cm",
         ref: `6118:2023 9.5.2.2.1 e Tabela 9.4 (${F4}, Eq. 6 e 7, Tabela 4)`,

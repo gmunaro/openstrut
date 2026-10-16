@@ -17,6 +17,7 @@
 // As regras "editor" (FORMEDCA) e "impressao" (FORMIMP) que a V2 tinha como "modo
 // original" vinham da V1 antiga: o FORMEDCA e o FORMIMP do SISTRUT não calculam fôrma
 // (PLANO da paridade, 4.1 item G; docs/MODO-CALCULO.md). Saíram.
+import { num } from "./texto";
 import { geometriaPilar } from "./secaoPilar";
 import {
   colineares,
@@ -65,7 +66,7 @@ export interface FormasObra {
   total: number;
 }
 
-const f = (x: number, casas = 2) => x.toFixed(casas);
+const f = (x: number, casas = 2) => num(x, casas);
 
 /** Laje: fundo lx·ly, m². */
 export const formaLaje = (l: Pick<Laje, "lx" | "ly">) => l.lx * l.ly;

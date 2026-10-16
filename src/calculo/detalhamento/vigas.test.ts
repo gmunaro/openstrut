@@ -434,7 +434,7 @@ describe("armadura dupla no negativo do apoio interno", () => {
     const avisos = r.avisos.filter((a) => a.includes("armadura comprimida"));
     expect(avisos).toHaveLength(1);
     expect(avisos[0]).toContain("apoio 2");
-    expect(avisos[0]).toContain("A's = 0.50");
+    expect(avisos[0]).toContain("A's = 0,50");
   });
 });
 
