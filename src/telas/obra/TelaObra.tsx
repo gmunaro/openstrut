@@ -264,6 +264,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
             size="sm"
             className="aria-disabled:opacity-50"
             aria-disabled={motivoFormas !== undefined}
+            aria-describedby={motivoFormas ? "motivo-dxf-formas" : undefined}
             title={motivoFormas}
             onClick={() => void exportar(motivoFormas, () => baixarFormasDxf(obra))}
           >
@@ -274,6 +275,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
             size="sm"
             className="aria-disabled:opacity-50"
             aria-disabled={motivoArmacao !== undefined}
+            aria-describedby={motivoArmacao ? "motivo-dxf-armacao" : undefined}
             title={motivoArmacao}
             onClick={() =>
               void exportar(motivoArmacao, () =>
@@ -284,6 +286,14 @@ function ObraAberta({ obra }: { obra: Obra }) {
             <FileDown /> Exportar DXF (armação)
           </Button>
         </div>
+        {(motivoFormas || motivoArmacao) && (
+          // por que a exportação está indisponível, à vista e ligado ao botão (aria-describedby)
+          <p className="text-muted-foreground basis-full text-right text-[11px]">
+            {motivoFormas && <span id="motivo-dxf-formas">DXF de formas: {motivoFormas}</span>}
+            {motivoFormas && motivoArmacao && " · "}
+            {motivoArmacao && <span id="motivo-dxf-armacao">DXF de armação: {motivoArmacao}</span>}
+          </p>
+        )}
       </header>
 
       {(mensagem || bloqueio || erroRascunho || falhaDxf || erros.length > 0) && (
@@ -297,7 +307,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
             />
           )}
           {bloqueio && (
-            <p role="status" className="text-muted-foreground text-xs">
+            // o motivo já está à vista sob os botões; aqui só o anúncio do clique bloqueado
+            <p role="status" className="sr-only">
               {bloqueio}
             </p>
           )}
