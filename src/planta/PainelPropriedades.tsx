@@ -13,7 +13,9 @@ import {
   type Vinculo,
 } from "../dominio/obra";
 import { useObra, type Selecao } from "../estado/obra";
+import { EditorLaje, resumoLaje } from "../telas/obra/editores/DialogoLaje";
 import { EditorPavimento, resumoPavimento } from "../telas/obra/editores/DialogoPavimento";
+import { EditorPilar, resumoPilar } from "../telas/obra/editores/DialogoPilar";
 import { EditorViga, resumoViga } from "../telas/obra/editores/DialogoViga";
 import { COR_SITUACAO, ROTULO_SITUACAO } from "./Desenho";
 import { alterarLaje, alterarPilar, alterarViga, type Edicao } from "./edicao";
@@ -230,6 +232,12 @@ function PropriedadesLaje({
         ))}
       </fieldset>
       {erro && <p className="text-xs text-red-400">{erro}</p>}
+      {nb178 && (
+        <div className="space-y-1 border-t border-slate-700 pt-2">
+          <EditorLaje pav={pav} laje={l} />
+          <p className="text-xs text-slate-400">{resumoLaje(l)}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -292,6 +300,8 @@ function PropriedadesPilar({
   aplicar: Props["aplicar"];
 }) {
   const muda = (m: Partial<Omit<Pilar, "id">>) => aplicar(alterarPilar(pav, p.id, m));
+  // seção, vínculos, vento, cargas e verificações: só o SISTRUT (NB-1/78)
+  const nb178 = useObra((s) => s.obra?.norma === "nb1-78");
   const num = (campo: "b" | "h", rotulo: string) => (
     <CampoNumero
       key={`${p.id}:${campo}:${p[campo]}`}
@@ -317,6 +327,12 @@ function PropriedadesPilar({
         {num("b", "b (em x)")}
         {num("h", "h (em y)")}
       </div>
+      {nb178 && (
+        <div className="space-y-1 border-t border-slate-700 pt-2">
+          <EditorPilar pav={pav} pilar={p} />
+          <p className="text-xs text-slate-400">{resumoPilar(p)}</p>
+        </div>
+      )}
     </div>
   );
 }
