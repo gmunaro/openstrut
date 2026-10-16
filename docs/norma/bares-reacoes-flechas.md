@@ -1,487 +1,160 @@
-# Tabelas de Bares/Pinheiro na apostila "Lajes de Concreto": flechas, reações de apoio e momentos
+# Tabelas de lajes (tipos de Bares/Pinheiro): como o app calcula momentos, reações e flechas
 
 ## 1. Escopo e status
 
-Fonte: BASTOS, P. S. S. *Lajes de Concreto*. UNESP Bauru/SP, out/2023. Cópia local usada: `lajes-bastos.pdf` (md5 dca1c10d4e5bc93826e0617687408772). [LAJES]
+O motor da NBR 6118 (`src/calculo/normas/nbr6118-2023/lajes.ts`) calcula lajes maciças retangulares com carga uniforme e bordos apoiados ou engastados por coeficientes tabelados em λ = ly/lx. Os coeficientes ficam em `src/calculo/normas/nbr6118-2023/tabelasBares.ts`, um arquivo **gerado** por `scripts/bares/gerar.ts`:
 
-Conteúdo deste arquivo:
+```
+bun scripts/bares/gerar.ts
+```
 
-- Tabelas A-1 a A-4: flechas em lajes com carga uniforme (A-1 e A-2) e triangular (A-3 e A-4).
-- Tabelas A-5 a A-7: reações de apoio em lajes com carga uniforme.
-- Tabelas A-11 e A-12: momentos fletores em lajes com carga uniforme.
+O gerador é determinístico (mesma saída a cada execução) e não lê nenhuma tabela publicada: calcula os coeficientes pela teoria de placas e pelo processo das áreas. O app manteve a numeração dos tipos (1 a 6) e o formato das tabelas de Bares adaptadas por Pinheiro, que a apostila de Bastos (*Lajes de Concreto*, UNESP, 2023, Anexo) usa e que o motor seguia antes, para que a memória de cálculo continue comparável com a literatura.
 
-Fora deste arquivo: A-8 a A-10 (momentos, transcritas em `durabilidade-lajes.md`, seção 6.3), A-13 a A-17 (momentos, carga triangular).
+Não normativo: a análise elástica por tabelas é uma escolha do app (docs/SPEC.md); a NBR 6118 admite análise linear (14.7.3) e o processo das áreas para as reações (14.7.6.1), mas não traz tabelas. [NÃO NORMATIVO]
 
-Origem: os coeficientes são de Bares, adaptados por Pinheiro (1994), conforme o rodapé de cada tabela. A obra original de Bares não foi consultada. Referência de Pinheiro: `Concreto armado: tabelas e ábacos`, São Carlos, EESC-USP, 1994, citada em [LAJES] PDF 86 (imp. 82). Não normativo: a apostila não relaciona estas tabelas a nenhuma edição da NBR 6118. [NÃO NORMATIVO]
+Fora do escopo: lajes com bordo livre (só o balanço com três bordos livres, tratado como faixa engastada em `lajes.ts`) e cargas triangulares. A apostila tem tabelas para esses casos; o app não as usa.
 
-Método de transcrição: leitura visual das imagens das páginas, linha a linha, sem OCR. Valores transcritos como impressos, inclusive sinais negativos. Células ilegíveis ou suspeitas estão marcadas com [VERIFICAR].
+## 2. Convenções
 
-Convenção de páginas: página PDF = página impressa + 4. Os números de página deste arquivo são PDF, com a impressa entre parênteses.
+- lx é o vão horizontal do desenho da tabela e o **menor** vão; ly = λ·lx, com 1 ≤ λ. Se o menor vão da laje é o vertical da planta, `lajes.ts` transpõe a tabela.
+- x-bordos: perpendiculares a lx (esquerdo E e direito D). y-bordos: perpendiculares a ly (inferior I e superior S).
+- Tipo = quantidade de engastes (nx nos x-bordos, ny nos y-bordos). Na orientação da tabela:
 
-## 2. Fórmulas de uso
+| Tipo | (nx, ny) | Engastados |
+|---|---|---|
+| 1 | (0, 0) | nenhum |
+| 2A | (0, 1) | I |
+| 2B | (1, 0) | D |
+| 3 | (1, 1) | D, I |
+| 4A | (0, 2) | I, S |
+| 4B | (2, 0) | E, D |
+| 5A | (1, 2) | D, I, S |
+| 5B | (2, 1) | E, D, I |
+| 6 | (2, 2) | todos |
 
-### 2.1 Flecha (Tabelas A-1 a A-4)
+  Nos tipos assimétricos, qual dos dois bordos opostos é o engastado não muda os coeficientes (espelhamento).
+- Colunas (22 posições: λ = 1,00 a 2,00 de 0,05 em 0,05, e a linha "> 2,00"):
+  - `mx`, `my` (μx, μy): momentos positivos **no centro** da placa; M = μ · p · lx² / 100.
+  - `mxNeg`, `myNeg` (μ'x, μ'y): módulo do maior momento negativo **ao longo do bordo** engastado; mesma fórmula. Nos bordos simétricos (o oposto tem o mesmo vínculo) é o meio do bordo; nos tipos 3, 5A (μ'y) e 5B (μ'x) o máximo fica deslocado para o canto apoiado.
+  - `vx`, `vy` (νx, νy): reação nos bordos apoiados; `vxNeg`, `vyNeg` (ν'x, ν'y): nos engastados; V = ν · p · lx / 10.
+  - `alfa` (α): flecha elástica no centro, a = α · p · lx⁴ / (1200 · EI), com EI da faixa de 1 m (E·h³/12). `lajes.ts` aplica a rigidez de Branson e a fluência sobre essa flecha.
+- Interpolação: `coeficienteBares` (em `lajes.ts`) interpola linearmente entre linhas; λ > 2 usa a linha "> 2,00".
 
-Flecha imediata, com b = 100 cm (rodapé de A-1 a A-4; Eq. 46 da apostila, PDF 31, imp. 27):
+## 3. Momentos e flecha: teoria de placas
 
-a_i = α · p · ℓx⁴ / (12 · EI)
+Placa delgada (Kirchhoff), isótropa, elástica linear, carga uniforme q, rigidez D = E h³ / (12 (1 − ν²)). Equação: D ∇⁴w = q, com w = 0 em todos os bordos, momento nulo nos apoiados e rotação nula nos engastados. Momentos: Mx = −D (w,xx + ν w,yy), My = −D (w,yy + ν w,xx).
 
-- α: coeficiente de flecha da tabela. Em A-2 e A-4, αB é o coeficiente no centro da borda livre.
-- ℓx: menor vão da laje (A-1, rodapé). Em A-2 a A-4 o rodapé fala em "menor valor entre ℓa e ℓb".
-- EI: (EI)eq se Ma > Mr; Ecs · Ic se Ma < Mr (Eq. 48, [LAJES] `lajes-bastos.txt:1718–1719`).
-- Flecha total: a_t = a_i · (1 + f) (Eq. 49, [LAJES] `lajes-bastos.txt:1723`).
-- Carga p: o corpo do texto usa a carga da combinação quase permanente. Os rodapés divergem: A-1 e A-2 dizem "carga uniforme"; A-3 e A-4 dizem "carga máxima". A apostila não reconcilia os dois usos. [VERIFICAR] antes de usar em projeto.
+### 3.1 Método (scripts/bares/placas.ts)
 
-### 2.2 Reação de apoio (Tabelas A-5 a A-7)
+Superposição, como em Timoshenko & Woinowsky-Krieger, *Theory of Plates and Shells* (2ª ed., 1959, cap. 6):
 
-V = ν · p · ℓx / 10 (rodapé de A-5 a A-7).
+1. Placa toda apoiada sob q: faixa apoiada em forma fechada mais a correção de Lévy em série de senos em x (exata, termo a termo).
+2. Em cada bordo engastado, a mesma placa apoiada sob um momento distribuído M(s) = Σ Eₖ sen(kπs/L), também resolvida por Lévy.
+3. Os coeficientes Eₖ saem de impor rotação nula em cada bordo engastado, projetada na mesma base de senos. A projeção da série do bordo perpendicular é fechada: integrando por partes contra o operador de Lévy, ∫ f(t) sen(kπt/L) dt depende só da carga e dos momentos nas pontas. Resulta um sistema linear denso de K equações por bordo engastado.
 
-- ν: coeficiente da coluna escolhida (νx, νy, ν'x, ν'y).
-- p: carga uniforme. ℓx: menor vão. O rodapé não indica unidades. [VERIFICAR]
-- Rodapé de A-5 a A-7: "(*) os alívios foram considerados pela metade, prevendo a possibilidade de engastes parciais."
+A única aproximação é truncar as séries de momento de bordo em K termos. K = 100 é o usado. Na tabela inteira (9 tipos, λ = 1,00 a 2,00), dobrar para K = 200 muda os coeficientes no máximo 4,6·10⁻⁵ (tipo 3, λ = 1,85, μ'x) e não muda nenhuma célula arredondada; a precisão publicada é 0,005. Com K = 50 a diferença para K = 100 chega a 3,3·10⁻⁴ e duas células mudam. O teste `tabelasBares.test.ts` compara K com 2K nos piores casos, com tolerância de 10⁻⁴. As funções hiperbólicas são avaliadas como razões com exponenciais negativas, sem estouro numérico.
 
-### 2.3 Momento fletor (Tabelas A-11 e A-12)
+### 3.2 Coeficiente de Poisson
 
-M = μ · p · ℓ² / 100 (rodapé de A-11 e A-12).
+ν = 0,15. Não é o 0,2 da NBR 6118 (8.2.9): é o valor que reproduz as tabelas de Bares/Pinheiro que o motor usava. Na placa quadrada apoiada, μ = 100 · 0,03683 · (1 + ν) e α = 1200 · 0,004062 · (1 − ν²); com ν = 0,15 dão 4,24 e 4,77, contra 4,42 e 4,68 com ν = 0,2, e a tabela antiga estava no primeiro par (a menos de uma unidade na segunda casa). O ajuste por outros tipos confirma ν ≈ 0,15, e a fonte também diz: Pinheiro, Muzardo e Santos (EESC-USP, 2003, nota 11.12) descrevem as tabelas como "baseadas nas de BARES (1972), com coeficiente de Poisson igual a 0,15". O gerador usa o mesmo ν, de modo que a comparação da seção 5 não tem efeito de ν. Trocar para 0,2 mudaria regra de cálculo, fora do escopo da troca de fonte. [VERIFICAR] se o app deve adotar 0,2.
 
-- ℓ: menor valor entre ℓa e ℓb. No corpo do texto, a Eq. 21 usa ℓx (PDF 22, imp. 18, `lajes-bastos.txt:1137`).
-- Mb: momento ao longo da borda livre, quando a coluna traz μyb ou μ'yb.
-- p: carga uniforme, conforme o rodapé.
+### 3.3 Linha "> 2,00"
 
-## 3. Legendas dos vínculos
+Na direção x (vão lx), a faixa de 1 m como viga vinculada pelos x-bordos: μx = 100/8, 100·9/128 ou 100/24; μ'x = 100/8 ou 100/12; α = 1200 · 5/384, 1200 · 0,0054159 (máximo da viga apoiada-engastada, em x = (1 + √33)/16 · l) ou 1200/384, sem o fator 1 − ν². Na direção y, a linha repete λ = 2,00. É a convenção da tabela antiga.
 
-### 3.1 Linhas de contorno (Figura 9, PDF 9, imp. 5)
+## 4. Reações: processo das áreas (scripts/bares/reacoes.ts)
 
-- Hachura: engaste perfeito.
-- Linha cheia: apoio simples.
-- Tracejado: borda livre.
+NBR 6118 14.7.6.1: a carga de cada região limitada pelas retas que saem dos cantos vai para o bordo da região; as retas fazem 45° entre bordos de mesmo vínculo e 60° a partir do engastado quando o outro é apoiado. O gerador obtém essa divisão atribuindo cada ponto ao bordo de menor k·d (d = distância ao bordo, k = 1 no engastado e k = √3 = tg 60° no apoiado) e recortando o retângulo pelos semiplanos correspondentes; as áreas são exatas.
 
-### 3.2 Tipos 1 a 10 (Figura 10, PDF 10, imp. 6)
+Metade do alívio: num par de bordos opostos com um engastado e outro apoiado, o apoiado recebe de volta metade do alívio. Como na viga apoiada-engastada (R = pl/2 ∓ X/l), o alívio é metade da diferença entre as duas reações, e só metade dele é descontada (previsão de engaste parcial, a mesma regra da tabela antiga):
 
-Leitura visual do desenho, com a convenção da Figura 9. Lados pela posição no desenho: S = superior, I = inferior, E = esquerda, D = direita. A = apoio simples, En = engaste, L = livre.
+ν_apoiado = ν_área + (ν'_área − ν_área) / 4.
 
-| Tipo | S | I | E | D | Observação |
-|---|---|---|---|---|---|
-| 1 | A | A | A | A | Quatro bordas apoiadas |
-| 2A | A | En | A | A | |
-| 2B | A | A | A | En | |
-| 3 | A | En | A | En | |
-| 4A | En | En | A | A | |
-| 4B | A | A | En | En | |
-| 5A | En | En | A | En | |
-| 5B | A | En | En | En | |
-| 6 | En | En | En | En | Quatro bordas engastadas |
-| 7 | A | A | A | L | |
-| 8 | En | En | A | L | |
-| 9 | A | A | En | L | |
-| 10 | En | En | En | L | |
-
-Os tipos 1 a 10 aparecem nas tabelas A-1, A-2, A-5, A-6, A-7, A-11 e A-12. A conferência pelos desenhos ampliados (`png/fig10-zoom.png`; `png/fig10-t10-hi.png` para o tipo 10; `png/fig10-5b-hi.png` para o tipo 5B) confirma cada borda acima.
-
-### 3.3 Tipos 11 a 18 (cabeçalho da Tabela A-3, PDF 89, imp. 85)
-
-Carga triangular à esquerda do quadro, com a rotulagem p junto à base do triângulo. Cotas: ℓa na vertical (direita), ℓb na horizontal (inferior).
-
-| Tipo | S | I | E | D | Observação |
-|---|---|---|---|---|---|
-| 11 | A | A | A | A | Sem hachura |
-| 12 | A | En | A | A | Hachura na borda inferior |
-| 13 | En | A | A | A | Hachura na borda superior |
-| 14 | En | En | A | A | Hachura nas bordas superior e inferior |
-| 15 | A | A | En | En | Hachura nas bordas esquerda e direita |
-| 16 | A | En | En | En | Hachura nas bordas inferior, esquerda e direita |
-| 17 | En | A | A | En | Hachura nas bordas superior e direita |
-| 18 | En | En | A | En | Hachura nas bordas superior, inferior e direita |
-
-Fonte visual: `png/a3-11-14.png` e `png/a3-15-18.png`, em tamanho médio, sem ampliação dedicada. A hachura lateral dos tipos 17 e 18 é a menos nítida do conjunto: ver seção 7, item 6.
-
-### 3.4 Tipos 19 a 22 (cabeçalho da Tabela A-4, PDF 90, imp. 86)
-
-Carga triangular à esquerda do quadro, com a rotulagem p junto à base do triângulo. Cotas: ℓa na vertical (direita), ℓb na horizontal (inferior). Tracejado = borda livre (L).
-
-| Tipo | S | I | E | D | Observação |
-|---|---|---|---|---|---|
-| 19 | L | A | A | A | Borda superior livre (tracejada), sem hachura |
-| 20 | L | A | En | En | Hachura nas bordas esquerda e direita; superior livre |
-| 21 | A | En | A | A | Hachura na borda inferior |
-| 22 | L | En | En | En | Hachura nas bordas inferior, esquerda e direita; superior livre |
-
-Fonte visual: `png/a4-19-20.png` e `png/a4-21-22.png`, em tamanho médio, sem ampliação dedicada. Mesmo critério do item 3.3.
-
-Nota de rodapé 3 da apostila: a numeração dos tipos pode diferir da usada por outros autores.
-
-## 4. Tabelas de flecha
-
-### Tabela A-1 / FLECHAS EM LAJES COM CARGA UNIFORME – VALORES DE α
-
-- PDF 87 (imp. 83). Fórmula: a_i = α · p · ℓx⁴ / (12 · EI), seção 2.1.
-- Tipos: 1, 2A, 2B, 3, 4A, 4B, 5A, 5B, 6 (legenda na seção 3.2).
-- Rodapé: "Valores extraídos de BARES e adaptada por PINHEIRO (1994)". p = carga uniforme; ℓx = menor vão; ℓy = maior vão.
-
-| λ = ℓy/ℓx | 1 | 2A | 2B | 3 | 4A | 4B | 5A | 5B | 6 |
-|---|---|---|---|---|---|---|---|---|---|
-| 1,00 | 4,76 | 3,26 | 3,26 | 2,46 | 2,25 | 2,25 | 1,84 | 1,84 | 1,49 |
-| 1,05 | 5,26 | 3,68 | 3,48 | 2,72 | 2,60 | 2,35 | 2,08 | 1,96 | 1,63 |
-| 1,10 | 5,74 | 4,11 | 3,70 | 2,96 | 2,97 | 2,45 | 2,31 | 2,08 | 1,77 |
-| 1,15 | 6,20 | 4,55 | 3,89 | 3,18 | 3,35 | 2,53 | 2,54 | 2,18 | 1,90 |
-| 1,20 | 6,64 | 5,00 | 4,09 | 3,40 | 3,74 | 2,61 | 2,77 | 2,28 | 2,02 |
-| 1,25 | 7,08 | 5,44 | 4,26 | 3,61 | 4,14 | 2,68 | 3,00 | 2,37 | 2,14 |
-| 1,30 | 7,49 | 5,88 | 4,43 | 3,80 | 4,56 | 2,74 | 3,22 | 2,46 | 2,24 |
-| 1,35 | 7,90 | 6,32 | 4,58 | 3,99 | 5,01 | 2,77 | 3,42 | 2,53 | 2,34 |
-| 1,40 | 8,29 | 6,74 | 4,73 | 4,15 | 5,41 | 2,80 | 3,62 | 2,61 | 2,41 |
-| 1,45 | 8,67 | 7,15 | 4,87 | 4,31 | 5,83 | 2,85 | 3,80 | 2,67 | 2,49 |
-| 1,50 | 9,03 | 7,55 | 5,01 | 4,46 | 6,25 | 2,89 | 3,98 | 2,73 | 2,56 |
-| 1,55 | 9,39 | 7,95 | 5,09 | 4,61 | 6,66 | 2,91 | 4,14 | 2,78 | 2,62 |
-| 1,60 | 9,71 | 8,32 | 5,18 | 4,73 | 7,06 | 2,92 | 4,30 | 2,82 | 2,68 |
-| 1,65 | 10,04 | 8,68 | 5,22 | 4,86 | 7,46 | 2,92 | 4,45 | 2,83 | 2,73 |
-| 1,70 | 10,34 | 9,03 | 5,26 | 4,97 | 7,84 | 2,93 | 4,59 | 2,84 | 2,77 |
-| 1,75 | 10,62 | 9,36 | 5,36 | 5,06 | 8,21 | 2,93 | 4,71 | 2,86 | 2,81 |
-| 1,80 | 10,91 | 9,69 | 5,46 | 5,16 | 8,58 | 2,94 | 4,84 | 2,88 | 2,85 |
-| 1,85 | 11,16 | 10,00 | 5,53 | 5,25 | 8,93 | 2,94 | 4,96 | 2,90 | 2,88 |
-| 1,90 | 11,41 | 10,29 | 5,60 | 5,33 | 9,25 | 2,95 | 5,07 | 2,92 | 2,90 |
-| 1,95 | 11,65 | 10,58 | 5,68 | 5,41 | 9,58 | 2,95 | 5,17 | 2,94 | 2,93 |
-| 2,00 | 11,89 | 10,87 | 5,76 | 5,49 | 9,90 | 2,96 | 5,28 | 2,96 | 2,96 |
-| ∞ | 15,63 | 15,63 | 6,50 | 6,50 | 15,63 | 3,13 | 6,50 | 3,13 | 3,13 |
-
-### Tabela A-2 / FLECHAS EM LAJES COM CARGA UNIFORME – VALORES DE α e αB
-
-- PDF 88 (imp. 84). Fórmula: a_i = α · p · ℓx⁴ / (12 · EI), seção 2.1. αB: coeficiente no centro da borda livre.
-- Tipos: 7, 8, 9, 10 (legenda na seção 3.2). Coluna γ = ℓa/ℓb.
-- Rodapé: "Valores extraídos de BARES e adaptada por PINHEIRO (1994)". a_i = α p ℓx⁴ / (12 EI); p = carga uniforme; h = altura da laje; ℓ = menor valor entre ℓa e ℓb; E = módulo de elasticidade; α = coeficiente centro da laje; αb = coeficiente centro da borda livre.
-- Célula 9 α, γ = 1,75 (12,23): o valor quebra a tendência das linhas vizinhas (11,01 em 1,70; 11,44 em 1,80). Impresso assim, conferido em ampliação. [VERIFICAR]
-
-| γ = ℓa/ℓb | 7 α | 7 αB | 8 α | 8 αB | 9 α | 9 αB | 10 α | 10 αB |
-|---|---|---|---|---|---|---|---|---|
-| < 0,30 | - | - | - | - | 53,13 | 150,00 | 53,13 | 150,00 |
-| 0,30 | 215,71 | 412,59 | 134,64 | 231,63 | 41,98 | 110,02 | 37,64 | 97,00 |
-| 0,35 | 163,97 | 309,59 | 95,26 | 164,37 | 37,48 | 96,70 | 31,65 | 78,05 |
-| 0,40 | 122,22 | 206,59 | 55,88 | 97,11 | 32,98 | 83,37 | 25,65 | 59,09 |
-| 0,45 | 88,76 | 160,99 | 41,73 | 71,35 | 29,06 | 71,61 | 20,89 | 46,71 |
-| 0,50 | 65,29 | 115,39 | 27,58 | 45,59 | 25,14 | 59,85 | 16,13 | 34,33 |
-| 0,55 | 52,96 | 92,40 | 21,35 | 34,38 | 22,12 | 51,42 | 13,22 | 27,07 |
-| 0,60 | 40,63 | 69,40 | 15,11 | 23,16 | 19,09 | 42,98 | 10,31 | 19,81 |
-| 0,65 | 33,58 | 56,48 | 12,07 | 18,03 | 16,80 | 37,00 | 8,53 | 15,96 |
-| 0,70 | 26,52 | 43,56 | 9,03 | 12,89 | 14,50 | 31,01 | 6,74 | 12,11 |
-| 0,75 | 22,14 | 35,64 | 7,41 | 10,31 | 12,79 | 26,67 | 5,63 | 9,82 |
-| 0,80 | 17,75 | 27,71 | 5,78 | 7,73 | 11,08 | 22,33 | 4,52 | 7,53 |
-| 0,85 | 15,23 | 23,54 | 4,82 | 6,32 | 9,78 | 19,25 | 3,84 | 6,19 |
-| 0,90 | 12,71 | 19,37 | 3,86 | 4,90 | 8,47 | 16,16 | 3,15 | 4,84 |
-| 0,95 | 10,92 | 16,48 | 3,26 | 4,08 | 7,49 | 13,96 | 2,71 | 4,04 |
-| 1,00 | 9,13 | 13,58 | 2,66 | 3,25 | 6,50 | 11,76 | 2,26 | 3,24 |
-| 1,05 | 9,46 | 13,85 | 2,71 | 3,26 | 6,91 | 12,19 | 2,34 | 3,26 |
-| 1,10 | 9,79 | 14,11 | 2,76 | 3,28 | 7,32 | 12,60 | 2,42 | 3,27 |
-| 1,15 | 10,12 | 14,38 | 2,81 | 3,29 | 7,72 | 13,01 | 2,49 | 3,29 |
-| 1,20 | 10,45 | 14,64 | 2,86 | 3,30 | 8,13 | 13,46 | 2,57 | 3,30 |
-| 1,25 | 10,69 | 14,77 | 2,88 | 3,31 | 8,46 | 13,72 | 2,61 | 3,31 |
-| 1,30 | 10,93 | 14,91 | 2,90 | 3,31 | 8,80 | 13,97 | 2,64 | 3,31 |
-| 1,35 | 11,18 | 15,04 | 2,93 | 3,32 | 9,13 | 14,23 | 2,68 | 3,32 |
-| 1,40 | 11,42 | 15,17 | 2,95 | 3,33 | 9,46 | 14,48 | 2,71 | 3,33 |
-| 1,45 | 11,66 | 15,31 | 2,97 | 3,33 | 9,80 | 14,74 | 2,75 | 3,33 |
-| 1,50 | 11,90 | 15,44 | 2,99 | 3,34 | 10,13 | 14,99 | 2,78 | 3,34 |
-| 1,55 | 12,04 | 15,50 | 3,00 | 3,34 | 10,35 | 15,09 | 2,79 | 3,34 |
-| 1,60 | 12,18 | 15,55 | 3,00 | 3,34 | 10,57 | 15,19 | 2,80 | 3,34 |
-| 1,65 | 12,31 | 15,61 | 3,01 | 3,35 | 10,79 | 15,29 | 2,81 | 3,35 |
-| 1,70 | 12,45 | 15,66 | 3,01 | 3,35 | 11,01 | 15,39 | 2,82 | 3,35 |
-| 1,75 | 12,59 | 15,72 | 3,02 | 3,35 | 12,23 [VERIFICAR] | 15,50 | 2,83 | 3,35 |
-| 1,80 | 12,73 | 15,78 | 3,02 | 3,35 | 11,44 | 15,60 | 2,84 | 3,35 |
-| 1,85 | 12,87 | 15,83 | 3,03 | 3,35 | 11,66 | 15,70 | 2,85 | 3,35 |
-| 1,90 | 13,00 | 15,89 | 3,03 | 3,36 | 11,88 | 15,80 | 2,86 | 3,36 |
-| 1,95 | 13,14 | 15,94 | 3,04 | 3,36 | 12,10 | 15,90 | 2,87 | 3,36 |
-| 2,00 | 13,28 | 16,00 | 3,04 | 3,36 | 12,32 | 16,00 | 2,88 | 3,36 |
-| ∞ | 15,63 | 16,00 | 3,13 | 3,36 | 15,63 | 16,00 | 3,13 | 3,36 |
-
-### Tabela A-3 / VALORES de α PARA CÁLCULO DE FLECHA EM LAJES COM CARGA TRIANGULAR
-
-- PDF 89 (imp. 85). Fórmula: a_i = α · p · ℓx⁴ / (12 · EI), seção 2.1, com p = carga máxima.
-- Tipos: 11 a 18 (legenda na seção 3.3). Coluna γ = ℓa/ℓb.
-- Rodapé: "Valores extraídos de BARES e adaptada por PINHEIRO (1994)". a_i = α p ℓx⁴ / (12 EI); p = carga máxima; h = altura da laje; ℓ = menor entre ℓa e ℓb; E = módulo de elasticidade; α = coeficiente da flecha máxima.
-- A linha γ = 1,75 não está impressa na tabela (conferido em `png/a3-zoom.png`). Não é célula ilegível.
-- Célula 18, γ = 2,00: impresso "160" (sem separador decimal). Transcrito como 1,60. [VERIFICAR]
-
-| γ = ℓa/ℓb | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
-|---|---|---|---|---|---|---|---|---|
-| < 0,50 | 7,82 | 2,87 | 3,66 | 1,57 | 7,82 | 2,87 | 3,66 | 1,57 |
-| 0,50 | 5,93 | 2,58 | 3,32 | 1,54 | 4,94 | 2,38 | 3,09 | 1,47 |
-| 0,55 | 5,50 | 2,48 | 3,19 | 1,51 | 4,37 | 2,21 | 2,84 | 1,42 |
-| 0,60 | 5,07 | 2,38 | 3,06 | 1,47 | 3,79 | 2,03 | 2,59 | 1,37 |
-| 0,65 | 4,67 | 2,28 | 2,91 | 1,44 | 3,30 | 1,87 | 2,36 | 1,30 |
-| 0,70 | 4,26 | 2,17 | 2,75 | 1,41 | 2,80 | 1,70 | 2,13 | 1,22 |
-| 0,75 | 3,90 | 2,06 | 2,61 | 1,38 | 2,44 | 1,55 | 1,94 | 1,14 |
-| 0,80 | 3,54 | 1,95 | 2,46 | 1,34 | 2,07 | 1,40 | 1,74 | 1,06 |
-| 0,85 | 3,23 | 1,85 | 2,31 | 1,29 | 1,80 | 1,26 | 1,56 | 0,98 |
-| 0,90 | 2,92 | 1,74 | 2,16 | 1,24 | 1,52 | 1,11 | 1,37 | 0,90 |
-| 0,95 | 2,65 | 1,62 | 2,02 | 1,18 | 1,34 | 0,99 | 1,21 | 0,83 |
-| 1,00 | 2,38 | 1,50 | 1,87 | 1,12 | 1,15 | 0,87 | 1,05 | 0,75 |
-| 1,05 | 2,62 | 1,71 | 2,11 | 1,30 | 1,22 | 0,93 | 1,14 | 0,82 |
-| 1,10 | 2,86 | 1,92 | 2,35 | 1,48 | 1,29 | 0,99 | 1,23 | 0,90 |
-| 1,15 | 3,11 | 2,13 | 2,62 | 1,68 | 1,36 | 1,05 | 1,30 | 0,96 |
-| 1,20 | 3,35 | 2,34 | 2,89 | 1,88 | 1,43 | 1,11 | 1,37 | 1,02 |
-| 1,25 | 3,59 | 2,54 | 3,15 | 2,08 | 1,49 | 1,17 | 1,44 | 1,07 |
-| 1,30 | 3,81 | 2,74 | 3,39 | 2,28 | 1,52 | 1,21 | 1,47 | 1,11 |
-| 1,35 | 4,03 | 2,94 | 3,63 | 2,48 | 1,54 | 1,24 | 1,50 | 1,15 |
-| 1,40 | 4,25 | 3,14 | 3,86 | 2,68 | 1,57 | 1,27 | 1,53 | 1,19 |
-| 1,45 | 4,46 | 3,33 | 4,09 | 2,88 | 1,60 | 1,30 | 1,55 | 1,22 |
-| 1,50 | 4,64 | 3,53 | 4,28 | 3,09 | 1,62 | 1,32 | 1,57 | 1,24 |
-| 1,55 | 4,82 | 3,72 | 4,48 | 3,30 | 1,64 | 1,34 | 1,58 | 1,26 |
-| 1,60 | 5,01 | 3,91 | 4,68 | 3,51 | 1,67 | 1,36 | 1,60 | 1,28 |
-| 1,65 | 5,19 | 4,10 | 4,87 | 3,71 | 1,69 | 1,38 | 1,62 | 1,31 |
-| 1,70 | 5,36 | 4,26 | 5,05 | 3,90 | 1,72 | 1,43 | 1,64 | 1,34 |
-| 1,80 | 5,71 | 4,55 | 5,40 | 4,25 | 1,79 | 1,54 | 1,68 | 1,43 |
-| 1,85 | 5,88 | 4,69 | 5,57 | 4,43 | 1,82 | 1,59 | 1,70 | 1,47 |
-| 1,90 | 6,05 | 4,83 | 5,74 | 4,61 | 1,85 | 1,65 | 1,72 | 1,51 |
-| 1,95 | 6,23 | 4,98 | 5,91 | 4,78 | 1,89 | 1,70 | 1,74 | 1,56 |
-| 2,00 | 6,40 | 5,12 | 6,08 | 4,96 | 1,92 | 1,76 | 1,76 | 1,60 [VERIFICAR] |
-
-### Tabela A-4 / FLECHAS EM LAJES COM CARGA TRIANGULAR – VALORES DE α e αB
-
-- PDF 90 (imp. 86). Fórmula: a_i = α · p · ℓx⁴ / (12 · EI), seção 2.1, com p = carga máxima. αB: coeficiente no centro da borda livre.
-- Tipos: 19 a 22 (legenda na seção 3.4). Coluna γ = ℓa/ℓb.
-- Rodapé: "Valores extraídos de BARES e adaptada por PINHEIRO (1994)". α = coeficiente no centro da laje; αB = coeficiente no centro da borda livre; p = carga máxima; h = altura da laje; ℓ = menor entre ℓa e ℓb; E = módulo de elasticidade.
-
-| γ = ℓa/ℓb | 19 α | 19 αB | 20 α | 20 αB | 21 α | 21 αB | 22 α | 22 αB |
-|---|---|---|---|---|---|---|---|---|
-| < 0,30 | - | - | - | - | 15,31 | 40,00 | 15,31 | 40,00 |
-| 0,30 | 73,83 | 123,05 | 46,33 | 75,28 | 13,03 | 30,40 | 11,58 | 24,61 |
-| 0,35 | 57,30 | 95,65 | 33,24 | 52,53 | 11,33 | 26,42 | 9,46 | 19,18 |
-| 0,40 | 40,77 | 68,25 | 20,15 | 29,77 | 9,62 | 22,44 | 7,33 | 13,74 |
-| 0,45 | 32,30 | 53,08 | 15,33 | 21,92 | 8,75 | 19,38 | 6,01 | 11,00 |
-| 0,50 | 23,83 | 37,90 | 10,51 | 14,07 | 7,88 | 16,32 | 4,69 | 8,25 |
-| 0,55 | 19,38 | 30,04 | 8,47 | 10,66 | 7,06 | 14,13 | 4,11 | 6,71 |
-| 0,60 | 14,93 | 22,17 | 6,42 | 7,24 | 6,24 | 11,94 | 3,53 | 5,16 |
-| 0,65 | 12,45 | 18,00 | 5,19 | 5,58 | 5,52 | 10,15 | 3,09 | 4,05 |
-| 0,70 | 9,96 | 13,82 | 3,96 | 3,91 | 4,79 | 8,35 | 2,64 | 2,93 |
-| 0,75 | 8,45 | 11,31 | 3,27 | 3,02 | 4,29 | 7,17 | 2,28 | 2,31 |
-| 0,80 | 6,93 | 8,79 | 2,58 | 2,12 | 3,78 | 5,98 | 1,92 | 1,69 |
-| 0,85 | 6,01 | 7,28 | 2,17 | 1,65 | 3,38 | 5,13 | 1,62 | 1,36 |
-| 0,90 | 5,08 | 5,77 | 1,75 | 1,18 | 2,97 | 4,27 | 1,32 | 1,02 |
-| 0,95 | 4,37 | 4,86 | 1,49 | 0,93 | 2,66 | 3,67 | 1,14 | 0,82 |
-| 1,00 | 3,65 | 3,94 | 1,23 | 0,67 | 2,34 | 3,06 | 0,95 | 0,62 |
-| 1,05 | 3,83 | 3,96 | 1,26 | 0,64 | 2,55 | 3,16 | 1,01 | 0,60 |
-| 1,10 | 4,02 | 3,98 | 1,28 | 0,62 | 2,76 | 3,26 | 1,08 | 0,58 |
-| 1,15 | 4,20 | 4,00 | 1,31 | 0,59 | 2,96 | 3,36 | 1,14 | 0,56 |
-| 1,20 | 4,38 | 4,02 | 1,33 | 0,56 | 3,17 | 3,46 | 1,20 | 0,54 |
-| 1,25 | 4,52 | 3,98 | 1,35 | 0,53 | 3,34 | 3,46 | 1,23 | 0,52 |
-| 1,30 | 4,66 | 3,95 | 1,36 | 0,51 | 3,51 | 3,45 | 1,26 | 0,50 |
-| 1,35 | 4,80 | 3,91 | 1,38 | 0,48 | 3,68 | 3,45 | 1,29 | 0,47 |
-| 1,40 | 4,94 | 3,87 | 1,39 | 0,46 | 3,86 | 3,45 | 1,31 | 0,45 |
-| 1,45 | 5,07 | 3,84 | 1,41 | 0,43 | 4,03 | 3,44 | 1,34 | 0,43 |
-| 1,50 | 5,21 | 3,80 | 1,42 | 0,41 | 4,20 | 3,44 | 1,37 | 0,41 |
-| 1,55 | 5,31 | 3,76 | 1,42 | 0,40 | 4,34 | 3,42 | 1,38 | 0,40 |
-| 1,60 | 5,42 | 3,71 | 1,42 | 0,39 | 4,48 | 3,39 | 1,38 | 0,39 |
-| 1,65 | 5,52 | 3,67 | 1,43 | 0,38 | 4,62 | 3,37 | 1,39 | 0,38 |
-| 1,70 | 5,62 | 3,62 | 1,43 | 0,37 | 4,76 | 3,34 | 1,40 | 0,37 |
-| 1,75 | 5,73 | 3,58 | 1,43 | 0,36 | 4,90 | 3,32 | 1,41 | 0,36 |
-| 1,80 | 5,83 | 3,54 | 1,43 | 0,35 | 5,04 | 3,30 | 1,41 | 0,35 |
-| 1,85 | 5,93 | 3,49 | 1,43 | 0,35 | 5,18 | 3,27 | 1,42 | 0,35 |
-| 1,90 | 6,03 | 3,45 | 1,44 | 0,34 | 5,32 | 3,25 | 1,43 | 0,34 |
-| 1,95 | 6,14 | 3,40 | 1,44 | 0,33 | 5,46 | 3,22 | 1,43 | 0,33 |
-| 2,00 | 6,24 | 3,36 | 1,44 | 0,32 | 5,60 | 3,20 | 1,44 | 0,32 |
-
-## 5. Tabelas de reações de apoio
-
-Fórmula comum a A-5, A-6 e A-7: V = ν · p · ℓx / 10 (seção 2.2). Rodapé comum: "(*) os alívios foram considerados pela metade, prevendo a possibilidade de engastes parciais." Rodapé completo: "Tabela elaborada por PINHEIRO (1994) conforme NBR 6118." V = ν p ℓx / 10; p = carga uniforme; ℓx = menor vão.
-
-Os títulos seguem a grafia impressa, "REAÇOES", sem acento no Ç.
-
-### Tabela A-5 / REAÇOES DE APOIO EM LAJES COM CARGA UNIFORME
-
-- PDF 91 (imp. 87).
-- Tipos: 1, 2A, 2B (legenda na seção 3.2).
-
-| λ = ℓy/ℓx | 1 νx | 1 νy | 2A νx | 2A νy | 2A ν'y | 2B νx | 2B ν'x | 2B νy |
-|---|---|---|---|---|---|---|---|---|
-| 1,00 | 2,50 | 2,50 | 1,83 | 2,75 | 4,02 | 2,75 | 4,02 | 1,83 |
-| 1,05 | 2,62 | 2,50 | 1,92 | 2,80 | 4,10 | 2,82 | 4,13 | 1,83 |
-| 1,10 | 2,73 | 2,50 | 2,01 | 2,85 | 4,17 | 2,89 | 4,23 | 1,83 |
-| 1,15 | 2,83 | 2,50 | 2,10 | 2,88 | 4,22 | 2,95 | 4,32 | 1,83 |
-| 1,20 | 2,92 | 2,50 | 2,20 | 2,91 | 4,27 | 3,01 | 4,41 | 1,83 |
-| 1,25 | 3,00 | 2,50 | 2,29 | 2,94 | 4,30 | 3,06 | 4,48 | 1,83 |
-| 1,30 | 3,08 | 2,50 | 2,38 | 2,95 | 4,32 | 3,11 | 4,55 | 1,83 |
-| 1,35 | 3,15 | 2,50 | 2,47 | 2,96 | 4,33 | 3,16 | 4,62 | 1,83 |
-| 1,40 | 3,21 | 2,50 | 2,56 | 2,96 | 4,33 | 3,20 | 4,68 | 1,83 |
-| 1,45 | 3,28 | 2,50 | 2,64 | 2,96 | 4,33 | 3,24 | 4,74 | 1,83 |
-| 1,50 | 3,33 | 2,50 | 2,72 | 2,96 | 4,33 | 3,27 | 4,79 | 1,83 |
-| 1,55 | 3,39 | 2,50 | 2,80 | 2,96 | 4,33 | 3,31 | 4,84 | 1,83 |
-| 1,60 | 3,44 | 2,50 | 2,87 | 2,96 | 4,33 | 3,34 | 4,89 | 1,83 |
-| 1,65 | 3,48 | 2,50 | 2,93 | 2,96 | 4,33 | 3,37 | 4,93 | 1,83 |
-| 1,70 | 3,53 | 2,50 | 2,99 | 2,96 | 4,33 | 3,40 | 4,97 | 1,83 |
-| 1,75 | 3,57 | 2,50 | 3,05 | 2,96 | 4,33 | 3,42 | 5,01 | 1,83 |
-| 1,80 | 3,61 | 2,50 | 3,10 | 2,96 | 4,33 | 3,45 | 5,05 | 1,83 |
-| 1,85 | 3,65 | 2,50 | 3,15 | 2,96 | 4,33 | 3,47 | 5,09 | 1,83 |
-| 1,90 | 3,68 | 2,50 | 3,20 | 2,96 | 4,33 | 3,50 | 5,12 | 1,83 |
-| 1,95 | 3,72 | 2,50 | 3,25 | 2,96 | 4,33 | 3,52 | 5,15 | 1,83 |
-| 2,00 | 3,75 | 2,50 | 3,29 | 2,96 | 4,33 | 3,54 | 5,18 | 1,83 |
-| > 2,00 | 5,00 | 2,50 | 5,00 | 2,96 | 4,33 | 4,38 | 6,25 | 1,83 |
-
-### Tabela A-6 / REAÇOES DE APOIO EM LAJES COM CARGA UNIFORME
-
-- PDF 92 (imp. 88).
-- Tipos: 3, 4A, 4B (legenda na seção 3.2).
-- Rodapé: idêntico ao da A-5.
-
-| λ = ℓy/ℓx | 3 νx | 3 ν'x | 3 νy | 3 ν'y | 4A νx | 4A ν'y | 4B ν'x | 4B νy |
-|---|---|---|---|---|---|---|---|---|
-| 1,00 | 2,17 | 3,17 | 2,17 | 3,17 | 1,44 | 3,56 | 3,56 | 1,44 |
-| 1,05 | 2,27 | 3,32 | 2,17 | 3,17 | 1,52 | 3,66 | 3,63 | 1,44 |
-| 1,10 | 2,36 | 3,46 | 2,17 | 3,17 | 1,59 | 3,75 | 3,69 | 1,44 |
-| 1,15 | 2,45 | 3,58 | 2,17 | 3,17 | 1,66 | 3,84 | 3,74 | 1,44 |
-| 1,20 | 2,53 | 3,70 | 2,17 | 3,17 | 1,73 | 3,92 | 3,80 | 1,44 |
-| 1,25 | 2,60 | 3,80 | 2,17 | 3,17 | 1,80 | 3,99 | 3,85 | 1,44 |
-| 1,30 | 2,63 | 3,90 | 2,17 | 3,17 | 1,88 | 4,06 | 3,89 | 1,44 |
-| 1,35 | 2,73 | 3,99 | 2,17 | 3,17 | 1,95 | 4,12 | 3,93 | 1,44 |
-| 1,40 | 2,78 | 4,08 | 2,17 | 3,17 | 2,02 | 4,17 | 3,97 | 1,44 |
-| 1,45 | 2,84 | 4,15 | 2,17 | 3,17 | 2,09 | 4,22 | 4,00 | 1,44 |
-| 1,50 | 2,89 | 4,23 | 2,17 | 3,17 | 2,17 | 4,25 | 4,04 | 1,44 |
-| 1,55 | 2,93 | 4,29 | 2,17 | 3,17 | 2,24 | 4,28 | 4,07 | 1,44 |
-| 1,60 | 2,98 | 4,36 | 2,17 | 3,17 | 2,31 | 4,30 | 4,10 | 1,44 |
-| 1,65 | 3,02 | 4,42 | 2,17 | 3,17 | 2,38 | 4,32 | 4,13 | 1,44 |
-| 1,70 | 3,06 | 4,48 | 2,17 | 3,17 | 2,45 | 4,33 | 4,15 | 1,44 |
-| 1,75 | 3,09 | 4,53 | 2,17 | 3,17 | 2,53 | 4,33 | 4,18 | 1,44 |
-| 1,80 | 3,13 | 4,58 | 2,17 | 3,17 | 2,59 | 4,33 | 4,20 | 1,44 |
-| 1,85 | 3,16 | 4,63 | 2,17 | 3,17 | 2,63 | 4,33 | 4,22 | 1,44 |
-| 1,90 | 3,19 | 4,67 | 2,17 | 3,17 | 2,72 | 4,33 | 4,24 | 1,44 |
-| 1,95 | 3,22 | 4,71 | 2,17 | 3,17 | 2,78 | 4,33 | 4,26 | 1,44 |
-| 2,00 | 3,25 | 4,75 | 2,17 | 3,17 | 2,83 | 4,33 | 4,28 | 1,44 |
-| > 2,00 | 4,38 | 6,25 | 2,17 | 3,17 | 5,00 | 4,33 | 5,00 | 1,44 |
-
-### Tabela A-7 / REAÇOES DE APOIO EM LAJES COM CARGA UNIFORME
-
-- PDF 93 (imp. 89).
-- Tipos: 5A, 5B, 6 (legenda na seção 3.2).
-- Rodapé: idêntico ao da A-5.
-
-| λ = ℓy/ℓx | 5A νx | 5A ν'x | 5A ν'y | 5B ν'x | 5B νy | 5B ν'y | 6 ν'x | 6 ν'y |
-|---|---|---|---|---|---|---|---|---|
-| 1,00 | 1,71 | 2,50 | 3,03 | 3,03 | 1,71 | 2,50 | 2,50 | 2,50 |
-| 1,05 | 1,79 | 2,63 | 3,08 | 3,12 | 1,71 | 2,50 | 2,62 | 2,50 |
-| 1,10 | 1,88 | 2,75 | 3,11 | 3,21 | 1,71 | 2,50 | 2,73 | 2,50 |
-| 1,15 | 1,96 | 2,88 | 3,14 | 3,29 | 1,71 | 2,50 | 2,83 | 2,50 |
-| 1,20 | 2,05 | 3,00 | 3,16 | 3,36 | 1,71 | 2,50 | 2,92 | 2,50 |
-| 1,25 | 2,13 | 3,13 | 3,17 | 3,42 | 1,71 | 2,50 | 3,00 | 2,50 |
-| 1,30 | 2,22 | 3,25 | 3,17 | 3,48 | 1,71 | 2,50 | 3,08 | 2,50 |
-| 1,35 | 2,30 | 3,36 | 3,17 | 3,54 | 1,71 | 2,50 | 3,15 | 2,50 |
-| 1,40 | 2,37 | 3,47 | 3,17 | 3,59 | 1,71 | 2,50 | 3,21 | 2,50 |
-| 1,45 | 2,44 | 3,57 | 3,17 | 3,64 | 1,71 | 2,50 | 3,28 | 2,50 |
-| 1,50 | 2,50 | 3,66 | 3,17 | 3,69 | 1,71 | 2,50 | 3,33 | 2,50 |
-| 1,55 | 2,56 | 3,75 | 3,17 | 3,73 | 1,71 | 2,50 | 3,39 | 2,50 |
-| 1,60 | 2,61 | 3,83 | 3,17 | 3,77 | 1,71 | 2,50 | 3,44 | 2,50 |
-| 1,65 | 2,67 | 3,90 | 3,17 | 3,81 | 1,71 | 2,50 | 3,48 | 2,50 |
-| 1,70 | 2,72 | 3,98 | 3,17 | 3,84 | 1,71 | 2,50 | 3,53 | 2,50 |
-| 1,75 | 2,76 | 4,04 | 3,17 | 3,87 | 1,71 | 2,50 | 3,57 | 2,50 |
-| 1,80 | 2,80 | 4,11 | 3,17 | 3,90 | 1,71 | 2,50 | 3,61 | 2,50 |
-| 1,85 | 2,85 | 4,17 | 3,17 | 3,93 | 1,71 | 2,50 | 3,65 | 2,50 |
-| 1,90 | 2,89 | 4,22 | 3,17 | 3,96 | 1,71 | 2,50 | 3,68 | 2,50 |
-| 1,95 | 2,92 | 4,28 | 3,17 | 3,99 | 1,71 | 2,50 | 3,72 | 2,50 |
-| 2,00 | 2,96 | 4,33 | 3,17 | 4,01 | 1,71 | 2,50 | 3,75 | 2,50 |
-| > 2,00 | 4,38 | 6,25 | 3,17 | 5,00 | 1,71 | 2,50 | 5,00 | 2,50 |
-
-## 6. Tabelas de momentos fletores
-
-Fórmula comum a A-11 e A-12: M = μ · p · ℓ² / 100 (seção 2.3). Rodapé comum: "Valores extraídos de BARES e adaptada por PINHEIRO (1994)"; p = carga uniforme; ℓ = menor valor entre ℓa e ℓb; Mb = momento ao longo da borda livre.
-
-Os coeficientes μ são de momentos positivos (μx, μy, μyb) e negativos (μ'y, μ'yb, μ'x), conforme o nome da coluna.
-
-### Tabela A-11 / MOMENTOS FLETORES EM LAJES COM CARGA UNIFORME
-
-- PDF 97 (imp. 93). Fórmula: M = μ · p · ℓ² / 100.
-- Tipos: 7 e 8 (legenda na seção 3.2). Coluna γ = ℓa/ℓb.
-- Célula 7 μy, γ > 2,00: impresso 12,50, fora da tendência (11,14 em 2,00). [VERIFICAR]
-
-| γ = ℓa/ℓb | 7 μx | 7 μy | 7 μyb | 8 μx | 8 μy | 8 μyb | 8 μ'y | 8 μ'yb |
-|---|---|---|---|---|---|---|---|---|
-| 0,30 | 11,33 | 15,89 | 28,44 | 10,44 | 14,22 | 25,55 | 41,89 | 77,00 |
-| 0,35 | 10,63 | 15,60 | 27,19 | 8,85 | 12,86 | 22,37 | 35,69 | 62,94 |
-| 0,40 | 9,94 | 15,31 | 25,94 | 7,25 | 11,50 | 19,19 | 29,50 | 48,88 |
-| 0,45 | 9,13 | 14,48 | 24,47 | 6,22 | 10,39 | 16,82 | 25,89 | 41,36 |
-| 0,50 | 8,32 | 13,64 | 23,00 | 5,20 | 9,28 | 14,44 | 22,28 | 33,84 |
-| 0,55 | 7,58 | 12,95 | 21,56 | 4,57 | 8,35 | 12,82 | 19,64 | 28,76 |
-| 0,60 | 6,83 | 12,25 | 20,11 | 3,94 | 7,42 | 11,19 | 17,00 | 23,67 |
-| 0,65 | 6,21 | 11,59 | 18,71 | 3,46 | 6,76 | 9,94 | 15,26 | 20,55 |
-| 0,70 | 5,59 | 10,92 | 17,31 | 2,98 | 6,10 | 8,69 | 13,51 | 17,43 |
-| 0,75 | 5,09 | 10,24 | 15,86 | 2,61 | 5,54 | 7,77 | 12,28 | 15,38 |
-| 0,80 | 4,59 | 9,55 | 14,41 | 2,23 | 4,98 | 6,84 | 11,05 | 13,33 |
-| 0,85 | 4,16 | 9,09 | 13,61 | 1,96 | 4,65 | 6,15 | 10,12 | 11,91 |
-| 0,90 | 3,73 | 8,63 | 12,80 | 1,68 | 4,31 | 5,46 | 9,19 | 10,49 |
-| 0,95 | 3,39 | 8,14 | 11,94 | 1,47 | 3,97 | 4,96 | 8,45 | 9,49 |
-| 1,00 | 3,05 | 7,64 | 11,08 | 1,26 | 3,62 | 4,45 | 7,71 | 8,48 |
-| 1,05 | 3,05 | 7,94 | 11,31 | 1,23 | 3,68 | 4,45 | 7,80 | 8,48 |
-| 1,10 | 3,06 | 8,24 | 11,55 | 1,19 | 3,74 | 4,46 | 7,88 | 8,47 |
-| 1,15 | 3,06 | 8,53 | 11,78 | 1,16 | 3,80 | 4,47 | 7,97 | 8,46 |
-| 1,20 | 3,07 | 8,83 | 12,01 | 1,12 | 3,86 | 4,47 | 8,05 | 8,46 |
-| 1,25 | 3,03 | 9,01 | 12,12 | 1,09 | 3,90 | 4,47 | 8,09 | 8,46 |
-| 1,30 | 3,00 | 9,19 | 12,22 | 1,06 | 3,93 | 4,47 | 8,13 | 8,46 |
-| 1,35 | 2,97 | 9,38 | 12,33 | 1,03 | 3,97 | 4,48 | 8,17 | 8,46 |
-| 1,40 | 2,94 | 9,56 | 12,43 | 0,99 | 4,01 | 4,48 | 8,20 | 8,45 |
-| 1,45 | 2,91 | 9,74 | 12,54 | 0,96 | 4,05 | 4,49 | 8,24 | 8,45 |
-| 1,50 | 2,88 | 9,92 | 12,64 | 0,92 | 4,08 | 4,49 | 8,28 | 8,45 |
-| 1,55 | 2,84 | 10,04 | 12,69 | 0,90 | 4,09 | 4,49 | 8,29 | 8,45 |
-| 1,60 | 2,81 | 10,16 | 12,74 | 0,88 | 4,10 | 4,49 | 8,29 | 8,45 |
-| 1,65 | 2,77 | 10,29 | 12,80 | 0,86 | 4,11 | 4,49 | 8,30 | 8,45 |
-| 1,70 | 2,74 | 10,41 | 12,85 | 0,84 | 4,12 | 4,49 | 8,30 | 8,45 |
-| 1,75 | 2,70 | 10,53 | 12,90 | 0,82 | 4,13 | 4,50 | 8,31 | 8,45 |
-| 1,80 | 2,66 | 10,65 | 12,95 | 0,80 | 4,13 | 4,50 | 8,31 | 8,45 |
-| 1,85 | 2,63 | 10,77 | 13,00 | 0,78 | 4,14 | 4,50 | 8,32 | 8,45 |
-| 1,90 | 2,59 | 10,90 | 13,06 | 0,76 | 4,15 | 4,50 | 8,32 | 8,45 |
-| 1,95 | 2,56 | 11,02 | 13,11 | 0,74 | 4,16 | 4,50 | 8,33 | 8,45 |
-| 2,00 | 2,52 | 11,14 | 13,16 | 0,72 | 4,17 | 4,50 | 8,33 | 8,45 |
-| > 2,00 | 2,52 | 12,50 [VERIFICAR] | 13,16 | 0,72 | 4,17 | 4,50 | 8,33 | 8,45 |
-
-### Tabela A-12 / MOMENTOS FLETORES EM LAJES COM CARGA UNIFORME
-
-- PDF 98 (imp. 94). Fórmula: M = μ · p · ℓ² / 100.
-- Tipos: 9 e 10 (legenda na seção 3.2). Coluna γ = ℓa/ℓb.
-- Valores negativos transcritos como impressos: μx do tipo 9 para γ até 0,50; μx do tipo 10 para γ de < 0,30 a 0,40.
-- Célula 9 μy, γ > 2,00: impresso 12,50, fora da tendência (10,31 em 2,00). [VERIFICAR]
-- Célula 10 μ'yb, γ = 1,15: impresso 6,49, fora da tendência (8,50 em 1,10; 8,48 em 1,20). [VERIFICAR]
-- Impresso como "-12,5" na linha < 0,30 do tipo 10 (sem o zero à direita).
-
-| γ = ℓa/ℓb | 9 μx | 9 μ'x | 9 μy | 9 μyb | 10 μx | 10 μ'x | 10 μy | 10 μyb | 10 μ'y | 10 μ'yb |
-|---|---|---|---|---|---|---|---|---|---|---|
-| < 0,30 | -12,50 | 50,00 | 0,78 | 6,22 | -12,5 | 50,00 | 2,11 | 8,67 | 14,56 | 37,00 |
-| 0,30 | -7,33 | 43,08 | 0,78 | 6,22 | -4,89 | 38,33 | 2,11 | 8,67 | 14,56 | 37,00 |
-| 0,35 | -5,17 | 39,98 | 1,89 | 7,89 | -2,57 | 33,08 | 3,18 | 9,74 | 14,84 | 35,53 |
-| 0,40 | -3,00 | 36,87 | 3,00 | 9,56 | -0,25 | 27,83 | 4,25 | 10,81 | 15,13 | 34,06 |
-| 0,45 | -1,78 | 33,89 | 3,62 | 10,54 | 0,54 | 23,94 | 4,53 | 10,77 | 14,26 | 31,21 |
-| 0,50 | -0,56 | 30,91 | 4,24 | 11,52 | 1,32 | 20,04 | 4,80 | 10,72 | 13,40 | 28,36 |
-| 0,55 | 0,25 | 28,02 | 4,62 | 11,82 | 1,62 | 17,40 | 4,86 | 9,99 | 12,48 | 25,26 |
-| 0,60 | 1,06 | 25,13 | 5,00 | 12,11 | 1,92 | 14,76 | 4,92 | 9,25 | 11,56 | 22,17 |
-| 0,65 | 1,47 | 22,90 | 5,25 | 12,12 | 1,91 | 12,91 | 4,68 | 8,55 | 10,81 | 19,63 |
-| 0,70 | 1,88 | 20,66 | 5,49 | 12,12 | 1,90 | 11,06 | 4,43 | 7,84 | 10,06 | 17,08 |
-| 0,75 | 2,06 | 18,84 | 5,61 | 11,81 | 1,82 | 9,86 | 4,14 | 7,15 | 9,42 | 15,17 |
-| 0,80 | 2,23 | 17,02 | 5,72 | 11,50 | 1,73 | 8,65 | 3,86 | 6,45 | 8,77 | 13,25 |
-| 0,85 | 2,26 | 15,59 | 5,66 | 11,05 | 1,64 | 7,78 | 3,59 | 5,86 | 8,19 | 11,87 |
-| 0,90 | 2,28 | 14,16 | 5,60 | 10,59 | 1,54 | 6,91 | 3,33 | 5,26 | 7,60 | 10,49 |
-| 0,95 | 2,25 | 12,99 | 5,48 | 10,07 | 1,40 | 6,25 | 3,11 | 4,81 | 7,12 | 9,50 |
-| 1,00 | 2,21 | 11,82 | 5,36 | 9,55 | 1,25 | 5,59 | 2,88 | 4,35 | 6,64 | 8,51 |
-| 1,05 | 2,33 | 11,91 | 5,72 | 9,91 | 1,25 | 5,59 | 2,98 | 4,37 | 6,82 | 8,50 |
-| 1,10 | 2,45 | 12,00 | 6,08 | 10,27 | 1,24 | 5,58 | 3,08 | 4,39 | 6,99 | 8,50 |
-| 1,15 | 2,57 | 12,08 | 6,44 | 10,62 | 1,24 | 5,58 | 3,18 | 4,41 | 7,17 | 6,49 [VERIFICAR] |
-| 1,20 | 2,69 | 12,17 | 6,80 | 10,98 | 1,24 | 5,57 | 3,27 | 4,43 | 7,34 | 8,48 |
-| 1,25 | 2,67 | 12,20 | 7,09 | 11,20 | 1,20 | 5,57 | 3,34 | 4,44 | 7,44 | 8,48 |
-| 1,30 | 2,64 | 12,22 | 7,37 | 11,42 | 1,17 | 5,57 | 3,41 | 4,45 | 7,54 | 8,47 |
-| 1,35 | 2,62 | 12,25 | 7,55 | 11,64 | 1,14 | 5,57 | 3,49 | 4,46 | 7,64 | 8,47 |
-| 1,40 | 2,59 | 12,28 | 7,93 | 11,85 | 1,11 | 5,58 | 3,56 | 4,47 | 7,73 | 8,47 |
-| 1,45 | 2,57 | 12,31 | 8,22 | 12,07 | 1,09 | 5,58 | 3,63 | 4,48 | 7,83 | 8,46 |
-| 1,50 | 2,54 | 12,33 | 8,50 | 12,29 | 1,06 | 5,58 | 3,70 | 4,49 | 7,93 | 8,46 |
-| 1,55 | 2,56 | 12,35 | 8,68 | 12,37 | 1,04 | 5,58 | 3,74 | 4,49 | 7,97 | 8,46 |
-| 1,60 | 2,58 | 12,36 | 8,86 | 12,45 | 1,01 | 5,58 | 3,77 | 4,49 | 8,00 | 8,46 |
-| 1,65 | 2,59 | 12,38 | 9,04 | 12,53 | 0,99 | 5,57 | 3,81 | 4,49 | 8,04 | 8,46 |
-| 1,70 | 2,61 | 12,39 | 9,22 | 12,61 | 0,97 | 5,57 | 3,84 | 4,49 | 8,08 | 8,46 |
-| 1,75 | 2,63 | 12,41 | 9,41 | 12,68 | 0,95 | 5,57 | 3,88 | 4,50 | 8,12 | 8,46 |
-| 1,80 | 2,65 | 12,42 | 9,59 | 12,76 | 0,93 | 5,57 | 3,92 | 4,50 | 8,15 | 8,45 |
-| 1,85 | 2,67 | 12,44 | 9,76 | 12,84 | 0,91 | 5,57 | 3,95 | 4,50 | 8,19 | 8,45 |
-| 1,90 | 2,68 | 12,45 | 9,94 | 12,92 | 0,88 | 5,56 | 3,99 | 4,50 | 8,23 | 8,45 |
-| 1,95 | 2,70 | 12,47 | 10,13 | 13,00 | 0,86 | 5,56 | 4,02 | 4,50 | 8,26 | 8,45 |
-| 2,00 | 2,72 | 12,48 | 10,31 | 13,08 | 0,84 | 5,56 | 4,06 | 4,50 | 8,30 | 8,45 |
-| > 2,00 | 2,72 | 12,48 | 12,50 [VERIFICAR] | 13,08 | 0,84 | 5,56 | 4,17 | 4,50 | 8,33 | 8,45 |
-
-## 7. Lista de [VERIFICAR]
-
-1. Tabela A-2, tipo 9, γ = 1,75: α = 12,23 (quebra a tendência).
-2. Tabela A-3, tipo 18, γ = 2,00: impresso "160" (transcrito como 1,60).
-3. Tabela A-11, tipo 7, μy, γ > 2,00: 12,50 (quebra a tendência).
-4. Tabela A-12, tipo 9, μy, γ > 2,00: 12,50 (quebra a tendência).
-5. Tabela A-12, tipo 10, μ'yb, γ = 1,15: 6,49 (quebra a tendência).
-6. Tipos 11 a 22: bordas (S, I, E, D) lidas em tamanho médio, sem ampliação dedicada (seções 3.3 e 3.4). Conferir em ampliação a hachura lateral direita dos tipos 17 e 18.
-7. Seção 2.1: carga p usada na flecha (quase permanente no corpo; uniforme ou máxima nos rodapés). A apostila não reconcilia os usos.
-8. Seção 2.2: unidades de V e de p na fórmula de reação não estão no rodapé.
+Por isso a soma das reações dos tipos assimétricos passa da carga total (até ~7 %, tipo 3 em λ = 1). Na linha "> 2,00", a faixa como viga: 1/2 (apoiada ou biengastada), 5/8 no engaste e 3/8 + 1/16 = 7/16 no apoio da apoiada-engastada.
+
+## 5. Comparação com a tabela impressa
+
+Tabela impressa: Bares adaptada por Pinheiro, no Anexo de Bastos. A transcrição está em `durabilidade-lajes.md` 6.3 (A-8 a A-10, momentos) e em `bares-tabelas-impressas.md` (A-1, flechas; A-5 a A-7, reações). Era a tabela que o motor usava antes do gerador.
+
+### 5.1 Casos clássicos
+
+Valor impresso, valor calculado pelo gerador (três casas, antes de arredondar) e diferença entre o impresso e a célula da tabela gerada (duas casas), em centésimos. Na última coluna, a solução de Timoshenko & Woinowsky-Krieger (Tabelas 8 e 35, ν = 0,3) levada para ν = 0,15: as curvaturas κx = (Mx − 0,3 My)/0,91 e κy saem dos dois momentos, M = κ + 0,15 κ', e α = 1200 · (1 − 0,15²) · w. Os valores de T&W têm três algarismos, e por isso a conversão vale a menos de ±0,01.
+
+| Caso | Coef. | Impresso | Calculado | Tabela | Δ | T&W, ν = 0,15 |
+|---|---|---|---|---|---|---|
+| Tipo 1 (apoiada), λ = 1,00 | μx = μy | 4,23 | 4,236 | 4,24 | +1 | 4,24 |
+| | α | 4,76 | 4,765 | 4,77 | +1 | 4,76 |
+| Tipo 1, λ = 1,50 | μx | 7,72 | 7,696 | 7,70 | −2 | 7,70 |
+| | μy | 3,89 | 3,893 | 3,89 | 0 | 3,89 |
+| | α | 9,03 | 9,060 | 9,06 | +3 | 9,06 |
+| Tipo 1, λ = 2,00 | μx | 9,91 | 9,907 | 9,91 | 0 | 9,91 |
+| | μy | 3,16 | 3,188 | 3,19 | +3 | 3,19 |
+| | α | 11,89 | 11,881 | 11,88 | −1 | 11,88 |
+| Tipo 6 (engastada), λ = 1,00 | μx = μy | 2,02 | 2,026 | 2,03 | +1 | 2,03 (*) |
+| | μ'x = μ'y | 5,15 | 5,133 | 5,13 | −2 | 5,13 |
+| | α | 1,49 | 1,484 | 1,48 | −1 | 1,48 |
+| Tipo 6, λ = 2,00 | μx | 4,05 | 4,058 | 4,06 | +1 | 4,06 |
+| | μy | 0,96 | 0,981 | 0,98 | +2 | 0,98 |
+| | μ'x | 8,33 | 8,287 | 8,29 | −4 | 8,29 |
+| | μ'y | 5,72 | 5,699 | 5,70 | −2 | 5,71 |
+| | α | 2,96 | 2,971 | 2,97 | +1 | 2,98 (**) |
+
+Impressos: Pinheiro, *Tabelas de lajes* (EESC-USP, 2007), Tabelas 2.3a (tipo 1, p. 11), 2.3c (tipo 6, p. 13) e 2.5a (α, p. 21); os mesmos números estão no Anexo de Bastos (A-1, A-8 e A-10) e na transcrição deste repositório. As duas fontes não são independentes: ambas vêm de Bares (1972) pela adaptação de Pinheiro.
+
+(*) T&W imprime 0,0231 qa² no centro (ν = 0,3), valor de Hencky; soluções mais finas da mesma placa dão 0,0229 qa², que leva a 2,03 (o FD da seção 5.2 também dá 2,03). Com 0,0231 a conversão daria 2,04.
+
+(**) T&W imprime w = 0,00254 qa⁴/D, com três algarismos; o intervalo de arredondamento (0,002535 a 0,002545) dá α de 2,97 a 2,98. O FD dá 2,971.
+
+Na amostra, o gerador fica a até 0,03 do impresso, com uma exceção, e a até 0,01 da solução clássica convertida. A exceção é o μ'x do tipo 6 em λ = 2,00: o impresso 8,33 é o −pl²/12 da faixa infinita, mas a placa 2 : 1 ainda não chegou lá. T&W dá −0,0829 qa² (8,29), o mesmo do gerador e do FD. O teste `tabelasBares.test.ts` fixa a amostra contra o impresso (até 0,03) e esse μ'x contra T&W.
+
+### 5.2 Conferência independente por diferenças finitas
+
+Para conferir os tipos com engaste, onde entra o sistema dos momentos de bordo, a mesma placa foi resolvida por diferenças finitas (estêncil de 13 pontos, pontos fantasmas para apoio e engaste, malhas h = lx/20, lx/40 e lx/80 com extrapolação de Richardson), sem nada em comum com `placas.ts`. Doze casos (tipo 1 e 6 em λ = 1; 1,5; 2; 2A e 5B em 1,5; 3 em 1 e 1,5; 4B em 2; 5A em 1,25): μx, μy e α batem com o gerador a menos de 0,001; μ'x e μ'y a menos de 0,01. As diferenças negativas (FD menor) vêm de o FD procurar o máximo só nos nós da malha. O script ficou fora do repositório, porque a tabela não depende dele.
+
+Convergência da série: entre 100 e 200 termos por bordo, a maior diferença na tabela inteira é 4·10⁻⁵ (5A, λ = 1,5, μ'x), e nenhuma célula arredondada muda.
+
+### 5.3 Tabela inteira
+
+1386 entradas (9 tipos × colunas × 22 linhas). Contagem das entradas que batem em ±1 na segunda casa e maior diferença, em centésimos:
+
+| Tipo | μ (positivos) | μ' (negativos) | ν (reações) | α (flecha) |
+|---|---|---|---|---|
+| 1 | 29/44 (+3) | — | 44/44 (0) | 8/22 (+4) |
+| 2A | 23/44 (+63) | 8/22 (−10) | 66/66 (0) | 15/22 (+3) |
+| 2B | 31/44 (−5) | 11/22 (+6) | 66/66 (0) | 7/22 (+10) |
+| 3 | 27/44 (+8) | 15/44 (−6) | 87/88 (+3) | 11/22 (+3) |
+| 4A | 24/44 (+8) | 14/22 (+5) | 43/44 (+3) | 19/22 (−2) |
+| 4B | 40/44 (+3) | 9/22 (+10) | 44/44 (0) | 9/22 (+11) |
+| 5A | 23/44 (−5) | 5/44 (−109) | 66/66 (+1) | 13/22 (+4) |
+| 5B | 39/44 (+4) | 4/44 (+16) | 66/66 (0) | 6/22 (+7) |
+| 6 | 25/44 (−10) | 16/44 (−5) | 44/44 (0) | 10/22 (+3) |
+| total | 261/396 | 82/264 | 526/528 | 98/198 |
+
+Leitura:
+
+- Reações: 526 de 528 batem; as duas que não batem (tipo 3 νx em λ = 1,30 e 4A νx em 1,85) já estavam marcadas como suspeitas de impressão.
+- Momentos e flechas: 441 de 858 batem em ±1; 234 diferem 2 ou 3; 82 diferem 4 ou 5; 101 diferem mais. Mediana da diferença relativa 0,3 %, 95 % abaixo de 2,4 %.
+- As maiores diferenças ficam em três trechos da tabela impressa: 2A μx em λ = 1,65 a 1,85 (até 0,63, em 1,80), 5A μ'x em λ = 1,10 a 1,35 (até 1,09, em 1,25) e 6 μx em λ = 1,15 a 1,25 (até 0,10). A tabela antiga só marcava como suspeitas 2A μx em 1,75 a 1,85 e 5A μ'x em 1,25; o resto desses trechos não estava marcado. Há também trechos de λ alto nos tipos 4B, 5A e 5B (μ' e α, até 0,16).
+- Nos tipos 4B e 5B, μ'x em λ = 2,00 (8,43 e 8,38) passa do −pl²/12 = 8,33 da linha "> 2,00": o momento no meio do bordo engastado longo ainda não chegou ao valor da faixa e passa dele antes de convergir. O FD da seção 5.2 confirma o 8,43. A tabela impressa já tinha esse degrau no 5B (8,47 → 8,33). Como λ > 2 usa a linha "> 2,00", o μ'x cai cerca de 1 % ao passar de λ = 2.
+- A diferença não é de convenção: na placa toda apoiada (tipo 1), que tem solução exata por série de Navier/Lévy, a flecha impressa erra para os dois lados (5,26 contra 5,24 exato em λ = 1,05, +0,02; 9,71 contra 9,75 em λ = 1,60, −0,04), o que nenhum ν ou ponto de leitura explica. A tabela antiga trazia o erro do método numérico de Bares e da interpolação/transcrição. O gerador reproduz os valores clássicos de Timoshenko & Woinowsky-Krieger (teste `tabelasBares.test.ts`).
+- Testes do motor que usavam coeficientes impressos foram atualizados para os gerados: em geral ±0,01 (tipo 1 e 2A em λ = 1, 2B em λ = 1,25), mais 0,03 no α do 2B em λ = 1,25, 0,05 no μ' do tipo 3 em λ = 1 e a célula suspeita 2A μx em λ = 1,80 (7,56 → 8,19). A lista de células suspeitas e o aviso que o motor dava ao interpolar sobre elas saíram: a tabela gerada não tem célula marcada. O exemplo de Bastos (E02, tipo 3, λ = 1,05) usa os coeficientes impressos; com os gerados os momentos diferem até 0,06 kN·m/m e o teste aceita 0,07 (ver `docs/norma/exemplos.md`).
+
+### 5.4 Efeito numa obra típica
+
+Pavimento 3 × 3 de lajes (vãos 4,0, 3,0 e 4,5 m em x e 5,0, 3,0 e 4,0 m em y; h = 11 cm, revestimento 1,0 e sobrecarga 1,5 kN/m², pilares 20 × 40), repetido 4 vezes (16 pilares por nível): tipos 3 (cantos), 5B (bordas; nas de vão horizontal maior a tabela é transposta) e 6 (centro), λ de 1,00 a 1,67. Mesma obra calculada pela 6118 com a tabela impressa e com a gerada:
+
+| Grandeza | Média da diferença | Maior diferença |
+|---|---|---|
+| μ positivo (mx, my) | 0,3 % | +0,74 % |
+| negativo compatibilizado | 0,6 % | +1,84 % |
+| flecha | 0,6 % | +1,41 % |
+| armadura das lajes | 0,1 % | −0,75 % |
+| reações, vigas (As, Asw), pilares (Nk, As) | 0 | 0 |
+
+As reações das duas tabelas são iguais nesses λ, e por isso nada muda das vigas para baixo. Diferenças maiores só aparecem perto das células que a tabela impressa tinha fora da tendência (por exemplo, a laje 2A com λ = 1,80: μx 7,56 → 8,19, +8,3 %). A conta foi feita por um script fora do repositório, que roda `calcularObra` duas vezes e troca `BARES` em memória pela tabela impressa entre as duas.
+
+## 6. Pendências
+
+1. [VERIFICAR] ν = 0,15 (seção 3.2) contra o 0,2 da NBR 6118 8.2.9.
+2. μx e μy são valores no centro. Nos tipos assimétricos o positivo máximo fica fora do centro e é maior (tipo 3, λ = 1: 2,92 a 0,39 lx do x-bordo apoiado e 0,43 ly do y-bordo apoiado, contra 2,69 no centro; série e FD em malha fina dão 2,925). É a convenção das tabelas de Bares; mudar seria mudar regra de cálculo. [VERIFICAR]
+3. Lajes com bordo livre e cargas triangulares não têm tabela gerada.

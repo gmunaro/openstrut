@@ -1,6 +1,6 @@
 # Verificação de pendências
 
-Data: 2026-10-12. Escopo: (1) células [VERIFICAR] da seção 7 de `bares-reacoes-flechas.md`, com segunda fonte das mesmas tabelas de Bares (adaptação Pinheiro); (2) fonte para dois itens de cálculo (NB-1/78). Este arquivo não altera `bares-reacoes-flechas.md`.
+Data: 2026-10-12. Escopo: (1) células [VERIFICAR] da seção 7 de `bares-tabelas-impressas.md`, com segunda fonte das mesmas tabelas de Bares (adaptação Pinheiro); (2) fonte para dois itens de cálculo (NB-1/78). Este arquivo não altera `bares-tabelas-impressas.md`.
 
 ## Resumo
 
@@ -12,15 +12,15 @@ Data: 2026-10-12. Escopo: (1) células [VERIFICAR] da seção 7 de `bares-reacoe
 
 ## Tarefa 1: células [VERIFICAR]
 
-Valores do arquivo lidos em `bares-reacoes-flechas.md`.
+Valores do arquivo lidos em `bares-tabelas-impressas.md` (cada célula pela tabela, tipo, coluna e linha de λ).
 
-| # | Linha | Tabela | Tipo | Coluna | γ | Transcrito | Vizinhas (mesma coluna) | Segunda fonte | Veredito |
-|---|---|---|---|---|---|---|---|---|---|
-| 1 | 185 | A-2 | 9 | α | 1,75 | 12,23 | 1,70 = 11,01; 1,80 = 11,44; 1,85 = 11,66; 1,90 = 11,88; 1,95 = 12,10; 2,00 = 12,32 | Nenhuma. Doctum e IFMG não trazem tipo 9 com borda livre. | Inconclusivo |
-| 2 | 233 | A-3 | 18 | α | 2,00 | 1,60 (impresso "160") | 1,80 = 1,43; 1,85 = 1,47; 1,90 = 1,51; 1,95 = 1,56 | Nenhuma. Doctum e IFMG não trazem tipos triangulares (11-22). | Inconclusivo (tendência sustenta 1,60, sem fonte) |
-| 3 | 427 | A-11 | 7 | μy | > 2,00 | 12,50 | 1,80 = 10,65; 1,95 = 11,02; 2,00 = 11,14 | Nenhuma. Doctum casos 7-9 têm outra configuração (ver nota). | Inconclusivo |
-| 4 | 476 | A-12 | 9 | μy | > 2,00 | 12,50 | 1,95 = 10,13; 2,00 = 10,31 | Nenhuma. Mesma limitação do item 3. | Inconclusivo |
-| 5 | 458 | A-12 | 10 | μ'yb | 1,15 | 6,49 | 1,10 = 8,50; 1,20 = 8,48; 1,30 = 8,47 | Nenhuma. Doctum e IFMG não trazem tipo 10. | Inconclusivo |
+| # | Tabela | Tipo | Coluna | γ | Transcrito | Vizinhas (mesma coluna) | Segunda fonte | Veredito |
+|---|---|---|---|---|---|---|---|---|
+| 1 | A-2 | 9 | α | 1,75 | 12,23 | 1,70 = 11,01; 1,80 = 11,44; 1,85 = 11,66; 1,90 = 11,88; 1,95 = 12,10; 2,00 = 12,32 | Nenhuma. Doctum e IFMG não trazem tipo 9 com borda livre. | Inconclusivo |
+| 2 | A-3 | 18 | α | 2,00 | 1,60 (impresso "160") | 1,80 = 1,43; 1,85 = 1,47; 1,90 = 1,51; 1,95 = 1,56 | Nenhuma. Doctum e IFMG não trazem tipos triangulares (11-22). | Inconclusivo (tendência sustenta 1,60, sem fonte) |
+| 3 | A-11 | 7 | μy | > 2,00 | 12,50 | 1,80 = 10,65; 1,95 = 11,02; 2,00 = 11,14 | Nenhuma. Doctum casos 7-9 têm outra configuração (ver nota). | Inconclusivo |
+| 4 | A-12 | 9 | μy | > 2,00 | 12,50 | 1,95 = 10,13; 2,00 = 10,31 | Nenhuma. Mesma limitação do item 3. | Inconclusivo |
+| 5 | A-12 | 10 | μ'yb | 1,15 | 6,49 | 1,10 = 8,50; 1,20 = 8,48; 1,30 = 8,47 | Nenhuma. Doctum e IFMG não trazem tipo 10. | Inconclusivo |
 
 ### Fontes consultadas
 

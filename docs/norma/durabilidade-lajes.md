@@ -430,6 +430,8 @@ Escopo: coeficientes μ para momentos fletores em lajes maciças retangulares co
 
 Não são texto normativo da NBR 6118 e a apostila não as relaciona a nenhuma edição da norma. Edição: não se aplica. [NÃO NORMATIVO]
 
+O motor não usa mais estes valores impressos: `tabelasBares.ts` é gerado pela teoria de placas (`scripts/bares`, `bares-reacoes-flechas.md`). A transcrição abaixo fica como referência publicada; a comparação está em `bares-reacoes-flechas.md`, seção 5.
+
 ### 6.1 Origem e atribuição
 
 | Item | Fonte | Página | Situação |
