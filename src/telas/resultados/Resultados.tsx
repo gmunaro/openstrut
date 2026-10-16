@@ -141,5 +141,5 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
 /** Resumo de aço e concreto da obra aberta (a obra traz cobrimentos e geometria). */
 function BlocoQuantitativos({ obra, resultado }: { obra: Obra; resultado: ResultadoObra }) {
   const quant = useMemo(() => calcularQuantitativos(obra, resultado), [obra, resultado]);
-  return <ResumoQuantitativos quant={quant} />;
+  return <ResumoQuantitativos quant={quant} obra={obra} />;
 }

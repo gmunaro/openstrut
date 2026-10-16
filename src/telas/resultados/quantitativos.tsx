@@ -14,6 +14,7 @@ import {
   type Quantidades,
   type Quantitativos,
 } from "../../calculo/quantitativos";
+import type { Obra } from "../../dominio/obra";
 import { formatarNumero } from "../formato";
 import { ListaAvisos } from "./avisos";
 import { LinhaElemento } from "./memoria";
@@ -26,8 +27,25 @@ const TIPOS = [
   ["pilares", "Pilares"],
 ] as const;
 
-export const NOTA_ESTIMATIVA =
-  "Aço do resumo: estimativa pelas barras adotadas, com comprimentos convencionais (ancoragens e emendas aproximadas). A tabela de aço é outra conta, a soma das barras detalhadas, e pode dar outro total.";
+/** Tipo de cada elemento da obra pelo nome, para separar por linha os de aço incompleto. */
+export function tiposPorNome(obra: Obra): Map<string, Tipo> {
+  const m = new Map<string, Tipo>();
+  for (const p of obra.pavimentos) {
+    for (const l of p.lajes) m.set(l.nome, "lajes");
+    for (const v of p.vigas) m.set(v.nome, "vigas");
+    for (const q of p.pilares) m.set(q.nome, "pilares");
+  }
+  return m;
+}
+
+/** Os nomes de aço incompleto que são do `tipo` ("Térreo: L1" vale pelo "L1"). */
+const doTipo = (nomes: readonly string[], tipos: Map<string, Tipo>, tipo: Tipo) =>
+  nomes.filter((n) => tipos.get(n.split(": ").at(-1) ?? n) === tipo);
+
+/** O que é o aço da linha: a estimativa (Quantitativos.definicaoAco), e incompleta quando
+ *  algum elemento dela não entrou inteiro (sem armadura ou sem barra adotada). */
+const origemAco = (incompletos: readonly string[]) =>
+  incompletos.length > 0 ? `estimativa incompleta: ${incompletos.join(", ")}` : "estimativa";
 
 function CabecalhoQuant({ primeira }: { primeira: string }) {
   return (
@@ -46,18 +64,22 @@ function CabecalhoQuant({ primeira }: { primeira: string }) {
         <Th num unidade="kg/m³">
           Taxa de aço
         </Th>
+        <Th>O aço é</Th>
       </Linha>
     </Cabecalho>
   );
 }
 
-function Celulas({ q }: { q: Quantidades }) {
+function Celulas({ q, incompletos }: { q: Quantidades; incompletos: readonly string[] }) {
   return (
     <>
       <Td num>{formatarNumero(q.concreto)}</Td>
       <Td num>{formatarNumero(q.forma)}</Td>
       <Td num>{formatarNumero(q.aco, 0)}</Td>
       <Td num>{formatarNumero(taxaAco(q), 0)}</Td>
+      <Td className={incompletos.length > 0 ? "text-aviso" : "text-muted-foreground"}>
+        {origemAco(incompletos)}
+      </Td>
     </>
   );
 }
@@ -126,7 +148,8 @@ export function NotaFontes({ quant }: { quant: Quantitativos }) {
 }
 
 /** Bloco curto da aba Resultados: total da obra por tipo; a linha Total abre a memória. */
-export function ResumoQuantitativos({ quant }: { quant: Quantitativos }) {
+export function ResumoQuantitativos({ quant, obra }: { quant: Quantitativos; obra: Obra }) {
+  const tipos = tiposPorNome(obra);
   const memoria = [
     { titulo: "Convenções", etapas: quant.memoria },
     ...quant.pavimentos.map((p) => ({
@@ -137,7 +160,9 @@ export function ResumoQuantitativos({ quant }: { quant: Quantitativos }) {
   return (
     <section className="mt-6">
       <h2 className="border-b pb-1 text-base font-semibold">Resumo de aço e concreto</h2>
-      <TituloBloco extra={<span className="text-muted-foreground text-xs">{NOTA_ESTIMATIVA}</span>}>
+      <TituloBloco
+        extra={<span className="text-muted-foreground text-xs">{quant.definicaoAco}</span>}
+      >
         Total da obra
       </TituloBloco>
       <Tabela className="w-auto">
@@ -146,17 +171,17 @@ export function ResumoQuantitativos({ quant }: { quant: Quantitativos }) {
           {TIPOS.map(([k, rotulo]) => (
             <Linha key={k}>
               <Td className="font-medium">{rotulo}</Td>
-              <Celulas q={quant[k]} />
+              <Celulas q={quant[k]} incompletos={doTipo(quant.acoIncompleto, tipos, k)} />
             </Linha>
           ))}
           <LinhaElemento
             nome="Total"
             avisos={quant.avisos}
             memoria={memoria}
-            colunas={5}
+            colunas={6}
             comMemoria
           >
-            <Celulas q={quant.total} />
+            <Celulas q={quant.total} incompletos={quant.acoIncompleto} />
           </LinhaElemento>
         </Corpo>
       </Tabela>
@@ -272,11 +297,12 @@ export function BlocoTabelaAco({
 }
 
 /** Tabela do relatório: cada pavimento (já multiplicado pelas repetições) e o total. */
-export function TabelaQuantitativos({ quant }: { quant: Quantitativos }) {
+export function TabelaQuantitativos({ quant, obra }: { quant: Quantitativos; obra: Obra }) {
+  const tipos = tiposPorNome(obra);
   return (
     <section className="mt-6 break-inside-avoid">
       <h2 className="border-b pb-1 text-base font-semibold">Resumo de aço e concreto</h2>
-      <p className="text-aviso mt-2 text-xs font-semibold">{NOTA_ESTIMATIVA}</p>
+      <p className="text-aviso mt-2 text-xs font-semibold">{quant.definicaoAco}</p>
       <p className="text-muted-foreground mt-1 text-xs">
         Geometria pelos eixos. Viga: concreto e forma abaixo da laje (fundo + 2 laterais). Aço:
         lajes com +10 % de ancoragens e emendas; vigas com negativas em 0,25 do vão; pilares com
@@ -288,7 +314,7 @@ export function TabelaQuantitativos({ quant }: { quant: Quantitativos }) {
           {quant.pavimentos.map((p, i) => (
             <Fragment key={i}>
               <Linha className="bg-muted/40 hover:bg-muted/40">
-                <Td colSpan={5} className="font-semibold">
+                <Td colSpan={6} className="font-semibold">
                   {p.nome}
                   {p.repeticoes > 1 ? ` (× ${p.repeticoes} repetições)` : ""}
                 </Td>
@@ -296,29 +322,29 @@ export function TabelaQuantitativos({ quant }: { quant: Quantitativos }) {
               {TIPOS.map(([k, rotulo]) => (
                 <Linha key={k}>
                   <Td className="pl-4">{rotulo}</Td>
-                  <Celulas q={p[k]} />
+                  <Celulas q={p[k]} incompletos={doTipo(p.acoIncompleto, tipos, k)} />
                 </Linha>
               ))}
               <Linha>
                 <Td className="pl-4 font-medium">Subtotal</Td>
-                <Celulas q={p.total} />
+                <Celulas q={p.total} incompletos={p.acoIncompleto} />
               </Linha>
             </Fragment>
           ))}
           <Linha className="bg-muted/40 hover:bg-muted/40">
-            <Td colSpan={5} className="font-semibold">
+            <Td colSpan={6} className="font-semibold">
               Total da obra
             </Td>
           </Linha>
           {TIPOS.map(([k, rotulo]) => (
             <Linha key={k}>
               <Td className="pl-4">{rotulo}</Td>
-              <Celulas q={quant[k]} />
+              <Celulas q={quant[k]} incompletos={doTipo(quant.acoIncompleto, tipos, k)} />
             </Linha>
           ))}
           <Linha className="font-semibold">
             <Td className="pl-4">Total</Td>
-            <Celulas q={quant.total} />
+            <Celulas q={quant.total} incompletos={quant.acoIncompleto} />
           </Linha>
         </Corpo>
       </Tabela>

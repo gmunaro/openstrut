@@ -172,7 +172,9 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
   const textoResultados = await resultados.innerText();
   expect.soft(textoResultados).not.toMatch(/NaN|undefined|Infinity/);
   const totalCorrigido = await totalNaAba(resultados);
-  expect(totalCorrigido).toHaveLength(4);
+  // concreto, fôrma, aço, taxa e o que o aço é ("estimativa")
+  expect(totalCorrigido).toHaveLength(5);
+  expect(totalCorrigido[4]).toMatch(/^estimativa/);
   await foto(page, "resultados-corrigido");
 
   // 4. Relatório, modo corrigido: mesmos quantitativos, unidades e pavimento ----

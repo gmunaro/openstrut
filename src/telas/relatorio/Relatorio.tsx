@@ -239,7 +239,7 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
 
                 {quant && (
                   <div className="relatorio-secao">
-                    <TabelaQuantitativos quant={quant} />
+                    <TabelaQuantitativos quant={quant} obra={obra} />
                   </div>
                 )}
 

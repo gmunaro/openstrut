@@ -237,3 +237,15 @@ test("arquivo da versão 2: a tela da obra avisa a versão de origem e a gravaç
   await aviso.getByRole("button", { name: "Fechar aviso de versão" }).click();
   await expect(aviso).toHaveCount(0);
 });
+
+test("resumo de aço: cada linha diz o que o aço é (estimativa, incompleta)", async ({ page }) => {
+  test.setTimeout(60_000);
+  await abrirFixture(page);
+  await page.getByRole("tab", { name: "Resultados", exact: true }).click();
+  const resultados = page.getByRole("tabpanel", { name: "Resultados" });
+  const titulo = resultados.getByRole("heading", { level: 3, name: "Total da obra" });
+  await titulo.scrollIntoViewIfNeeded();
+  const tabela = titulo.locator("xpath=../following-sibling::*[1]");
+  await expect(tabela.getByRole("row").last()).toContainText("estimativa");
+  await foto(page, "15-resumo-aco");
+});
