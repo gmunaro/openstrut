@@ -28,6 +28,7 @@ import {
   type FormaApoioViga,
   type FormaTrechoViga,
   type ParametrosVigaObra,
+  type ArmaduraDigitada,
 } from "../dominio/obra";
 import type {
   Alvenaria,
@@ -965,6 +966,58 @@ class Validador {
           : { lajesNoCorte: this.opcao(f, "lajesNoCorte", cf, LAJES_NO_CORTE) }),
       };
     }
+    const pilares = this.opcional(d, "pilaresNoRep", c, (x, cx) => {
+      if (x === null) return null;
+      const k = this.numeroSolto(x, cx, "positivo");
+      if (!Number.isInteger(k)) this.erro(cx, "esperado um número inteiro ou null", x);
+      return k;
+    });
+    if (pilares) r.pilaresNoRep = pilares;
+    if (d.repeticoes !== undefined) {
+      const k = this.numero(d, "repeticoes", c, "naoNegativo");
+      if (!Number.isInteger(k)) this.erro(`${c}.repeticoes`, "esperado um número inteiro", k);
+      r.repeticoes = k;
+    }
+    const armadura = this.opcional(d, "armaduraDigitada", c, (x, cx) =>
+      this.armaduraDigitada(this.objeto(x, cx), cx),
+    );
+    if (armadura) r.armaduraDigitada = armadura;
+    return r;
+  }
+
+  private armaduraDigitada(d: Dados, c: string): ArmaduraDigitada {
+    const inteiro = (o: Dados, campo: string, cx: string, limite: "positivo" | "naoNegativo") => {
+      const k = this.numero(o, campo, cx, limite);
+      if (!Number.isInteger(k)) this.erro(`${cx}.${campo}`, "esperado um número inteiro", k);
+      return k;
+    };
+    const opcionais = <K extends string>(o: Dados, cx: string, campos: readonly K[]) => {
+      const out: Partial<Record<K, number>> = {};
+      for (const k of campos) if (o[k] !== undefined) out[k] = this.numero(o, k, cx, "positivo");
+      return out;
+    };
+    const r: ArmaduraDigitada = {
+      em: this.opcao(d, "em", c, ["apoio", "tramo"] as const),
+      numero: inteiro(d, "numero", c, "naoNegativo"),
+    };
+    if (d.tracionada !== undefined) {
+      const ct = `${c}.tracionada`;
+      r.tracionada = opcionais(this.objeto(d.tracionada, ct), ct, [
+        "bitola",
+        "bitolaMistura",
+        "barras",
+        "barrasMistura",
+      ] as const);
+    }
+    if (d.comprimida !== undefined) r.comprimida = this.texto(d, "comprimida", c);
+    if (d.fissuracao !== undefined) {
+      const cf = `${c}.fissuracao`;
+      const f = this.objeto(d.fissuracao, cf);
+      r.fissuracao = {
+        ...opcionais(f, cf, ["bitola"] as const),
+        quantidade: inteiro(f, "quantidade", cf, "positivo"),
+      };
+    }
     return r;
   }
 
@@ -972,6 +1025,17 @@ class Validador {
     const tipo = this.opcao(d, "tipo", c, TIPOS_CARGA_VIGA);
     const trecho = this.numero(d, "trecho", c, "naoNegativo");
     if (!Number.isInteger(trecho)) this.erro(`${c}.trecho`, "esperado um número inteiro", trecho);
+    if (tipo === "reacao") {
+      const apoio = this.numero(d, "apoio", c, "naoNegativo");
+      if (!Number.isInteger(apoio)) this.erro(`${c}.apoio`, "esperado um número inteiro", apoio);
+      return {
+        tipo,
+        trecho,
+        posicao: this.numero(d, "posicao", c, "naoNegativo"),
+        viga: this.texto(d, "viga", c),
+        apoio,
+      };
+    }
     const total = this.numero(d, "total", c);
     const acidental =
       d.acidental === undefined ? {} : { acidental: this.numero(d, "acidental", c) };
@@ -1071,6 +1135,7 @@ class Validador {
 const TIPOS_CARGA_VIGA: readonly [CargaViga["tipo"], ...CargaViga["tipo"][]] = [
   "distribuida",
   "concentrada",
+  "reacao",
 ];
 const TIPOS_APOIO_FORMA: readonly ["P", "V", "O", "A"] = ["P", "V", "O", "A"];
 const LAJES_NO_CORTE: readonly ["nao", "mesa"] = ["nao", "mesa"];

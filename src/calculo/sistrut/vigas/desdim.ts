@@ -31,6 +31,7 @@ import {
 } from "./desdim-cisalhamento";
 import { type SecaoCalculo, flexaoSecao, taxaArmaduraMinima, xiLimite } from "./desdim-flexao";
 import { type Fissuracao, fissuracao, flechaEJ, flechaTramo, moduloEc } from "./desdim-flecha";
+import { aplicaAlteracoes, type ElementoArmadura } from "./desdim-alteracao";
 import { analisaDescalc } from "./desinitDescalc";
 
 // ---------------------------------------------------------------- esforços do DESCALC
@@ -112,7 +113,7 @@ const SEM_FLEXAO: FlexaoViga = {
  *  0,0015·bw·hw do .DSP em todo apoio do laço, barras) e os tramos (M+, As,mín,
  *  barras, Asw e estribos dos dois lados, flecha). Modo corrigido: R8 (σs elástico
  *  sem ÷ γs), R9 (áreas de φ4 e φ32) e H (As,mín 0,25 % com CA-25). */
-export const dimensionaViga: DimensionaViga = (entrada, modo) => {
+export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
   const s = atribuicao(modo);
   const { viga, materiais, parametros: p } = entrada;
   const mult = p.multiplicadorUnidade;
@@ -244,6 +245,8 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
   const fim = Math.min(n, Math.max(0, n - 1 + balD + engD + (externoNeg(1) ? 1 : 0)));
   const simples = !balE && !balD && !engE && !engD && n <= 1 && !externoNeg(0) && !externoNeg(1);
   const apoios: ApoioDimensionado[] = [];
+  /** Momento e seção de cálculo de cada apoio dimensionado (para refazer a fissuração). */
+  const calcApoio = new Map<number, { m: number; sec: SecaoCalculo }>();
   for (let k = 0; k <= n; k++) {
     if (k < ini || k > fim) {
       apoios.push({ ...SEM_FLEXAO, apoio: k, dimensionado: false });
@@ -272,6 +275,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
       barras: leArranjo(arranjo),
       ramo: r.ramo,
     };
+    calcApoio.set(k, { m, sec });
     if (p.verificaFissuracao && !simples) {
       apoio.fissuracao = paraMm(
         fissuracao(
@@ -299,6 +303,8 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
 
   // ---- tramos (DESDIM.BAS:2917-3057)
   const tramos: TramoDimensionado[] = [];
+  /** Momento, seção e EJ·f de cada tramo interno (para refazer flecha e fissuração). */
+  const calcTramo = new Map<number, { m: number; sec: SecaoCalculo; ejf: number }>();
   let balancoEsquerdo: TramoDimensionado | undefined;
   let balancoDireito: TramoDimensionado | undefined;
   for (const t of esforcos.tramos) {
@@ -373,6 +379,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
       );
       flecha = f.valor;
       flechaTexto = f.texto;
+      calcTramo.set(t.indice, { m, sec, ejf });
       if (p.verificaFissuracao) {
         fiss = paraMm(
           fissuracao(
@@ -408,6 +415,80 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
     if (t.indice === 0) balancoEsquerdo = tramo;
     else if (t.indice === n + 1) balancoDireito = tramo;
     else tramos.push(tramo);
+  }
+
+  if (alteracoes && alteracoes.length > 0) {
+    // As alterações das telas do DESDIM (vigas/desdim-alteracao.ts), com a fissuração e a
+    // flecha refeitas com as barras novas, como a 2ª passada (DESDIM.BAS:3082-3106)
+    const fissuraDe = (m: number, sec: SecaoCalculo, b: BarrasArranjo) =>
+      paraMm(fissuracao(m, sec, asEfetiva(b, false), b.bitola1, materiais, p, modo));
+    const elementos: ElementoArmadura[] = [
+      ...apoios
+        .filter((a) => a.dimensionado)
+        .map((a): ElementoArmadura => {
+          const c = calcApoio.get(a.apoio)!;
+          const e: ElementoArmadura = {
+            em: "apoio",
+            numero: a.apoio,
+            as: a.as,
+            bw: c.sec.bw,
+            barras: a.barras,
+            arranjo: a.arranjo,
+            arranjoCompressao: a.arranjoCompressao,
+          };
+          if (a.fissuracao) e.fissuraOk = () => fissuraDe(c.m, c.sec, e.barras).ok;
+          return e;
+        }),
+      ...tramos.map((t): ElementoArmadura => {
+        const c = calcTramo.get(t.indice)!;
+        const e: ElementoArmadura = {
+          em: "tramo",
+          numero: t.indice,
+          as: t.flexao.as,
+          bw: c.sec.bw,
+          barras: t.flexao.barras,
+          arranjo: t.flexao.arranjo,
+          arranjoCompressao: t.flexao.arranjoCompressao,
+        };
+        if (t.fissuracao) e.fissuraOk = () => fissuraDe(c.m, c.sec, e.barras).ok;
+        return e;
+      }),
+    ];
+    const aviso = (texto: string) => avisos.push(`${viga.nome} ${texto}`);
+    for (const e of aplicaAlteracoes(alteracoes, elementos, p, modo, aviso)) {
+      if (e.em === "apoio") {
+        const a = apoios[e.numero]!;
+        const c = calcApoio.get(e.numero)!;
+        Object.assign(a, {
+          barras: e.barras,
+          arranjo: e.arranjo,
+          arranjoCompressao: e.arranjoCompressao,
+        });
+        if (a.fissuracao) a.fissuracao = fissuraDe(c.m, c.sec, e.barras);
+        continue;
+      }
+      const t = tramos.find((x) => x.indice === e.numero)!;
+      const c = calcTramo.get(e.numero)!;
+      t.flexao = {
+        ...t.flexao,
+        barras: e.barras,
+        arranjo: e.arranjo,
+        arranjoCompressao: e.arranjoCompressao,
+      };
+      const fl = flechaTramo(
+        c.ejf,
+        c.sec,
+        ec,
+        asEfetiva(e.barras, true),
+        p.flechaInerciaFissurada,
+        p.coeficienteMedida,
+        p.coeficienteForca,
+        modo,
+      );
+      t.flecha = fl.valor;
+      t.flechaTexto = fl.texto;
+      if (t.fissuracao) t.fissuracao = fissuraDe(c.m, c.sec, e.barras);
+    }
   }
 
   return {

@@ -204,6 +204,20 @@ export interface Viga {
   momentosExternos?: { esquerdo: number; direito: number };
   /** Apoios cuja reação não vai a pilar nenhum (o "*" no número do pilar, VIGA opção 7). */
   apoiosDesconsiderados?: number[];
+  /** Número do pilar de cada apoio que o usuário digita na opção 7 do VIGA quando o J não
+   *  traz a marca ("Numero do pilar referente ao Apoio", VIGA.BAS:2150-2175); o .REP leva a
+   *  reação ao pilar "P<número>". null = sem número (vale o pilar da planta). Ausente = o
+   *  pilar da planta. */
+  pilaresNoRep?: (number | null)[];
+  /** Repetições da viga no DESENHO ("Vigas com repetições para consideração na Tabela",
+   *  DESENHO.BAS:1875-1910): o "rept" do .TAB, que o resumo conta como MAX(1, rept).
+   *  Ausente = as repetições do pavimento. */
+  repeticoes?: number;
+  /** Armadura que o usuário altera no DESDIM, com "Altero a armadura que será optada pela
+   *  Parametrização" S no DESENHO (DESENHO.BAS:1707), em ordem: as telas de "Altero a
+   *  Armação" (S_60137 nos apoios, S_61fbe nos tramos) e as de "Modifico as Armaduras" da
+   *  fissuração (S_20137). */
+  armaduraDigitada?: ArmaduraDigitada[];
   /** Seção de cada trecho e de cada apoio no DESENHO (.SEC). Ausente = bw × h. */
   secoes?: { trechos?: SecaoTrechoViga[]; apoios?: SecaoApoioViga[] };
   /** Dados de forma do DESENHO (.FOR) que substituem os tirados da planta.
@@ -232,7 +246,27 @@ export type CargaViga =
       total: number;
       acidental?: number;
     }
-  | { tipo: "concentrada"; trecho: number; posicao: number; total: number; acidental?: number };
+  | { tipo: "concentrada"; trecho: number; posicao: number; total: number; acidental?: number }
+  /** A reação do apoio `apoio` (0..n) da viga `viga`, apoiada aqui: a carga indexada
+   *  "*n.aa" que o usuário digita no F do VIGA (VIGA.BAS:1309-1312). O VIGA a resolve depois
+   *  de calcular a viga apoiada (opção 2, VIGA.BAS:1670-1706). */
+  | { tipo: "reacao"; trecho: number; posicao: number; viga: string; apoio: number };
+
+/** Uma alteração de armadura no DESDIM, num apoio k (0..n) ou num tramo t (1..n), como o
+ *  DESDIM numera. */
+export interface ArmaduraDigitada {
+  em: "apoio" | "tramo";
+  numero: number;
+  /** "Bitola(mm) Tracionada" e "Numero de Barras": `bitola` ausente = a mesma do arranjo
+   *  (Enter); `bitolaMistura` = o "+b" para misturar; `barras` ausente = o necessário
+   *  (Enter); `barrasMistura` = o "+m". O campo inteiro ausente = "=" (mantém). */
+  tracionada?: { bitola?: number; bitolaMistura?: number; barras?: number; barrasMistura?: number };
+  /** "Armadura Comprimida": "-" anula, "a#b" (a > 0, b padronizada). Ausente = a mesma. */
+  comprimida?: string;
+  /** "Modifico as Armaduras" da fissuração: bitola (ausente = a mesma) e quantidade. Só
+   *  vale se a fissuração do grupo (apoios ou tramos) não passou. */
+  fissuracao?: { bitola?: number; quantidade: number };
+}
 
 /** Seção de viga num trecho, cm: alma bw × h e mesa bf × hf (0 = retangular). */
 export interface SecaoTrechoViga {

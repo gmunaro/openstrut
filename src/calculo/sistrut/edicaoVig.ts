@@ -23,8 +23,9 @@
 //   sem balanço não há onde pôr e ela é recusada;
 // - no máximo 30 divisões na viga (V_16bc%, VIGA.BAS:1030, 1265-1270);
 // - acidentais "S" com acidental "G": Pac = pct·P/100 e Fac = pct·F/100 da divisão
-//   inteira, num produto só (VIGA.BAS:1294-1298); com "F", a `acidental` de cada carga
-//   (o Pac/Fac digitado) somada à da montagem.
+//   inteira, num produto só (VIGA.BAS:1294-1298), nas divisões que recebem carga sem a
+//   `acidental` (as digitadas); a carga com a `acidental` informada (a do .VIG gravado, ou
+//   o Pac/Fac digitado com "F") a soma à da montagem.
 // O que o original recusa vira aviso e não entra no registro.
 import type { CargaViga, Viga } from "../../dominio/obra";
 import { atribuicao, qbCint } from "./base/f32";
@@ -64,6 +65,9 @@ interface Div {
   pac: number;
   fac: number;
   indexada?: DivisaoCarga["indexada"];
+  /** Recebeu carga sem a acidental informada: com "G", a divisão foi digitada no VIGA e a
+   *  acidental dela é a gerada. */
+  digitada?: boolean;
 }
 
 /** Trechos do registro na ordem do eixo: balanço esquerdo, tramos, balanço direito. */
@@ -136,7 +140,8 @@ export function editaVig(
     viga.inercias !== undefined ||
     viga.engaste !== undefined ||
     viga.momentosExternos !== undefined ||
-    (viga.apoiosDesconsiderados?.length ?? 0) > 0;
+    (viga.apoiosDesconsiderados?.length ?? 0) > 0 ||
+    viga.pilaresNoRep !== undefined;
   if (!temEdicao) return dados;
   const s = atribuicao(modo);
   const trechos = trechosDe(dados);
@@ -159,8 +164,8 @@ export function editaVig(
   const gerada = parametros.acidentais && parametros.acidentalGerada;
   const pct = porcentagemAcidentalGerada(parametros, modo);
   /** Acidental digitada (modo "F"); com "G" a acidental sai da divisão inteira no fim. */
-  const acidentalDe = (c: CargaViga) =>
-    c.acidental === undefined || gerada
+  const acidentalDe = (c: Exclude<CargaViga, { tipo: "reacao" }>) =>
+    c.acidental === undefined
       ? 0
       : c.tipo === "distribuida"
         ? s(knPorMParaTPorM(c.acidental))
@@ -210,9 +215,11 @@ export function editaVig(
     const fora = (u: number) => u < -tol || u > vao + tol;
     for (const c of viga.cargas ?? []) {
       if (c.trecho !== i) continue;
-      if (c.tipo === "concentrada") {
+      if (c.tipo === "concentrada" || c.tipo === "reacao") {
         if (fora(c.posicao)) {
-          aviso(`carga concentrada fora do trecho ${i} (${c.posicao} m): ignorada.`);
+          aviso(
+            `carga ${c.tipo === "reacao" ? "indexada" : "concentrada"} fora do trecho ${i} (${c.posicao} m): ignorada.`,
+          );
           continue;
         }
         let x = doApoio(c.posicao);
@@ -222,6 +229,17 @@ export function editaVig(
           x = 0;
         } else x = corta(divs, x, tol);
         const alvo = divs.find((dv) => dv.fim === x)!;
+        if (c.tipo === "reacao") {
+          // "*n.aa" no F da divisão: a F é a reação da viga apoiada (VIGA.BAS:1309-1312)
+          if (alvo.indexada || alvo.f !== 0 || alvo.fac !== 0) {
+            aviso(
+              `carga indexada da viga ${c.viga} a ${c.posicao} m do trecho ${i}: a divisão já tem F e o VIGA tem uma F por divisão. Carga ignorada.`,
+            );
+            continue;
+          }
+          alvo.indexada = { viga: c.viga, apoio: c.apoio };
+          continue;
+        }
         if (alvo.indexada) {
           aviso(
             `carga concentrada a ${c.posicao} m do trecho ${i}, no ponto da viga ${alvo.indexada.viga} apoiada: o VIGA tem uma F por divisão e ela é da carga indexada (VIGA.BAS:1309-1312). Carga ignorada.`,
@@ -230,6 +248,7 @@ export function editaVig(
         }
         alvo.f = s(alvo.f + s(knParaT(c.total)));
         alvo.fac = s(alvo.fac + acidentalDe(c));
+        if (c.acidental === undefined) alvo.digitada = true;
         continue;
       }
       if (fora(c.inicio) || fora(c.fim)) {
@@ -246,6 +265,7 @@ export function editaVig(
         if (inicio >= xa && dv.fim <= xb && dv.fim > inicio) {
           dv.p = s(dv.p + total);
           dv.pac = s(dv.pac + ac);
+          if (c.acidental === undefined) dv.digitada = true;
         }
         inicio = dv.fim;
       }
@@ -256,7 +276,7 @@ export function editaVig(
   // F no fim de um tramo interno: o VIGA exige F = 0 na última divisão (VIGA.BAS:1279)
   listas.forEach(({ divs, tipo }, i) => {
     const ultima = divs.at(-1)!;
-    if (tipo !== "tramo" || (ultima.f === 0 && ultima.fac === 0) || ultima.indexada) return;
+    if (tipo !== "tramo" || (ultima.f === 0 && ultima.fac === 0 && !ultima.indexada)) return;
     const proxima = listas[i + 1];
     if (!proxima) {
       aviso(
@@ -271,15 +291,19 @@ export function editaVig(
       if (alvo !== primeira) proxima.divs.unshift(alvo);
       alvo.f = s(alvo.f + ultima.f);
       alvo.fac = s(alvo.fac + ultima.fac);
+      if (ultima.indexada) alvo.indexada = ultima.indexada;
     }
     ultima.f = 0;
     ultima.fac = 0;
+    delete ultima.indexada;
   });
 
-  // acidentais "S" com "G": Pac e Fac da divisão inteira (VIGA.BAS:1294-1298)
+  // acidentais "S" com "G": Pac e Fac da divisão inteira digitada (VIGA.BAS:1294-1298).
+  // A divisão que só tem cargas com a acidental informada vem de um arquivo (o .VIG
+  // gravado) e fica como está: o VIGA só gera a acidental na entrada.
   if (gerada)
     for (const { divs } of listas)
-      for (const dv of divs) {
+      for (const dv of divs.filter((x) => x.digitada)) {
         dv.pac = s((pct * dv.p) / 100);
         if (!dv.indexada) dv.fac = s((pct * dv.f) / 100);
       }
@@ -300,7 +324,14 @@ export function editaVig(
   const resto: DadosViga = { ...dados };
   delete resto.registro;
   delete resto.inerciasBrutas;
-  const pilares = dados.pilares.map((p, k) => (viga.apoiosDesconsiderados?.includes(k) ? null : p));
+  if (viga.pilaresNoRep && viga.pilaresNoRep.length !== n + 1)
+    aviso(`pilaresNoRep tem ${viga.pilaresNoRep.length} números e a viga tem ${n + 1} apoios.`);
+  // o número digitado na opção 7 (VIGA.BAS:2150-2175): o .REP leva a reação a "P<número>"
+  const pilares = dados.pilares.map((p, k) => {
+    if (viga.apoiosDesconsiderados?.includes(k)) return null;
+    const numero = viga.pilaresNoRep?.[k];
+    return numero === undefined || numero === null ? p : `P${numero}`;
+  });
   return {
     ...resto,
     tramos: novos.slice(be, be + n),

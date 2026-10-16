@@ -38,6 +38,7 @@
 //   cálculo, como o resto da V2). Aviso não esconde resultado.
 import type { ComMemoria } from "../../tipos";
 import type { Bordo, ClasseAco, Vinculo } from "../../../dominio/obra";
+import type { ArmaduraDigitada } from "../../../dominio/obra";
 import type {
   EmSingle,
   PARAMETROS_DSP,
@@ -1062,7 +1063,19 @@ export interface DimensionamentoViga extends ComMemoria {
 }
 /** Os esforços saem do DESCALC refeito a partir de `entrada.viga` (o original roda o
  *  DESCALC antes de dimensionar, DESDIM.BAS:795-797): não recebe a análise do VICALC. */
-export type DimensionaViga = (entrada: EntradaDesdim, modo: ModoSistrut) => DimensionamentoViga;
+export type DimensionaViga = (
+  entrada: EntradaDesdim,
+  modo: ModoSistrut,
+  alteracoes?: readonly AlteracaoArmadura[],
+) => DimensionamentoViga;
+
+/** Armadura que o usuário altera nas telas do DESDIM ("Altero a Armação", S_60137 e
+ *  S_61fbe; "Modifico as Armaduras" da fissuração, S_20137), com o DESENHO em "Altero a
+ *  armadura que será optada pela Parametrização" S (DESENHO.BAS:1707). A forma é a de
+ *  `ArmaduraDigitada` da obra; bitolas em mm. `dimensionaViga` aplica as alterações
+ *  depois de escolher os arranjos, refaz a fissuração e a flecha com as barras novas e
+ *  avisa as que o original recusaria (vigas/desdim-alteracao.ts). */
+export type AlteracaoArmadura = ArmaduraDigitada;
 
 /** Uma posição de barra do detalhamento (DESINIT). */
 export interface PosicaoBarra {

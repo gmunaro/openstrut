@@ -786,6 +786,28 @@ function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
   return { predominanteKgPorM: predominante, excecoes };
 }
 
+/** A armadura comprimida digitada no DESDIM ("Armadura Comprimida", S_60137/S_61fbe) vai
+ *  ao DESINIT pelo COMMON (A_13d0$, A_13a2$); os outros elementos ficam com o padrão. */
+function comprimidaDigitada(viga: Pavimento["vigas"][number], dim: DimensionamentoViga) {
+  const alt = (viga.armaduraDigitada ?? []).filter((a) => a.comprimida !== undefined);
+  if (alt.length === 0) return {};
+  const apoios: string[] = [];
+  const tramos: string[] = [];
+  for (const a of alt) {
+    if (a.em === "apoio") {
+      const x = dim.apoios[a.numero];
+      if (x?.dimensionado) apoios[a.numero] = x.arranjoCompressao;
+    } else {
+      const x = dim.tramos.find((t) => t.indice === a.numero);
+      if (x) tramos[a.numero - 1] = x.flexao.arranjoCompressao;
+    }
+  }
+  return {
+    ...(apoios.length ? { comprimidaApoios: apoios } : {}),
+    ...(tramos.length ? { comprimidaTramos: tramos } : {}),
+  };
+}
+
 const mensagem = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Pilares do LAJEGEOM (A_1156) para a montagem, só quando o pavimento tem
@@ -968,12 +990,15 @@ function calcularPavimentoSistrut(
     };
     const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: avisosForma };
     try {
-      v.dimensionamento = dimensionaViga(entrada, modo);
+      v.dimensionamento = dimensionaViga(entrada, modo, g.viga.armaduraDigitada);
       v.detalhamento = detalhaViga(entrada, v.dimensionamento, modo, {
         apoios,
         ...(eixos ? { eixos } : {}),
+        ...comprimidaDigitada(g.viga, v.dimensionamento),
       });
-      v.quadro = quadroDaViga(v.detalhamento, secoes, forma, pav.repeticoes, par.dsp, modo);
+      // repetições da viga no DESENHO (o rept do .TAB) ou as do pavimento
+      const rept = g.viga.repeticoes ?? pav.repeticoes;
+      v.quadro = quadroDaViga(v.detalhamento, secoes, forma, rept, par.dsp, modo);
     } catch (e) {
       const qb = e instanceof ErroQB ? " (o original para com erro de execução)" : "";
       v.avisos.push(
