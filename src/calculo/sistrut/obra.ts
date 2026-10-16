@@ -27,6 +27,9 @@
 // - pilares: uma coluna por posição, do nível da fundação (cota 0) ao último
 //   pavimento em que o pilar existe; o .REP de cada pavimento (e de cada repetição)
 //   no seu nível; vínculo "continuidade" em todos os níveis.
+// - entrada de viga do VIGA e do DESENHO (cargas, vãos, J, engastes, momentos externos,
+//   apoios desconsiderados, .SEC, .FOR; `edicaoVig.ts`) e o VIGA.INI/.DSP da obra
+//   (`Obra.parametrosViga`) por cima do que a montagem grava e dos padrões de fábrica.
 //
 // Materiais: original = fck nominal (MPa/100 → t/cm²: 15 MPa = 0,15 t/cm², o que o
 // usuário do original digitava para 150 kgf/cm²), fyk pela categoria (CA-50 = 5 t/cm²),
@@ -35,6 +38,7 @@
 // SI convertido exato (fck/98,0665, 500 MPa → 5,0986 t/cm², 25 kN/m³ → 2,5493 t/m³),
 // cobrimentos da obra, float64.
 import type { Bordo, Laje, Materiais, Obra, Pavimento, Pilar, Vinculo } from "../../dominio/obra";
+import type { ParametrosVigaObra } from "../../dominio/obra";
 import { geometriaDasVigas, type GeometriaViga } from "../montagem";
 import type { Etapa } from "../tipos";
 import { atribuicao, ErroQB, sng } from "./base/f32";
@@ -105,6 +109,7 @@ import { dimensionaViga } from "./vigas/desdim";
 import { detalhaViga } from "./vigas/desinit";
 import { somaReacoesPilares } from "./vigas/rep";
 import { analisaVigas } from "./vigas/vicalc";
+import { editaVig, secoesEFormaDaObra } from "./edicaoVig";
 
 // ---------------------------------------------------------------- materiais e parâmetros
 
@@ -141,25 +146,48 @@ export const densidadeSistrut = (modo: ModoSistrut) =>
 
 /** Tabelas "SISTRUT" do original. No modo original, em SINGLE e com os cobrimentos
  *  delas; no corrigido, em decimal, com a densidade SI e os cobrimentos da obra. */
-export function parametrosSistrut(m: Materiais, modo: ModoSistrut) {
+export function parametrosSistrut(m: Materiais, modo: ModoSistrut, pv?: ParametrosVigaObra) {
+  // VIGA.INI e .DSP da obra por cima dos de fábrica (cada campo substitui o inteiro)
+  const dspObra = { ...PARAMETROS_DSP, ...pv?.dsp };
+  const vigaObra = { ...PARAMETROS_VIGA, ...pv?.viga };
   if (modo === "original")
     return {
       laje: emSingle(PARAMETROS_LAJE),
-      dsp: emSingle(PARAMETROS_DSP),
-      viga: emSingle(PARAMETROS_VIGA),
+      dsp: emSingle(dspObra),
+      viga: emSingle(vigaObra),
       pilar: emSingle(PARAMETROS_PILAR),
       pip: emSingle(PARAMETROS_PIP),
     };
   const densidade = densidadeSistrut(modo);
   return {
     laje: { ...PARAMETROS_LAJE, densidade, cobrimento: m.cobrimentoLaje },
-    dsp: { ...PARAMETROS_DSP, cobrimento: m.cobrimentoViga },
-    viga: PARAMETROS_VIGA,
+    dsp: { ...dspObra, cobrimento: m.cobrimentoViga },
+    viga: vigaObra,
     pilar: PARAMETROS_PILAR,
     pip: { ...PARAMETROS_PIP, densidade, cobrimento: m.cobrimentoPilar },
   };
 }
 export type ParametrosSistrut = ReturnType<typeof parametrosSistrut>;
+
+/** Materiais do DESDIM/DESINIT. No modo original, o fck, o fyk, a classe do aço e os γ do
+ *  .DSP da obra, quando ela os dá (o DESDIM lê os do .DSP, DESENHO.BAS:4774-4789); no
+ *  corrigido, sempre os da obra. */
+export function materiaisDaViga(
+  mat: MateriaisSistrut,
+  pv: ParametrosVigaObra | undefined,
+  modo: ModoSistrut,
+): MateriaisSistrut {
+  const d = pv?.dsp;
+  if (modo !== "original" || !d) return mat;
+  return {
+    fck: d.fck !== undefined ? sng(d.fck) : mat.fck,
+    fyk: d.fyk !== undefined ? sng(d.fyk) : mat.fyk,
+    classeAco: d.classeAco ?? mat.classeAco,
+    gamaF: d.gamaF !== undefined ? sng(d.gamaF) : mat.gamaF,
+    gamaC: d.gamaC !== undefined ? sng(d.gamaC) : mat.gamaC,
+    gamaS: d.gamaS !== undefined ? sng(d.gamaS) : mat.gamaS,
+  };
+}
 
 // ---------------------------------------------------------------- resultado
 
@@ -207,6 +235,9 @@ export interface PavimentoSistrut {
   montagem: MontagemPavimento;
   /** .VIG com as cargas indexadas resolvidas pelo VIGA. */
   vigasVig: DadosViga[];
+  /** .VIG que o VIGA lê: o da montagem com o que a obra diz de cada viga (cargas, vãos,
+   *  J, engastes, momentos externos; edicaoVig.ts), antes de resolver as indexadas. */
+  vig: DadosViga[];
   analises: AnaliseViga[];
   naoProcessadas: string[];
   rep: LinhaRep[];
@@ -497,7 +528,11 @@ function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
   const dens = densidadeSistrut(modo);
   // o peso digitado (kN/m → t/m) ou o da seção
   const tPorM = (v: (typeof pav.vigas)[number]) =>
-    v.pesoProprio !== undefined ? knPorMParaTPorM(v.pesoProprio) : ((v.bw * v.h) / 10_000) * dens;
+    v.somenteCargasProprias
+      ? 0
+      : v.pesoProprio !== undefined
+        ? knPorMParaTPorM(v.pesoProprio)
+        : ((v.bw * v.h) / 10_000) * dens;
   const kg = new Map(pav.vigas.map((v) => [v.nome, pesoKgPorM(s(tPorM(v)))]));
   const contagem = new Map<number, number>();
   for (const k of kg.values()) contagem.set(k, (contagem.get(k) ?? 0) + 1);
@@ -522,6 +557,7 @@ function calcularPavimentoSistrut(
   par: ParametrosSistrut,
   modo: ModoSistrut,
   otimiza: boolean,
+  matViga: MateriaisSistrut = mat,
 ): PavimentoSistrut {
   const s = atribuicao(modo);
   const avisos: string[] = [];
@@ -530,7 +566,7 @@ function calcularPavimentoSistrut(
 
   // alvenarias: a carga linear de cada viga sobre o eixo dela
   for (const v of pav.vigas)
-    if (v.cargaLinear > 0)
+    if (v.cargaLinear > 0 && !v.somenteCargasProprias)
       painel.alvenarias.push({
         inicio: { x: s(v.x1), y: s(v.y1) },
         fim: { x: s(v.x2), y: s(v.y2) },
@@ -614,12 +650,14 @@ function calcularPavimentoSistrut(
     modo,
   );
 
+  // o .VIG editado pela obra (o que o usuário digita no VIGA)
+  const vig = montagem.vigas.map((d) => {
+    const v = pav.vigas.find((x) => x.nome === d.nome);
+    return v ? editaVig(d, v, par.viga, modo, avisos) : d;
+  });
+
   // VIGA: análise (VICALC) e .REP
-  const {
-    analises,
-    naoProcessadas,
-    vigas: vigasVig,
-  } = analisaVigas(montagem.vigas, par.viga, modo);
+  const { analises, naoProcessadas, vigas: vigasVig } = analisaVigas(vig, par.viga, modo);
   if (naoProcessadas.length > 0)
     avisos.push(
       `Vigas não processadas pelo VIGA (carga indexada sem origem): ${naoProcessadas.join(", ")}.`,
@@ -641,18 +679,26 @@ function calcularPavimentoSistrut(
   for (const dados of vigasAnalisadas) {
     const g = geo.vigas.find((x) => x.viga.nome === dados.nome);
     if (!g) continue;
-    const { secoes, forma, apoios } = secoesEForma(g, dados, pav);
+    const { secoes, forma, apoios, eixos } = secoesEFormaDaObra(
+      g.viga,
+      dados,
+      secoesEForma(g, dados, pav),
+      modo,
+    );
     const entrada: EntradaDesdim = {
       viga: dados,
       secoes,
       forma,
-      materiais: mat,
+      materiais: matViga,
       parametros: par.dsp,
     };
     const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: [] };
     try {
       v.dimensionamento = dimensionaViga(entrada, modo);
-      v.detalhamento = detalhaViga(entrada, v.dimensionamento, modo, { apoios });
+      v.detalhamento = detalhaViga(entrada, v.dimensionamento, modo, {
+        apoios,
+        ...(eixos ? { eixos } : {}),
+      });
       v.quadro = quadroDaViga(v.detalhamento, secoes, forma, pav.repeticoes, par.dsp, modo);
     } catch (e) {
       const qb = e instanceof ErroQB ? " (o original para com erro de execução)" : "";
@@ -680,6 +726,7 @@ function calcularPavimentoSistrut(
     geometriaVigas: geo.vigas,
     montagem,
     vigasVig,
+    vig,
     analises,
     naoProcessadas,
     rep,
@@ -835,13 +882,14 @@ function calcularPilaresSistrut(
 export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): ResultadoSistrut {
   const { modo } = opcoes;
   const mat = materiaisSistrut(obra.materiais, modo);
-  const par = parametrosSistrut(obra.materiais, modo);
+  const par = parametrosSistrut(obra.materiais, modo, obra.parametrosViga);
+  const matViga = materiaisDaViga(mat, obra.parametrosViga, modo);
   const avisos: string[] = [];
   if (obra.materiais.aco === "CA-25" && obra.materiais.classeAco === "B")
     avisos.push("Aço CA-25 é sempre classe A; a classe B informada foi ignorada.");
   const otimiza = obra.otimizaNegativos ?? true;
   const pavimentos = obra.pavimentos.map((p) =>
-    calcularPavimentoSistrut(p, mat, par, modo, otimiza),
+    calcularPavimentoSistrut(p, mat, par, modo, otimiza, matViga),
   );
   const falhas: ResultadoSistrut["falhas"] = [];
   const { colunas, lances } = calcularPilaresSistrut(obra, pavimentos, mat, par, modo, falhas);

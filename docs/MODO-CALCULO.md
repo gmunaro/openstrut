@@ -41,6 +41,31 @@ Uma obra da V2 vira a entrada do original assim (`sistrut/obra.ts`):
 
 Exemplos prontos: `sistrut/__e2e__/obraE2E.ts` (casos a, b e c) e `sistrut/__e2e__/obraVBX.ts` (v2par_viga_fluxo).
 
+### Entrada de viga do VIGA e do DESENHO
+
+O que o usuário do original digita no VIGA e no DESENHO depois da montagem fica em campos opcionais da viga e da obra (`dominio/obra.ts`). O motor aplica esses campos ao registro que a montagem grava (`sistrut/edicaoVig.ts`), e o resultado é o .VIG que o VIGA lê (`PavimentoSistrut.vig`). Trechos e apoios seguem a ordem do eixo crescente (x na viga horizontal, y na vertical), como no .VIG. O trecho 0 é o primeiro, ou seja, o balanço esquerdo quando ele existe. O apoio 0 é o primeiro apoio.
+
+| Obra da V2 | Original |
+|---|---|
+| `viga.cargas` | as divisões do .VIG (P/Pac de D(k−1) a D(k), F/Fac em D(k)). Uma distribuída (kN/m, de `inicio` a `fim`) corta as divisões nas suas pontas e soma P nas que ficam entre elas. Uma concentrada (kN) corta na `posicao` e soma F na divisão que termina ali. As posições são em m a partir da ponta esquerda do trecho; no balanço esquerdo o motor converte para o registro, que vai da ponta para o apoio e mede D a partir do apoio. `total` inclui a `acidental`. Sem `acidental`, vale a acidental gerada pelo % quando o VIGA.INI diz "G" (VIGA.BAS:1294-1298) e zero quando diz "F". |
+| `viga.somenteCargasProprias` | o .VIG digitado no VIGA: a montagem não leva carga à viga (lajes, peso próprio, `cargaLinear`). Ficam só `cargas` e a reação das vigas apoiadas nela (indexada). |
+| `viga.vaos` | vão de cada trecho como digitado (m). Sem o campo, o vão vem da planta, medido em SINGLE pelas coordenadas, como faz o LAJEMONT. O vão digitado só entra se bater com a planta a menos de 5 mm; senão o motor avisa. |
+| `viga.inercias` | J de cada trecho. Sem o campo, vale o da montagem, que grava a marca do pilar: 1 + número/100000. |
+| `viga.engaste`, `viga.momentosExternos` | Ee/Ed e os momentos externos dos apoios extremos (kN·m). Os momentos só entram com `parametrosViga.viga.momentosExternos`. |
+| `viga.apoiosDesconsiderados` | o "*" no número do pilar (VIGA opção 7): a reação do apoio não vai a pilar nenhum. |
+| `viga.secoes` | o .SEC: bw, h e mesa bf/hf por trecho (seção T) e bw, h por apoio. Sem o campo, bw × h em toda a viga. |
+| `viga.forma` | o .FOR: por trecho, vão livre, pe/Hle/pd/Hld, eixo e alinhamento; por apoio, largura, tipo, título, código, LPs e Dis. Cada campo ausente vem da planta. |
+| `obra.parametrosViga.viga` / `.dsp` | o VIGA.INI e o .DSP. Cada campo presente substitui o de fábrica inteiro (uma tabela vem inteira). Os valores ficam nas unidades do original. No modo original, o DESDIM usa o fck, o fyk, a classe do aço e os γ do .DSP, quando a obra os informa (DESENHO.BAS:4774-4789). No corrigido, valem os materiais e o cobrimento da obra. A % de acidental gerada vale como na tela (opção 8, sem limite, R6). Quem lê um VIGA.INI aplica o limite 4..96 da leitura. |
+
+### Importar a parte de viga de uma obra do SISTRUT
+
+`importarVigasSistrut(arquivos, obra?, pavimentoId?)` (`armazenamento/sistrut/viga.ts`) lê o .VIG (registro de 855 bytes), o .SEC (346 bytes por viga), o .FOR (616 bytes por viga), um .DSP (texto lido como o DESENHO lê, L_23333) e o VIGA.INI. O leiaute de cada arquivo está no cabeçalho do arquivo.
+
+- **Sem obra (gerar)**: cada viga fica numa linha horizontal própria, com um pilar em cada apoio. O nome do pilar sai da marca no J (CINT((J − INT(J·100)/100)·100000), VIGA opção 7). A marca 471 vira apoio desconsiderado. Apoio sem marca leva o nome `<viga>.A<k>` e gera aviso. A viga recebe `somenteCargasProprias`, `vaos`, `inercias` e `cargas` (uma distribuída por divisão com P e uma concentrada por F, com a acidental explícita), além de engastes, momentos externos, `secoes` e `forma`. O .DSP e o VIGA.INI entram em `parametrosViga`, só com os campos que diferem do de fábrica. O fck, o aço e a classe da obra saem do .DSP. A obra fica no modo original.
+- **Com obra (completar)**: as vigas casam pelo nome no pavimento. O importador compara o .VIG com o registro que a montagem da própria obra grava. Se as divisões diferem em mais de 1e-5 relativo, a viga recebe as cargas do .VIG com `somenteCargasProprias`. Vãos, J e engastes entram só se diferem. `secoes` e `forma` entram sempre que o .SEC e o .FOR trazem a viga. A F de uma divisão em que a planta já tem a reação de uma viga apoiada não entra.
+
+A obra sai validada por `lerObra`. Um registro vazio de .SEC ou .FOR (o QB preenche com zeros os registros que pula) é ignorado. O DESENHO.INI não é lido: os coeficientes de medida e força dele ficam em `parametrosViga.dsp` (`coeficienteMedida`, `coeficienteForca`).
+
 ### Formato de `resultado.sistrut`
 
 `ResultadoSistrut` (tipos em `sistrut/base/tipos.ts` e `sistrut/obra.ts`), tudo nas unidades do original:
@@ -138,6 +163,10 @@ Os itens B a H deste documento foram feitos contra a V1 antiga, a reconstrução
 - **Casos de laje v2par_*** (balanço, bordo livre, uma direção, assimetria, otimização, R2, R3, cargas): conferidos nas famílias (T1, T2, T6), não pela obra da V2. As obras da V2 desses casos são as do comparador.
 - **Detalhamento da tela:** é pelas regras da V2, não pelo DESINIT.
 - **e2e do Playwright** (`e2e/modo-calculo.spec.ts`): o texto foi ajustado, mas o teste não foi rodado.
+- **Entrada de viga no modo corrigido:** as obras importadas rodam sem aviso (`armazenamento/sistrut/viga.test.ts`), mas não há número de referência.
+- **v2par_viga_r6 pelos arquivos:** a VR6 foi digitada no VIGA e o original não gravou o .VIG (o run não tem `obra/`). A obra do teste repete o roteiro.
+- **retrad_des_p3:** a sonda não gravou a seção. O .SEC e o .FOR do run só têm zeros, e o único valor do caso (a seção digitada na tela) não está em arquivo nenhum.
+- **Montagem × LAJEMONT no último bit:** o .VIG que a montagem da V2 grava para a E2E (V3 tramo 2, V6 tramo 1) e para a VBX (V2 tramo 2) difere do que o original gravou em poucos ulps do SINGLE em P e Pac. Os números impressos batem nos dois caminhos. Ao completar uma obra, o importador não trata essa diferença como edição (tolerância relativa de 1e-5).
 
 ## O que o modelo da obra ainda não representa
 
@@ -147,10 +176,11 @@ Estes recursos do original não têm campo na obra da V2, então os casos que de
 - cargas de ocupação por área com polígono próprio e parcela acidental diferente da total (a V2 tem revestimento e sobrecarga por laje);
 - alvenaria sobre laje (só a carga linear sobre a viga). A montagem da T6 já distribui a alvenaria sobre laje pela posição e bate com o v2par_laje_cargas;
 - tipos de laje pré-moldada e "comum não calculada";
-- piso Mneg/Mpos editável (v2par_laje_r3) e os demais parâmetros do .LAP/.DSP/VIGA.INI/.PIP (só os padrões "SISTRUT");
-- acidental gerada por % (v2par_viga_r6), acidentais "S" (envoltória) e reação máxima;
-- cargas concentradas em viga, momentos externos, engaste nas extremidades e J por tramo;
-- seção T, seções diferentes por tramo e acidentais próprias da viga (v2par_des_especial);
+- piso Mneg/Mpos editável (v2par_laje_r3) e os demais parâmetros do .LAP/.PIP (só os padrões "SISTRUT"). O VIGA.INI e o .DSP já são da obra (`parametrosViga`);
+- vigas: a armadura que o usuário altera nas telas do DESDIM ("Altero a armadura", as janelas de fissuração) e o arranjo da armadura comprimida que ele digita (`ExtrasDesinit.comprimidaTramos/Apoios`). Vale o que o DESDIM escolhe;
+- vigas: repetições por viga do DESENHO (o "rept" do .TAB). O motor usa as do pavimento;
+- vigas: carga indexada (viga sobre viga) de um .VIG importado sem planta. Sem a geometria, a reação da viga apoiada não chega, e o importador avisa. Com a obra do .LAJ, a planta traz o apoio. O .VIG regravado pelo VIGA já traz a F resolvida e não precisa disso;
+- vigas: número de pilar digitado na tela da opção 7 quando o J não traz a marca. O importador dá o nome `<viga>.A<k>` e avisa;
 - pilares não retangulares, vínculos por nível, vento e excentricidade entre seções;
 - predimensionamento de pilar (PILAREDI 3.1) e verificação de seção dada (PILAR opção 6). A verificação existe na família, `verificaPilarSistrut` em `sistrut/pilares/verificacao.ts`, mas não entra no cálculo da obra.
 
@@ -158,5 +188,22 @@ Estes recursos do original não têm campo na obra da V2, então os casos que de
 
 - **E2E** (`sistrut/__e2e__/obraE2E.ts`): 4 lajes 4×5 h 10, vigas 12×40 e 12×50, pilares P1..P9 20×20, pé-direito 3. `sistrut/obra.test.ts` confere no modo original todos os números de `caso_a_laje`, `caso_b_viga`, `caso_c_pilaredi` e `retrad_lajeproc`, exceto os ids de `NAO_PRODUZIDOS` (eco do H e predimensionamento).
 - **VBX** (`sistrut/__e2e__/obraVBX.ts`): `v2par_viga_fluxo`, os 259 valores (viga sobre as pontas de dois balanços, .REP com P4 −0,01).
+- **Importação da parte de viga** (`armazenamento/sistrut/viga.oraculo.test.ts`, pulado sem os runs): os arquivos que o original gravou viram a obra, que passa pelo motor no modo original. Valores conferidos (os que faltam são de laje ou montagem, que não estão no .VIG, ou do desenho gráfico do DESIMP):
+
+  | caso | arquivos do original | conferidos |
+  |---|---|---|
+  | caso_b_viga, gerada | E2E.VIG (run caso_a_laje) | 252 de 252: análise do VIGA e .REP |
+  | caso_b_viga, completando a obra E2E | E2E.VIG | 252 de 252 |
+  | v2par_viga_fluxo, gerada | VBX.VIG (regravado pelo VIGA) | 123 de 259: todos os de viga e .REP; os 136 restantes são de laje e montagem |
+  | v2par_viga_fluxo, completando a obra VBX | VBX.VIG | 123 de 259 |
+  | v2par_viga_r6 | nenhum (obra do roteiro) | 56 de 56: acidental gerada a 150 %, envoltória e reações mínimas negativas |
+  | v2par_des_3tramos | ASS.VIG (run v2par_laje_assim), ASS.SEC/.FOR | 128 de 128, mais o .TAB e o quadro de ferros |
+  | v2par_des_2tramos | ASS.VIG, ASS.SEC/.FOR | 96 de 96, mais o .TAB e o quadro de ferros |
+  | v2par_des_especial | DSX.VIG/.SEC/.FOR, V2P.DSP | 159 de 159, mais o .TAB e o quadro de ferros |
+  | retrad_des_det, gerada e completando a E2E | E2E.VIG, E2E.SEC/.FOR | 113 de 126, mais o .TAB; os 13 restantes são cotas, corte e anotações do desenho, eixo do .FOR e textos de tela |
+  | retrad_des_p5 / p6 | E2E.VIG, E2E.SEC/.FOR | 2 de 2 / 27 de 27 |
+  | retrad_des_menu / p10 | E2E.VIG/.SEC/.FOR da obra de partida | 53 de 57 / 13 de 13, mais o .TAB |
+
+  Na análise do DESDIM, o teste roda o DESCALC sobre a entrada que o motor montou (o .VIG editado, as seções e o .DSP da obra).
 - **q1** (`modoCalculo.test.ts`, `formas.test.ts`): L1 4×5 apoiada e L2 em balanço 1,5×5; item D e fôrma de 53,724 m² pela regra da V2.
 - **FLUXO e BALC da V1 antiga** (`fluxo.test.ts`, `armazenamento/importarV1*.test.ts`): conferem o fluxo genérico da V2 (`caminho: "v2"`, o mesmo da NBR 6118) com os métodos NB-1/78 da V1 antiga contra a V1 antiga. Não são o SISTRUT.

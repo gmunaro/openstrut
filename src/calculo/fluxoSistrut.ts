@@ -592,10 +592,13 @@ function equilibrio(ps: PavimentoSistrut, pilares: CargaPilar[]): Equilibrio {
     if (rb.apoio.tipo === "viga") lajesNasVigas += kn(t);
   }
   let cargaVigas = 0;
-  for (const d of ps.vigasVig)
+  // o .VIG antes do VIGA: as concentradas que ele tem são as digitadas na viga (a reação
+  // de viga apoiada, indexada, ainda está com F = 0 e não é carga nova)
+  for (const d of ps.vig)
     for (const { tramo, tipo } of tramosVig(d)) {
       const c = cargasDoTramo(tramo, tipo);
       cargaVigas += kn(c.distribuidas.reduce((s, x) => s + x.p * (x.b - x.a), 0));
+      cargaVigas += kn(c.concentradas.reduce((s, f) => s + f.f, 0));
     }
   const cargaPilares = pilares.reduce((s, p) => s + p.n, 0);
   const cargaPilaresProjeto = pilares.reduce((s, p) => s + p.nProjeto, 0);
