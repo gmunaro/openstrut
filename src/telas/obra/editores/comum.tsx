@@ -300,12 +300,13 @@ export function TabelaEditavel<C extends string>({
     aoMudar(linhas.map((l, k) => (k === i ? { ...l, [c]: v } : l)));
   const cheia = maximo !== undefined && linhas.length >= maximo;
   return (
-    <div role="group" aria-label={titulo} className="grid gap-1">
+    // o nome de grupo fica com a moldura (Grupo); a tabela se nomeia pelo próprio <table>
+    <div className="grid gap-1">
       {linhas.length === 0 ? (
         <p className="text-muted-foreground text-xs">{vazio}</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="text-xs">
+          <table aria-label={titulo} className="text-xs">
             <thead>
               <tr className="text-muted-foreground">
                 <th className="pr-2 text-left font-medium">

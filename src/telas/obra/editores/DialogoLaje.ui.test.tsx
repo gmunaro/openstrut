@@ -38,7 +38,7 @@ describe("editor dos dados de laje do SISTRUT", () => {
     await user.click(
       within(dialogo).getByRole("button", { name: "Criar polígono a partir do retângulo" }),
     );
-    const tabela = within(dialogo).getByRole("group", { name: "Polígono" });
+    const tabela = within(dialogo).getByRole("table", { name: "Polígono" });
     expect(within(tabela).getByLabelText("Vértice 3, x")).toHaveProperty("value", "4");
     expect(within(tabela).getByLabelText("Vértice 3, y")).toHaveProperty("value", "5");
     await user.selectOptions(
@@ -64,7 +64,7 @@ describe("editor dos dados de laje do SISTRUT", () => {
     await user.click(
       within(dialogo).getByRole("button", { name: "Criar polígono a partir do retângulo" }),
     );
-    const tabela = within(dialogo).getByRole("group", { name: "Polígono" });
+    const tabela = within(dialogo).getByRole("table", { name: "Polígono" });
     // troca os vértices 2 e 4: (0, 0), (4, 0), (4, 5), (0, 5) é anti-horário
     const campo = (r: string) => within(tabela).getByLabelText(r);
     await user.clear(campo("Vértice 2, x"));
