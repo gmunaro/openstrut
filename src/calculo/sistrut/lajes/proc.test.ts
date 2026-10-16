@@ -170,7 +170,8 @@ describe("R2: vizinho com o mesmo número de lado (LAJEPROC.BAS:836)", () => {
     const r = lajeproc(esforcos, E2E, PARAM, "original");
     expect(r.negativas[0]!.as).toBeCloseTo(2.1299, 3);
     expect(r.negativas[0]!.barra).toMatchObject({ ok: true, espacamento: 12.5 });
-    expect(r.avisos.join(" ")).toContain("R2");
+    expect(r.avisos.join(" ")).toContain("não foi recalculado, como no SISTRUT original");
+    expect(r.memoria.some((m) => m.ref === "LAJEPROC.BAS:836, 855")).toBe(true);
   });
   it("corrigido: usa o maior As dos dois lados, 2,620 # 6.3 c/10", () => {
     const r = lajeproc(esforcos, E2E, PARAM, "corrigido");

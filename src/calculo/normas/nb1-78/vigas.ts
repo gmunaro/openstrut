@@ -4,6 +4,7 @@
 // Contas internas em kN, cm e kN/cm² (1 MPa = 0,1 kN/cm²). A V1 trabalha em
 // tf/cm², mas as fórmulas são homogêneas e as constantes com unidade
 // (τwu ≤ 4,5 MPa, τc = ψ1·√fck com fck em MPa) foram convertidas sem mudar valor.
+import { num, numAte } from "../../texto";
 import { espacamentoMaximoEstribo } from "../../barras";
 import { type ClasseAco, epsYd, tensaoAco } from "../../pilares/flexaoComposta";
 import type { CortanteResultado, Etapa, FlexaoResultado, MateriaisCalc } from "../../tipos";
@@ -151,7 +152,7 @@ export function vigaFlexaoNb178(
     xd = xdLim;
     if (d <= D_LINHA) {
       avisos.push(
-        `Md acima do limite e d = ${d} cm ≤ d' = ${D_LINHA} cm: sem solução, aumente a seção.`,
+        `Md acima do limite e d = ${numAte(d, 2)} cm ≤ d' = ${numAte(D_LINHA, 2)} cm: sem solução, aumente a seção.`,
       );
       return { as: Number.NaN, asComprimida: Number.NaN, xd, avisos, memoria };
     }
@@ -165,7 +166,7 @@ export function vigaFlexaoNb178(
     const sigmaLinha = kNcm2(tensaoAco(epsLinha, t));
     if (sigmaLinha <= 0) {
       avisos.push(
-        `Md acima do limite e d' = ${D_LINHA} cm ≥ x_lim = ${xl.toFixed(2)} cm: a armadura de compressão ficaria tracionada; aumente a seção.`,
+        `Md acima do limite e d' = ${numAte(D_LINHA, 2)} cm ≥ x_lim = ${num(xl, 2)} cm: a armadura de compressão ficaria tracionada; aumente a seção.`,
       );
       return { as: Number.NaN, asComprimida: Number.NaN, xd, avisos, memoria };
     }
@@ -174,12 +175,12 @@ export function vigaFlexaoNb178(
     const asMax = TAXA_AS_MAX * bw * h;
     if (as + asComprimida > asMax) {
       avisos.push(
-        `Armadura dupla As + As' = ${(as + asComprimida).toFixed(2)} cm² > 4 % Ac = ${asMax.toFixed(2)} cm²: seção insuficiente, aumente a seção.`,
+        `Armadura dupla As + As' = ${num(as + asComprimida, 2)} cm² > 4 % Ac = ${num(asMax, 2)} cm²: seção insuficiente, aumente a seção.`,
       );
       return { as: Number.NaN, asComprimida: Number.NaN, xd, avisos, memoria };
     }
     avisos.push(
-      `x/d passaria do limite ${xdLim.toFixed(3)}: armadura dupla (As' = ${asComprimida.toFixed(2)} cm²).`,
+      `x/d passaria do limite ${num(xdLim, 3)}: armadura dupla (As' = ${num(asComprimida, 2)} cm²).`,
     );
     memoria.push(
       {
@@ -314,7 +315,7 @@ export function vigaCortanteNb178(
   );
   if (!bielaOk) {
     avisos.push(
-      `Biela comprimida esmagada: τwd = ${(twd * 10).toFixed(2)} MPa > τwu = ${(twu * 10).toFixed(2)} MPa; aumente a seção.`,
+      `Biela comprimida esmagada: τwd = ${num(twd * 10, 2)} MPa > τwu = ${num(twu * 10, 2)} MPa; aumente a seção.`,
     );
   }
   return { asw, bielaOk, sMax, avisos, memoria };

@@ -217,7 +217,7 @@ describe("editaVig: cargas na viga", () => {
       "corrigido",
       avisos,
     );
-    expect(avisos).toEqual(["Viga V1: carga concentrada fora do trecho 0 (4.5 m): ignorada."]);
+    expect(avisos).toEqual(["Viga V1: carga concentrada fora do trecho 0 (4,5 m): ignorada."]);
   });
 });
 
@@ -242,7 +242,7 @@ describe("editaVig: vãos, J, engaste, momentos externos e apoios", () => {
     ).toEqual([1.95, 1]);
     const avisos: string[] = [];
     editaVig(base(), viga({ inercias: [2] }), par, "corrigido", avisos);
-    expect(avisos[0]).toContain("inercias tem 1 valores e a viga tem 2 trechos");
+    expect(avisos[0]).toContain("as inércias (J) digitadas: 1 valores, e a viga tem 2 trechos");
   });
 
   it("engaste, momentos externos (kN·m → t·m) e apoio desconsiderado (pilar null)", () => {
@@ -508,6 +508,6 @@ describe("secoesEFormaDaObra: tamanhos e seção 0 de balanço", () => {
       avisos,
     );
     expect(avisos).toHaveLength(2);
-    expect(avisos[0]).toContain("secoes.trechos tem 1 itens e a viga tem 2");
+    expect(avisos[0]).toContain("as seções dos trechos: 1 itens, e a viga tem 2");
   });
 });

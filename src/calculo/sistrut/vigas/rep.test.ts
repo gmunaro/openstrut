@@ -12,7 +12,7 @@ import {
 } from "../__oraculo__/index";
 import { casoVicalc, dadosViga, parametrosDoCaso, type VigaJson } from "./__casos__/index";
 import type { LinhaRep } from "../base/tipos";
-import { corteDuasCasas, linhasArquivoRep, somaReacoesPilares, tituloRep } from "./rep";
+import { corteDuasCasas, linhasArquivoRep, somaReacoesPilares, textoDoRep, tituloRep } from "./rep";
 import { analisaViga } from "./vicalc";
 
 /** O valor bate com o impresso truncado? Trunca para zero o STR$ do SINGLE (7
@@ -74,6 +74,18 @@ describe("corte textual de 2 casas (VIGA.BAS:2415-2419)", () => {
     [2, "2"],
     [6.93, "6.93"],
   ])("%d → %s", (x, texto) => expect(corteDuasCasas(Math.fround(x))).toBe(texto));
+
+  // D-21: sem ponto, o corte deixa o sinal e o 1º dígito (v2par2_viga_varios, P8 e P9:
+  // parcela 30,00 impressa "3" e momento −20 impresso "-2"); o corrigido não corta
+  it.each([
+    [30, "3", "30"],
+    [-20, "-2", "-20"],
+    [-0.6481, "-.64", "-0.65"],
+    [6.93, "6.93", "6.93"],
+  ])("%d: original %s, corrigido %s (D-21)", (x, original, corrigido) => {
+    expect(textoDoRep(Math.fround(x), "original")).toBe(original);
+    expect(textoDoRep(x, "corrigido")).toBe(corrigido);
+  });
 });
 
 describe("caso b: quadro de reações e E2E.REP", () => {
@@ -109,13 +121,14 @@ describe("caso b: quadro de reações e E2E.REP", () => {
     );
   });
 
-  it("corrigido (R5): soma sem truncar e arredonda o total: P5 = 6,939745 + 10,447119 → 17,39", () => {
+  it("corrigido (R5, D-21): soma sem truncar; o .REP grava 17,39 e o pilar recebe 6,939745 + 10,447119 = 17,386864", () => {
     const corr = repDoCaso("caso_b", caso.vigas, "corrigido").linhas;
     const p5 = corr.find((l) => l.pilar === "P5")!;
     expect(p5.parcelas[0]!.valor).toBeCloseTo(6.939745, 5);
     expect(p5.parcelas[1]!.valor).toBeCloseTo(10.447119, 5);
-    expect(p5.total).toBe(17.39);
-    expect(corr.find((l) => l.pilar === "P7")!.total).toBe(1.83);
+    expect(p5.total).toBeCloseTo(17.386864, 5);
+    expect(qbUsing("#####.##", p5.total).trim()).toBe("17.39");
+    expect(corr.find((l) => l.pilar === "P7")!.total).toBeCloseTo(1.83, 2);
   });
 });
 
@@ -181,6 +194,8 @@ describe("v2par_viga_fluxo: R5 com reação negativa", () => {
     const corr = repDoCaso("v2par_viga_fluxo", caso.vigas, "corrigido").linhas.find(
       (l) => l.pilar === "P4",
     )!;
-    expect(Math.abs(corr.total)).toBe(0);
+    // a soma sem truncar é 0,00023 t (D-21: o pilar recebe esse valor); o .REP grava 0,00
+    expect(corr.total).toBeCloseTo(0, 3);
+    expect(qbUsing("####.##", corr.total).trim()).toBe("0.00");
   });
 });

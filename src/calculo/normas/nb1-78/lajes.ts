@@ -10,6 +10,7 @@
 //   limite pela classe do aço (A ou B), e aviso de cortante na laje sem estribos.
 // A V1 trabalha em tf, tf/m² e tf/cm²; aqui tudo está em kN, m, cm e MPa. As
 // fórmulas são homogêneas, então a conversão não muda a física.
+import { num } from "../../texto";
 import { BORDOS, type Bordo, type Vinculo } from "../../../dominio/obra";
 import { escolheMalha } from "../../barras";
 import { type ClasseAco, epsYd } from "../../pilares/flexaoComposta";
@@ -617,7 +618,7 @@ export function lajeArmaduraNb178(
     // [VERIFICAR] pendencias.md item 7 só traz a taxa de flexão de vigas (0,25 % para
     // CA-25, fonte secundária); para lajes não há fonte. Mantidas as taxas da V1.
     avisos.push(
-      `${e.nome}: taxas mínimas da V1 (0,15 % e 0,10 %) com CA-25 não conferidas na NB-1/78; confira As,mín.`,
+      `${e.nome}: taxas mínimas adotadas (0,15 % e 0,10 %) com CA-25 não conferidas na NB-1/78; confira As,mín.`,
     );
   if ([asx, asy, ...BORDOS.map((b) => asNegativos[b])].some(Number.isNaN)) {
     avisos.push(
@@ -649,7 +650,7 @@ export function lajeArmaduraNb178(
   );
   if (tauWd > tauWu1)
     avisos.push(
-      `${e.nome}: cortante τwd = ${tauWd.toFixed(3)} MPa > τwu1 = ${tauWu1.toFixed(3)} MPa, laje sem estribos; aumente a espessura.`,
+      `${e.nome}: cortante τwd = ${num(tauWd, 3)} MPa > τwu1 = ${num(tauWu1, 3)} MPa, laje sem estribos; aumente a espessura.`,
     );
 
   const malha = (as: number, posicao: string): Barra | null => {

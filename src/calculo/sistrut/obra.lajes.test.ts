@@ -182,7 +182,7 @@ describe("laje comum não calculada (tipo 3)", () => {
     expect(p.painel.lajes[0]).toMatchObject({ tipo: 3, angulo: -1, mu: 0 });
     expect(p.esforcos.momentos.L1).toBeUndefined();
     expect(p.esforcos.avisos).toEqual([
-      "L1: não calculada (Division by zero: 1/SQR(μ) com μ 0 (LAJECALC.BAS:7239) (erro 11 do QuickBASIC))",
+      "L1: não calculada (divisão por zero em 1/√μ: a laje está sem a relação μ (μ = 0) (erro 11 do QuickBASIC))",
     ]);
     // a montagem a carrega mesmo assim: 20·(0,30 + 0,10 + 0,25) = 13 t
     const soma = p.montagem.reacoes.reduce(
@@ -486,7 +486,7 @@ describe("continuidades do LAJECALC 1 (grupo, i por lado, lista confirmada, D10)
     expect(p.painel.lajes[1]!.codigos[0]).toBe(22);
     const fora = de(vizinhas({ coeficientesLados: [null, null, 2.5, null] }, {}));
     expect(fora.painel.lajes[0]!.codigos[2]).toBe(22);
-    expect(fora.avisos).toEqual(["Laje L1, lado 3: i = 2.5 fora de 0.3 a 2; vale o do engaste."]);
+    expect(fora.avisos).toEqual(["Laje L1, lado 3: i = 2,5 fora de 0,3 a 2; vale o do engaste."]);
   });
 
   it("lista confirmada: dois trechos sem vizinha no lado comum, e linhas que o assistente recusa", () => {

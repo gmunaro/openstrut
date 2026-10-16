@@ -407,7 +407,7 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
   const todas = [viga.balancoEsquerdo, ...viga.tramos, viga.balancoDireito];
   if (todas.some((t) => t?.divisoes.some((d) => d.indexada))) {
     avisos.push(
-      `${viga.nome}: carga indexada não resolvida; o F gravado foi usado como está (use analisaVigas).`,
+      `${viga.nome}: carga indexada não resolvida (a viga apoiada não foi calculada antes); o F gravado foi usado como está.`,
     );
   }
 

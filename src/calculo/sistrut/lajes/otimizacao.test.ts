@@ -209,7 +209,7 @@ describe("armadura imposta na continuidade (LAJECALC.BAS:2165-2221)", () => {
     })();
     expect(erro).toBeInstanceOf(ErroNaoConverge);
     if (!(erro instanceof ErroNaoConverge)) return;
-    expect(erro.message).toContain("R3");
+    expect(erro.message).toContain("repete este lado sem fim");
     const estado: OtimizacaoParada | undefined = erro.estado;
     expect(estado).toMatchObject({ laje: "A", lado: 0, codigo: 12 });
     expect(estado?.relacaoNova).toBeCloseTo(0.96, 6);

@@ -18,6 +18,7 @@
 // não informa a vinculação. O método da rigidez κ aproximada não foi implementado.
 // Resistência da seção: diagrama parábola-retângulo e domínios 1 a 5 da 6118
 // (pilares/secaoParabolaRetangulo.ts), não o núcleo da V1 (flexaoComposta.ts).
+import { num, numAte } from "../../texto";
 import type {
   Barra,
   BarrasPilar,
@@ -287,12 +288,13 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
   if (mat.fck > 50)
     avisos.push(`${e.nome}: fck = ${mat.fck} MPa > 50 (Grupo II) está fora do escopo do app`);
   if (bMin < 14)
-    avisos.push(`${e.nome}: menor dimensão ${bMin} cm < 14 cm, não permitida (13.2.3)`);
+    avisos.push(`${e.nome}: menor dimensão ${numAte(bMin, 1)} cm < 14 cm, não permitida (13.2.3)`);
   else if (bMin < 19)
     avisos.push(
-      `${e.nome}: menor dimensão ${bMin} cm < 19 cm, esforços majorados por γn = ${gn.toFixed(2)}`,
+      `${e.nome}: menor dimensão ${numAte(bMin, 1)} cm < 19 cm, esforços majorados por γn = ${num(gn, 2)}`,
     );
-  if (ac < 360) avisos.push(`${e.nome}: área da seção ${ac} cm² < 360 cm², não permitida (13.2.3)`);
+  if (ac < 360)
+    avisos.push(`${e.nome}: área da seção ${numAte(ac, 1)} cm² < 360 cm², não permitida (13.2.3)`);
 
   memoria.push(
     {
@@ -303,7 +305,7 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
     },
     {
       descricao: "Força normal de cálculo",
-      formula: `Nd = γn·γf·Nk = ${gn.toFixed(2)}·${GAMA_F}·Nk`,
+      formula: `Nd = γn·γf·Nk = ${num(gn, 2)}·${GAMA_F}·Nk`,
       valor: nd,
       unidade: "kN",
       ref: REF_GAMA_N,
@@ -325,20 +327,20 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
   });
 
   if (!(e.nk > 0)) {
-    avisos.push(`${e.nome}: Nk = ${e.nk} kN; só pilar comprimido é dimensionado`);
+    avisos.push(`${e.nome}: Nk = ${num(e.nk, 2)} kN; só pilar comprimido é dimensionado`);
     return semSolucao(NaN, NaN);
   }
   const lambdaMax = Math.max(lambdaX, lambdaY);
   if (lambdaMax > LAMBDA_MAX_MN) {
     memoria.push({ descricao: "Esbeltez máxima", valor: lambdaMax, ref: REF_LAMBDA_MAX });
     avisos.push(
-      `${e.nome}: λ = ${lambdaMax.toFixed(1)} > ${LAMBDA_MAX_MN} exige o método geral (15.8.3.2 e 15.8.1), fora do escopo; aumente a seção`,
+      `${e.nome}: λ = ${num(lambdaMax, 1)} > ${LAMBDA_MAX_MN} exige o método geral (15.8.3.2 e 15.8.1), fora do escopo; aumente a seção`,
     );
     return semSolucao(NaN, NaN);
   }
   if (lambdaMax > 90)
     avisos.push(
-      `${e.nome}: λ = ${lambdaMax.toFixed(1)} > 90: pilar-padrão acoplado a diagramas M, N, 1/r com fluência (15.8.3.3.4 e 15.8.4), φ = ${COEF_FLUENCIA} e Nsg = Nk adotados [VERIFICAR]`,
+      `${e.nome}: λ = ${num(lambdaMax, 1)} > 90: pilar-padrão acoplado a diagramas M, N, 1/r com fluência (15.8.3.3.4 e 15.8.4), φ = ${numAte(COEF_FLUENCIA, 2)} e Nsg = Nk adotados [VERIFICAR]`,
     );
 
   const nu = nd / (ac * mat.fcd * KN_POR_MPA_CM2);
@@ -648,7 +650,7 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
     for (const [nome, mxd, myd] of situacoes) {
       const a = armaduraObliqua6118(nd, mxd, myd, secaoX, t, asMaxFace);
       memoria.push({
-        descricao: `Armadura por face, flexão oblíqua (${nome}: Mxd = ${mxd.toFixed(2)}, Myd = ${myd.toFixed(2)} kN·m)`,
+        descricao: `Armadura por face, flexão oblíqua (${nome}: Mxd = ${num(mxd, 2)}, Myd = ${num(myd, 2)} kN·m)`,
         formula: `(Mxd/MRx)^${ALFA_OBLIQUA_6118} + (Myd/MRy)^${ALFA_OBLIQUA_6118} ≤ 1`,
         valor: a ?? NaN,
         unidade: "cm²",
@@ -690,7 +692,7 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
     const total = Math.max(d.topo, d.base, r.mTot);
     memoria.push(
       {
-        descricao: `Curvatura da seção intermediária no diagrama M, N, 1/r (${eixo}), As,face = ${a.toFixed(2)} cm²`,
+        descricao: `Curvatura da seção intermediária no diagrama M, N, 1/r (${eixo}), As,face = ${num(a, 2)} cm²`,
         formula: "menor 1/r com M(Nd; 1/r) = M1d,C + Nd·(1/r)·le²/10",
         valor: r.curvatura,
         unidade: "1/cm",
@@ -751,7 +753,7 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
   );
   if (asNecessaria > 0.04 * ac)
     avisos.push(
-      `${e.nome}: armadura ${((asNecessaria / ac) * 100).toFixed(1)}% de Ac > 4%; com emendas por traspasse passa de 8% (17.3.5.3.2)`,
+      `${e.nome}: armadura ${num((asNecessaria / ac) * 100, 1)}% de Ac > 4%; com emendas por traspasse passa de 8% (17.3.5.3.2)`,
     );
 
   const escolha = escolheBarras(asNecessaria, 10, 4, 20);
@@ -780,7 +782,7 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
       ref: REF_ARRANJO,
     },
     {
-      descricao: `Espaçamento entre eixos: ${arranjo.sFaceX.toFixed(1)} cm (faces de ${h} cm), ${arranjo.sFaceY.toFixed(1)} cm (faces de ${b} cm)`,
+      descricao: `Espaçamento entre eixos: ${num(arranjo.sFaceX, 1)} cm (faces de ${h} cm), ${num(arranjo.sFaceY, 1)} cm (faces de ${b} cm)`,
       formula: "s ≤ min(2·bmin; 40 cm)",
       valor: arranjo.sMax,
       unidade: "cm",
@@ -789,28 +791,28 @@ export function pilar6118(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): 
   );
   if (arranjo.extrasEspacamento > 0)
     avisos.push(
-      `${e.nome}: ${arranjo.extrasEspacamento} barra(s) φ ${escolha.phi} intermediária(s) acrescentada(s) para o espaçamento entre eixos ≤ ${arranjo.sMax} cm (18.4.2.2)`,
+      `${e.nome}: ${arranjo.extrasEspacamento} barra(s) φ ${numAte(escolha.phi, 1)} intermediária(s) acrescentada(s) para o espaçamento entre eixos ≤ ${numAte(arranjo.sMax, 1)} cm (18.4.2.2)`,
     );
   const livre = Math.min(arranjo.sFaceX, arranjo.sFaceY) - escolha.phi / 10;
   if (livre < espacamentoLivreMinimo(escolha.phi))
     avisos.push(
-      `${e.nome}: espaçamento livre ${livre.toFixed(1)} cm < ${espacamentoLivreMinimo(escolha.phi).toFixed(2)} cm entre as barras (18.4.2.2); as ${n} φ ${escolha.phi} não cabem no arranjo, aumente a seção ou a bitola`,
+      `${e.nome}: espaçamento livre ${num(livre, 1)} cm < ${num(espacamentoLivreMinimo(escolha.phi), 2)} cm entre as barras (18.4.2.2); as ${n} φ ${numAte(escolha.phi, 1)} não cabem no arranjo, aumente a seção ou a bitola`,
     );
   if (barras.phi > (bMin * 10) / 8)
     avisos.push(
-      `${e.nome}: φ ${barras.phi} mm > b/8 = ${((bMin * 10) / 8).toFixed(1)} mm (18.4.2.1)`,
+      `${e.nome}: φ ${numAte(barras.phi, 1)} mm > b/8 = ${num((bMin * 10) / 8, 1)} mm (18.4.2.1)`,
     );
   const estribo = estriboPilar(barras.phi, bMin, mat.aco);
   memoria.push(
     {
-      descricao: `Barras: ${n} φ ${barras.phi} mm`,
+      descricao: `Barras: ${n} φ ${numAte(barras.phi, 1)} mm`,
       formula: "10 mm ≤ φ ≤ b/8, n par ≥ 4",
       valor: barras.area,
       unidade: "cm²",
       ref: REF_PHI,
     },
     {
-      descricao: `Estribo φ ${estribo.phi} mm`,
+      descricao: `Estribo φ ${numAte(estribo.phi, 1)} mm`,
       formula: `φt ≥ max(5 mm; φ/4); s ≤ min(20 cm; b; ${mat.aco === "CA-25" ? 24 : 12}φ)`,
       valor: estribo.espacamento,
       unidade: "cm",

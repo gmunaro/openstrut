@@ -65,7 +65,7 @@ describe("arquivo: campos de pilar da NB-1/78", () => {
   it("ida e volta sem perda", () => {
     const o = obraCompleta();
     const r = lerObra(serializarObra(o));
-    expect(r).toEqual({ ok: true, obra: o });
+    expect(r).toEqual({ ok: true, obra: o, versaoOrigem: 3, migrada: false });
   });
 
   it("arquivo antigo (sem os campos) abre igual e não ganha campo novo", () => {
@@ -106,7 +106,12 @@ describe("arquivo: campos de pilar da NB-1/78", () => {
       cargaTopo: { normal: 10, momentos: [], modo: "maxima" },
     };
     pilares[1] = { ...pilares[1]!, armadura: {} };
-    expect(lerObra(serializarObra(o))).toEqual({ ok: true, obra: o });
+    expect(lerObra(serializarObra(o))).toEqual({
+      ok: true,
+      obra: o,
+      versaoOrigem: 3,
+      migrada: false,
+    });
     const ruim = serializarObra(o)
       .replace('"variaArmadura": 0', '"variaArmadura": 1.5')
       .replace('"modo": "maxima"', '"modo": "maior"')

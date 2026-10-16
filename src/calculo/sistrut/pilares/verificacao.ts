@@ -4,6 +4,7 @@
 //
 // Fonte: PILAR.BAS:4482-5672 (FUN_3000_013c). Livro: livros_viga_pilar.md 2.1-2.11
 // e conta à mão 3.2 (caso c). PLANO P1-P7, P16.
+import { numAte } from "../../texto";
 import type { Etapa } from "../../tipos";
 import type { VerificaPilar, VerificacaoPilar } from "../base/tipos";
 import { eluPilar } from "./elu";
@@ -54,7 +55,9 @@ export const verificaPilar: VerificaPilar = (entrada, modo) => {
     { descricao: "λy = CINT(Lye/√(Jx/A)·100)", valor: lambdaY, ref: "PILAR.BAS:5632" },
   );
   if (area < 0)
-    avisos.push("Poligonal no sentido anti-horário: área negativa, resultado sem sentido (D-6).");
+    avisos.push(
+      "Poligonal no sentido anti-horário: área negativa, resultado sem sentido, como no original.",
+    );
   const situacao = situacaoPilar(nk, mxk, myk);
   const resultado: VerificacaoPilar = {
     area,
@@ -72,12 +75,13 @@ export const verificaPilar: VerificaPilar = (entrada, modo) => {
   const lMax = Math.max(lambdaX, lambdaY);
   if (lMax > 140)
     avisos.push(
-      `λ = ${lMax} > 140: o original recomenda Csf = ${s(qbIntLocal(lMax - 140) / 100 + k.c14)}.`,
+      `λ = ${numAte(lMax, 1)} > 140: o original recomenda Csf = ${numAte(s(qbIntLocal(lMax - 140) / 100 + k.c14), 2)}.`,
     );
   if (lambdaY > lambdaEuler || lambdaX > lambdaEuler)
     avisos.push("λ acima do λ de Euler (o original mostra F crítico).");
   if (lambdaY > 200 || lambdaX > 200) {
-    avisos.push("λ > 200: o original recusa a verificação e volta à entrada (PILAR.BAS:5666).");
+    avisos.push("λ > 200: o original recusa a verificação e volta à entrada.");
+    memoria.push({ descricao: "λ > 200: verificação recusada", ref: "PILAR.BAS:5666" });
     return resultado;
   }
   const simetrica = (secao.tipo === 1 || secao.tipo === 2) && par.secoesSimetricas;
@@ -123,12 +127,8 @@ export const verificaPilar: VerificaPilar = (entrada, modo) => {
       lambda2a: par.lambda2aOrdem,
     });
     const rotulo = `${i + 1}/${sinais.length}`;
-    if (r.erro === "nao-converge")
-      avisos.push(
-        `Caso ${rotulo}: a busca do equilíbrio não converge; o original fica em laço (D-2).`,
-      );
-    if (r.erro === "nk-nulo")
-      avisos.push(`Caso ${rotulo}: Nk = 0, o original divide por zero (D-3); caso não verificado.`);
+    // onde o original trava (D-2) ou divide por Nk = 0 (D-3), o caso sai com `erro`, e só
+    // ali: a tela escreve a situação na linha do caso
     resultado.casos.push({
       rotulo,
       mxa: x.ma + x.mc,

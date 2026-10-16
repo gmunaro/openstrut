@@ -379,7 +379,7 @@ function leCol(l: LeitorQB, avisos: string[]): ArquivoCol {
           ],
         };
       }
-    l.numero("o indicador V_11b4 depois das cargas");
+    l.numero("o indicador de fim das cargas");
   }
   // seções: até [1] + 1 por coluna, terminadas por 0 (PIGRAEDI.BAS:532-552, 920-962)
   const temSecoes = l.numero("o indicador de seções") === 1;
@@ -619,7 +619,7 @@ function lePil(l: LeitorQB, avisos: string[]): SecaoPil {
     // círculo com V_0fbc (1662, 3843), o da seção anterior da sessão; o PILAR (opção 6)
     // lê certo. A obra fica com o D gravado.
     avisos.push(
-      `.PIL: seção circular D ${fmt(d)} cm. No PILAREDI (seção de coluna lida do .PIL) o original usaria o diâmetro da seção anterior da sessão, não este (defeito D-19); a obra usa o D do arquivo, como o PILAR.`,
+      `.PIL: seção circular D ${fmt(d)} cm. No PILAREDI (seção de coluna lida do .PIL) o original usaria o diâmetro da seção que ficou da sessão anterior, não este, e esse valor não fica em arquivo nenhum; a obra usa o D do arquivo, como o PILAR (opção 6).`,
     );
     return {
       b: d,
@@ -1170,13 +1170,13 @@ function gerarObra(ctx: Contexto, nome: string | undefined): Obra | { erros: str
     bases.add(base);
     if (c.nivelInferior > 1)
       avisos.push(
-        `Coluna ${semEspacos(c.nome)} começa no nível ${c.nivelInferior}, sobre viga de transição: o motor a dimensiona desde a base e marca a carga da base como falha até ela ir para a viga (Viga.cargas) e o pilar ganhar transicao.`,
+        `Coluna ${semEspacos(c.nome)} começa no nível ${c.nivelInferior}, sobre viga de transição: o motor a dimensiona desde a base e marca a carga da base como falha até ela ir para as cargas da viga de transição e o pilar ser marcado "Nasce sobre viga de transição".`,
       );
     if (c.secoes.length === 0)
       avisos.push(
         ctx.pil
           ? `Coluna ${semEspacos(c.nome)} sem seção no .COL: usada a seção do .PIL (${fmt(ctx.pil.b)} × ${fmt(ctx.pil.h)} cm).`
-          : `Coluna ${semEspacos(c.nome)} sem seção no .COL: usada 20 × 20 cm (o PILAREDI predimensionaria; veja parametrosPilar.predimensionamento).`,
+          : `Coluna ${semEspacos(c.nome)} sem seção no .COL: usada 20 × 20 cm (o PILAREDI predimensionaria; veja o predimensionamento nos parâmetros de pilar).`,
       );
     for (let j = c.nivelInferior; j < c.nivelSuperior; j++) {
       const pav = pavDoNivel.get(j + 1)!;
@@ -1204,7 +1204,7 @@ function gerarObra(ctx: Contexto, nome: string | undefined): Obra | { erros: str
   if (!mat.aco) {
     ini.fyk = mat.fyk;
     avisos.push(
-      `.COL: fyk ${fmt(mat.fyk)} MPa não é de CA-25/50/60; gravado em parametrosPilar.ini.fyk (aço da obra: CA-50).`,
+      `.COL: fyk ${fmt(mat.fyk)} MPa não é de CA-25/50/60; gravado nos parâmetros de pilar da obra (PILAR.INI) (aço da obra: CA-50).`,
     );
   }
   const aco = mat.aco ?? "CA-50";
@@ -1302,25 +1302,25 @@ function completarObra(ctx: Contexto, base: Obra, cargas: boolean): Obra {
   if (mat.coeficienteTensao !== (ini.coeficienteTensao ?? 1)) {
     ini.coeficienteTensao = mat.coeficienteTensao;
     avisos.push(
-      `.COL: multiplicador da unidade de fck e fyk [12] = ${fmt(mat.coeficienteTensao)}; gravado em parametrosPilar.ini.coeficienteTensao.`,
+      `.COL: multiplicador da unidade de fck e fyk [12] = ${fmt(mat.coeficienteTensao)}; gravado nos parâmetros de pilar da obra (PILAR.INI).`,
     );
   }
   if (mat.fck !== obra.materiais.fck) {
     ini.fck = mat.fck;
     avisos.push(
-      `.COL: fck ${fmt(mat.fck)} MPa, a obra tem ${fmt(obra.materiais.fck)} MPa; gravado em parametrosPilar.ini.fck.`,
+      `.COL: fck ${fmt(mat.fck)} MPa, a obra tem ${fmt(obra.materiais.fck)} MPa; gravado nos parâmetros de pilar da obra (PILAR.INI).`,
     );
   }
   if (mat.fyk !== FYK_DO_ACO[obra.materiais.aco]) {
     ini.fyk = mat.fyk;
     avisos.push(
-      `.COL: fyk ${fmt(mat.fyk)} MPa, a obra tem ${obra.materiais.aco}; gravado em parametrosPilar.ini.fyk.`,
+      `.COL: fyk ${fmt(mat.fyk)} MPa, a obra tem ${obra.materiais.aco}; gravado nos parâmetros de pilar da obra (PILAR.INI).`,
     );
   }
   if (mat.classeAco !== obra.materiais.classeAco) {
     ini.classeAco = mat.classeAco;
     avisos.push(
-      `.COL: aço classe ${mat.classeAco}, a obra tem classe ${obra.materiais.classeAco}; gravado em parametrosPilar.ini.classeAco.`,
+      `.COL: aço classe ${mat.classeAco}, a obra tem classe ${obra.materiais.classeAco}; gravado nos parâmetros de pilar da obra (PILAR.INI).`,
     );
   }
   const novos = parametrosPilarDe(ini, ctx.pip, col);
@@ -1348,7 +1348,7 @@ export function importarPilaresSistrut(
   // (PIGRAEDI.BAS:924-926); o motor usa o 3 fixo no limite de variações
   if (col.parametros.maximoSecoes > 3)
     avisos.push(
-      `.COL: [1] = ${col.parametros.maximoSecoes} seções; o motor usa o limite de 4 do PILAREDI (V_0e3e% = 3) no plano de variações de armadura.`,
+      `.COL: [1] = ${col.parametros.maximoSecoes} seções; o motor usa o limite de 4 do PILAREDI no plano de variações de armadura.`,
     );
   const pip = pipDaObra(col, arquivos.pip, avisos);
   if (!pip.ok) return { erros: pip.erros };

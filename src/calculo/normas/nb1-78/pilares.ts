@@ -3,6 +3,7 @@
 // cuja altura é b (λx = 3,464·lex/b); My flete na direção y, altura h.
 // A V1 trata 0,15 tf/cm² como 15 MPa (1 tf = 10 kN); com tensões em MPa e Es =
 // 210 000 MPa a física é a mesma.
+import { num, numAte } from "../../texto";
 import type {
   Barra,
   BarrasPilar,
@@ -230,13 +231,11 @@ export function pilarNb178(
   // abaixo de 20 cm, sem majorar esforços (resultado igual ao da V1).
   if (Math.min(b, h) < DIMENSAO_MINIMA)
     avisos.push(
-      `${e.nome}: menor dimensão ${Math.min(b, h)} cm < ${DIMENSAO_MINIMA} cm; a NB-1/78 pede dimensão mínima e majoração para seção pequena (não aplicada, confira) [VERIFICAR]`,
+      `${e.nome}: menor dimensão ${numAte(Math.min(b, h), 1)} cm < ${DIMENSAO_MINIMA} cm; a NB-1/78 pede dimensão mínima e majoração para seção pequena (não aplicada, confira) [VERIFICAR]`,
     );
 
   if (lambda > LAMBDA_MAXIMO) {
-    avisos.push(
-      `${e.nome}: esbeltez máxima excedida (λ = ${lambda.toFixed(1)} > ${LAMBDA_MAXIMO})`,
-    );
+    avisos.push(`${e.nome}: esbeltez máxima excedida (λ = ${num(lambda, 1)} > ${LAMBDA_MAXIMO})`);
     return semSolucao(NaN, NaN);
   }
 
@@ -337,7 +336,7 @@ export function pilarNb178(
   memoria.push(
     {
       descricao: "Armadura mínima",
-      formula: `As,min = ${taxaMin * 100}%·Ac (0,8% se λ > 30)`,
+      formula: `As,min = ${numAte(taxaMin * 100, 2)} %·Ac (0,8 % se λ > 30)`,
       valor: asMin,
       unidade: "cm²",
       ref: REF_DIM,
@@ -403,7 +402,7 @@ export function pilarNb178(
   const estribo = escolheEstribo(phi, b, h);
   memoria.push(
     {
-      descricao: `Barras: ${n} φ ${phi} mm; ${faces.nfx} por face ⟂ x e ${faces.nfy} por face ⟂ y (cantos incluídos)`,
+      descricao: `Barras: ${n} φ ${numAte(phi, 1)} mm; ${faces.nfx} por face ⟂ x e ${faces.nfy} por face ⟂ y (cantos incluídos)`,
       formula: obliqua
         ? "φ ≥ 10 mm, n par ≥ 4, n ≤ 20; (Mxd/MRx)^1,2 + (Myd/MRy)^1,2 ≤ 1 com as barras nas posições reais"
         : "φ ≥ 10 mm, n par ≥ 4, n ≤ 20; MR ≥ Md com as barras nas posições reais",
@@ -412,7 +411,7 @@ export function pilarNb178(
       ref: REF_DIM,
     },
     {
-      descricao: `Estribo φ ${estribo.phi} mm`,
+      descricao: `Estribo φ ${numAte(estribo.phi, 1)} mm`,
       formula: "φt ≥ max(φ/4; 5 mm); s ≤ min(30 cm; menor lado; 12φ)",
       valor: estribo.espacamento,
       unidade: "cm",

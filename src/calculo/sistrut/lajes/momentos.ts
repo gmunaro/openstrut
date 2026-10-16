@@ -191,7 +191,10 @@ export const impoeEspessura: ImpoeEspessura = (laje, h, parametros, modo) => {
     };
   }
   if (laje.tipo !== 0 && laje.tipo !== 3) {
-    return { laje, avisos: [`${laje.nome}: imposição de H só vale para lajes dos tipos 0 e 3`] };
+    return {
+      laje,
+      avisos: [`${laje.nome}: imposição de H só vale para laje maciça e laje comum não calculada`],
+    };
   }
   const pesoProprio = s((potencia(modo)(1, 2) / (100 * 1)) * hS * s(parametros.densidade));
   return { laje: { ...laje, h: hS, pesoProprio }, avisos: [] };

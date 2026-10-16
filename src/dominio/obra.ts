@@ -80,7 +80,8 @@ export interface Laje {
    *  grava ali é a escolha automática dele, refeita a cada rodada (LAJEPROC.BAS:892). */
   negativasImpostas?: (BarraImposta | null)[];
   /** Grupo da laje (A_10cc(·,3)): a continuidade automática só liga lajes do mesmo
-   *  grupo (LAJECALC.BAS:3709). Ausente = 0. */
+   *  grupo (LAJECALC.BAS:3709, @30a83: só igualdade). Qualquer número: a laje rebaixada grava
+   *  −(Hmáx − H), ex. −10 (LAJEGEOM.BAS:3755, @275a9). Ausente = 0. */
   grupo?: number;
   /** Relação Mneg/Mpos (i) de cada lado engastado do `poligono`, a que o usuário dá no
    *  <A>ltera do LAJECALC 1 (código do lado = CINT(10·i + 2), LAJECALC.BAS:4058-4104;

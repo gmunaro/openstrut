@@ -20,6 +20,9 @@ import { calcularObraSistrut, type ResultadoSistrut } from "../../calculo/sistru
 import { linhasArquivoRep } from "../../calculo/sistrut/vigas/rep";
 import { textoMep } from "../../calculo/sistrut/vigas/vicalc";
 import { qbCint } from "../../calculo/sistrut/base/f32";
+import { calcularObra } from "../../calculo/fluxo";
+import { nb178 } from "../../calculo/normas";
+import { calcularQuantitativos } from "../../calculo/quantitativos";
 import { materiaisPadrao } from "../../dominio/criar";
 import type { ArmaduraDigitada, Obra, ParametrosVigaIni } from "../../dominio/obra";
 import { type RegistroTeste, vig } from "./__teste__/vig";
@@ -471,13 +474,28 @@ describe('"Continuo com o processamento desta Viga" (DESDIM.BAS:3062-3080)', () 
     expect(v.interrompida).toEqual({
       motivos: v.dimensionamento!.limitesExcedidos,
       impressa: true,
+      aviso: v.avisos.at(-1),
     });
     expect(v.detalhamento).toBeUndefined();
     expect(v.quadro).toBeUndefined();
     expect(r.quadros).toEqual([]);
     expect(r.resumoVigas.porViga).toEqual([]);
-    expect(v.avisos.at(-1)).toContain("Atencao !!! Tensao de Cisalhamento acima do Limite.");
-    expect(v.avisos.at(-1)).toContain("Continuo com o processamento desta Viga  S/*N*");
+    // o aviso diz em pt-BR o que marcar na tela, com id estável; a tela do DESDIM vai
+    // para a memória do pavimento
+    expect(v.avisos.at(-1)).toBe(
+      `${v.nome}: tensão de cisalhamento acima do limite e momento acima de 40 % do limite da armadura simples. Como no original com a resposta padrão "N", a viga parou no dimensionamento, sem detalhamento nem quadro de ferros. Para seguir, marque "Continuar mesmo acima do limite" na viga.`,
+    );
+    expect(r.avisosComOpcao).toEqual([
+      {
+        id: "viga.continuar-acima-do-limite",
+        pavimentoId: r.pavimentos[0]!.pavimentoId,
+        elemento: { tipo: "viga", id: v.id },
+        texto: v.avisos.at(-1),
+      },
+    ]);
+    const tela = r.pavimentos[0]!.memoria.find((m) => m.ref === "DESDIM.BAS:3062-3080");
+    expect(tela?.descricao).toContain("Atencao !!! Tensao de Cisalhamento acima do Limite.");
+    expect(tela?.descricao).toContain("Continuo com o processamento desta Viga  S/*N*");
   });
 
   it('com a resposta "S" (continuaSeExcederLimite) a viga segue até o DESINIT e o quadro', () => {
@@ -496,6 +514,32 @@ describe('"Continuo com o processamento desta Viga" (DESDIM.BAS:3062-3080)', () 
     expect(
       v.dimensionamento!.avisos.some((a) => a.includes("tensão de cisalhamento acima do limite")),
     ).toBe(true);
+  });
+
+  it("quantitativos: a viga que para entra pela estimativa da V2, não com aço 0", () => {
+    // modo original, sem `continuaSeExcederLimite`: V9 sem quadro do DESINIT
+    const o = structuredClone(obra);
+    o.modoCalculo = "original";
+    const r = calcularObra(o, nb178);
+    const q = calcularQuantitativos(o, r);
+    expect(r.sistrut!.pavimentos[0]!.vigas[0]!.quadro).toBeUndefined();
+    expect(q.pavimentos[0]!.vigasSemDesinit).toEqual(["V9"]);
+    expect(q.fonte.vigas.aco).toBe("misto");
+    expect(q.memoria.some((m) => m.descricao.includes("as vigas sem quadro do DESINIT"))).toBe(
+      true,
+    );
+    // a estimativa conta as barras longitudinais da V9 (2 tramos × 86,16 kg) e nenhum
+    // estribo: com o cisalhamento acima do limite o DESDIM não adota estribo ("*"), e a
+    // viga sai marcada com o aço incompleto
+    expect(q.vigas.aco).toBeGreaterThan(0);
+    expect(q.acoIncompleto).toContain("V9");
+    expect(q.avisos.some((x) => x.includes("V9 tramo 1: sem estribo adotado"))).toBe(true);
+    // com a resposta "S" a mesma viga tem quadro, e o aço é o do DESINIT
+    const s = structuredClone(o);
+    s.pavimentos[0]!.vigas[0]!.continuaSeExcederLimite = true;
+    const qs = calcularQuantitativos(s, calcularObra(s, nb178));
+    expect(qs.fonte.vigas.aco).toBe("sistrut");
+    expect(qs.acoIncompleto).not.toContain("V9");
   });
 
   it("com a verificação de fissuração, a passada que para não imprime (V_187a = 0)", () => {

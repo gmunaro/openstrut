@@ -5,6 +5,7 @@
 // (REGRAS_PILAR_6118 e REGRAS_PILAR_NB178); lb e ganchos vêm de ancoragem.ts
 // via RegrasDetalhamento (vigas.ts).
 // Unidades: comprimentos e cotas em cm, φ em mm.
+import { num, numAte } from "../texto";
 import type { NormaId, Pilar } from "../../dominio/obra";
 import { geometriaPilar } from "../secaoPilar";
 import { arranjoBarras } from "../normas/nb1-78/pilares";
@@ -66,8 +67,8 @@ export function traspasse6118(phi: number, mat: MateriaisCalc): Traspasse {
       ...basica.memoria,
       ...nec.memoria,
       {
-        descricao: `Traspasse das barras φ ${phi} mm (todas na mesma seção)`,
-        formula: `l0t = α0t lb,nec = ${ALFA_0T_TODAS} · ${nec.lbNec.toFixed(1)} ≥ máx(0,3 α0t lb; 15 φ; 20 cm) = ${minimo.toFixed(1)}`,
+        descricao: `Traspasse das barras φ ${fmt(phi)} mm (todas na mesma seção)`,
+        formula: `l0t = α0t lb,nec = ${ALFA_0T_TODAS} · ${num(nec.lbNec, 1)} ≥ máx(0,3 α0t lb; 15 φ; 20 cm) = ${num(minimo, 1)}`,
         valor: l0,
         unidade: "cm",
         ref: `6118:2023 9.5.2.2.1 e Tabela 9.4 (${F4}, Eq. 6 e 7, Tabela 4)`,
@@ -88,7 +89,7 @@ export function traspasseNb178(phi: number, mat: MateriaisCalc): Traspasse {
     memoria: [
       ...basica.memoria,
       {
-        descricao: `Traspasse das barras φ ${phi} mm`,
+        descricao: `Traspasse das barras φ ${fmt(phi)} mm`,
         formula: "l0 = lb (arredondado para cima)",
         valor: l0,
         unidade: "cm",
@@ -197,7 +198,7 @@ export interface PilarDetalhamento extends ComMemoria {
 }
 
 const arredonda = (v: number) => Math.max(0, Math.ceil(v - 1e-6));
-const fmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+const fmt = (v: number) => numAte(v, 2);
 
 // ---- detalhamento -----------------------------------------------------------------
 
@@ -273,7 +274,7 @@ export function detalharPilar(
       fim = L + t.l0;
       if (acima.b !== lance.b || acima.h !== lance.h)
         avisos.push(
-          `${rotulo}: a seção muda para ${acima.b} × ${acima.h} cm no lance de cima; a dobra ou espera das barras não está detalhada.`,
+          `${rotulo}: a seção muda para ${fmt(acima.b)} × ${fmt(acima.h)} cm no lance de cima; a dobra ou espera das barras não está detalhada.`,
         );
     }
     adiciona({
@@ -299,7 +300,7 @@ export function detalharPilar(
     const minimo = regras.estriboMinimo?.(barras.phi, bMin, mat);
     if (minimo) {
       memoria.push({
-        descricao: `${rotulo}: estribo mínimo φ ${minimo.phi} mm c/ ${minimo.espacamento} cm; adotado φ ${estribo.phi} c/ ${estribo.espacamento}`,
+        descricao: `${rotulo}: estribo mínimo φ ${fmt(minimo.phi)} mm c/ ${fmt(minimo.espacamento)} cm; adotado φ ${fmt(estribo.phi)} c/ ${fmt(estribo.espacamento)}`,
         formula: "φt ≥ máx(5 mm; φ/4); s ≤ mín(20 cm; b; 12 φ, 24 φ no CA-25)",
         valor: minimo.espacamento,
         unidade: "cm",
@@ -307,7 +308,7 @@ export function detalharPilar(
       });
       if (estribo.phi < minimo.phi || estribo.espacamento > minimo.espacamento + 1e-9)
         avisos.push(
-          `${rotulo}: estribo φ ${estribo.phi} c/ ${estribo.espacamento} cm fora do mínimo da norma (φ ${minimo.phi} c/ ${minimo.espacamento} cm, 18.4.3).`,
+          `${rotulo}: estribo φ ${fmt(estribo.phi)} c/ ${fmt(estribo.espacamento)} cm fora do mínimo da norma (φ ${fmt(minimo.phi)} c/ ${fmt(minimo.espacamento)} cm, 18.4.3).`,
         );
     }
     const nEstribos = Math.ceil(L / estribo.espacamento - 1e-9) + (i === 0 ? 1 : 0);
@@ -337,7 +338,7 @@ export function detalharPilar(
     const { porFaceX, porFaceY, origem } = arranjoDetalhado(barras, lance.b, lance.h);
     if (origem === "padrao")
       avisos.push(
-        `${rotulo}: o arranjo do cálculo (${barras.porFaceX} e ${barras.porFaceY} barras por face) não fecha com ${barras.n} barras; usada a distribuição da V1 (${porFaceX} e ${porFaceY}), que pode não ser a verificada.`,
+        `${rotulo}: o arranjo do cálculo (${barras.porFaceX} e ${barras.porFaceY} barras por face) não fecha com ${barras.n} barras; usada a distribuição padrão (${porFaceX} e ${porFaceY}, as barras intermediárias a mais nas faces maiores), que pode não ser a verificada.`,
       );
     const dLinha = c + estribo.phi / 10 + barras.phi / 20;
     const faces = [

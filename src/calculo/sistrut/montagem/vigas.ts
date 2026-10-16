@@ -198,7 +198,7 @@ export function montaPontos(
     const decrescente = vertical ? y1 < y0 : x1 < x0;
     if (decrescente && modo === "original")
       avisos.push(
-        `Viga ${v.nome}: eixo em ordem decrescente; o original (LAJEMONT.BAS:4752-4814) insere ` +
+        `Viga ${v.nome}: eixo em ordem decrescente; o original insere ` +
           `os pontos supondo ordem crescente, como o LAJEGEOM grava.`,
       );
     // chave da inserção: a coordenada do original ou a posição ao longo do eixo

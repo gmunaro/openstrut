@@ -841,13 +841,14 @@ export interface LinhaRep {
   /** Σ parcelas, t. */
   total: number;
   /** Parcela = INT(R·100)/100 no original (R estática ou máxima); sem truncar no
-   *  corrigido (R5). `texto` = a forma gravada no .REP depois do "*" (STR$ cortado 2
-   *  casas depois do ponto, VIGA.BAS:2415). */
+   *  corrigido (R5). `texto` = a forma gravada no .REP depois do "*": no original, STR$
+   *  cortado 2 casas depois do ponto (VIGA.BAS:2415; sem ponto, sinal e 1º dígito, D-21);
+   *  no corrigido, o número com até 2 casas (`textoDoRep`). */
   parcelas: { viga: string; valor: number; texto: string }[];
   /** Momento de extremidade (VIGA.BAS:2416-2419): `valor` = A_0fc4 com 4 casas (tm,
-   *  ex.: −0,6481); `texto` = STR$(valor) cortado 2 casas depois do ponto ("-.64"),
-   *  que é o que vai ao .REP e o que o PILGEEDI lê, como ABS(VAL(texto))
-   *  (PILGEEDI.BAS:606); apoio extremo (1 = esquerdo, n = direito); vão adjacente (m).
+   *  ex.: −0,6481); `texto` = o que vai ao .REP: no original, STR$(valor) cortado 2 casas
+   *  depois do ponto ("-.64"), que o PILGEEDI lê como ABS(VAL(texto)) (PILGEEDI.BAS:606);
+   *  no corrigido, o número com até 2 casas, e o PILGEEDI lê o `valor` (D-21); apoio extremo (1 = esquerdo, n = direito); vão adjacente (m).
    *  `inclinacao` (graus) e `rigidez` (numerador da rigidez da viga, cm⁴) não vão ao
    *  .REP: o PILGEEDI começa com 0 nos dois e o usuário os edita na tela
    *  (PILGEEDI.BAS:597-640). Ausentes = 0, como no original. */
@@ -1271,7 +1272,8 @@ export type SituacaoPilar =
 
 /** Veredito de um caso (PILAR.BAS:5342-5360, 5534; PILAREDI.BAS:5361-5425). Onde o
  *  original fica em laço (D-2) ou divide por Nk = 0 (D-3), o caso sai "NAO" com
- *  `CasoPilar.erro` ("nao-converge" ou "nk-nulo") e um aviso. */
+ *  `CasoPilar.erro` ("nao-converge" ou "nk-nulo"); na verificação (PILAR opção 6) o
+ *  erro do caso é o único registro, sem aviso repetido. */
 export type VereditoPilar =
   | "ok"
   | "NAO"

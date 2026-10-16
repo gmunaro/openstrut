@@ -137,7 +137,7 @@ describe("vigaFlexao6118: avisos", () => {
   it("h = 70 > 60: armadura de pele 0,10 % · 20 · 70 = 1,40 cm² por face", () => {
     const r = vigaFlexao6118(100, 20, 70, 65, mat(25));
     expect(etapa(r, "Armadura de pele")).toBeCloseTo(1.4, 9);
-    expect(r.avisos.some((a) => a.includes("1.40 cm²"))).toBe(true);
+    expect(r.avisos.some((a) => a.includes("1,40 cm²"))).toBe(true);
   });
   it("fck > 50: aviso de fora do escopo", () => {
     const r = vigaFlexao6118(100, 20, 50, 45, mat(55));

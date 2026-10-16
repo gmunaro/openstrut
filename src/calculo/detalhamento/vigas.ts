@@ -4,6 +4,7 @@
 // O que muda entre as normas fica em RegrasDetalhamento (REGRAS_6118 e
 // REGRAS_NB178); a geometria do detalhamento é comum.
 // Unidades: comprimentos e abscissas em cm, φ em mm, cortantes em kN.
+import { num } from "../texto";
 import type { Aco, NormaId } from "../../dominio/obra";
 import { fctm, GAMA_C } from "../normas/nbr6118-2023/materiais";
 import type { Barra, BarrasLongitudinais, ComMemoria, Etapa, MateriaisCalc } from "../tipos";
@@ -53,7 +54,7 @@ export function decalagem6118(vsd: number, bw: number, d: number, mat: Materiais
     memoria: [
       {
         descricao: "Decalagem do diagrama de momentos (Modelo I, estribos verticais)",
-        formula: `al = d VSd / (2 (VSd − Vc)), 0,5 d ≤ al ≤ d; VSd = ${v.toFixed(1)} kN, Vc = ${vc.toFixed(1)} kN`,
+        formula: `al = d VSd / (2 (VSd − Vc)), 0,5 d ≤ al ≤ d; VSd = ${num(v, 1)} kN, Vc = ${num(vc, 1)} kN`,
         valor: al,
         unidade: "cm",
         ref: `6118:2023 17.4.2.2 c (${F6}, Eq. 31)`,
@@ -345,14 +346,14 @@ export function detalharViga(
     const disponivel = largura(k) - c;
     memoria.push({
       descricao: `${nome}: ancoragem no apoio ${k + 1} (extremo)`,
-      formula: `lb,ef = b − c = ${disponivel.toFixed(1)} ≥ máx(lb,nec com gancho; r + 5,5 φ; 6 cm) = ${exigido.toFixed(1)}`,
+      formula: `lb,ef = b − c = ${num(disponivel, 1)} ≥ máx(lb,nec com gancho; r + 5,5 φ; 6 cm) = ${num(exigido, 1)}`,
       valor: exigido,
       unidade: "cm",
       ref: "6118:2023 18.3.2.4 e 18.3.2.4.1 (Bastos, Vigas, Eq. 39 a 44)",
     });
     if (disponivel < exigido) {
       avisos.push(
-        `${e.nome} ${nome}: ancoragem no apoio ${k + 1} insuficiente (lb,ef = ${disponivel.toFixed(1)} cm < ${exigido.toFixed(1)} cm); use grampos ou aumente o apoio.`,
+        `${e.nome} ${nome}: ancoragem no apoio ${k + 1} insuficiente (lb,ef = ${num(disponivel, 1)} cm < ${num(exigido, 1)} cm); use grampos ou aumente o apoio.`,
       );
     }
   };
@@ -376,7 +377,7 @@ export function detalharViga(
     posicoes.push(pos);
     if (p.tipo !== "estribo" && comprimento > COMPRIMENTO_BARRA_COMERCIAL) {
       avisos.push(
-        `${e.nome} ${pos.nome}: barra de ${(comprimento / 100).toFixed(2)} m, maior que a comercial de 12 m; prever emenda (não detalhada).`,
+        `${e.nome} ${pos.nome}: barra de ${num(comprimento / 100, 2)} m, maior que a comercial de 12 m; prever emenda (não detalhada).`,
       );
     }
     return pos;
@@ -411,7 +412,7 @@ export function detalharViga(
     const asComp = asComprimidaNo(k);
     if (asComp > 0) {
       avisos.push(
-        `${e.nome} apoio ${k + 1}: armadura dupla no negativo; a armadura comprimida (A's = ${asComp.toFixed(2)} cm², barras inferiores sobre o apoio) não está detalhada.`,
+        `${e.nome} apoio ${k + 1}: armadura dupla no negativo; a armadura comprimida (A's = ${num(asComp, 2)} cm², barras inferiores sobre o apoio) não está detalhada.`,
       );
     }
     const { phi, n: qtd } = s.barras;
@@ -453,7 +454,7 @@ export function detalharViga(
       const limite = vao(seguinte) - (balanco(seguinte) ? c : 0);
       if (alem > limite) {
         avisos.push(
-          `${e.nome} ${nome}: o negativo do apoio ${k + 1} precisa passar ${alem.toFixed(1)} cm além do apoio ${outro + 1}, mais que o tramo seguinte (${limite.toFixed(1)} cm); confira a ancoragem.`,
+          `${e.nome} ${nome}: o negativo do apoio ${k + 1} precisa passar ${num(alem, 1)} cm além do apoio ${outro + 1}, mais que o tramo seguinte (${num(limite, 1)} cm); confira a ancoragem.`,
         );
       }
       return {
@@ -494,7 +495,7 @@ export function detalharViga(
     }
     if ((s.flexao?.asComprimida ?? 0) > 0) {
       avisos.push(
-        `${e.nome} tramo ${t + 1}: armadura dupla; a armadura comprimida (A's = ${(s.flexao?.asComprimida ?? 0).toFixed(2)} cm²) não está detalhada.`,
+        `${e.nome} tramo ${t + 1}: armadura dupla; a armadura comprimida (A's = ${num(s.flexao?.asComprimida ?? 0, 2)} cm²) não está detalhada.`,
       );
     }
     const { phi, n: qtd, area } = s.barras;

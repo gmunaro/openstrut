@@ -130,7 +130,7 @@ describe("pilar que termina num pavimento intermediário", () => {
     expect(nk(r, 1, "k1")).toBeCloseTo(103, 9);
     expect(nk(r, 2, "k1")).toBeCloseTo(103, 9);
     expect(r.avisos).toEqual([
-      "Pilar P1 termina no pavimento B: a carga (103.00 kN) NÃO foi transferida a viga de transição — modele a transição.",
+      "Pilar P1 termina no pavimento B: a carga (103,00 kN) NÃO foi transferida a viga de transição — modele a transição.",
     ]);
     expect(r.transicoes).toHaveLength(1);
     expect(r.transicoes[0]).toMatchObject({ nome: "P1", pavimentoId: "B", repeticao: 1 });

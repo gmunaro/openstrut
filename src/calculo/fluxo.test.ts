@@ -215,7 +215,7 @@ describe("fluxo: falhas que deixam vigas e pilares incompletos", () => {
     const aviso = r.avisos.find((a) => a.startsWith(`Pilar ${nome} termina no pavimento TERREO`));
     expect(aviso).toContain("NÃO foi transferida a viga de transição");
     // carga do P5 da cobertura: 7,3157 tf (FLUXO.COL) = 71,74 kN
-    expect(aviso).toContain(`(${(7.3157462 * KN_POR_TF).toFixed(2)} kN)`);
+    expect(aviso).toContain(`(${(7.3157462 * KN_POR_TF).toFixed(2).replace(".", ",")} kN)`);
     expect(cob!.falhas).toEqual([]);
     expect(ter!.falhas).toEqual([aviso]);
     expect(ter!.equilibrio.ok).toBe(false);
@@ -239,7 +239,7 @@ describe("fluxo: falhas que deixam vigas e pilares incompletos", () => {
     const rp = r.pavimentos[0]!;
     expect(Object.values(rp.lajes[0]!.esforcos.reacoes)).toEqual([0, 0, 0, 0]);
     expect(rp.falhas).toHaveLength(1);
-    expect(rp.falhas[0]).toMatch(/^Laje L1 sem cálculo: a carga dela \([\d.]+ kN\) NÃO chegou/);
+    expect(rp.falhas[0]).toMatch(/^Laje L1 sem cálculo: a carga dela \([\d,]+ kN\) NÃO chegou/);
     expect(rp.equilibrio.ok).toBe(false);
     expect(rp.equilibrio.avisos).toContain(rp.falhas[0]);
     expect(rp.vigas.length).toBeGreaterThan(0);
@@ -283,7 +283,7 @@ describe("fluxo: d' com barras acima de 20 mm", () => {
     expect(v4.d).toBeCloseTo(36, 9);
     const real = 40 - 2.5 - v4.tramos[0]!.estribo!.phi / 10 - barras.phi / 20;
     expect(v4.avisos).toContain(
-      `${v4.viga.nome} tramo 1: barras de φ ${barras.phi} mm (> 20 mm): d real = h − c − φt − φ/2 = ${real.toFixed(2)} cm, menor que o d adotado (36.00 cm); confira.`,
+      `${v4.viga.nome} tramo 1: barras de φ ${barras.phi} mm (> 20 mm): d real = h − c − φt − φ/2 = ${real.toFixed(2).replace(".", ",")} cm, menor que o d adotado (36,00 cm); confira.`,
     );
   });
 });

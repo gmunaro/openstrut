@@ -27,6 +27,7 @@
 //   `acidental` (as digitadas); a carga com a `acidental` informada (a do .VIG gravado, ou
 //   o Pac/Fac digitado com "F") a soma à da montagem.
 // O que o original recusa vira aviso e não entra no registro.
+import { num, numAte } from "../texto";
 import type { CargaViga, Viga } from "../../dominio/obra";
 import { atribuicao, qbCint } from "./base/f32";
 import type {
@@ -147,15 +148,16 @@ export function editaVig(
   const trechos = trechosDe(dados);
   const n = dados.tramos.length;
   const aviso = (texto: string) => avisos.push(`Viga ${viga.nome}: ${texto}`);
-  const confere = (campo: string, lista: readonly unknown[] | undefined) => {
+  /** `rotulo`: o que o usuário digitou, em pt-BR ("os vãos digitados"). */
+  const confere = (rotulo: string, lista: readonly unknown[] | undefined) => {
     if (lista === undefined || lista.length === trechos.length) return lista !== undefined;
     aviso(
-      `${campo} tem ${lista.length} valores e a viga tem ${trechos.length} trechos na planta: ${campo} ignorado.`,
+      `${rotulo}: ${lista.length} valores, e a viga tem ${trechos.length} trechos na planta; não usados.`,
     );
     return false;
   };
-  const usaVaos = confere("vaos", viga.vaos);
-  const usaInercias = confere("inercias", viga.inercias);
+  const usaVaos = confere("os vãos digitados", viga.vaos);
+  const usaInercias = confere("as inércias (J) digitadas", viga.inercias);
   for (const c of viga.cargas ?? [])
     if (c.trecho >= trechos.length)
       aviso(`carga no trecho ${c.trecho}, e a viga tem ${trechos.length} trechos: ignorada.`);
@@ -188,7 +190,7 @@ export function editaVig(
       const novo = s(viga.vaos![i]!);
       if (Math.abs(novo - vao) > TOL_VAO)
         aviso(
-          `o vão ${viga.vaos![i]} m do trecho ${i} não bate com a planta (${vao.toFixed(3)} m): vale o da planta.`,
+          `o vão ${numAte(viga.vaos![i]!, 3)} m do trecho ${i} não bate com a planta (${num(vao, 3)} m): vale o da planta.`,
         );
       else {
         vao = novo;
@@ -198,7 +200,7 @@ export function editaVig(
         const alem = divs.slice(0, -1).filter((dv) => dv.fim >= vao - tol);
         if (alem.some((dv) => dv.f !== 0 || dv.fac !== 0 || dv.indexada))
           aviso(
-            `o vão do trecho ${i} encurtou para ${viga.vaos![i]} m: a F das divisões no fim ou além dele passa para a última divisão.`,
+            `o vão do trecho ${i} encurtou para ${numAte(viga.vaos![i]!, 3)} m: a F das divisões no fim ou além dele passa para a última divisão.`,
           );
         for (const dv of alem) {
           ultima.f = s(ultima.f + dv.f);
@@ -218,7 +220,7 @@ export function editaVig(
       if (c.tipo === "concentrada" || c.tipo === "reacao") {
         if (fora(c.posicao)) {
           aviso(
-            `carga ${c.tipo === "reacao" ? "indexada" : "concentrada"} fora do trecho ${i} (${c.posicao} m): ignorada.`,
+            `carga ${c.tipo === "reacao" ? "indexada" : "concentrada"} fora do trecho ${i} (${numAte(c.posicao, 3)} m): ignorada.`,
           );
           continue;
         }
@@ -233,7 +235,7 @@ export function editaVig(
           // "*n.aa" no F da divisão: a F é a reação da viga apoiada (VIGA.BAS:1309-1312)
           if (alvo.indexada || alvo.f !== 0 || alvo.fac !== 0) {
             aviso(
-              `carga indexada da viga ${c.viga} a ${c.posicao} m do trecho ${i}: a divisão já tem F e o VIGA tem uma F por divisão. Carga ignorada.`,
+              `carga indexada da viga ${c.viga} a ${numAte(c.posicao, 3)} m do trecho ${i}: a divisão já tem F e o VIGA tem uma F por divisão. Carga ignorada.`,
             );
             continue;
           }
@@ -242,7 +244,7 @@ export function editaVig(
         }
         if (alvo.indexada) {
           aviso(
-            `carga concentrada a ${c.posicao} m do trecho ${i}, no ponto da viga ${alvo.indexada.viga} apoiada: o VIGA tem uma F por divisão e ela é da carga indexada (VIGA.BAS:1309-1312). Carga ignorada.`,
+            `carga concentrada a ${numAte(c.posicao, 3)} m do trecho ${i}, no ponto da viga ${alvo.indexada.viga} apoiada: o VIGA tem uma F por divisão e ela é da carga indexada. Carga ignorada.`,
           );
           continue;
         }
@@ -252,7 +254,9 @@ export function editaVig(
         continue;
       }
       if (fora(c.inicio) || fora(c.fim)) {
-        aviso(`carga distribuída fora do trecho ${i} (${c.inicio} a ${c.fim} m): ignorada.`);
+        aviso(
+          `carga distribuída fora do trecho ${i} (${numAte(c.inicio, 3)} a ${numAte(c.fim, 3)} m): ignorada.`,
+        );
         continue;
       }
       const [a, b] = [doApoio(c.inicio), doApoio(c.fim)].sort((x, y) => x - y) as [number, number];
@@ -280,11 +284,11 @@ export function editaVig(
     const proxima = listas[i + 1];
     if (!proxima) {
       aviso(
-        `F de ${ultima.f.toFixed(3)} t no fim do trecho ${i}, em cima do último apoio: o VIGA não aceita F na última divisão de um tramo (VIGA.BAS:1279) e não há trecho depois. Carga ignorada: ela vai direto ao pilar.`,
+        `F de ${num(ultima.f, 3)} t no fim do trecho ${i}, em cima do último apoio: o VIGA não aceita F na última divisão de um tramo e não há trecho depois. Carga ignorada: ela vai direto ao pilar.`,
       );
     } else {
       aviso(
-        `F no fim do trecho ${i} (em cima do apoio): o VIGA exige F = 0 na última divisão de um tramo (VIGA.BAS:1279); a carga passa para o começo (D = 0) do trecho ${i + 1}.`,
+        `F no fim do trecho ${i} (em cima do apoio): o VIGA exige F = 0 na última divisão de um tramo; a carga passa para o começo (D = 0) do trecho ${i + 1}.`,
       );
       const primeira = proxima.divs[0]!;
       const alvo = primeira.fim === 0 ? primeira : vazia(0, primeira.p);
@@ -311,7 +315,7 @@ export function editaVig(
   const total = listas.reduce((soma, l) => soma + l.divs.length, 0);
   if (total > MAX_DIVISOES)
     aviso(
-      `${total} divisões de carga: o VIGA aceita no máximo ${MAX_DIVISOES} ("SOMENTE 30 DIVISOES DE CARGA NA VIGA", VIGA.BAS:1265-1270); o original recusaria a viga.`,
+      `${total} divisões de carga: o VIGA aceita no máximo ${MAX_DIVISOES} ("SOMENTE 30 DIVISOES DE CARGA NA VIGA"); o original recusaria a viga.`,
     );
 
   const novos = listas.map(({ divs, vao, tipo }, i): TramoViga => ({
@@ -325,7 +329,9 @@ export function editaVig(
   delete resto.registro;
   delete resto.inerciasBrutas;
   if (viga.pilaresNoRep && viga.pilaresNoRep.length !== n + 1)
-    aviso(`pilaresNoRep tem ${viga.pilaresNoRep.length} números e a viga tem ${n + 1} apoios.`);
+    aviso(
+      `os números de pilar dos apoios (opção 7 do VIGA): ${viga.pilaresNoRep.length} números, e a viga tem ${n + 1} apoios.`,
+    );
   // o número digitado na opção 7 (VIGA.BAS:2150-2175): o .REP leva a reação a "P<número>"
   const pilares = dados.pilares.map((p, k) => {
     if (viga.apoiosDesconsiderados?.includes(k)) return null;
@@ -364,16 +370,17 @@ export function secoesEFormaDaObra(
   const nTrechos = be + n + (dados.balancoDireito ? 1 : 0);
   /** Índice do trecho da obra para o trecho do registro: tramo t (1..n), 0 balE, n+1 balD. */
   const trechoDe = (t: number) => (be ? t : t - 1);
-  const tamanho = (campo: string, lista: readonly unknown[] | undefined, esperado: number) => {
+  /** `rotulo`: o que o usuário digitou, em pt-BR ("as seções dos trechos"). */
+  const tamanho = (rotulo: string, lista: readonly unknown[] | undefined, esperado: number) => {
     if (lista && lista.length !== esperado)
       avisos.push(
-        `Viga ${viga.nome}: ${campo} tem ${lista.length} itens e a viga tem ${esperado}; valem os ${Math.min(lista.length, esperado)} primeiros, o resto vem da planta.`,
+        `Viga ${viga.nome}: ${rotulo}: ${lista.length} itens, e a viga tem ${esperado}; valem os ${Math.min(lista.length, esperado)} primeiros, o resto vem da planta.`,
       );
   };
-  tamanho("secoes.trechos", viga.secoes?.trechos, nTrechos);
-  tamanho("secoes.apoios", viga.secoes?.apoios, n + 1);
-  tamanho("forma.trechos", viga.forma?.trechos, nTrechos);
-  tamanho("forma.apoios", viga.forma?.apoios, n + 1);
+  tamanho("as seções dos trechos", viga.secoes?.trechos, nTrechos);
+  tamanho("as seções dos apoios", viga.secoes?.apoios, n + 1);
+  tamanho("a fôrma dos trechos", viga.forma?.trechos, nTrechos);
+  tamanho("a fôrma dos apoios", viga.forma?.apoios, n + 1);
 
   const st = viga.secoes?.trechos;
   const sa = viga.secoes?.apoios;
@@ -392,7 +399,7 @@ export function secoesEFormaDaObra(
       return { ...secao, bw: a?.bw ?? secao.bw, hw: a?.hw ?? secao.hw };
     }
     avisos.push(
-      `Viga ${viga.nome}: seção 0 no tramo ${t}; vale a da planta (${viga.bw} × ${viga.h}).`,
+      `Viga ${viga.nome}: seção 0 no tramo ${t}; vale a da planta (${numAte(viga.bw, 1)} × ${numAte(viga.h, 1)} cm).`,
     );
     return padrao;
   };

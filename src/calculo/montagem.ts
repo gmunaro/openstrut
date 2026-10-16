@@ -5,6 +5,7 @@
 //
 // A análise da viga (contínua, por rigidez) entra como parâmetro: a montagem
 // não depende de como ela é feita, só das reações por apoio.
+import { num } from "./texto";
 import {
   BORDOS,
   type Bordo,
@@ -534,7 +535,7 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
 
 const nomeBordo = (l: Laje, b: Bordo) => `${l.nome}: bordo ${b} com reação e sem viga de apoio.`;
 
-const fmt = (x: number) => x.toFixed(2);
+const fmt = (x: number) => num(x, 2);
 
 export interface Equilibrio extends ComMemoria {
   /** Σ (g + q) · lx · ly das lajes, kN. */
@@ -597,7 +598,7 @@ export function verificarEquilibrio<R extends AnaliseVigaMinima>(
   const excesso = cargaLajes > 0 ? (reacoesLajes - cargaLajes) / cargaLajes : 0;
   if (cargaLajes > 0 && (excesso < -0.03 || excesso > 0.08))
     avisos.push(
-      `A somatória das reações das lajes (${fmt(reacoesLajes)} kN) difere da carga total das lajes (${fmt(cargaLajes)} kN) em ${(excesso * 100).toFixed(1)}%.`,
+      `A somatória das reações das lajes (${fmt(reacoesLajes)} kN) difere da carga total das lajes (${fmt(cargaLajes)} kN) em ${num(excesso * 100, 1)}%.`,
     );
   if (difere(lajesNasVigas, reacoesLajes, tolerancia))
     avisos.push(

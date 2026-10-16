@@ -10,6 +10,7 @@
 // As vigas e os pilares da V2 saem das lajes (gerarEstrutura). Do .VIG e do .COL
 // só entra o que casa com um elemento gerado: seção e carga adicional das vigas,
 // seção dos pilares. Tudo o que não entra ou foge do esperado vira aviso.
+import { numAte } from "../calculo/texto";
 import { vinculacao } from "../calculo/lajes/vinculacao";
 import { tfParaKn } from "../calculo/unidades";
 import { nomeLivre, novoId, obraNova, pavimentoNovo } from "../dominio/criar";
@@ -376,7 +377,7 @@ function lerCol(a: ArquivoV1): ColV1 {
 
 // ------------------------------------------------------------ conversão -----
 
-const fmt = (n: number) => String(Number(n.toFixed(4)));
+const fmt = (n: number) => numAte(n, 4);
 const ponto = (x: number, y: number) => `(${fmt(x)}; ${fmt(y)})`;
 const extensao = (nome: string) => nome.slice(nome.lastIndexOf(".") + 1).toUpperCase();
 
@@ -738,7 +739,7 @@ function importar(arquivos: readonly ArquivoV1[]): ImportacaoV1 {
 
   const obra = obraNova(laj.obra || "Obra da V1", "nb1-78");
   avisos.push(
-    `Materiais: os arquivos .LAJ, .VIG e .COL não guardam fck, aço nem cobrimentos (na V1 ficam no .LAP e nos .INI); usados os padrões da NB-1/78 da V2: fck ${obra.materiais.fck} MPa, ${obra.materiais.aco}, cobrimentos ${obra.materiais.cobrimentoLaje}/${obra.materiais.cobrimentoViga}/${obra.materiais.cobrimentoPilar} cm (laje/viga/pilar), aço classe ${obra.materiais.classeAco}. A ortotropia das lajes (relação entre esforços da V1) também não fica no .LAJ: μ = 1 (isótropa). Confira.`,
+    `Materiais: os arquivos .LAJ, .VIG e .COL não guardam fck, aço nem cobrimentos (na V1 ficam no .LAP e nos .INI); usados os padrões da NB-1/78 da V2: fck ${obra.materiais.fck} MPa, ${obra.materiais.aco}, cobrimentos ${fmt(obra.materiais.cobrimentoLaje)}/${fmt(obra.materiais.cobrimentoViga)}/${fmt(obra.materiais.cobrimentoPilar)} cm (laje/viga/pilar), aço classe ${obra.materiais.classeAco}. A ortotropia das lajes (relação entre esforços da V1) também não fica no .LAJ: μ = 1 (isótropa). Confira.`,
   );
 
   // pavimento: nome e pé-direito do nível do .COL (nível 1 = o mais alto, como no .LAJ)

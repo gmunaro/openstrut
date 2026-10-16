@@ -11,6 +11,7 @@
 // partir de `entrada.viga` como o DESDIM faz, com a envoltória das acidentais; é o
 // mesmo DESCALC que o dimensionamento (`desdim.ts`) usa. O Mk dos tramos e o Vk com
 // alívio gravados no COMMON também saem dele.
+import { numAte } from "../../texto";
 import type {
   ApoioFormaViga,
   DetalhaViga,
@@ -441,7 +442,7 @@ export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras 
   const posicoes = posicoesDoQuadro(c);
   for (const p of posicoes) {
     memoria.push({
-      descricao: `${p.nome} ${p.tipo}: ${p.quantidade} φ${p.bitola} de ${p.inicio} a ${p.fim} cm`,
+      descricao: `${p.nome} ${p.tipo}: ${p.quantidade} φ${numAte(p.bitola, 1)} de ${numAte(p.inicio, 1)} a ${numAte(p.fim, 1)} cm`,
       valor: p.comprimento,
       unidade: "cm",
       ref: "DESINIT.BAS:562-940 (quadro de ferros)",

@@ -173,7 +173,7 @@ describe("r2: negativa com o mesmo número de lado nas duas lajes", () => {
     const n = r.negativas[0]!;
     confere(c.oraculo, "L2.As-maior", n.as);
     confereBarraTexto(c.oraculo, "L1-L2.proc.neg", n.barra);
-    expect(r.avisos.join(" ")).toContain("R2");
+    expect(r.avisos.join(" ")).toContain("não foi recalculado, como no SISTRUT original");
   });
   it("corrigido (R2): o maior As dos dois lados, 4,70 da L1 → # 8.0 c/10", () => {
     const n = lajeproc(e, MAT, PARAM, "corrigido").negativas[0]!;

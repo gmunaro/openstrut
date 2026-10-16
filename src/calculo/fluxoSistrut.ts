@@ -9,6 +9,7 @@
 // diagrama de momentos por pontos (estática do tramo sobre as cargas do .VIG), a flecha
 // da laje no modo original (o original não calcula: 0) e o Nd/Md dos pilares (γf × as
 // ações características que o original usa).
+import { num, numAte } from "./texto";
 import type { Bordo, Laje, Obra, Pavimento } from "../dominio/obra";
 import type { BarrasNaAlma } from "./barras";
 import type {
@@ -227,13 +228,15 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
       flechaLimite = f.limite;
       if (!f.atende)
         avisos.push(
-          `${nome}: flecha ${f.flecha.toFixed(2)} cm acima do limite ${f.limite.toFixed(2)} cm (corrigido, R1).`,
+          `${nome}: flecha ${num(f.flecha, 2)} cm acima do limite ${num(f.limite, 2)} cm (verificação do modo corrigido).`,
         );
     }
   }
   const esp = ps.espessuras[nome];
   if (esp?.ok && esp.h > laje.h)
-    avisos.push(`${nome}: H ${laje.h} cm abaixo da espessura mínima ${esp.h} cm (LAJECALC 3).`);
+    avisos.push(
+      `${nome}: H ${numAte(laje.h, 1)} cm abaixo da espessura mínima ${numAte(esp.h, 1)} cm (LAJECALC 3).`,
+    );
   if (esp && !esp.ok) avisos.push(`${nome}: H necessário > H máximo configurado (LAJECALC 3).`);
   const mPrincipal = mom ? tmPorMParaKnmPorM(Math.max(mom.mPositivoPrincipalTcm, 0) / 100) : 0;
   const mSecundario = mom ? tmPorMParaKnmPorM(mom.mPositivoSecundarioTcm / 100) : 0;
@@ -526,7 +529,7 @@ function secaoDaFlexao(f: FlexaoViga | undefined, bw: number, aviso: string[]): 
       avisos: aviso,
       memoria: [
         {
-          descricao: `Mk ${f.mk.toFixed(2)} tm, x/d ${f.xd.toFixed(3)}, arranjo ${f.arranjo}`,
+          descricao: `Mk ${num(f.mk, 2)} tm, x/d ${num(f.xd, 3)}, arranjo ${f.arranjo}`,
           valor: f.as,
           unidade: "cm²",
           ref: "DESDIM.BAS:2836-2957",
@@ -576,7 +579,7 @@ function resultadoViga(
         memoria: c
           ? [
               {
-                descricao: `Vk ${c.vkEsquerda.toFixed(2)} / ${c.vkDireita.toFixed(2)} t; Asw ${c.aswEsquerda.toFixed(2)} / ${c.aswDireita.toFixed(2)} cm²/m (ψ = 0,225 + 15ρ)`,
+                descricao: `Vk ${num(c.vkEsquerda, 2)} / ${num(c.vkDireita, 2)} t; Asw ${num(c.aswEsquerda, 2)} / ${num(c.aswDireita, 2)} cm²/m (ψ = 0,225 + 15ρ)`,
                 valor: asw,
                 unidade: "cm²/m",
                 ref: "DESDIM.BAS:3127-3336",
@@ -627,7 +630,7 @@ function equilibrio(ps: PavimentoSistrut, pilares: CargaPilar[]): Equilibrio {
     Math.abs(a - b) > 0.01 * Math.max(Math.abs(a), Math.abs(b), 1e-9);
   if (difere(cargaPilares, cargaVigas))
     avisos.push(
-      `Carga nos pilares (${cargaPilares.toFixed(2)} kN) difere da carga das vigas (${cargaVigas.toFixed(2)} kN).`,
+      `Carga nos pilares (${num(cargaPilares, 2)} kN) difere da carga das vigas (${num(cargaVigas, 2)} kN).`,
     );
   const etapa = (descricao: string, valor: number): Etapa => ({
     descricao,
@@ -738,7 +741,7 @@ function resultadoPavimento(
   // recebe no .REP (LAJEMONT.BAS:2655-2760; sai em branco no original)
   if (ps.montagem.totais.pilares > 0)
     rp.falhas.push(
-      `Bordos de laje sem viga embaixo: ${ps.montagem.totais.pilares.toFixed(2)} t vão ao "total dos pilares" do LAJEMONT, mas não chegam a nenhum pilar.`,
+      `Bordos de laje sem viga embaixo: ${num(ps.montagem.totais.pilares, 2)} t vão ao "total dos pilares" do LAJEMONT, mas não chegam a nenhum pilar.`,
     );
   for (const f of r.falhas) if (f.pavimentoId === pav.id) rp.falhas.push(f.texto);
   if (rp.falhas.length > 0) {
@@ -787,7 +790,7 @@ function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavim
     if (!pav || !pilar) continue;
     const d = l.dimensionamento;
     const avisos = [...l.avisos, ...(d?.avisos ?? [])];
-    if (d?.recusa) avisos.push(`${pilar.nome}: PILAREDI recusa o pilar (${d.recusa}).`);
+    // a recusa (d.recusa) já vem explicada em d.avisos, uma vez
     const mx = d ? Math.max(0, ...d.casos.map((c) => Math.abs(c.mx))) : 0;
     const my = d ? Math.max(0, ...d.casos.map((c) => Math.abs(c.my))) : 0;
     const resultado: PilarResultado = {
@@ -913,6 +916,7 @@ export function calcularObraPeloSistrut(obra: Obra, norma: Norma): ResultadoObra
     pavimentos,
     pilares: resultadosPilares(obra, sistrut, pavimentos),
     avisos: [...sistrut.avisos],
+    avisosComOpcao: sistrut.avisosComOpcao,
     sistrut,
   };
 }

@@ -18,11 +18,24 @@
 // Referências: runtime da V1 nova, `dist/src-original/comum/RT45.BM` (FX##,
 // RT_SNG!, RT_PU#), conferido byte a byte contra o oráculo.
 
+/** Nome em pt-BR dos erros de execução do QB que o porte reproduz (o texto em inglês
+ *  é o que a tela do original mostra). */
+const NOMES_ERRO_QB: Record<string, string> = {
+  "Division by zero": "divisão por zero",
+  "Subscript out of range": "índice fora da faixa",
+  "Illegal function call": "chamada de função inválida",
+};
+
 /** Erro de runtime do QB4.5 (ex.: 6 = Overflow, 13 = Type mismatch). */
 export class ErroQB extends Error {
   readonly codigo: number;
   constructor(codigo: number, mensagem: string) {
-    super(`${mensagem} (erro ${codigo} do QuickBASIC)`);
+    // a mensagem chega aos avisos: o nome do erro do QB em pt-BR, o código fica
+    const pt = Object.entries(NOMES_ERRO_QB).reduce(
+      (m, [en, ptBr]) => (m.startsWith(en) ? ptBr + m.slice(en.length) : m),
+      mensagem,
+    );
+    super(`${pt} (erro ${codigo} do QuickBASIC)`);
     this.codigo = codigo;
   }
 }

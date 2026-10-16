@@ -258,7 +258,20 @@ describe("falhas que o caminho do SISTRUT marca", () => {
     // > 1): o PILAREDI a dimensiona; a carga na base, 17,37 + 0,20·0,20·3·2,5 = 17,67 t,
     // fica para a viga de transição do MEIO, e sem `transicao` é falha ali
     const daBase = falhas.find((f) => f.startsWith("MEIO: Pilar P5 do pavimento COB"));
-    expect(daBase).toContain("17.67 t");
+    expect(daBase).toContain("17,67 t");
+    // a falha aponta a opção do pilar, com id estável
+    expect(r.avisosComOpcao?.filter((a) => a.elemento.tipo === "pilar")).toEqual([
+      {
+        id: "pilar.nasce-em-transicao",
+        pavimentoId: "MEIO",
+        elemento: {
+          tipo: "pilar",
+          id: obra.pavimentos.find((p) => p.id === "COB")!.pilares.find((q) => q.nome === "P5")!.id,
+        },
+        texto: daBase!.slice("MEIO: ".length),
+      },
+    ]);
+    expect(daBase).toContain('marque "Nasce sobre viga de transição" no pilar');
     expect(falhas.some((f) => f.includes("não foi levada a nenhuma coluna"))).toBe(false);
     const p5 = r.pilares.filter((p) => p.pilar.nome === "P5");
     expect(p5.map((p) => p.pavimentoId).sort()).toEqual(["COB", "TERREO"]);
