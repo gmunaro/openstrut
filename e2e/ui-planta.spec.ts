@@ -157,8 +157,13 @@ for (const vp of VIEWPORTS) {
     // as 4 lajes 4×5 m aparecem com o rótulo de dimensão; 9 pilares P1–P9
     // exato: o <title> de cada laje traz "L1: 4,00 × 5,00 m, h = …" e não entra na conta
     await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+    // a dica (<title>) de cada pilar traz o nome em qualquer escala
     for (let n = 1; n <= 9; n++)
-      await expect(svg.getByText(`P${n}`, { exact: true })).toBeVisible();
+      await expect(svg.locator("title").filter({ hasText: new RegExp(`^P${n}:`) })).toHaveCount(1);
+    // o nome visível só aparece com escala >= 30 px/m (ESCALA_NOME_PILAR em Desenho.tsx)
+    if (vp.nome !== "janela-estreita-640x800")
+      for (let n = 1; n <= 9; n++)
+        await expect(svg.getByText(`P${n}`, { exact: true })).toBeVisible();
     await page.screenshot({ path: `${SAIDA}/${vp.nome}-02-quatro-lajes.png` });
 
     const tab = await percorrerTab(page, 30);
@@ -250,7 +255,9 @@ test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e C
   expect(idErro).not.toBeNull();
   await expect(page.locator(`[id="${idErro}"]`)).toHaveText("Número inválido.");
   await expect(painel.getByLabel(/^lx/)).toHaveAccessibleName(/^lx/);
-  expect((await lx.evaluate((el) => el.closest("label")?.textContent ?? "")).includes("Número")).toBe(false);
+  expect(
+    (await lx.evaluate((el) => el.closest("label")?.textContent ?? "")).includes("Número"),
+  ).toBe(false);
 
   // abaixo do vão mínimo (0,1 m): o campo marca erro e não grava
   await lx.fill("0,05");
@@ -417,5 +424,66 @@ test("erros de geometria: sobreposição e pilar fora de viga aparecem na mensag
   await expect(page.getByRole("status")).toHaveCount(0, { timeout: 15_000 });
   anotar("erros-geometria-tempo", [
     `mensagem sumiu após ${Date.now() - t0} ms, medido a partir da leitura (o código tem 7000 ms)`,
+  ]);
+});
+
+test("cálculo nos dois modos: a aba Resultados mostra o total nos modos Corrigido e original", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  mkdirSync(SAIDA, { recursive: true });
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const erros: string[] = [];
+  page.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+  page.on("console", (m) => {
+    if (m.type() === "error") erros.push(`console: ${m.text()}`);
+  });
+
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+
+  // modo padrão: Corrigido
+  await page.getByRole("tab", { name: "Resultados" }).click();
+  const resultados = page.getByRole("tabpanel", { name: "Resultados" });
+  await expect(resultados.getByRole("heading", { level: 3, name: "Total da obra" })).toBeVisible();
+  // o modo aparece no Relatório
+  await page.getByRole("tab", { name: "Relatório" }).click();
+  const relatorio = page.getByRole("tabpanel", { name: "Relatório" });
+  await expect(relatorio.getByText("Modo de cálculo: Corrigido", { exact: true })).toBeVisible();
+
+  // troca para o modo original pelo teclado no switch e aplica
+  await page.getByRole("button", { name: /Materiais/ }).click();
+  const dialogo = page.getByRole("dialog", { name: "Obra e materiais" });
+  await dialogo.getByRole("switch", { name: "Modo de cálculo Como o SISTRUT original" }).focus();
+  await page.keyboard.press("Space");
+  await dialogo.getByRole("button", { name: "Aplicar" }).click();
+  await expect(dialogo).toHaveCount(0);
+
+  await page.getByRole("tab", { name: "Relatório" }).click();
+  await expect(relatorio.getByText(/^Modo de cálculo: Como o SISTRUT original/)).toBeVisible();
+  await page.getByRole("tab", { name: "Resultados" }).click();
+  await expect(resultados.getByRole("heading", { level: 3, name: "Total da obra" })).toBeVisible();
+  await page.screenshot({ path: `${SAIDA}/calculo-resultados-original.png` });
+
+  writeFileSync(`${SAIDA}/calculo-erros.txt`, erros.join("\n") || "(nenhum)");
+  expect(erros).toEqual([]);
+});
+
+test("sondagem: Backspace apaga a laje selecionada?", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  await page.keyboard.press("Escape");
+  await svg.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("button", { name: "Apagar (Delete)" })).toBeVisible();
+  await page.keyboard.press("Backspace");
+  await pintar(page);
+  const restantes = await svg.getByText("4,00 × 5,00", { exact: true }).count();
+  anotar("backspace", [
+    `Após Backspace com laje selecionada: ${restantes} rótulos 4,00 × 5,00 (4 antes).`,
+    restantes === 4 ? "Backspace não apaga; só Delete." : "Backspace apagou a laje.",
   ]);
 });
