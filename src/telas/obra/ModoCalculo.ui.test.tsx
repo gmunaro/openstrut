@@ -111,11 +111,12 @@ describe("modo de cálculo: switch", () => {
     expect(document.activeElement).toBe(botao);
 
     const dica = screen.getByRole("tooltip");
-    expect(dica.textContent).toContain("Só na NB-1/78");
+    expect(dica.textContent).toContain("Só vale na NB-1/78");
     expect(dica.textContent).toContain("número a número");
     expect(dica.textContent).toContain("flecha das lajes");
-    expect(dica.textContent).toContain("CA-25 de 0,15 % em vez de 0,25 %");
-    expect(dica.textContent).toContain("DESINIT");
+    expect(dica.textContent).toContain("0,25 % com CA-25");
+    expect(dica.textContent).toContain("reações truncadas no .REP");
+    expect(dica.textContent).toContain("sem .RLP nem .SEC");
     // o switch também é descrito pela dica (leitor de tela)
     expect(switchModo(dialogo).getAttribute("aria-describedby")).toBe(dica.id);
     expect(botao.getAttribute("aria-describedby")).toBe(dica.id);

@@ -357,21 +357,16 @@ function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCal
         </span>
         <Dica id="mat-modo-dica" rotulo="O que muda com o modo de cálculo">
           <span className="block">
-            Só na NB-1/78, que nos dois modos calcula pelo método do SISTRUT 4.0.{" "}
-            {NOME_MODO.original} repete o programa de 1991 número a número (CA-50 = 5 t/cm²,
-            concreto 2,5 t/m³, cobrimentos do SISTRUT, precisão simples), inclusive os erros.
-            Corrigido usa 500 MPa, 25 kN/m³ e os cobrimentos da obra, e corrige os erros, entre
-            eles:
+            Só vale na NB-1/78. {NOME_MODO.original} reproduz o SISTRUT 4.0 número a número,
+            inclusive os defeitos. {NOME_MODO.corrigido} usa aço de 500 MPa, concreto de 25 kN/m³ e
+            os cobrimentos da obra, e corrige os defeitos, entre eles:
           </span>
-          <span className="mt-1 block">· flecha das lajes nunca verificada;</span>
+          <span className="mt-1 block">· a flecha das lajes, nunca verificada no original;</span>
           <span className="block">
-            · armadura mínima de viga com CA-25 de 0,15 % em vez de 0,25 %;
+            · a armadura mínima de viga: 0,25 % com CA-25 (o original usa 0,15 %);
           </span>
           <span className="block">
-            · reações truncadas no .REP e momento da viga no pilar sem rigidez nem direção;
-          </span>
-          <span className="block">
-            · volume e fôrma de viga pelo DESINIT, que conta de novo a faixa da laje.
+            · as reações truncadas no .REP e o momento de viga no pilar sem .RLP nem .SEC.
           </span>
         </Dica>
       </div>

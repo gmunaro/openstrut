@@ -4,8 +4,8 @@ import path from "node:path";
 
 // Modo de cálculo (docs/MODO-CALCULO.md) numa obra NB-1/78: a FLUXO da V1, com duas
 // lajes e o bordo comum engastado. O switch do diálogo de materiais liga o modo
-// "como o SISTRUT original", que conta a negativa do bordo comum nas duas lajes
-// (item E): o aço das lajes cresce, aparece o selo nos resultados e o modo no
+// "como o SISTRUT original", que conta a negativa do bordo comum nas duas lajes:
+// o aço das lajes cresce, aparece o selo nos resultados e o modo no
 // relatório. Desligar volta ao valor corrigido. Os prints saem em e2e/prints/modo.
 
 const PASTA = path.resolve(process.cwd(), "e2e/prints/modo");
@@ -68,6 +68,7 @@ test("alternar o modo numa obra NB-1/78 muda o aço das lajes", async ({ page })
   const dialogo = page.getByRole("dialog", { name: "Obra e materiais" });
   await dialogo.getByRole("button", { name: "O que muda com o modo de cálculo" }).focus();
   await expect(page.getByRole("tooltip")).toContainText("número a número");
+  await expect(page.getByRole("tooltip")).toContainText("inclusive os defeitos");
   await page.screenshot({ path: path.join(PASTA, "01-dica-do-modo.png") });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("tooltip")).toBeHidden();
@@ -83,7 +84,9 @@ test("alternar o modo numa obra NB-1/78 muda o aço das lajes", async ({ page })
 
   await page.getByRole("tab", { name: "Relatório" }).click();
   await expect(
-    page.getByRole("tabpanel", { name: "Relatório" }).getByText(/^Modo de cálculo: Como o SISTRUT original/),
+    page
+      .getByRole("tabpanel", { name: "Relatório" })
+      .getByText(/^Modo de cálculo: Como o SISTRUT original/),
   ).toBeVisible();
 
   await alternarModo(page, "false");
