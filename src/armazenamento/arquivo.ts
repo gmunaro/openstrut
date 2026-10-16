@@ -936,10 +936,9 @@ class Validador {
         );
     }
     if (d.tipo !== undefined) r.tipo = this.opcao(d, "tipo", c, TIPOS_LAJE);
-    if (d.grupo !== undefined) {
-      r.grupo = this.numero(d, "grupo", c, "naoNegativo");
-      if (!Number.isInteger(r.grupo)) this.erro(`${c}.grupo`, "esperado um inteiro", d.grupo);
-    }
+    // qualquer número: o LAJEGEOM grava −(Hmáx − H) na laje rebaixada (LAJEGEOM.BAS:3755, @275a9)
+    // e o LAJECALC só compara igualdade (LAJECALC.BAS:3709, @30a83)
+    if (d.grupo !== undefined) r.grupo = this.numero(d, "grupo", c);
     if (d.coeficientesLados !== undefined)
       r.coeficientesLados = porLado("coeficientesLados", (v, ci) => this.item(v, ci));
     if (d.muInformado !== undefined) r.muInformado = this.booleano(d, "muInformado", c);

@@ -447,6 +447,19 @@ describe("importarLaj: o que o .LAJ tem e a obra representa", () => {
       { lajeA: "L3", bordoA: 2, lajeB: "L4", bordoB: 1 },
     ]);
   });
+
+  it("grupo negativo: a laje rebaixada −10 do v2par2_laje_tipos (TIP.LAJ:227) importa e não liga", () => {
+    // LAJEGEOM grava −(Hmáx − H) (LAJEGEOM.BAS:3755); o LAJECALC só compara igualdade
+    const imp = importarLaj(laj("v2par2_laje_tipos"));
+    if (!imp.ok) throw new Error(imp.erros.join("\n"));
+    const lajes = imp.obra.pavimentos[0]!.lajes;
+    expect(lajes.find((l) => l.nome === "L5")!.grupo).toBe(-10);
+    expect(lajes.filter((l) => l.grupo !== undefined).map((l) => l.nome)).toEqual(["L5"]);
+    // a mesma laje sem continuidade gravada: a automática não a liga às de grupo 0
+    const { p } = importaE2e(e2eLaj({ 265: "0", 158: "-10" }, [[266, 291]]));
+    expect(p.painel.lajes[1]!.grupo).toBe(-10);
+    expect(p.painel.continuidades.some((c) => c.lajeA === "L2" || c.lajeB === "L2")).toBe(false);
+  });
 });
 
 describe("importarLaj: o que a obra não representa vira aviso", () => {
