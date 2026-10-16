@@ -2,10 +2,11 @@
 // do oráculo e um prédio sintético montado do .LAJ da E2E editado linha a linha e de um
 // .COL no formato do PIGRAEDI.
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import type { ArquivoEntrada } from "../InicioSistrut";
 
-const PASTA = fileURLToPath(new URL("./sistrut/", import.meta.url));
+// a partir da raiz do projeto: no ambiente jsdom o import.meta.url não é file:
+const PASTA = `${resolve(process.cwd(), "src/telas/__fixtures__/sistrut")}/`;
 
 /** Lê um arquivo da pasta de fixtures como o seletor do navegador o entregaria. */
 export const arquivo = (nome: string): ArquivoEntrada => ({

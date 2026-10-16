@@ -634,12 +634,18 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       `sem o .COL, que tem os pilares do prédio; ${pips.length + pils.length > 1 ? "ignorados" : "ignorado"}.`,
     );
   } else {
-    const [pip, ...pipsExtras] = pips;
-    const [pil, ...pilsExtras] = pils;
+    // o PILAREDI abre o .PIP com o nome que o .COL grava; "SISTRUT" é a tabela embutida,
+    // sem arquivo (PILAREDI.BAS:1833)
+    const nomePip = colOk.valor.parametros.pip.trim().toUpperCase();
+    const pip = nomePip === "SISTRUT" ? undefined : pips.find((p) => baseDe(p.nome) === nomePip);
     c.ignora(
-      [...pipsExtras, ...pilsExtras],
-      "mais de um .PIP ou .PIL; valeu o primeiro de cada, em ordem de nome.",
+      pips.filter((p) => p !== pip),
+      nomePip === "SISTRUT"
+        ? 'o .COL usa a parametrização "SISTRUT", a tabela embutida: o PILAREDI não lê .PIP nenhum (PILAREDI.BAS:1833).'
+        : `o .COL usa a parametrização ${nomePip}.PIP; o PILAREDI não lê outro .PIP.`,
     );
+    const [pil, ...pilsExtras] = pils;
+    c.ignora(pilsExtras, "mais de um .PIL; valeu o primeiro, em ordem de nome.");
     const soPilares = obra === undefined;
     const usaReps = !soPilares || !temCargas(colOk.valor);
     if (soPilares && !usaReps)

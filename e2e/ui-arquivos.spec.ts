@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 // Interface da tela inicial e da saída da obra: importar a obra do SISTRUT pelos arquivos
-// de uma vez (fixtures reais em src/telas/__fixtures__/sistrut), erro sem .LAJ, aviso ao
+// de uma vez (fixtures reais em src/telas/__fixtures__/sistrut), erro sem obra, aviso ao
 // sair com alterações não salvas, teclado e layout em 1366×768, 1920×1080 e janela estreita.
 // Prints em e2e/prints/ui-arquivos. Qualquer erro no console da página reprova o teste.
 
@@ -60,25 +60,31 @@ test.describe("importação da obra do SISTRUT", () => {
       .getByLabel("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)")
       .setInputFiles(OBRA_SISTRUT);
 
-    const avisos = page.getByRole("region", { name: "Avisos da importação" });
-    await expect(avisos).toContainText(
-      /Obra E2E lida do SISTRUT: 4 lajes, \d+ vigas e 9 pilares\./,
-    );
+    const resumo = page.getByRole("dialog", { name: "Obra E2E lida do SISTRUT" });
+    const pavimentos = resumo.getByRole("region", { name: "Pavimentos importados" });
+    await expect(pavimentos.getByRole("row", { name: /^E2E 3 4 \d+ 9$/ })).toBeVisible();
+    // a foto espera a animação de abertura do diálogo
+    await resumo.evaluate((el) => Promise.all(el.getAnimations().map((x) => x.finished)));
     await foto(page, "importacao-sistrut");
 
-    await avisos.getByRole("button", { name: "Abrir obra importada" }).click();
+    await resumo.getByRole("button", { name: "Abrir obra importada" }).click();
     await expect(page).toHaveURL(/\/obra$/);
     await expect(page.getByRole("heading", { name: "E2E" })).toBeVisible();
     expect(erros).toEqual([]);
   });
 
-  test("sem o .LAJ, a tela diz o que selecionar e não abre nada", async ({ page }) => {
+  test("sem .LAJ, .VIG nem .COL, o diálogo diz por quê e não abre nada", async ({ page }) => {
     const erros = vigiarErros(page);
     await page.goto("/");
-    const vigas = OBRA_SISTRUT.filter((c) => !c.endsWith(".LAJ"));
-    await page.getByLabel("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)").setInputFiles(vigas);
+    const soltos = OBRA_SISTRUT.filter((c) => /\.(SEC|REP|RLP)$/.test(c));
+    await page.getByLabel("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)").setInputFiles(soltos);
 
-    await expect(page.getByRole("alert")).toContainText("Nenhum .LAJ entre os arquivos");
+    const dialogo = page.getByRole("dialog", {
+      name: "Não foi possível importar a obra do SISTRUT",
+    });
+    await expect(dialogo.getByRole("alert")).toContainText("Nenhuma obra para abrir");
+    await foto(page, "importacao-sistrut-sem-obra");
+    await dialogo.getByRole("button", { name: "Voltar" }).click();
     await expect(page).toHaveURL(/\/$/);
     expect(erros).toEqual([]);
   });
