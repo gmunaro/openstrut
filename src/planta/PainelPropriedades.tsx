@@ -1,7 +1,7 @@
 // Painel de propriedades do elemento selecionado na planta. Cada campo confirma
 // ao sair do campo ou com Enter (Esc desfaz a digitação); o valor passa pelas
 // validações de edicao.ts e o erro aparece embaixo do campo.
-import { useState } from "react";
+import { useId, useState } from "react";
 import { vinculacao } from "../calculo/lajes/vinculacao";
 import {
   BORDOS,
@@ -304,7 +304,8 @@ function PropriedadesPilar({
 }
 
 /** Campo de texto que confirma ao sair ou com Enter. `confirmar` devolve o erro, se houver.
- *  Quem usa troca a `key` quando o valor muda por fora (desfazer, outra seleção). */
+ *  O erro fica fora do `<label>` (não entra no nome do campo) e é ligado ao input por
+ *  `aria-describedby`. Quem usa troca a `key` quando o valor muda por fora (desfazer, outra seleção). */
 function Campo({
   rotulo,
   unidade,
@@ -318,31 +319,39 @@ function Campo({
 }) {
   const [texto, setTexto] = useState(inicial);
   const [erro, setErro] = useState<string>();
+  const idErro = useId();
   const enviar = () => setErro(texto === inicial ? undefined : confirmar(texto));
   return (
-    <label className="block">
-      <span className="text-xs text-slate-400">
-        {rotulo}
-        {unidade && <span className="text-slate-500"> ({unidade})</span>}
-      </span>
-      <input
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        onBlur={enviar}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") enviar();
-          if (e.key === "Escape") {
-            setTexto(inicial);
-            setErro(undefined);
-          }
-        }}
-        aria-invalid={erro !== undefined}
-        className={`mt-0.5 w-full rounded border bg-slate-900 px-1.5 py-0.5 text-right font-mono tabular-nums ${
-          erro ? "border-red-500" : "border-slate-700"
-        }`}
-      />
-      {erro && <span className="mt-0.5 block text-xs text-red-400">{erro}</span>}
-    </label>
+    <div className="block">
+      <label className="block">
+        <span className="text-xs text-slate-400">
+          {rotulo}
+          {unidade && <span className="text-slate-500"> ({unidade})</span>}
+        </span>
+        <input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={enviar}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") enviar();
+            if (e.key === "Escape") {
+              setTexto(inicial);
+              setErro(undefined);
+            }
+          }}
+          aria-invalid={erro !== undefined}
+          aria-describedby={erro !== undefined ? idErro : undefined}
+          className={`mt-0.5 w-full rounded border bg-slate-900 px-1.5 py-0.5 text-right font-mono tabular-nums ${
+            erro ? "border-red-500" : "border-slate-700"
+          }`}
+        />
+      </label>
+      {erro && (
+        <span id={idErro} className="mt-0.5 block text-xs text-red-400">
+          {erro}
+        </span>
+      )}
+    </div>
   );
 }
 
