@@ -1,5 +1,5 @@
 // Tela inicial: nova obra (nome + norma), abrir arquivo .openstrut.json, importar
-// obra da V1 (.LAJ + .VIG + .COL) e obra do SISTRUT (vários arquivos de uma vez), a lista
+// obra da V1 (.LAJ + .VIG + .COL) e obra do SISTRUT (ImportarSistrut.tsx), a lista
 // de rascunhos recentes do navegador, a seção de instalar o app e o aviso de origem.
 import { useNavigate } from "@tanstack/react-router";
 import { Download, FilePlus2, FolderOpen, Import, Trash2 } from "lucide-react";
@@ -37,7 +37,7 @@ import {
   useInstalacao,
 } from "./instalar";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "./marca";
-import { importarObraSistrut } from "./InicioSistrut";
+import { ImportarSistrut } from "./ImportarSistrut";
 import { useConfirmacao } from "./useConfirmacao";
 
 const NORMAS: { id: NormaId; rotulo: string }[] = [
@@ -46,19 +46,6 @@ const NORMAS: { id: NormaId; rotulo: string }[] = [
 ];
 
 const ehNorma = (x: string): x is NormaId => NORMAS.some((n) => n.id === x);
-
-/** Quantos lajes, vigas e pilares a obra tem, para o resumo antes de abrir a importação. */
-function contar(obra: Obra) {
-  let lajes = 0;
-  let vigas = 0;
-  let pilares = 0;
-  for (const p of obra.pavimentos) {
-    lajes += p.lajes.length;
-    vigas += p.vigas.length;
-    pilares += p.pilares.length;
-  }
-  return { lajes, vigas, pilares };
-}
 
 /** "1 aviso" ou "N avisos". */
 const avisos = (n: number) => `${n} ${n === 1 ? "aviso" : "avisos"}`;
@@ -71,12 +58,7 @@ export function Inicio() {
   const [recentes, setRecentes] = useState<ResumoRascunho[] | null>(null);
   const [erroLista, setErroLista] = useState<string | null>(null);
   const entradaV1 = useRef<HTMLInputElement>(null);
-  const entradaSistrut = useRef<HTMLInputElement>(null);
-  const [importada, setImportada] = useState<{
-    obra: Obra;
-    avisos: string[];
-    origem: "V1" | "SISTRUT";
-  } | null>(null);
+  const [importada, setImportada] = useState<{ obra: Obra; avisos: string[] } | null>(null);
   const [errosImportacao, setErrosImportacao] = useState<string[]>([]);
   const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao();
 
@@ -120,31 +102,9 @@ export function Inicio() {
       const r = importarV1(lidos);
       if (!r.ok) setErrosImportacao(["Não foi possível importar a obra da V1:", ...r.erros]);
       else if (r.avisos.length === 0) abrirImportada(r.obra);
-      else setImportada({ obra: r.obra, avisos: r.avisos, origem: "V1" });
+      else setImportada({ obra: r.obra, avisos: r.avisos });
     } catch (erro) {
       setErrosImportacao([`Erro ao ler os arquivos da V1: ${String(erro)}`]);
-    }
-  };
-
-  /**
-   * Lê todos os arquivos do SISTRUT escolhidos de uma vez. Sempre mostra o resumo e os
-   * avisos antes de abrir, para o engenheiro conferir o que entrou na obra.
-   */
-  const importarSistrut = async (e: ChangeEvent<HTMLInputElement>) => {
-    const arquivos = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    setErrosImportacao([]);
-    setImportada(null);
-    if (arquivos.length === 0) return;
-    try {
-      const lidos = await Promise.all(
-        arquivos.map(async (f) => ({ nome: f.name, dados: new Uint8Array(await f.arrayBuffer()) })),
-      );
-      const r = importarObraSistrut(lidos);
-      if (!r.ok) setErrosImportacao(["Não foi possível importar a obra do SISTRUT:", ...r.erros]);
-      else setImportada({ obra: r.obra, avisos: r.avisos, origem: "SISTRUT" });
-    } catch (erro) {
-      setErrosImportacao([`Erro ao ler os arquivos do SISTRUT: ${String(erro)}`]);
     }
   };
 
@@ -183,23 +143,9 @@ export function Inicio() {
           aria-label="Avisos da importação"
           className="border-aviso/60 bg-aviso/10 rounded-md border p-3 text-sm"
         >
-          {importada.origem === "V1" ? (
-            <p className="font-medium">
-              Obra {importada.obra.nome} importada da V1 com {avisos(importada.avisos.length)}:
-            </p>
-          ) : (
-            <>
-              <p className="font-medium">
-                Obra {importada.obra.nome} lida do SISTRUT: {contar(importada.obra).lajes} lajes,{" "}
-                {contar(importada.obra).vigas} vigas e {contar(importada.obra).pilares} pilares.
-              </p>
-              <p className="mt-1 text-xs">
-                {importada.avisos.length === 0
-                  ? "Nenhum aviso da importação."
-                  : `${avisos(importada.avisos.length)} da importação:`}
-              </p>
-            </>
-          )}
+          <p className="font-medium">
+            Obra {importada.obra.nome} importada da V1 com {avisos(importada.avisos.length)}:
+          </p>
           {importada.avisos.length > 0 && (
             <ul className="mt-1 list-disc pl-5 text-xs">
               {importada.avisos.map((a, i) => (
@@ -286,23 +232,7 @@ export function Inicio() {
             className="hidden"
             onChange={(e) => void importar(e)}
           />
-          <Button
-            variant="outline"
-            onClick={() => entradaSistrut.current?.click()}
-            className="mt-2 w-full"
-            title="Selecione de uma vez todos os arquivos da obra: o .LAJ, os .VIG, o .COL e os demais"
-          >
-            <Import /> Importar obra do SISTRUT
-          </Button>
-          <input
-            ref={entradaSistrut}
-            type="file"
-            multiple
-            accept=".laj,.vig,.sec,.for,.tab,.dsp,.ini,.col,.pip,.pil,.rep,.rlp"
-            aria-label="Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)"
-            className="hidden"
-            onChange={(e) => void importarSistrut(e)}
-          />
+          <ImportarSistrut aoAbrir={abrirImportada} />
 
           <h3 className="text-muted-foreground mt-6 mb-2 text-xs font-semibold uppercase tracking-wide">
             Rascunhos recentes (neste navegador)

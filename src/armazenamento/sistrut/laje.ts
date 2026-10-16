@@ -41,6 +41,8 @@ import type {
 } from "../../dominio/obra";
 import { lerObra, serializarObra, VERSAO_ATUAL } from "../arquivo";
 import { importarV1 } from "../importarV1";
+import { explicarErros } from "./mensagens";
+import type { RegistroVigLido } from "./viga";
 
 export interface OpcoesImportacaoLaj {
   /** Materiais (o .LAJ não os tem). Padrão: os de fábrica do SISTRUT, fck 15 MPa
@@ -61,6 +63,13 @@ export interface OpcoesImportacaoLaj {
   /** "Vx apoia em Vy" do LAJEMONT, que o .LAJ não guarda: por nome da viga, as vigas em
    *  que ela se apoia nos cruzamentos sem pilar (`Viga.apoiaEm`). */
   apoiosEmViga?: Record<string, string[]>;
+  /** Id e nome do pavimento (padrão "PAV1"). Com o campo, os ids de lajes, vigas e
+   *  pilares levam o id do pavimento na frente ("COB/L1"), para a obra de vários
+   *  pavimentos não repetir ids; o nome fica o do original. */
+  pavimento?: { id: string; nome: string };
+  /** Registros do .VIG do mesmo pavimento (`lerVig`): o "apoia em" de cada viga sai dos
+   *  apoios dela, pelos vãos (`apoiosEmVigaDoVig`). `apoiosEmViga` vale por cima. */
+  registrosVig?: readonly RegistroVigLido[];
 }
 
 export type ImportacaoLaj =
@@ -138,6 +147,53 @@ function envolvente(p: readonly Ponto[]) {
   return { x, y, lx: Math.max(...xs) - x, ly: Math.max(...ys) - y };
 }
 
+/** O "Vx apoia em Vy" do LAJEMONT a partir do .VIG: o LAJEMONT grava no .VIG os trechos
+ *  de cada viga com os apoios que o usuário escolheu (LAJEMONT.BAS:5170-5393), e o vão
+ *  de cada trecho é a distância entre dois nós do eixo. Andando pelos vãos desde o
+ *  início do eixo (depois do balanço esquerdo), cada apoio cai num nó; um apoio num
+ *  cruzamento sem pilar diz que a viga se apoia nas que cruzam ali. Viga cujos vãos não
+ *  caem em nós do eixo (vão editado no VIGA) fica sem a escolha e com aviso. */
+export function apoiosEmVigaDoVig(
+  lida: Pick<ObraLaj, "eixos" | "pilares">,
+  registros: readonly RegistroVigLido[],
+  avisos: string[],
+): Record<string, string[]> {
+  const perto = (a: number, b: number) => Math.abs(a - b) < TOL_PILAR;
+  const mesmo = (a: Ponto, b: Ponto) => perto(a.x, b.x) && perto(a.y, b.y);
+  const r: Record<string, string[]> = {};
+  for (const reg of registros) {
+    const e = lida.eixos.find((x) => x.nome === reg.nome);
+    if (!e || e.pontos.length < 2) continue;
+    const horizontal = e.pontos.every((p) => p.y === e.pontos[0]!.y);
+    const s = (p: Ponto) => (horizontal ? p.x : p.y);
+    const nos = [...e.pontos].sort((a, b) => s(a) - s(b));
+    const inicio = s(nos[0]!);
+    const fim = s(nos.at(-1)!);
+    const n = reg.tramos;
+    const vao = (t: number) => sng(reg.trechos[t]?.vao ?? 0);
+    // posições dos apoios 0..n ao longo do eixo
+    const apoios = [inicio + (reg.balancoEsquerdo ? vao(0) : 0)];
+    for (let t = 1; t <= n; t++) apoios.push(apoios.at(-1)! + vao(t));
+    const ponta = apoios.at(-1)! + (reg.balancoDireito ? vao(n + 1) : 0);
+    const noDe = apoios.map((a) => nos.find((p) => perto(s(p), a)));
+    if (n < 1 || !perto(ponta, fim) || noDe.some((p) => !p)) {
+      avisos.push(
+        `Viga ${reg.nome}: os vãos do .VIG não caem nos nós do eixo do .LAJ; o "apoia em" dela fica com a regra da V2.`,
+      );
+      continue;
+    }
+    const emVigas = noDe.flatMap((p) => {
+      if (lida.pilares.some((q) => mesmo(q, p!) || (q.fim !== undefined && mesmo(q.fim, p!))))
+        return [];
+      return lida.eixos
+        .filter((o) => o !== e && o.pontos.some((q) => mesmo(q, p!)))
+        .map((o) => o.nome);
+    });
+    if (emVigas.length > 0) r[reg.nome] = [...new Set(emVigas)];
+  }
+  return r;
+}
+
 /** Formato do .LAJ pela primeira linha: o de saída do LAJEGRAV ("SISTRUT Software e
  *  Tecnologia s/c Ltda", LAJEGRAV.BAS:484), o de entrada da V1 ("SISTRUT40","LAJ",1,…,
  *  gravado com WRITE #; DADOS.md da V1) ou nenhum dos dois. */
@@ -167,17 +223,48 @@ export function importarLaj(
     return {
       ok: false,
       erros: [
-        "O arquivo não é um .LAJ do SISTRUT: a primeira linha deveria ser o cabeçalho do SISTRUT.",
+        `${nomeArquivo}: não é um .LAJ do SISTRUT (a primeira linha deveria ser o cabeçalho "SISTRUT Software e Tecnologia"). Confira se o arquivo é o .LAJ certo, ou importe sem ele.`,
       ],
     };
   let lida: ObraLaj;
   try {
     lida = lerObraLaj(texto);
   } catch (e) {
-    return { ok: false, erros: [`.LAJ ilegível: ${e instanceof Error ? e.message : String(e)}`] };
+    return {
+      ok: false,
+      erros: [
+        `${nomeArquivo}: .LAJ ilegível (${e instanceof Error ? e.message : String(e)}). Abra a obra no LAJE do SISTRUT e grave de novo, ou importe sem este arquivo.`,
+      ],
+    };
   }
-  if (lida.painel.lajes.length === 0) return { ok: false, erros: ["O .LAJ não tem lajes."] };
   const avisos: string[] = [...lida.avisos];
+  // pavimento sem laje: todos os painéis marcados como buraco no LAJEGEOM (o térreo sobre
+  // o solo, só com vigas baldrame e alvenarias); o LAJEMONT monta as vigas assim mesmo
+  if (lida.painel.lajes.length === 0) {
+    if (lida.eixos.length === 0)
+      return {
+        ok: false,
+        erros: [
+          `${nomeArquivo}: não tem lajes nem vigas. Abra o pavimento no LAJEGEOM do SISTRUT e confira se ele foi gravado, ou importe sem este arquivo.`,
+        ],
+      };
+    avisos.push(
+      lida.buracos > 0
+        ? `Nenhuma laje: os ${lida.buracos} painéis estão marcados como buraco no LAJEGEOM. O pavimento fica só com as vigas, os pilares e as alvenarias.`
+        : "Nenhuma laje: o pavimento fica só com as vigas, os pilares e as alvenarias.",
+    );
+  } else if (lida.buracos > 0)
+    avisos.push(
+      lida.buracos === 1
+        ? "1 painel marcado como buraco no LAJEGEOM: não entra como laje."
+        : `${lida.buracos} painéis marcados como buraco no LAJEGEOM: não entram como laje.`,
+    );
+  // "apoia em": o do .VIG do pavimento, com o das opções por cima
+  const apoiosEmViga = {
+    ...(opcoes.registrosVig ? apoiosEmVigaDoVig(lida, opcoes.registrosVig, avisos) : {}),
+    ...opcoes.apoiosEmViga,
+  };
+  const idDe = (nome: string) => (opcoes.pavimento ? `${opcoes.pavimento.id}/${nome}` : nome);
   const t = tfParaKn;
   const lap = emSingle({ ...PARAMETROS_LAJE, ...opcoes.parametrosLaje });
   const codigoContinuidade = qbCint(sng(lap.relacaoNegPosMax) * 10 + 2);
@@ -229,7 +316,7 @@ export function importarLaj(
     if (pos && !principal && !secundaria)
       avisos.push(`${l.nome}: positivas impostas fora das tabelas do .LAP; ignoradas.`);
     return {
-      id: l.nome,
+      id: idDe(l.nome),
       nome: l.nome,
       ...envolvente(poligono),
       h,
@@ -276,9 +363,9 @@ export function importarLaj(
         `Viga ${e.nome}: eixo em ordem decrescente no .LAJ; a V2 o percorre em ordem crescente.`,
       );
     const extra = opcoes.vigas?.[e.nome] ?? {};
-    const apoiaEm = opcoes.apoiosEmViga?.[e.nome];
+    const apoiaEm = apoiosEmViga[e.nome]?.map(idDe);
     vigas.push({
-      id: e.nome,
+      id: idDe(e.nome),
       nome: e.nome,
       x1: Math.min(a.x, b.x),
       y1: Math.min(a.y, b.y),
@@ -297,15 +384,15 @@ export function importarLaj(
   const sp = opcoes.secaoPilares ?? { b: 20, h: 20 };
   const trechosPilares: TrechoPilar[] = [];
   const pilares: Pilar[] = lida.pilares.map((p) => {
-    if (!p.fim) return { id: p.nome, nome: p.nome, x: p.x, y: p.y, b: sp.b, h: sp.h };
+    if (!p.fim) return { id: idDe(p.nome), nome: p.nome, x: p.x, y: p.y, b: sp.b, h: sp.h };
     const { x: x2, y: y2 } = p.fim;
-    trechosPilares.push({ pilar: p.nome, inicio: { x: p.x, y: p.y }, fim: { x: x2, y: y2 } });
+    trechosPilares.push({ pilar: idDe(p.nome), inicio: { x: p.x, y: p.y }, fim: { x: x2, y: y2 } });
     const horizontal = p.y === y2;
     if (!horizontal && p.x !== x2)
       avisos.push(`Pilar-parede ${p.nome} inclinado: seção da V2 ${sp.b} × ${sp.h} cm no centro.`);
     const comprimento = Math.round(Math.hypot(x2 - p.x, y2 - p.y) * 10000) / 100;
     return {
-      id: p.nome,
+      id: idDe(p.nome),
       nome: p.nome,
       x: (p.x + x2) / 2,
       y: (p.y + y2) / 2,
@@ -317,7 +404,7 @@ export function importarLaj(
   // "Vx apoia em Vy" (LAJEMONT): a escolha não fica no .LAJ (vai ao .VIG, que o VIGA
   // regrava com a reação resolvida); vem de `opcoes.apoiosEmViga` ou vale a regra da V2
   const escolhido = (vs: readonly string[]) =>
-    vs.some((v) => vs.some((w) => opcoes.apoiosEmViga?.[v]?.includes(w)));
+    vs.some((v) => vs.some((w) => apoiosEmViga[v]?.includes(w)));
   const nos = new Map<string, string[]>();
   for (const e of lida.eixos)
     for (const p of e.pontos) {
@@ -345,8 +432,8 @@ export function importarLaj(
     materiais: { ...MATERIAIS_SISTRUT, ...opcoes.materiais },
     pavimentos: [
       {
-        id: "PAV1",
-        nome: "PAV1",
+        id: opcoes.pavimento?.id ?? "PAV1",
+        nome: opcoes.pavimento?.nome ?? "PAV1",
         peDireito: opcoes.peDireito ?? 3,
         repeticoes: 1,
         lajes,
@@ -368,9 +455,9 @@ export function importarLaj(
         ...(lida.painel.continuidadesConfirmadas
           ? {
               continuidadesLajes: lida.painel.continuidades.map((c) => ({
-                lajeA: c.lajeA,
+                lajeA: idDe(c.lajeA),
                 ladoA: c.bordoA,
-                ...(c.lajeB !== null ? { lajeB: c.lajeB, ladoB: c.bordoB } : {}),
+                ...(c.lajeB !== null ? { lajeB: idDe(c.lajeB), ladoB: c.bordoB } : {}),
               })),
             }
           : {}),
@@ -379,7 +466,9 @@ export function importarLaj(
   };
   // a obra passa pela mesma validação de um arquivo aberto
   const lido = lerObra(serializarObra(obra));
-  return lido.ok ? { ok: true, obra: lido.obra, avisos } : { ok: false, erros: lido.erros };
+  return lido.ok
+    ? { ok: true, obra: lido.obra, avisos }
+    : { ok: false, erros: explicarErros(lido.erros, obra, () => ({ laj: nomeArquivo })) };
 }
 
 /** .LAJ no formato de entrada (cabeçalho "SISTRUT40"): a obra da V1, pelo importador

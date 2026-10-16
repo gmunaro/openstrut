@@ -771,6 +771,10 @@ export interface OpcoesImportacaoPilar {
   cargas?: boolean;
   /** Nome da obra nova; ausente = o do .COL. */
   nome?: string;
+  /** Ao completar: o nível do .COL de cada pavimento (id → nível 1-based, o do topo do
+   *  lance; numa repetição, o da primeira). Pavimento fora do mapa fica com os pilares
+   *  como estão. Ausente = de baixo para cima, o k-ésimo nível da obra é o lance k → k + 1. */
+  niveis?: Record<string, number>;
 }
 
 /** Normal e momentos de viga de um nível, como em A_1280 (t, tm). */
@@ -1240,19 +1244,32 @@ function gerarObra(ctx: Contexto, nome: string | undefined): Obra | { erros: str
  *  contém o número do pilar (`casaNome`, como o PILGEEDI casa o .REP) e, de baixo para
  *  cima, o k-ésimo nível da obra (com as repetições) é o lance k → k + 1. Lajes e vigas
  *  ficam como estão. */
-function completarObra(ctx: Contexto, base: Obra, cargas: boolean): Obra {
+function completarObra(
+  ctx: Contexto,
+  base: Obra,
+  cargas: boolean,
+  niveis: Record<string, number> | undefined,
+): Obra {
   const { col, avisos, materiais: mat } = ctx;
   const obra = structuredClone(base);
   const usadas = new Set<number>();
   const deBaixo = [...obra.pavimentos].reverse();
   const totalNiveis = deBaixo.reduce((s, p) => s + p.repeticoes, 0);
-  if (totalNiveis !== col.niveis.length - 1)
+  if (!niveis && totalNiveis !== col.niveis.length - 1)
     avisos.push(
       `A obra tem ${totalNiveis} níveis de pilar e o .COL tem ${col.niveis.length - 1} lances; casados de baixo para cima até onde houver.`,
     );
   let t0 = 0;
   for (const pav of deBaixo) {
-    const j0 = t0 + 1;
+    const nivel = niveis?.[pav.id];
+    if (niveis && nivel === undefined) {
+      if (pav.pilares.length > 0)
+        avisos.push(
+          `Pavimento ${pav.nome}: sem nível no .COL; os pilares dele ficaram como estavam.`,
+        );
+      continue;
+    }
+    const j0 = nivel !== undefined ? nivel - 1 : t0 + 1;
     for (let r = 0; r < pav.repeticoes; r++) {
       const j = j0 + r;
       const a = col.niveis[j - 1];
@@ -1370,7 +1387,11 @@ export function importarPilaresSistrut(
     pil,
     avisos,
   };
-  if (opcoes.base) return { obra: completarObra(ctx, opcoes.base, opcoes.cargas ?? false), avisos };
+  if (opcoes.base)
+    return {
+      obra: completarObra(ctx, opcoes.base, opcoes.cargas ?? false, opcoes.niveis),
+      avisos,
+    };
   const obra = gerarObra(ctx, opcoes.nome);
   return "erros" in obra ? obra : { obra, avisos };
 }

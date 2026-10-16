@@ -30,7 +30,8 @@ import type { Obra } from "../../dominio/obra";
 import vigaFluxo from "../../calculo/sistrut/lajes/__casos_t2__/v2par_viga_fluxo.json";
 import { KN_POR_TF } from "../../calculo/sistrut/base/unidades";
 import { lerObraLaj } from "../../calculo/sistrut/montagem/obraLaj";
-import { importarLaj, type OpcoesImportacaoLaj } from "./laje";
+import { apoiosEmVigaDoVig, importarLaj, type OpcoesImportacaoLaj } from "./laje";
+import type { RegistroVigLido } from "./viga";
 
 /** O .LAJ que o original gravou no run do caso (cópia versionada). */
 const laj = (caso: string) =>
@@ -488,7 +489,7 @@ describe("importarLaj: o que a obra não representa vira aviso", () => {
     expect(importarLaj("{}")).toEqual({
       ok: false,
       erros: [
-        "O arquivo não é um .LAJ do SISTRUT: a primeira linha deveria ser o cabeçalho do SISTRUT.",
+        `obra.LAJ: não é um .LAJ do SISTRUT (a primeira linha deveria ser o cabeçalho "SISTRUT Software e Tecnologia"). Confira se o arquivo é o .LAJ certo, ou importe sem ele.`,
       ],
     });
   });
@@ -525,5 +526,131 @@ describe("importarLaj: .LAJ no formato de entrada (cabeçalho entre aspas)", () 
       "As opções de importação do .LAJ gravado pelo LAJEGRAV não valem neste formato.",
     );
     expect(() => lerObraLaj(texto)).toThrow(/formato de entrada/);
+  });
+});
+
+describe("importarLaj: .LAJ de obras gravadas pelo usuário", () => {
+  // linhas do caso_a_laje (obra E2E): 34 = A_1014(0,0), a próxima linha livre (7); 35 =
+  // A_1014(0,1), o número de áreas (1); 36-49 = as linhas 1..7 de A_1014 (n, total e
+  // acidental, 4 vértices e a linha livre); 78 = número de lajes; 147, 156, 165 e 174 =
+  // tipo de cada painel (A_10cc(·,1))
+  it("a linha livre de A_1014 não é área, mesmo com o fechamento da última área nela", () => {
+    // área começando em (8; 0): a linha livre fica com (8; 0), o ponto que fecha o
+    // polígono (LAJEGEOM.BAS:8181, 8209), e a coluna 2 da linha do nº de vértices com
+    // lixo, como nos .LAJ de 1994; o original só lê A_1014(0,1) áreas (LAJEMONT.BAS:406)
+    const fechamento = { 37: ".275", 40: "8", 41: "0", 42: "8", 43: "10", 44: "0", 45: "10" };
+    const texto = e2eLaj({ ...fechamento, 46: "0", 47: "0", 48: "8", 49: "0" });
+    expect(lerObraLaj(texto).painel.cargasPorArea).toEqual([
+      {
+        vertices: [
+          { x: 8, y: 0 },
+          { x: 8, y: 10 },
+          { x: 0, y: 10 },
+          { x: 0, y: 0 },
+        ],
+        total: 0.15,
+        acidental: 0.15,
+      },
+    ]);
+    const r = importarLaj(texto, {}, "COB.LAJ");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.obra.pavimentos[0]!.cargasOcupacao).toHaveLength(1);
+  });
+
+  it("todos os painéis como buraco (tipo 2): pavimento sem laje, com as vigas e os pilares", () => {
+    const texto = e2eLaj({ 78: "0", 147: "2", 156: "2", 165: "2", 174: "2" });
+    const r = importarLaj(texto, {}, "TER.LAJ");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const [pav] = r.obra.pavimentos;
+    expect(pav!.lajes).toEqual([]);
+    expect(pav!.vigas.map((v) => v.nome)).toEqual(lerObraLaj(texto).eixos.map((e) => e.nome));
+    expect(pav!.pilares).toHaveLength(9);
+    expect(r.avisos).toContain(
+      "Nenhuma laje: os 4 painéis estão marcados como buraco no LAJEGEOM. O pavimento fica só com as vigas, os pilares e as alvenarias.",
+    );
+    // o pavimento sem laje calcula: as vigas levam o peso próprio
+    expect(() => calcularObraSistrut(r.obra, { modo: "original" })).not.toThrow();
+  });
+
+  it("com `pavimento`, os ids levam o id do pavimento na frente e as referências o acompanham", () => {
+    const r = importarLaj(laj("caso_a_laje"), { pavimento: { id: "COB", nome: "COB" } });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const [pav] = r.obra.pavimentos;
+    expect([pav!.id, pav!.nome]).toEqual(["COB", "COB"]);
+    expect(pav!.lajes.map((l) => [l.id, l.nome])).toContainEqual(["COB/L1", "L1"]);
+    expect(pav!.vigas.every((v) => v.id === `COB/${v.nome}`)).toBe(true);
+    expect(pav!.pilares.every((p) => p.id === `COB/${p.nome}`)).toBe(true);
+    const ids = new Set(pav!.lajes.map((l) => l.id));
+    for (const c of pav!.continuidadesLajes ?? []) {
+      expect(ids.has(c.lajeA)).toBe(true);
+      if (c.lajeB !== undefined) expect(ids.has(c.lajeB)).toBe(true);
+    }
+  });
+});
+
+describe('apoiosEmVigaDoVig: o "apoia em" do LAJEMONT pelos vãos do .VIG', () => {
+  // V1 horizontal de (0; 0) a (6; 0), cruzando V2 (vertical, x = 2) sem pilar; pilares
+  // nas pontas das duas
+  const eixo = (nome: string, pontos: [number, number][]) => ({
+    nome,
+    pontos: pontos.map(([x, y]) => ({ x, y })),
+    apoios: [],
+    balancoInicio: false,
+    balancoFim: false,
+  });
+  const lida = {
+    eixos: [
+      eixo("V1", [
+        [0, 0],
+        [2, 0],
+        [6, 0],
+      ]),
+      eixo("V2", [
+        [2, -3],
+        [2, 0],
+        [2, 3],
+      ]),
+    ],
+    pilares: [
+      { nome: "P1", x: 0, y: 0 },
+      { nome: "P2", x: 6, y: 0 },
+      { nome: "P3", x: 2, y: -3 },
+      { nome: "P4", x: 2, y: 3 },
+    ],
+  };
+  /** Registro do .VIG com os vãos dos tramos (sem balanço). */
+  const registro = (nome: string, vaos: number[]): RegistroVigLido => ({
+    nome,
+    tramos: vaos.length,
+    balancoEsquerdo: false,
+    balancoDireito: false,
+    engasteEsquerdo: false,
+    engasteDireito: false,
+    trechos: Array.from({ length: 14 }, (_, t) => ({
+      divisoes: 0,
+      acumulado: 0,
+      vao: vaos[t - 1] ?? 0,
+      inercia: 1,
+    })),
+    divisoes: [],
+    momentosExternos: [0, 0],
+  });
+
+  it("V1 com apoio em x = 2 (vãos 2 e 4) se apoia em V2; V2 de um vão só não se apoia em nada", () => {
+    const avisos: string[] = [];
+    const r = apoiosEmVigaDoVig(lida, [registro("V1", [2, 4]), registro("V2", [6])], avisos);
+    expect(r).toEqual({ V1: ["V2"] });
+    expect(avisos).toEqual([]);
+  });
+
+  it("vãos que não caem nos nós do eixo (editados no VIGA): sem escolha, com aviso", () => {
+    const avisos: string[] = [];
+    expect(apoiosEmVigaDoVig(lida, [registro("V1", [2.5, 3.5])], avisos)).toEqual({});
+    expect(avisos).toEqual([
+      'Viga V1: os vãos do .VIG não caem nos nós do eixo do .LAJ; o "apoia em" dela fica com a regra da V2.',
+    ]);
   });
 });

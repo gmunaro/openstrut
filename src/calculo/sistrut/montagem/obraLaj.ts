@@ -21,6 +21,8 @@ export interface ObraLaj {
   nome: string;
   /** Espessura mínima do LAJECALC 3 (A_12ca), cm, por nome; ausente se não calculada. */
   hMinimos: Record<string, number>;
+  /** Painéis marcados como buraco no LAJEGEOM (tipo 2, LAJEGEOM.BAS:3887): não são laje. */
+  buracos: number;
   /** O que o leitor não entendeu (tipo de laje desconhecido). */
   avisos: string[];
 }
@@ -59,12 +61,18 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
       const [x1, y1, x2, y2, carga] = [num(), num(), num(), num(), num()];
       alvenarias.push({ inicio: { x: x1, y: y1 }, fim: { x: x2, y: y2 }, carga });
     }
+    // A_1014(0,0) é a próxima linha livre e A_1014(0,1) o número de áreas; o LAJEGRAV
+    // grava as linhas 1..A_1014(0,0), a livre inclusive (LAJEGRAV.BAS:542-547). A livre
+    // não é área: guarda o ponto de fechamento da última desenhada (LAJEGEOM.BAS:8181,
+    // 8209) ou lixo de uma apagada (8572-8581), e o original só lê A_1014(0,1) áreas
+    // (LAJEGEOM.BAS:890, LAJEMONT.BAS:406 e 3456, LAJECALC.BAS:7954)
     const linhasCarga = num();
-    num();
+    const nAreas = num();
     const rows: [number, number][] = [];
     for (let k = 0; k < linhasCarga; k++) rows.push([num(), num()]);
-    // A_1014: linha f = nº de vértices; f+1 = total, acidental; f+2.. = vértices
-    for (let f = 0; f < rows.length;) {
+    // A_1014: linha f = nº de vértices; f+1 = total, acidental; f+2.. = vértices; o
+    // polígono fecha no 1º vértice (LAJEMONT.BAS:3468)
+    for (let f = 0, a = 0; a < nAreas && f < rows.length; a++) {
       const n = rows[f]?.[0] ?? 0;
       if (n <= 0) break;
       const [total, acidental] = rows[f + 1] ?? [0, 0];
@@ -86,6 +94,7 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
   const avisos: string[] = [];
   /** Laje de cada linha p de A_10cc (1-based; null = vazio, tipo 2) e o polígono dela. */
   const daLinha: ({ laje: LajeSistrut; poligono: number } | null)[] = [null];
+  let buracos = 0;
   if (num() === 1) {
     // A_1070(0,0) e depois os pares k = 0..n (o par 0 repete a contagem)
     const nv = num();
@@ -113,6 +122,7 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
       const [poli, tipo, area, grupo, perm, pp] = r;
       const pol = polis[(poli ?? 1) - 1];
       if (!pol || tipo === 2) {
+        if (tipo === 2) buracos += 1;
         daLinha.push(null);
         continue;
       }
@@ -241,6 +251,7 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
     pilares,
     nome: nomeObra,
     hMinimos,
+    buracos,
     avisos,
   };
 }
