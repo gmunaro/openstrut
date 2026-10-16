@@ -39,6 +39,7 @@ const CASOS: {
 const TELAS = [
   { largura: 1366, altura: 768 },
   { largura: 1920, altura: 1080 },
+  { largura: 900, altura: 800 },
 ] as const;
 
 test.beforeAll(() => {
