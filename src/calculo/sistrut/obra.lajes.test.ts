@@ -375,3 +375,147 @@ describe("Obra.parametrosLaje", () => {
     expect(editado.parametros.laje.relacaoNegPosMin).toBe(Math.fround(0.35));
   });
 });
+
+/** A obra com campos do pavimento por cima. */
+const comPavimento = (o: Obra, extra: Partial<Obra["pavimentos"][number]>): Obra => ({
+  ...o,
+  pavimentos: [{ ...o.pavimentos[0]!, ...extra }],
+});
+
+/** Retângulo horário a partir do canto inferior esquerdo. */
+const retangulo = (x: number, y: number, lx: number, ly: number) => [
+  { x, y },
+  { x, y: y + ly },
+  { x: x + lx, y: y + ly },
+  { x: x + lx, y },
+];
+
+describe('Viga.apoiaEm ("Vx apoia em Vy" do LAJEMONT)', () => {
+  // cruz sem pilar no meio: V1 horizontal y = 4 e V2 vertical x = 4, de 0 a 8, pilares
+  // nas quatro pontas, só peso próprio (12 × 50: 0,15 t/m)
+  const pilares = [pilar("P1", 0, 4), pilar("P2", 8, 4), pilar("P3", 4, 0), pilar("P4", 4, 8)];
+  const cruz = (apoiaEm?: string[]) =>
+    pavimento(
+      obra([], {
+        vigas: [
+          { ...viga("V1", 0, 4, 8, 4), ...(apoiaEm ? { apoiaEm } : {}) },
+          viga("V2", 4, 0, 4, 8),
+        ],
+        pilares,
+        ocupacao: [],
+      }),
+    );
+  const reacoes = (p: ReturnType<typeof pavimento>, v: string) =>
+    p.analises.find((a) => a.nome === v)!.apoios.map((x) => x.r);
+
+  it("sem escolha vale a regra da V2: as duas passam, mesmo h e vão, a vertical se apoia na horizontal", () => {
+    const p = cruz();
+    expect(p.eixos.find((e) => e.nome === "V2")!.apoios).toEqual([
+      { pilar: "P3" },
+      { viga: "V1" },
+      { pilar: "P4" },
+    ]);
+  });
+
+  it("V1 apoia em V2: V1 contínua em dois tramos de 4 m e V2 isostática de 8 m com a reação no meio", () => {
+    const p = cruz(["V2"]);
+    expect(p.eixos.find((e) => e.nome === "V1")!.apoios).toEqual([
+      { pilar: "P1" },
+      { viga: "V2" },
+      { pilar: "P2" },
+    ]);
+    // viga contínua de dois vãos iguais: 3/8·qL nas pontas e 10/8·qL no meio
+    const [a, b, c] = reacoes(p, "V1");
+    expect(a).toBeCloseTo((3 / 8) * 0.15 * 4, 5);
+    expect(b).toBeCloseTo((10 / 8) * 0.15 * 4, 5);
+    expect(c).toBeCloseTo((3 / 8) * 0.15 * 4, 5);
+    // V2: (q·8 + F)/2 com F = a reação do meio da V1
+    for (const r of reacoes(p, "V2")) expect(r).toBeCloseTo((0.15 * 8 + 0.75) / 2, 5);
+  });
+});
+
+describe('a parada da opção 5 "todas" (erro de execução numa laje)', () => {
+  // L1, L2 (comum não calculada sem μ: o original para em 1/√μ) e L3, de 4 × 5
+  const lajes = [
+    { ...L1 },
+    { ...L1, id: "L2", nome: "L2", x: 4, tipo: "comum-nao-calculada" as const },
+    { ...L1, id: "L3", nome: "L3", x: 8 },
+  ];
+  const vigas = [
+    viga("V1", 0, 0, 12, 0),
+    viga("V2", 0, 5, 12, 5),
+    ...[0, 4, 8, 12].map((x, i) => viga(`V${i + 3}`, x, 0, x, 5)),
+  ];
+  const pilares = [0, 4, 8, 12].flatMap((x, i) => [pilar(`Pa${i}`, x, 0), pilar(`Pb${i}`, x, 5)]);
+  const o = obra(lajes, { vigas, pilares, ocupacao: [] });
+
+  it("original: o ON ERROR volta ao menu (LAJECALC.BAS:169-174) e a L3, depois da L2, fica sem cálculo", () => {
+    const p = pavimento(o);
+    expect(Object.keys(p.esforcos.momentos)).toEqual(["L1"]);
+    expect(Object.keys(p.espessuras)).toEqual(["L1"]);
+    expect(p.esforcos.avisos[1]).toBe(
+      'L3: não calculada: a opção 5 "todas" do original para na laje L2 (erro de execução, volta ao menu).',
+    );
+  });
+
+  it("corrigido: a L3 é calculada", () => {
+    const p = calcularObraSistrut({ ...o, modoCalculo: "corrigido" }, { modo: "corrigido" })
+      .pavimentos[0]!;
+    expect(Object.keys(p.esforcos.momentos)).toEqual(["L1", "L3"]);
+  });
+});
+
+describe("continuidades do LAJECALC 1 (grupo, i por lado, lista confirmada, D10)", () => {
+  const vizinhas = (a: Partial<Laje>, b: Partial<Laje>): Laje[] => [
+    { ...L1, poligono: retangulo(0, 0, 4, 5), ...a },
+    { ...L1, id: "L2", nome: "L2", x: 4, poligono: retangulo(4, 0, 4, 5), ...b },
+  ];
+  const vigas = [...VIGAS, viga("V5", 4, 0, 8, 0), viga("V6", 4, 5, 8, 5), viga("V7", 8, 0, 8, 5)];
+  const pilares = [...PILARES, pilar("P5", 8, 0), pilar("P6", 8, 5)];
+  const de = (lajes: Laje[], extra: Partial<Obra["pavimentos"][number]> = {}) =>
+    pavimento(comPavimento(obra(lajes, { vigas, pilares, ocupacao: [] }), extra));
+
+  it("grupos diferentes: a automática não liga (LAJECALC.BAS:3709)", () => {
+    expect(de(vizinhas({}, {})).painel.continuidades).toHaveLength(1);
+    expect(de(vizinhas({}, { grupo: 1 })).painel.continuidades).toEqual([]);
+  });
+
+  it("i por lado: CINT(10·1,25 + 2) = CINT(14,5) = 14 (ao par) só no lado da L1; fora da faixa, aviso e 22", () => {
+    const p = de(vizinhas({ coeficientesLados: [null, null, 1.25, null] }, {}));
+    expect(p.painel.lajes[0]!.codigos[2]).toBe(14);
+    expect(p.painel.lajes[1]!.codigos[0]).toBe(22);
+    const fora = de(vizinhas({ coeficientesLados: [null, null, 2.5, null] }, {}));
+    expect(fora.painel.lajes[0]!.codigos[2]).toBe(22);
+    expect(fora.avisos).toEqual(["Laje L1, lado 3: i = 2.5 fora de 0.3 a 2; vale o do engaste."]);
+  });
+
+  it("lista confirmada: dois trechos sem vizinha no lado comum, e linhas que o assistente recusa", () => {
+    const p = de(vizinhas({}, {}), {
+      continuidadesLajes: [
+        { lajeA: "L1", ladoA: 2 },
+        { lajeA: "L2", ladoA: 0 },
+        { lajeA: "L9", ladoA: 0 },
+      ],
+    });
+    expect(p.painel.continuidades).toEqual([
+      { lajeA: "L1", bordoA: 2, lajeB: null, bordoB: 2 },
+      { lajeA: "L2", bordoA: 0, lajeB: null, bordoB: 0 },
+    ]);
+    expect(p.painel.lajes.map((l) => l.codigos)).toEqual([
+      [0, 0, 22, 0],
+      [22, 0, 0, 0],
+    ]);
+    expect(p.avisos).toEqual([
+      "Continuidade L9 lado 1: laje que não existe no pavimento; ignorada.",
+    ]);
+  });
+
+  it("D10: lados que só coincidem em parte não viram continuidade, como no original", () => {
+    // L2 deslocada 2 m para cima: os lados em x = 4 se sobrepõem de y = 2 a 5
+    const p = de([
+      { ...L1, poligono: retangulo(0, 0, 4, 5) },
+      { ...L1, id: "L2", nome: "L2", x: 4, y: 2, poligono: retangulo(4, 2, 4, 5) },
+    ]);
+    expect(p.painel.continuidades).toEqual([]);
+  });
+});

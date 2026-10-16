@@ -79,6 +79,16 @@ export interface Laje {
    *  espaçamento entra inteiro (CINT). null = nenhuma. O código negativo que o LAJEPROC
    *  grava ali é a escolha automática dele, refeita a cada rodada (LAJEPROC.BAS:892). */
   negativasImpostas?: (BarraImposta | null)[];
+  /** Grupo da laje (A_10cc(·,3)): a continuidade automática só liga lajes do mesmo
+   *  grupo (LAJECALC.BAS:3709). Ausente = 0. */
+  grupo?: number;
+  /** Relação Mneg/Mpos (i) de cada lado engastado do `poligono`, a que o usuário dá no
+   *  <A>ltera do LAJECALC 1 (código do lado = CINT(10·i + 2), LAJECALC.BAS:4058-4104;
+   *  mínimo ≤ i ≤ máximo do .LAP). null ou ausente = o máximo do .LAP (código 22). */
+  coeficientesLados?: (number | null)[];
+  /** true: `mu` é o μ informado (<R>elação do LAJECALC 2), inclusive 1. Ausente = μ 1
+   *  quer dizer não informado (ver `mu`). */
+  muInformado?: boolean;
 }
 
 /** Barra de laje: bitola, mm, e espaçamento, cm. */
@@ -158,6 +168,17 @@ export interface ParametrosLajeObra {
 /** Trecho de um pilar-parede no LAJEGEOM (A_1156: x1, y1, x2, y2). O pilar da V2 fica
  *  no centro com a seção b × h; a montagem do SISTRUT usa o trecho (bordo de laje e
  *  alvenaria sobre o pilar-parede). */
+/** Continuidade confirmada no LAJECALC 1 (uma linha do A_11e0): o lado `ladoA` da laje
+ *  `lajeA` (ids; lados do `poligono`) contínuo com o `ladoB` da `lajeB`, ou trecho
+ *  engastado sem vizinha (`lajeB` ausente: <I>mpõe engastamento sem "continua com",
+ *  LAJECALC.BAS:3936-3990). */
+export interface ContinuidadeLajes {
+  lajeA: string;
+  ladoA: number;
+  lajeB?: string;
+  ladoB?: number;
+}
+
 export interface TrechoPilar {
   pilar: string;
   inicio: Ponto;
@@ -181,6 +202,10 @@ export interface Viga {
    *  SISTRUT usa o peso que o usuário digita no LAJEGEOM (predominante e exceções,
    *  LAJEMONT.BAS:4110-4160), não o da seção. */
   pesoProprio?: number;
+  /** Ids das vigas em que esta se apoia nos cruzamentos sem pilar (a escolha "Vx apoia
+   *  em Vy" do LAJEMONT). Vale sobre a regra da V2 (`geometriaDasVigas`) para esse par.
+   *  Ausente = a regra. */
+  apoiaEm?: string[];
   // ---- Entrada do VIGA e do DESENHO do SISTRUT (NB-1/78). Trechos e apoios na ordem
   // do eixo crescente (x na viga horizontal, y na vertical), como o .VIG: trecho 0 é o
   // primeiro (o balanço esquerdo, se houver), apoio 0 é o primeiro apoio. Só o caminho
@@ -398,6 +423,11 @@ export interface Pavimento {
   /** SISTRUT (NB-1/78): trechos dos pilares-parede (id do pilar). Ausente = todos
    *  pontuais. */
   trechosPilares?: TrechoPilar[];
+  /** SISTRUT (NB-1/78): as continuidades confirmadas no LAJECALC 1 (A_11e0). Com elas,
+   *  não roda a continuidade automática: valem estas, os lados livres e os
+   *  `coeficientesLados`, e os vínculos engastado/apoiado das lajes não entram. Ausente =
+   *  a automática com os vínculos forçados. */
+  continuidadesLajes?: ContinuidadeLajes[];
 }
 
 /** Modo de cálculo da obra nos pontos em que o SISTRUT de 1991 erra (a V1 reproduz

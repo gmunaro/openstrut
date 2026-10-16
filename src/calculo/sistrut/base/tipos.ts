@@ -386,7 +386,13 @@ export type OtimizacaoInjetada = (
 /** `EsforcosDoPainel` com a otimização dos negativos injetada (LAJECALC opção 6 depois
  *  da 5). O recálculo da mesma laje mais de `LIMITE_RECALCULOS` vezes lança
  *  `ErroNaoConverge` (o laço do R3). Sem `otimiza` = `EsforcosDoPainel`. */
-export type EsforcosDoPainelCom = (otimiza?: OtimizacaoInjetada) => EsforcosDoPainel;
+/** `paraNaPrimeiraFalha`: como a opção 5 "todas" do original, o erro de execução do
+ *  QuickBASIC (`ErroQB`) numa laje volta ao menu (ON ERROR, LAJECALC.BAS:169-174) e as
+ *  lajes seguintes ficam sem cálculo. Ausente = calcula as outras. */
+export type EsforcosDoPainelCom = (
+  otimiza?: OtimizacaoInjetada,
+  paraNaPrimeiraFalha?: boolean,
+) => EsforcosDoPainel;
 
 // ============================================================== T2 LAJE: flexão, barras, espessura, LAJEPROC
 // Arquivos: sistrut/lajes/flexao.ts, barras.ts, espessura.ts, proc.ts (e
