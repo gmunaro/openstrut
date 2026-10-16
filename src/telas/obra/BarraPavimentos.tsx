@@ -94,38 +94,32 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
         // key: ao trocar de pavimento os campos recomeçam com os valores dele (sem levar
         // texto digitado e não confirmado de um pavimento para outro)
         <div key={ativo.id} className="flex flex-wrap items-center gap-2 text-xs">
-          <label className="flex items-center gap-1">
-            Nome
-            <CampoTexto
-              className="w-36"
-              valor={ativo.nome}
-              confirmar={(nome) => {
-                const problema = problemaNomePavimento(obra, ativo.id, nome);
-                if (!problema) editar((o) => renomearPavimento(o, ativo.id, nome));
-                return problema;
-              }}
-            />
-          </label>
-          <label className="flex items-center gap-1">
-            Pé-direito
-            <CampoNumero
-              className="w-16"
-              valor={ativo.peDireito}
-              valido={(n) => n > 0}
-              confirmar={(n) => editar((o) => alterarPeDireito(o, ativo.id, n))}
-            />
-            <span className="text-muted-foreground">m</span>
-          </label>
-          <label className="flex items-center gap-1">
-            Repetições
-            <CampoNumero
-              className="w-12"
-              casas={0}
-              valor={ativo.repeticoes}
-              valido={(n) => Number.isInteger(n) && n >= 1}
-              confirmar={(n) => editar((o) => alterarRepeticoes(o, ativo.id, n))}
-            />
-          </label>
+          <CampoTexto
+            rotulo="Nome"
+            className="w-36"
+            valor={ativo.nome}
+            confirmar={(nome) => {
+              const problema = problemaNomePavimento(obra, ativo.id, nome);
+              if (!problema) editar((o) => renomearPavimento(o, ativo.id, nome));
+              return problema;
+            }}
+          />
+          <CampoNumero
+            rotulo="Pé-direito"
+            unidade="m"
+            className="w-16"
+            valor={ativo.peDireito}
+            valido={(n) => n > 0}
+            confirmar={(n) => editar((o) => alterarPeDireito(o, ativo.id, n))}
+          />
+          <CampoNumero
+            rotulo="Repetições"
+            className="w-12"
+            casas={0}
+            valor={ativo.repeticoes}
+            valido={(n) => Number.isInteger(n) && n >= 1}
+            confirmar={(n) => editar((o) => alterarRepeticoes(o, ativo.id, n))}
+          />
           <Button
             variant="ghost"
             size="icon-xs"
