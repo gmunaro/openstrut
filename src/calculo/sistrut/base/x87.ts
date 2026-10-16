@@ -918,7 +918,12 @@ export function mulX(a: Estendido, b: Estendido): Estendido {
     B_ = deEstendido(b);
   if (A.k === 2 || B_.k === 2) return { tipo: "nan" };
   const s = (A.s ^ B_.s) as 0 | 1;
-  if (A.k === 1 || B_.k === 1) return A.a2 === 0 && A.k === 0 ? { tipo: "nan" } : B_.a2 === 0 && B_.k === 0 ? { tipo: "nan" } : { tipo: "infinito", s };
+  if (A.k === 1 || B_.k === 1)
+    return A.a2 === 0 && A.k === 0
+      ? { tipo: "nan" }
+      : B_.a2 === 0 && B_.k === 0
+        ? { tipo: "nan" }
+        : { tipo: "infinito", s };
   return paraEstendido(estendeL(mulL(A, B_, 64)));
 }
 
@@ -944,13 +949,39 @@ export function comparaX(a: Estendido, b: Estendido): number {
   return d.m === 0n ? 0 : d.s ? -1 : 1;
 }
 
+// Cache dos helpers dos portes: as contas do original repetem muito as mesmas
+// potências e raízes (um pilar que não converge faz ~580 mil ^ com ~500 pares
+// distintos). As funções são puras, então o cache não muda nenhum bit. Chave: os
+// dois números; a raiz de ±0 fica fora (o Map junta −0 e +0, e SQR(−0) = −0).
+const LIMITE_CACHE = 4096;
+const cachePot = {
+  double: new Map<number, Map<number, number>>(),
+  single: new Map<number, Map<number, number>>(),
+};
+const cacheRaiz = { double: new Map<number, number>(), single: new Map<number, number>() };
+
 /** `a ^ b` do modo, para os portes: no original, o B$POW do QB4.5 (o estendido
  *  arredondado a DOUBLE para seguir a expressão em float64, ou a SINGLE quando a
  *  potência é a expressão inteira gravada numa variável `!`); no corrigido, `**`.
  *  Uso: `const pot = potencia(modo)` e `pot(a, b)`. */
 export function potencia(modo: ModoSistrut, destino: Destino = "double") {
   if (modo === "corrigido") return (a: number, b: number) => a ** b;
-  return (a: number, b: number) => paraNumeroL(potenciaL(deNumero(a), deNumero(b)), destino);
+  const porExpoente = cachePot[destino];
+  return (a: number, b: number) => {
+    let c = porExpoente.get(b);
+    if (c === undefined) {
+      if (porExpoente.size >= 64) porExpoente.clear();
+      c = new Map();
+      porExpoente.set(b, c);
+    }
+    let r = c.get(a);
+    if (r === undefined) {
+      r = paraNumeroL(potenciaL(deNumero(a), deNumero(b)), destino); // ErroQB não entra no cache
+      if (c.size >= LIMITE_CACHE) c.clear();
+      c.set(a, r);
+    }
+    return r;
+  };
 }
 
 /** `SQR(x)` do modo, para os portes: no original, o FSQRT do x87 (negativo dá NaN,
@@ -958,5 +989,15 @@ export function potencia(modo: ModoSistrut, destino: Destino = "double") {
  *  SINGLE; no corrigido, `Math.sqrt`. */
 export function raiz(modo: ModoSistrut, destino: Destino = "double") {
   if (modo === "corrigido") return Math.sqrt;
-  return (x: number) => paraNumeroL(raizL(deNumero(x)), destino);
+  const c = cacheRaiz[destino];
+  return (x: number) => {
+    if (x === 0) return paraNumeroL(raizL(deNumero(x)), destino);
+    let r = c.get(x);
+    if (r === undefined) {
+      r = paraNumeroL(raizL(deNumero(x)), destino);
+      if (c.size >= LIMITE_CACHE) c.clear();
+      c.set(x, r);
+    }
+    return r;
+  };
 }

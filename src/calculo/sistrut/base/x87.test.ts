@@ -245,6 +245,18 @@ describe("helpers dos portes", () => {
     expect(potencia("original")(100, 2)).toBe(10000);
   });
 
+  it("o cache dos helpers não muda nenhum bit: repetição, ±0 e erro", () => {
+    const pot = potencia("original"),
+      rz = raiz("original");
+    for (let i = 0; i < 3; i++) {
+      expect(pot(Math.fround(4.7137), 1.5)).toBe(potenciaQB(Math.fround(4.7137), 1.5, "double"));
+      expect(Object.is(rz(-0), -0)).toBe(true);
+      expect(Object.is(rz(0), 0)).toBe(true);
+      expect(() => pot(-2, 0.5)).toThrow(ErroQB); // erro não fica no cache
+    }
+    expect(potencia("original", "single")(3, 2)).toBe(potenciaQB(3, 2, "single"));
+  });
+
   it("mulX, divX e comparaX seguem o x87 (64 bits, ao par; 1/0 = infinito)", () => {
     const e = estendido;
     // 1/3 em estendido vezes 3 arredonda de volta a 1 (ao par, 64 bits)
