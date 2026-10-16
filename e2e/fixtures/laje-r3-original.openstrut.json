@@ -1,0 +1,232 @@
+{
+  "versao": 3,
+  "nome": "Laje R3 original",
+  "norma": "nb1-78",
+  "modoCalculo": "original",
+  "parametrosLaje": {
+    "relacaoNegPosMin": 0.35
+  },
+  "materiais": {
+    "fck": 15,
+    "aco": "CA-50",
+    "acoEstribo": "CA-50",
+    "classeAco": "B",
+    "caa": 1,
+    "cobrimentoLaje": 1.5,
+    "cobrimentoViga": 2,
+    "cobrimentoPilar": 2
+  },
+  "pavimentos": [
+    {
+      "id": "PAV1",
+      "nome": "PAV1",
+      "peDireito": 3,
+      "repeticoes": 1,
+      "lajes": [
+        {
+          "id": "L1",
+          "nome": "L1",
+          "x": 0,
+          "y": 0,
+          "lx": 6,
+          "ly": 6,
+          "h": 10,
+          "revestimento": 0.980665,
+          "sobrecarga": 0,
+          "vinculos": {},
+          "mu": 0.9,
+          "poligono": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 0,
+              "y": 6
+            },
+            {
+              "x": 6,
+              "y": 6
+            },
+            {
+              "x": 6,
+              "y": 0
+            }
+          ]
+        },
+        {
+          "id": "L2",
+          "nome": "L2",
+          "x": 6,
+          "y": 0,
+          "lx": 1.7999999999999998,
+          "ly": 6,
+          "h": 10,
+          "revestimento": 0.980665,
+          "sobrecarga": 0,
+          "vinculos": {},
+          "mu": 0.5,
+          "poligono": [
+            {
+              "x": 7.8,
+              "y": 0
+            },
+            {
+              "x": 6,
+              "y": 0
+            },
+            {
+              "x": 6,
+              "y": 6
+            },
+            {
+              "x": 7.8,
+              "y": 6
+            }
+          ]
+        }
+      ],
+      "vigas": [
+        {
+          "id": "V1",
+          "nome": "V1",
+          "x1": 0,
+          "y1": 6,
+          "x2": 7.8,
+          "y2": 6,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "V2",
+          "nome": "V2",
+          "x1": 0,
+          "y1": 0,
+          "x2": 7.8,
+          "y2": 0,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "V3",
+          "nome": "V3",
+          "x1": 0,
+          "y1": 0,
+          "x2": 0,
+          "y2": 6,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "V4",
+          "nome": "V4",
+          "x1": 6,
+          "y1": 0,
+          "x2": 6,
+          "y2": 6,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "V5",
+          "nome": "V5",
+          "x1": 7.8,
+          "y1": 0,
+          "x2": 7.8,
+          "y2": 6,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        }
+      ],
+      "pilares": [
+        {
+          "id": "P1",
+          "nome": "P1",
+          "x": 0,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "P2",
+          "nome": "P2",
+          "x": 6,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "P3",
+          "nome": "P3",
+          "x": 7.8,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "P4",
+          "nome": "P4",
+          "x": 7.8,
+          "y": 6,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "P5",
+          "nome": "P5",
+          "x": 6,
+          "y": 6,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "P6",
+          "nome": "P6",
+          "x": 0,
+          "y": 6,
+          "b": 20,
+          "h": 20
+        }
+      ],
+      "pilaresRemovidos": [],
+      "cargasOcupacao": [
+        {
+          "poligono": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 7.8,
+              "y": 0
+            },
+            {
+              "x": 7.8,
+              "y": 6
+            },
+            {
+              "x": 0,
+              "y": 6
+            }
+          ],
+          "total": 1.4709975,
+          "acidental": 1.4709975
+        }
+      ],
+      "alvenarias": [],
+      "continuidadesLajes": [
+        {
+          "lajeA": "L1",
+          "ladoA": 2,
+          "lajeB": "L2",
+          "ladoB": 1
+        }
+      ]
+    }
+  ]
+}
