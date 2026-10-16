@@ -20,9 +20,12 @@ import {
   copiarPlanta,
   moverPavimento,
   problemaNomePavimento,
+  problemaPeDireito,
+  problemaRepeticoes,
   renomearPavimento,
 } from "../pavimentos";
-import { CampoNumero, CampoTexto } from "./campos";
+import { CampoTexto } from "./campos";
+import { CampoPavimentoNumero } from "./BarraPavimentosNumero";
 
 export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string | null }) {
   const editar = useObra((e) => e.editar);
@@ -40,7 +43,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
   const apagar = () => {
     if (!ativo) return;
     const conteudo = ativo.lajes.length + ativo.vigas.length + ativo.pilares.length;
-    const msg = `Apagar o pavimento "${ativo.nome}"${conteudo > 0 ? ` e a planta dele (${ativo.lajes.length} lajes)` : ""}? Dá para desfazer.`;
+    const msg = `Apagar o pavimento "${ativo.nome}"${conteudo > 0 ? ` e a planta dele (${ativo.lajes.length} lajes, ${ativo.vigas.length} vigas, ${ativo.pilares.length} pilares)` : ""}? Dá para desfazer.`;
     if (window.confirm(msg)) editar((o) => apagarPavimento(o, ativo.id));
   };
 
@@ -104,20 +107,20 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
               return problema;
             }}
           />
-          <CampoNumero
+          <CampoPavimentoNumero
             rotulo="Pé-direito"
             unidade="m"
             className="w-16"
             valor={ativo.peDireito}
-            valido={(n) => n > 0}
+            problema={problemaPeDireito}
             confirmar={(n) => editar((o) => alterarPeDireito(o, ativo.id, n))}
           />
-          <CampoNumero
+          <CampoPavimentoNumero
             rotulo="Repetições"
             className="w-12"
             casas={0}
             valor={ativo.repeticoes}
-            valido={(n) => Number.isInteger(n) && n >= 1}
+            problema={problemaRepeticoes}
             confirmar={(n) => editar((o) => alterarRepeticoes(o, ativo.id, n))}
           />
           <Button

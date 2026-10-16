@@ -12,21 +12,28 @@ import { COR_SITUACAO, Desenho, ROTULO_SITUACAO } from "./Desenho";
 import {
   acrescentarLaje,
   acrescentarPilar,
+  alterarLaje,
   apagarLaje,
   apagarPilar,
   apagarViga,
+  moverPilar,
   substituirPavimento,
   type Edicao,
 } from "./edicao";
+import { DialogoAdicionar } from "./DialogoAdicionar";
 import { fmt } from "./formato";
 import {
+  type Alvo,
   CAIXA_VAZIA,
+  cabeNaTela,
+  caixaDoAlvo,
   caixaDoPavimento,
   elementoEm,
   enquadrar,
   lajeSobreposta,
   linhasDeSnap,
   normalizarRetangulo,
+  proximoAlvo,
   snap,
   telaParaMundo,
   zoomNoPonto,
@@ -44,6 +51,13 @@ export const GRADES = [0.25, 0.5, 1] as const;
 /** Distância de snap aos bordos de lajes e folga do clique de seleção, px. */
 const SNAP_PX = 10;
 const CLIQUE_PX = 6;
+/** Sentido de cada seta no mundo (y para cima), em passos de grade com Shift. */
+const DIRECAO: Record<string, Ponto> = {
+  ArrowRight: { x: 1, y: 0 },
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowUp: { x: 0, y: 1 },
+  ArrowDown: { x: 0, y: -1 },
+};
 
 /** `resultado`: cálculo do pavimento ativo; `pilares`: ResultadoObra.pilares (todos os
  *  níveis; o editor filtra os do pavimento ativo). Sem eles a planta fica sem cores. */
@@ -70,8 +84,6 @@ function Editor({
   const refazer = useObra((s) => s.refazer);
   const selecao = useObra((s) => s.selecao);
   const selecionar = useObra((s) => s.selecionar);
-  const podeDesfazer = useObra((s) => s.passado.length > 0);
-  const podeRefazer = useObra((s) => s.futuro.length > 0);
 
   const [ferramenta, setFerramenta] = useState<Ferramenta>("selecionar");
   const [grade, setGrade] = useState<number>(0.5);
@@ -81,6 +93,7 @@ function Editor({
   const [cursor, setCursor] = useState<Ponto>();
   const [espaco, setEspaco] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem>();
+  const [adicionando, setAdicionando] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -135,6 +148,15 @@ function Editor({
     return undefined;
   };
 
+  /** Grava o elemento criado e o seleciona; se ele não cabe na área visível, reenquadra o pavimento. */
+  function criado(novo: Pavimento, alvo: Alvo) {
+    aplicar(novo);
+    selecionar(alvo);
+    const caixa = caixaDoAlvo(novo, alvo);
+    if (vista && caixa && !cabeNaTela(vista, caixa, tamanho.largura, tamanho.altura))
+      setVista(enquadrar(caixaDoPavimento(novo) ?? CAIXA_VAZIA, tamanho.largura, tamanho.altura));
+  }
+
   function apagarSelecao() {
     if (!selecao) return;
     if (selecao.tipo === "laje") {
@@ -165,6 +187,27 @@ function Editor({
     selecionar(null);
   }
 
+  /** Desloca o elemento selecionado em metros: laje por alterarLaje (regenera a estrutura),
+   *  pilar por moverPilar. Viga não se move; a mensagem diz de onde vem a posição dela. */
+  function moverSelecao(dx: number, dy: number) {
+    if (!selecao) return;
+    if (selecao.tipo === "viga") {
+      setMensagem({ tipo: "info", texto: "Vigas não se movem: a posição delas vem das lajes." });
+      return;
+    }
+    const erro =
+      selecao.tipo === "laje"
+        ? (() => {
+            const l = pav.lajes.find((q) => q.id === selecao.id);
+            return l && aplicarEdicao(alterarLaje(pav, l.id, { x: l.x + dx, y: l.y + dy }));
+          })()
+        : (() => {
+            const p = pav.pilares.find((q) => q.id === selecao.id);
+            return p && aplicarEdicao(moverPilar(pav, p.id, { x: p.x + dx, y: p.y + dy }));
+          })();
+    setMensagem(erro ? { tipo: "erro", texto: erro } : undefined);
+  }
+
   // atalhos de teclado (fora de campos de texto e de diálogos abertos por cima da planta)
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
@@ -185,12 +228,33 @@ function Editor({
         return;
       }
       if (e.altKey) return;
+      // Shift+seta move o selecionado um passo de grade (com a planta em foco)
+      const direcao = DIRECAO[e.key];
+      if (e.shiftKey && direcao && alvo === svgRef.current) {
+        e.preventDefault();
+        moverSelecao(direcao.x * grade, direcao.y * grade);
+        return;
+      }
+      // com a planta em foco, as setas percorrem os elementos (Tab segue para fora da planta)
+      const passo =
+        e.key === "ArrowRight" || e.key === "ArrowDown"
+          ? 1
+          : e.key === "ArrowLeft" || e.key === "ArrowUp"
+            ? -1
+            : 0;
+      if (passo !== 0 && alvo === svgRef.current) {
+        e.preventDefault();
+        const prox = proximoAlvo(pav, selecao, passo);
+        if (prox) selecionar(prox);
+        return;
+      }
       if (e.key === " ") {
         e.preventDefault();
         setEspaco(true);
       } else if (k === "v") setFerramenta("selecionar");
       else if (k === "l") setFerramenta("laje");
       else if (k === "p") setFerramenta("pilar");
+      else if (k === "a") setAdicionando(true);
       else if (e.key === "Delete") apagarSelecao();
       else if (e.key === "Escape") {
         setMensagem(undefined);
@@ -237,8 +301,7 @@ function Editor({
     } else if (ferramenta === "pilar") {
       const r = acrescentarPilar(pav, pontoSnap(vista, t));
       if (!r.ok) return setMensagem({ tipo: "erro", texto: r.erro });
-      aplicar(r.pavimento);
-      selecionar({ tipo: "pilar", id: r.id });
+      criado(r.pavimento, { tipo: "pilar", id: r.id });
     } else {
       selecionar(elementoEm(pav, telaParaMundo(vista, t), CLIQUE_PX / vista.escala) ?? null);
     }
@@ -265,10 +328,7 @@ function Editor({
       } else {
         const res = acrescentarLaje(pav, r);
         if (!res.ok) setMensagem({ tipo: "erro", texto: res.erro });
-        else {
-          aplicar(res.pavimento);
-          selecionar({ tipo: "laje", id: res.id });
-        }
+        else criado(res.pavimento, { tipo: "laje", id: res.id });
       }
     }
     setArrasto(undefined);
@@ -305,15 +365,11 @@ function Editor({
         <Botao ativo={ferramenta === "pilar"} onClick={() => setFerramenta("pilar")} dica="P">
           Pilar
         </Botao>
+        <Botao onClick={() => setAdicionando(true)} dica="A">
+          Adicionar…
+        </Botao>
         <Botao onClick={apagarSelecao} desabilitado={!selecao} dica="Delete">
           Apagar
-        </Botao>
-        <Separador />
-        <Botao onClick={desfazer} desabilitado={!podeDesfazer} dica="Ctrl+Z">
-          Desfazer
-        </Botao>
-        <Botao onClick={refazer} desabilitado={!podeRefazer} dica="Ctrl+Y">
-          Refazer
         </Botao>
         <Separador />
         <Botao onClick={() => setVista(enquadrarTudo())} desabilitado={tamanho.largura === 0}>
@@ -335,13 +391,24 @@ function Editor({
         </label>
       </div>
 
+      <DialogoAdicionar
+        pav={pav}
+        aberto={adicionando}
+        aoMudarAberto={setAdicionando}
+        aoCriar={(novo, alvo) => {
+          criado(novo, alvo);
+          setAdicionando(false);
+        }}
+      />
+
       <div className="flex min-h-0 flex-1">
         <div ref={areaRef} className="relative min-w-0 flex-1 overflow-hidden bg-slate-900">
           <svg
             ref={svgRef}
             role="application"
             aria-label="Planta do pavimento"
-            className="absolute inset-0 size-full touch-none select-none"
+            tabIndex={0}
+            className="absolute inset-0 size-full touch-none select-none outline-none focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-sky-400"
             style={{ cursor: cursorSvg }}
             onPointerDown={aoPressionar}
             onPointerMove={aoMover}
@@ -400,7 +467,7 @@ function Editor({
 const DICAS: Record<Ferramenta, string> = {
   selecionar: "Clique num elemento para selecionar.",
   laje: "Arraste o retângulo da laje (snap à grade e aos bordos).",
-  pilar: "Clique sobre o eixo de uma viga para acrescentar um pilar 20 × 20.",
+  pilar: "Clique sobre o eixo de uma viga para acrescentar um pilar 20 × 20 cm.",
 };
 
 const COR_MENSAGEM: Record<Mensagem["tipo"], string> = {

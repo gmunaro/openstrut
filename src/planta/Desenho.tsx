@@ -62,6 +62,7 @@ export function Desenho({
 }: Props) {
   const sel = (tipo: "laje" | "viga" | "pilar", id: string) =>
     selecao?.tipo === tipo && selecao.id === id;
+  const selLaje = pav.lajes.find((l) => sel("laje", l.id));
   return (
     <>
       <Grade vista={vista} largura={largura} altura={altura} grade={grade} />
@@ -95,6 +96,7 @@ export function Desenho({
           selecionado={sel("pilar", p.id)}
         />
       ))}
+      {selLaje && <ContornoLaje l={selLaje} vista={vista} />}
       {previa && <Previa {...previa} vista={vista} />}
       {cursor && <Cursor p={mundoParaTela(vista, cursor)} />}
     </>
@@ -135,6 +137,13 @@ function Grade({
       })}
     </g>
   );
+}
+
+/** Contorno da laje selecionada, desenhado por cima de vigas e pilares: as vigas do
+ *  bordo cobrem o contorno da própria laje e a seleção ficaria invisível. */
+function ContornoLaje({ l, vista }: { l: Laje; vista: Vista }) {
+  const rt = retanguloTela(vista, { xmin: l.x, ymin: l.y, xmax: l.x + l.lx, ymax: l.y + l.ly });
+  return <rect {...rt} fill="none" stroke={COR_SELECAO} strokeWidth={2.5} pointerEvents="none" />;
 }
 
 function DesenhoLaje({
@@ -264,6 +273,10 @@ function DesenhoViga({
   );
 }
 
+/** Escala (px/m) mínima para desenhar o nome do pilar. Abaixo disso o nome encosta no
+ *  nome da viga vizinha; o nome continua na dica do pilar e no painel de propriedades. */
+const ESCALA_NOME_PILAR = 30;
+
 function DesenhoPilar({
   p,
   vista,
@@ -290,15 +303,17 @@ function DesenhoPilar({
         stroke={selecionado ? COR_SELECAO : "#0f172a"}
         strokeWidth={selecionado ? 3 : 1}
       />
-      <text
-        x={c.x + meiaB + 3}
-        y={c.y - meiaH - 3}
-        fontSize={11}
-        fill="#f1f5f9"
-        pointerEvents="none"
-      >
-        {p.nome}
-      </text>
+      {vista.escala >= ESCALA_NOME_PILAR && (
+        <text
+          x={c.x + meiaB + 3}
+          y={c.y - meiaH - 3}
+          fontSize={11}
+          fill="#f1f5f9"
+          pointerEvents="none"
+        >
+          {p.nome}
+        </text>
+      )}
     </g>
   );
 }

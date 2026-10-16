@@ -185,9 +185,42 @@ export function elementoEm(pav: Pavimento, p: Ponto, tol: number): Alvo | undefi
   return laje ? { tipo: "laje", id: laje.id } : undefined;
 }
 
+/** Próximo elemento (`delta` +1) ou anterior (−1) na ordem laje → viga → pilar, com volta.
+ *  Sem seleção, +1 pega o primeiro e −1 o último. Usado pelas setas com a planta em foco. */
+export function proximoAlvo(pav: Pavimento, atual: Alvo | null, delta: 1 | -1): Alvo | undefined {
+  const lista: Alvo[] = [
+    ...pav.lajes.map((l) => ({ tipo: "laje" as const, id: l.id })),
+    ...pav.vigas.map((v) => ({ tipo: "viga" as const, id: v.id })),
+    ...pav.pilares.map((p) => ({ tipo: "pilar" as const, id: p.id })),
+  ];
+  if (lista.length === 0) return undefined;
+  const i = lista.findIndex((a) => atual !== null && a.tipo === atual.tipo && a.id === atual.id);
+  if (i < 0) return delta > 0 ? lista[0] : lista[lista.length - 1];
+  return lista[(i + delta + lista.length) % lista.length];
+}
+
 /** Espaçamento das linhas de grade desenhadas: o da grade, dobrado até ficar ≥ `minPx` na tela. */
 export function passoVisivel(grade: number, escala: number, minPx = 8) {
   let passo = grade;
   while (passo * escala < minPx) passo *= 2;
   return passo;
+}
+
+/** Caixa do mundo (m) de uma laje ou pilar do pavimento; undefined se o id não existe nele. */
+export function caixaDoAlvo(p: Pavimento, alvo: Alvo): Caixa | undefined {
+  if (alvo.tipo === "laje") {
+    const l = p.lajes.find((x) => x.id === alvo.id);
+    return l && { xmin: l.x, ymin: l.y, xmax: l.x + l.lx, ymax: l.y + l.ly };
+  }
+  if (alvo.tipo === "pilar") {
+    const q = p.pilares.find((x) => x.id === alvo.id);
+    return q && { xmin: q.x, ymin: q.y, xmax: q.x, ymax: q.y };
+  }
+  return undefined;
+}
+
+/** Se a caixa do mundo inteira cabe dentro da área de `largura` × `altura` px da tela. */
+export function cabeNaTela(v: Vista, c: Caixa, largura: number, altura: number): boolean {
+  const r = retanguloTela(v, c);
+  return r.x >= 0 && r.y >= 0 && r.x + r.width <= largura && r.y + r.height <= altura;
 }
