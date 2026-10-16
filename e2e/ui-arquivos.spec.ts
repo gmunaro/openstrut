@@ -84,10 +84,13 @@ test.describe("importação da obra do SISTRUT", () => {
   });
 
   test("o botão abre o seletor de arquivos pelo teclado", async ({ page }) => {
+    // a espera vem antes do goto: o Playwright liga a interceptação do seletor de forma
+    // assíncrona, e um Enter logo depois às vezes chegava antes dela (a página clicava o
+    // input com ativação do usuário, mas o evento não vinha)
+    const seletor = page.waitForEvent("filechooser");
     await page.goto("/");
     const botao = page.getByRole("button", { name: "Importar obra do SISTRUT" });
     await botao.focus();
-    const seletor = page.waitForEvent("filechooser");
     await page.keyboard.press("Enter");
     const escolha = await seletor;
     expect(escolha.isMultiple()).toBe(true);
