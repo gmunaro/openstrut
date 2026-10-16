@@ -143,6 +143,11 @@ test("resultados secoes paradas-original-900", async ({ page }) => {
   await revisarSecoes(page, 900, 800, "900-");
 });
 
+test("resultados secoes paradas-original-1920", async ({ page }) => {
+  test.setTimeout(180_000);
+  await revisarSecoes(page, 1920, 1080, "1920-");
+});
+
 // Memória de cálculo: cada detalhamento traz um "Memória do detalhamento" fechado por
 // padrão. Abre cada um com foco e Enter, tira uma captura por botão e grava o estado.
 test("resultados memoria paradas-original-1366", async ({ page }) => {
