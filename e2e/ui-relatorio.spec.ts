@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { arrastar, clicar } from "./planta";
 
 // Áreas RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO, numa obra NB-1/78 de referência
 // (UI-COMUM.md): 1 pavimento, 4 lajes 4×5 m em grade 2×2, vigas no contorno e no meio e 9
@@ -13,47 +14,6 @@ import path from "node:path";
 const PASTA = path.resolve(process.cwd(), "e2e/prints/ui-relatorio");
 const NOME_OBRA = "Edificio Relatorio UI";
 const NAO_EXISTE = "não existe no SISTRUT";
-
-type Ponto = { x: number; y: number };
-
-/** Ponto do mundo (m) sob o cursor, lido do rodapé da planta (`x = … y = … m`). */
-async function mundoSobCursor(page: Page, p: Ponto): Promise<Ponto> {
-  await page.mouse.move(p.x, p.y);
-  const texto = await page.getByText(/^x = /).innerText();
-  const m = /x = (-?[\d,.]+)\s+y = (-?[\d,.]+)/.exec(texto);
-  if (!m?.[1] || !m[2]) throw new Error(`rodapé da planta sem coordenadas: "${texto}"`);
-  return { x: Number(m[1].replace(",", ".")), y: Number(m[2].replace(",", ".")) };
-}
-
-/** Função mundo (m) → tela (px) da planta, calibrada pelo rodapé nos cantos da área. */
-async function calibrar(page: Page, svg: Locator) {
-  await svg.scrollIntoViewIfNeeded();
-  const b = await svg.boundingBox();
-  if (!b) throw new Error("planta sem caixa na tela");
-  const p1 = { x: b.x + 100, y: b.y + 100 };
-  const p2 = { x: b.x + b.width - 100, y: b.y + b.height - 100 };
-  const m1 = await mundoSobCursor(page, p1);
-  const m2 = await mundoSobCursor(page, p2);
-  const escala = (p2.x - p1.x) / (m2.x - m1.x);
-  const ox = p1.x - m1.x * escala;
-  const oy = p1.y + m1.y * escala;
-  return (m: Ponto): Ponto => ({ x: ox + m.x * escala, y: oy - m.y * escala });
-}
-
-async function clicar(page: Page, svg: Locator, m: Ponto) {
-  const p = (await calibrar(page, svg))(m);
-  await page.mouse.click(p.x, p.y);
-}
-
-async function arrastar(page: Page, svg: Locator, a: Ponto, b: Ponto) {
-  const t = await calibrar(page, svg);
-  const A = t(a);
-  const B = t(b);
-  await page.mouse.move(A.x, A.y);
-  await page.mouse.down();
-  await page.mouse.move(B.x, B.y, { steps: 10 });
-  await page.mouse.up();
-}
 
 /** Abre o diálogo de materiais, alterna o switch do modo pelo teclado e aplica. */
 async function alternarModo(page: Page, esperado: "true" | "false") {
