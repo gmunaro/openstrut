@@ -273,6 +273,10 @@ function DesenhoViga({
   );
 }
 
+/** Escala (px/m) mínima para desenhar o nome do pilar. Abaixo disso o nome encosta no
+ *  nome da viga vizinha; o nome continua na dica do pilar e no painel de propriedades. */
+const ESCALA_NOME_PILAR = 30;
+
 function DesenhoPilar({
   p,
   vista,
@@ -299,15 +303,17 @@ function DesenhoPilar({
         stroke={selecionado ? COR_SELECAO : "#0f172a"}
         strokeWidth={selecionado ? 3 : 1}
       />
-      <text
-        x={c.x + meiaB + 3}
-        y={c.y - meiaH - 3}
-        fontSize={11}
-        fill="#f1f5f9"
-        pointerEvents="none"
-      >
-        {p.nome}
-      </text>
+      {vista.escala >= ESCALA_NOME_PILAR && (
+        <text
+          x={c.x + meiaB + 3}
+          y={c.y - meiaH - 3}
+          fontSize={11}
+          fill="#f1f5f9"
+          pointerEvents="none"
+        >
+          {p.nome}
+        </text>
+      )}
     </g>
   );
 }
