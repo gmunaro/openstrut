@@ -180,7 +180,11 @@ export function DialogoMateriais({
               </SelectContent>
             </Select>
           </div>
-          <SwitchModo modo={f.modoCalculo} aoMudar={(modoCalculo) => setF({ ...f, modoCalculo })} />
+          <SwitchModo
+            norma={f.norma}
+            modo={f.modoCalculo}
+            aoMudar={(modoCalculo) => setF({ ...f, modoCalculo })}
+          />
           {CAMPOS_NUM.slice(0, 1).map((c) => (
             <CampoNumerico key={c.campo} c={c} f={f} setF={setF} />
           ))}
@@ -347,8 +351,18 @@ function SeletorAco({
 
 /** Switch do modo de cálculo (Obra.modoCalculo): desligado = corrigido, ligado = como o
  *  SISTRUT original. A dica resume o que muda (a lista completa está em
- *  docs/MODO-CALCULO.md). */
-function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCalculo) => void }) {
+ *  docs/MODO-CALCULO.md). Fora da NB-1/78 o switch fica desabilitado e o valor salvo
+ *  não muda: a norma não usa o modo. */
+function SwitchModo({
+  norma,
+  modo,
+  aoMudar,
+}: {
+  norma: NormaId;
+  modo: ModoCalculo;
+  aoMudar: (m: ModoCalculo) => void;
+}) {
+  const semEfeito = norma !== "nb1-78";
   return (
     <div className="col-span-2 grid gap-1.5">
       <div className="flex items-center gap-1">
@@ -370,16 +384,17 @@ function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCal
           </span>
         </Dica>
       </div>
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className={modo === "corrigido" ? "font-medium" : "text-muted-foreground"}>
           {NOME_MODO.corrigido}
         </span>
         <Switch
           id="mat-modo"
           checked={modo === "original"}
+          disabled={semEfeito}
           onCheckedChange={(ligado) => aoMudar(ligado ? "original" : "corrigido")}
           aria-labelledby="mat-modo-titulo mat-modo-original"
-          aria-describedby="mat-modo-dica"
+          aria-describedby={semEfeito ? "mat-modo-dica mat-modo-aviso" : "mat-modo-dica"}
         />
         <Label
           id="mat-modo-original"
@@ -388,6 +403,11 @@ function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCal
         >
           {NOME_MODO.original}
         </Label>
+        {semEfeito && (
+          <span id="mat-modo-aviso" className="text-muted-foreground text-xs">
+            O modo de cálculo só se aplica à NB-1/78.
+          </span>
+        )}
       </div>
     </div>
   );
