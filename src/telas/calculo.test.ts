@@ -72,6 +72,44 @@ describe("coletarAvisos", () => {
     };
     expect(coletarAvisos(r)).toEqual([{ local: "Tipo", elemento: p.pilar.nome, texto: "λ > 90" }]);
   });
+
+  it("avisos da verificação de seção dada e o erro de caso do pilar também entram", () => {
+    const c = calcular(obraDuasLajes("nb1-78"));
+    if (c.tipo !== "ok") throw new Error("esperado cálculo ok");
+    const p = c.resultado.pilares[0]!;
+    const verificacao = {
+      indice: 0,
+      esforcosDoLance: true,
+      nk: 100,
+      casos: [
+        {
+          rotulo: "ea +",
+          mx: 0,
+          my: 0,
+          mTotal: 0,
+          mrX: 0,
+          mrY: 0,
+          mrTotal: 0,
+          veredito: "—",
+          erro: "D-2: o original trava neste caso",
+        },
+      ],
+      avisos: ["verificação não concluiu"],
+    };
+    const r = {
+      ...c.resultado,
+      avisos: [],
+      pavimentos: [],
+      pilares: [
+        { ...p, resultado: { ...p.resultado, avisos: ["λ > 90"] }, verificacoes: [verificacao] },
+      ],
+    };
+    expect(coletarAvisos(r)).toEqual([
+      { local: "Tipo", elemento: p.pilar.nome, texto: "λ > 90" },
+      { local: "Tipo", elemento: p.pilar.nome, texto: "verificação não concluiu" },
+      { local: "Tipo", elemento: p.pilar.nome, texto: "D-2: o original trava neste caso" },
+    ]);
+  });
 });
 
 describe("nomeArquivoSugerido", () => {

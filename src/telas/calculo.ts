@@ -59,9 +59,17 @@ export const avisosLaje = (r: ResultadoLaje) => [...r.esforcos.avisos, ...r.arma
 /** Avisos da viga: os da análise contínua e os do dimensionamento (já com o tramo). */
 export const avisosViga = (r: ResultadoViga) => [...new Set([...r.analise.avisos, ...r.avisos])];
 
+/** Avisos das verificações de seção dada do pilar (NB-1/78): os da própria
+ *  verificação e o `erro` de cada caso de excentricidade (onde o original trava). */
+export const avisosVerificacoesPilar = (p: Pick<ResultadoPilar, "verificacoes">): string[] =>
+  (p.verificacoes ?? []).flatMap((v) => [
+    ...v.avisos,
+    ...v.casos.flatMap((c) => (c.erro ? [c.erro] : [])),
+  ]);
+
 /** Todos os avisos da obra, na ordem: obra, pavimentos (lajes, montagem, vigas,
- *  equilíbrio), pilares por nível e, se houver, o detalhamento (vigas, lajes e
- *  pilares).
+ *  equilíbrio), pilares por nível (cálculo e verificações) e, se houver, o
+ *  detalhamento (vigas, lajes e pilares).
  *  Nenhum é filtrado. */
 export function coletarAvisos(r: ResultadoObra, detalhamento?: DetalhamentoObra | null): Aviso[] {
   const avisos: Aviso[] = r.avisos.map((texto) => ({ local: "", elemento: "", texto }));
@@ -81,7 +89,7 @@ export function coletarAvisos(r: ResultadoObra, detalhamento?: DetalhamentoObra 
     for (const texto of p.equilibrio.avisos) avisos.push({ local, elemento: "equilíbrio", texto });
   }
   for (const p of r.pilares)
-    for (const texto of p.resultado.avisos)
+    for (const texto of [...p.resultado.avisos, ...avisosVerificacoesPilar(p)])
       avisos.push({ local: rotuloNivel(r, p), elemento: p.pilar.nome, texto });
   for (const v of detalhamento?.vigas ?? [])
     for (const texto of v.detalhamento.avisos)

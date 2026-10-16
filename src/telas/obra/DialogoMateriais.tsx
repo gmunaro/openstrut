@@ -1,7 +1,7 @@
 // Diálogo "Obra e materiais": nome, norma, modo de cálculo (corrigido ou como o SISTRUT
 // original, com a dica do que muda), fck, aços, classe do aço (só NB-1/78; CA-25 só A),
 // classe de agressividade e cobrimentos. Grava tudo de uma vez (uma entrada no desfazer).
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dica } from "@/components/ui/dica";
 import {
@@ -88,14 +88,17 @@ const paraFormulario = (o: Obra, m: Materiais = o.materiais): Formulario => ({
   },
 });
 
+// botaoOrigem recebe o foco ao fechar: o Radix só o devolve se o diálogo for um DialogTrigger.
 export function DialogoMateriais({
   obra,
   aberto,
   aoMudarAberto,
+  botaoOrigem,
 }: {
   obra: Obra;
   aberto: boolean;
   aoMudarAberto: (a: boolean) => void;
+  botaoOrigem: RefObject<HTMLButtonElement | null>;
 }) {
   const editar = useObra((e) => e.editar);
   const [f, setF] = useState(() => paraFormulario(obra));
@@ -143,7 +146,13 @@ export function DialogoMateriais({
 
   return (
     <Dialog open={aberto} onOpenChange={aoMudarAberto}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          botaoOrigem.current?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Obra e materiais</DialogTitle>
           <DialogDescription>
@@ -180,7 +189,11 @@ export function DialogoMateriais({
               </SelectContent>
             </Select>
           </div>
-          <SwitchModo modo={f.modoCalculo} aoMudar={(modoCalculo) => setF({ ...f, modoCalculo })} />
+          <SwitchModo
+            norma={f.norma}
+            modo={f.modoCalculo}
+            aoMudar={(modoCalculo) => setF({ ...f, modoCalculo })}
+          />
           {CAMPOS_NUM.slice(0, 1).map((c) => (
             <CampoNumerico key={c.campo} c={c} f={f} setF={setF} />
           ))}
@@ -347,8 +360,18 @@ function SeletorAco({
 
 /** Switch do modo de cálculo (Obra.modoCalculo): desligado = corrigido, ligado = como o
  *  SISTRUT original. A dica resume o que muda (a lista completa está em
- *  docs/MODO-CALCULO.md). */
-function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCalculo) => void }) {
+ *  docs/MODO-CALCULO.md). Fora da NB-1/78 o switch fica desabilitado e o valor salvo
+ *  não muda: a norma não usa o modo. */
+function SwitchModo({
+  norma,
+  modo,
+  aoMudar,
+}: {
+  norma: NormaId;
+  modo: ModoCalculo;
+  aoMudar: (m: ModoCalculo) => void;
+}) {
+  const semEfeito = norma !== "nb1-78";
   return (
     <div className="col-span-2 grid gap-1.5">
       <div className="flex items-center gap-1">
@@ -357,34 +380,30 @@ function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCal
         </span>
         <Dica id="mat-modo-dica" rotulo="O que muda com o modo de cálculo">
           <span className="block">
-            Só na NB-1/78, que nos dois modos calcula pelo método do SISTRUT 4.0.{" "}
-            {NOME_MODO.original} repete o programa de 1991 número a número (CA-50 = 5 t/cm²,
-            concreto 2,5 t/m³, cobrimentos do SISTRUT, precisão simples), inclusive os erros.
-            Corrigido usa 500 MPa, 25 kN/m³ e os cobrimentos da obra, e corrige os erros, entre
-            eles:
+            Só vale na NB-1/78. {NOME_MODO.original} reproduz o SISTRUT 4.0 número a número,
+            inclusive os defeitos. {NOME_MODO.corrigido} usa aço de 500 MPa, concreto de 25 kN/m³ e
+            os cobrimentos da obra, e corrige os defeitos, entre eles:
           </span>
-          <span className="mt-1 block">· flecha das lajes nunca verificada;</span>
+          <span className="mt-1 block">· a flecha das lajes, nunca verificada no original;</span>
           <span className="block">
-            · armadura mínima de viga com CA-25 de 0,15 % em vez de 0,25 %;
+            · a armadura mínima de viga: 0,25 % com CA-25 (o original usa 0,15 %);
           </span>
           <span className="block">
-            · reações truncadas no .REP e momento da viga no pilar sem rigidez nem direção;
-          </span>
-          <span className="block">
-            · volume e fôrma de viga pelo DESINIT, que conta de novo a faixa da laje.
+            · as reações truncadas no .REP e o momento de viga no pilar sem .RLP nem .SEC.
           </span>
         </Dica>
       </div>
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className={modo === "corrigido" ? "font-medium" : "text-muted-foreground"}>
           {NOME_MODO.corrigido}
         </span>
         <Switch
           id="mat-modo"
           checked={modo === "original"}
+          disabled={semEfeito}
           onCheckedChange={(ligado) => aoMudar(ligado ? "original" : "corrigido")}
           aria-labelledby="mat-modo-titulo mat-modo-original"
-          aria-describedby="mat-modo-dica"
+          aria-describedby={semEfeito ? "mat-modo-dica mat-modo-aviso" : "mat-modo-dica"}
         />
         <Label
           id="mat-modo-original"
@@ -393,6 +412,11 @@ function SwitchModo({ modo, aoMudar }: { modo: ModoCalculo; aoMudar: (m: ModoCal
         >
           {NOME_MODO.original}
         </Label>
+        {semEfeito && (
+          <span id="mat-modo-aviso" className="text-muted-foreground text-xs">
+            O modo de cálculo só se aplica à NB-1/78.
+          </span>
+        )}
       </div>
     </div>
   );

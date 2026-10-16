@@ -4,6 +4,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { lerObra, serializarObra } from "../../armazenamento/arquivo";
+import { obraNova } from "../../dominio/criar";
 import { useObra } from "../../estado/obra";
 import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
 
@@ -240,4 +241,74 @@ describe("tela da obra: sem obra aberta", () => {
     await user.click(screen.getByRole("link", { name: /Ir para o início/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   });
+});
+
+describe("tela da obra: avisos de salvar", () => {
+  it("salvo em arquivo é status; falha ao salvar é alert", async () => {
+    const { user } = await abrirTela();
+    const disco = arquivoFalso("Casa.openstrut.json");
+    instalar("showSaveFilePicker", async () => disco.handle);
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    const salvo = await screen.findByText(/^Salvo em Casa\.openstrut\.json às/);
+    expect(salvo.getAttribute("role")).toBe("status");
+  });
+
+  it("falha ao salvar aparece como alert", async () => {
+    const { user } = await abrirTela();
+    instalar("showSaveFilePicker", async () => {
+      throw new Error("disco cheio");
+    });
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+    const erro = await screen.findByText(/^Erro ao salvar: /);
+    expect(erro.getAttribute("role")).toBe("alert");
+  });
+});
+
+describe("tela da obra: abrir com alterações não salvas", () => {
+  it("cancelar o diálogo não abre o seletor; 'Abrir outra' abre", async () => {
+    const { user } = await abrirTela();
+    const seletor = vi.fn(async () => {
+      throw new DOMException("cancelado", "AbortError");
+    });
+    instalar("showOpenFilePicker", seletor);
+
+    await user.click(screen.getByRole("button", { name: "Abrir" }));
+    const dialogo = await screen.findByRole("dialog", { name: "Abrir outra obra?" });
+    await user.click(within(dialogo).getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(seletor).not.toHaveBeenCalled();
+    expect(useObra.getState().obra?.nome).toBe("Casa");
+
+    await user.click(screen.getByRole("button", { name: "Abrir" }));
+    const outra = await screen.findByRole("dialog", { name: "Abrir outra obra?" });
+    await user.click(within(outra).getByRole("button", { name: "Abrir outra" }));
+    await waitFor(() => expect(seletor).toHaveBeenCalledOnce());
+  });
+});
+
+describe("tela da obra: exportar DXF sem o que exportar", () => {
+  it.each([
+    ["formas", /Exportar DXF \(formas\)/],
+    ["armação", /Exportar DXF \(armação\)/],
+  ])(
+    "DXF de %s com obra vazia fica com aria-disabled, sem baixar, e mostra o motivo",
+    async (_nome, botao) => {
+      abrirObra(obraNova("Casa", "nb1-78"));
+      const { user } = renderizarApp("/obra");
+      await screen.findByRole("heading", { level: 1, name: "Casa" });
+      const clique = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+      const dxf = screen.getByRole("button", { name: botao });
+      expect(dxf.getAttribute("aria-disabled")).toBe("true");
+      expect(dxf.hasAttribute("disabled")).toBe(false);
+      dxf.focus();
+      expect(document.activeElement).toBe(dxf);
+
+      await user.click(dxf);
+      expect(clique).not.toHaveBeenCalled();
+      const motivo = screen.getByText(/^(Não há|Calcule a obra primeiro)/);
+      expect(motivo.getAttribute("role")).toBe("status");
+      clique.mockRestore();
+    },
+  );
 });
