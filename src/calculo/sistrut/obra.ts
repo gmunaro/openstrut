@@ -38,6 +38,8 @@
 // "SISTRUT" (.LAP 1,5; .DSP 2,0 + 2,0; .PIP 2,0), Float32 por atribuição. Corrigido =
 // SI convertido exato (fck/98,0665, 500 MPa → 5,0986 t/cm², 25 kN/m³ → 2,5493 t/m³),
 // cobrimentos da obra, float64.
+import { rotuloOpcao, type AvisoComOpcao, type IdAviso } from "../avisos";
+import { num, numAte } from "../texto";
 import type { Bordo, Laje, Materiais, Obra, Pavimento, Pilar, Vinculo } from "../../dominio/obra";
 import type { BarraImposta, ParametrosLajeObra, Ponto, TipoLaje } from "../../dominio/obra";
 import type { ParametrosVigaObra } from "../../dominio/obra";
@@ -266,7 +268,7 @@ export interface VigaSistrut {
    *  detalhamento nem quadro (.TAB) e ela fica fora do resumo. `impressa` = a tabela de
    *  apoios e tramos já saiu na impressora: só na passada que imprime (V_187a = 1, sem
    *  fissuração nem "Altero a armadura", DESDIM.BAS:2771-2776, 3058-3060). */
-  interrompida?: { motivos: ("cisalhamento" | "momento")[]; impressa: boolean };
+  interrompida?: { motivos: ("cisalhamento" | "momento")[]; impressa: boolean; aviso: string };
 }
 
 export interface PavimentoSistrut {
@@ -341,7 +343,11 @@ export interface ResultadoSistrut {
   /** Carga que não chegou à fundação, por pavimento: a da base de um pilar que nasce
    *  sobre viga de transição sem `Pilar.transicao` e a linha do .REP sem coluna. A
    *  projeção marca o pavimento com falha. */
-  falhas: { pavimentoId: string; texto: string }[];
+  falhas: { pavimentoId: string; texto: string; opcao?: { id: IdAviso; pilarId: string } }[];
+  /** Avisos que a tela liga a uma opção do elemento, com id estável (`calculo/avisos.ts`):
+   *  a viga que parou no DESDIM e o pilar que nasce acima da fundação. O `texto` é o mesmo
+   *  da lista de avisos da viga ou das falhas do pavimento. */
+  avisosComOpcao: AvisoComOpcao[];
   /** Materiais dos pilares: os da obra com os do PILAR.INI da obra por cima. */
   materiaisPilar: MateriaisSistrut;
   /** PILAR opção 6 de cada `Pilar.verificacoes` (pilaresDaObra.ts). */
@@ -573,7 +579,7 @@ function codigoDaBarra(
   const ie = par.laje.espacamentos.findIndex((x) => perto(x, b.espacamento));
   if (ib < 0 || (origem === "lajeproc" && ie < 0)) {
     avisos.push(
-      `Barra imposta φ${b.bitola} c/${b.espacamento} fora das tabelas do .LAP; ignorada.`,
+      `Barra imposta φ ${numAte(b.bitola, 1)} c/${numAte(b.espacamento, 1)} cm fora das bitolas e espaçamentos dos parâmetros de laje (.LAP); ignorada.`,
     );
     return undefined;
   }
@@ -720,7 +726,7 @@ function painelDoPavimento(
       if (c > par.laje.relacaoNegPosMax || c < par.laje.relacaoNegPosMin) {
         // o original recusa (BEEP, LAJECALC.BAS:4096)
         avisos.push(
-          `Laje ${l.nome}, lado ${k + 1}: i = ${coef} fora de ${Number(par.laje.relacaoNegPosMin.toFixed(2))} a ${Number(par.laje.relacaoNegPosMax.toFixed(2))}; vale o do engaste.`,
+          `Laje ${l.nome}, lado ${k + 1}: i = ${numAte(coef, 2)} fora de ${numAte(par.laje.relacaoNegPosMin, 2)} a ${numAte(par.laje.relacaoNegPosMax, 2)}; vale o do engaste.`,
         );
         return;
       }
@@ -884,9 +890,9 @@ function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
   return { predominanteKgPorM: predominante, excecoes };
 }
 
-/** A tela do DESDIM quando a viga para (DESDIM.BAS:3062-3080). */
-function textoInterrompida(nome: string, motivos: readonly ("cisalhamento" | "momento")[]) {
-  const tela = [
+/** A tela do DESDIM quando a viga para (DESDIM.BAS:3062-3080), para a memória. */
+function telaInterrompida(motivos: readonly ("cisalhamento" | "momento")[]) {
+  return [
     "Atencao !!!",
     ...(motivos.includes("cisalhamento") ? ["Tensao de Cisalhamento acima do Limite."] : []),
     ...(motivos.includes("momento")
@@ -894,7 +900,16 @@ function textoInterrompida(nome: string, motivos: readonly ("cisalhamento" | "mo
       : []),
     "Continuo com o processamento desta Viga  S/*N*",
   ].join(" ");
-  return `${nome}: o DESDIM para a viga com a resposta padrão N ("${tela}"): sem detalhamento nem quadro (.TAB). Para seguir, marque continuaSeExcederLimite na viga.`;
+}
+
+/** Aviso da viga que parou no DESDIM: o motivo e a opção da tela que a faz seguir. */
+function textoInterrompida(nome: string, motivos: readonly ("cisalhamento" | "momento")[]) {
+  // na ordem da tela do DESDIM: cisalhamento, depois momento
+  const porque = [
+    ...(motivos.includes("cisalhamento") ? ["tensão de cisalhamento acima do limite"] : []),
+    ...(motivos.includes("momento") ? ["momento acima de 40 % do limite da armadura simples"] : []),
+  ].join(" e ");
+  return `${nome}: ${porque}. Como no original com a resposta padrão "N", a viga parou no dimensionamento, sem detalhamento nem quadro de ferros. Para seguir, marque ${rotuloOpcao("viga.continuar-acima-do-limite")} na viga.`;
 }
 
 /** A armadura comprimida digitada no DESDIM ("Armadura Comprimida", S_60137/S_61fbe) vai
@@ -1120,11 +1135,17 @@ function calcularPavimentoSistrut(
       const motivos = v.dimensionamento.limitesExcedidos ?? [];
       if (modo === "original" && motivos.length > 0 && !g.viga.continuaSeExcederLimite) {
         // a pergunta vem antes de "Altero a Armação" (DESDIM.BAS:3074, 3086): nada é alterado
+        const aviso = textoInterrompida(dados.nome, motivos);
         v.interrompida = {
           motivos,
           impressa: !par.dsp.verificaFissuracao && g.viga.armaduraDigitada === undefined,
+          aviso,
         };
-        v.avisos.push(textoInterrompida(dados.nome, motivos));
+        v.avisos.push(aviso);
+        memoria.push({
+          descricao: `${dados.nome}: o DESDIM pergunta "${telaInterrompida(motivos)}" e segue com o padrão N`,
+          ref: "DESDIM.BAS:3062-3080",
+        });
         vigas.push(v);
         continue;
       }
@@ -1250,9 +1271,9 @@ function calcularPilaresSistrut(
     lancesDasColunas.push(lances);
   });
 
-  const falha = (pavimentoId: string, texto: string) => {
+  const falha = (pavimentoId: string, texto: string, opcao?: { id: IdAviso; pilarId: string }) => {
     if (!falhas.some((f) => f.pavimentoId === pavimentoId && f.texto === texto))
-      falhas.push({ pavimentoId, texto });
+      falhas.push({ pavimentoId, texto, ...(opcao ? { opcao } : {}) });
   };
   /** Base de cada coluna no edifício (o nível do lance de baixo). */
   const baseDa = (ci: number) => lancesDasColunas[ci]![0]!.nivel;
@@ -1275,7 +1296,7 @@ function calcularPilaresSistrut(
       if (!c) {
         falha(
           pav.id,
-          `Carga de ${linha.total.toFixed(2)} t do pilar ${linha.pilar} no .REP do pavimento ${pav.nome} não foi levada a nenhuma coluna: não chega à fundação.`,
+          `Carga de ${num(linha.total, 2)} t do pilar ${linha.pilar} no .REP do pavimento ${pav.nome} não foi levada a nenhuma coluna: não chega à fundação.`,
         );
         return [];
       }
@@ -1459,17 +1480,18 @@ function calcularPilaresSistrut(
     if (base.nivel === 0) return;
     const { pav } = niveis[base.nivel]!;
     const abaixo = niveis[base.nivel - 1]!.pav;
-    const carga = `${(f.fundacao * KN_POR_TF).toFixed(1)} kN (${f.fundacao.toFixed(2)} t)`;
+    const carga = `${num(f.fundacao * KN_POR_TF, 1)} kN (${num(f.fundacao, 2)} t)`;
     if (base.pilar.transicao)
       lances
         .find((l) => l.pilarId === base.pilar.id && l.nivel === base.nivel)
         ?.avisos.push(
-          `${base.pilar.nome}: nasce sobre viga de transição no pavimento ${abaixo.nome}; a carga na base, ${carga}, tem de estar nas cargas da viga (Pilar.transicao).`,
+          `${base.pilar.nome}: nasce sobre viga de transição no pavimento ${abaixo.nome}; a carga na base, ${carga}, tem de estar nas cargas dessa viga.`,
         );
     else
       falha(
         abaixo.id,
-        `Pilar ${base.pilar.nome} do pavimento ${pav.nome} nasce acima da fundação: a carga na base dele, ${carga}, não chega à fundação. Lance-a na viga de transição (Viga.cargas) e marque o pilar com transicao, como o usuário do original faz no VIGA.`,
+        `Pilar ${base.pilar.nome} do pavimento ${pav.nome} nasce acima da fundação: a carga na base dele, ${carga}, não chega à fundação. Lance essa carga nas cargas da viga de transição e marque ${rotuloOpcao("pilar.nasce-em-transicao")} no pilar, como o usuário do original faz no VIGA.`,
+        { id: "pilar.nasce-em-transicao", pilarId: base.pilar.id },
       );
   });
   return { colunas, lances, verificacoes, predimensionamentos, fundacoes };
@@ -1513,6 +1535,34 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     lances,
     quadros,
     falhas,
+    avisosComOpcao: [
+      ...pavimentos.flatMap((p) =>
+        p.vigas.flatMap((v): AvisoComOpcao[] =>
+          v.interrompida
+            ? [
+                {
+                  id: "viga.continuar-acima-do-limite",
+                  pavimentoId: p.pavimentoId,
+                  elemento: { tipo: "viga", id: v.id },
+                  texto: v.interrompida.aviso,
+                },
+              ]
+            : [],
+        ),
+      ),
+      ...falhas.flatMap((f): AvisoComOpcao[] =>
+        f.opcao
+          ? [
+              {
+                id: f.opcao.id,
+                pavimentoId: f.pavimentoId,
+                elemento: { tipo: "pilar", id: f.opcao.pilarId },
+                texto: f.texto,
+              },
+            ]
+          : [],
+      ),
+    ],
     resumoVigas: resumoGeralVigas(quadros, par.dsp, modo),
     avisos,
     materiaisPilar: matPilar,

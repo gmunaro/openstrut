@@ -486,7 +486,7 @@ describe("continuidades do LAJECALC 1 (grupo, i por lado, lista confirmada, D10)
     expect(p.painel.lajes[1]!.codigos[0]).toBe(22);
     const fora = de(vizinhas({ coeficientesLados: [null, null, 2.5, null] }, {}));
     expect(fora.painel.lajes[0]!.codigos[2]).toBe(22);
-    expect(fora.avisos).toEqual(["Laje L1, lado 3: i = 2.5 fora de 0.3 a 2; vale o do engaste."]);
+    expect(fora.avisos).toEqual(["Laje L1, lado 3: i = 2,5 fora de 0,3 a 2; vale o do engaste."]);
   });
 
   it("lista confirmada: dois trechos sem vizinha no lado comum, e linhas que o assistente recusa", () => {

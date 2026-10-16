@@ -335,7 +335,7 @@ describe("NB-1/78: viga sem quadro do DESINIT e o que o aço é", () => {
         "PAV1: V1: sem o quadro do DESINIT; volume, fôrma e aço estimados pela regra da V2.",
       );
     } finally {
-      v1.quadro = quadro;
+      if (quadro) v1.quadro = quadro;
     }
   });
 });

@@ -913,6 +913,7 @@ export function calcularObraPeloSistrut(obra: Obra, norma: Norma): ResultadoObra
     pavimentos,
     pilares: resultadosPilares(obra, sistrut, pavimentos),
     avisos: [...sistrut.avisos],
+    avisosComOpcao: sistrut.avisosComOpcao,
     sistrut,
   };
 }

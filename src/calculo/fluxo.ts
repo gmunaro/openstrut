@@ -1,6 +1,7 @@
 // Cálculo da obra inteira: lajes → vigas → pilares, pavimento por pavimento,
 // com verificação de equilíbrio. Orquestra as peças comuns (vinculação,
 // compatibilização, montagem, viga contínua, acumulação) e as da norma.
+import type { AvisoComOpcao } from "./avisos";
 import type { Laje, Obra, Pavimento, Pilar } from "../dominio/obra";
 import { calcularObraPeloSistrut } from "./fluxoSistrut";
 import type { ResultadoSistrut } from "./sistrut/obra";
@@ -132,6 +133,9 @@ export interface ResultadoObra {
   pavimentos: ResultadoPavimento[];
   pilares: ResultadoPilar[];
   avisos: string[];
+  /** NB-1/78: os avisos que a tela liga a uma opção do elemento, com id estável
+   *  (`calculo/avisos.ts`); o texto é o mesmo das listas de avisos e falhas. */
+  avisosComOpcao?: AvisoComOpcao[];
   /** NB-1/78: o resultado do caminho do SISTRUT nas unidades do original (t, m, cm,
    *  t/cm², t·m), do qual os campos acima são a projeção em SI (fluxoSistrut.ts). */
   sistrut?: ResultadoSistrut;

@@ -471,13 +471,28 @@ describe('"Continuo com o processamento desta Viga" (DESDIM.BAS:3062-3080)', () 
     expect(v.interrompida).toEqual({
       motivos: v.dimensionamento!.limitesExcedidos,
       impressa: true,
+      aviso: v.avisos.at(-1),
     });
     expect(v.detalhamento).toBeUndefined();
     expect(v.quadro).toBeUndefined();
     expect(r.quadros).toEqual([]);
     expect(r.resumoVigas.porViga).toEqual([]);
-    expect(v.avisos.at(-1)).toContain("Atencao !!! Tensao de Cisalhamento acima do Limite.");
-    expect(v.avisos.at(-1)).toContain("Continuo com o processamento desta Viga  S/*N*");
+    // o aviso diz em pt-BR o que marcar na tela, com id estável; a tela do DESDIM vai
+    // para a memória do pavimento
+    expect(v.avisos.at(-1)).toBe(
+      `${v.nome}: tensão de cisalhamento acima do limite e momento acima de 40 % do limite da armadura simples. Como no original com a resposta padrão "N", a viga parou no dimensionamento, sem detalhamento nem quadro de ferros. Para seguir, marque "Continuar mesmo acima do limite" na viga.`,
+    );
+    expect(r.avisosComOpcao).toEqual([
+      {
+        id: "viga.continuar-acima-do-limite",
+        pavimentoId: r.pavimentos[0]!.pavimentoId,
+        elemento: { tipo: "viga", id: v.id },
+        texto: v.avisos.at(-1),
+      },
+    ]);
+    const tela = r.pavimentos[0]!.memoria.find((m) => m.ref === "DESDIM.BAS:3062-3080");
+    expect(tela?.descricao).toContain("Atencao !!! Tensao de Cisalhamento acima do Limite.");
+    expect(tela?.descricao).toContain("Continuo com o processamento desta Viga  S/*N*");
   });
 
   it('com a resposta "S" (continuaSeExcederLimite) a viga segue até o DESINIT e o quadro', () => {
