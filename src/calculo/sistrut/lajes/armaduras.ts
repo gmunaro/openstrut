@@ -94,8 +94,9 @@ export function secaoDeMaiorX(
  * - As+ principal com max(M+, 0): As se x ≥ 0, senão −1;
  * - As− maior/menor com |M+|·c_max/c_min: só se M > 0 (senão 0); As se x > 0, senão −1;
  * - As+ secundária com o M+ secundário (0 se M+ ≤ 0): As se x > 0, senão −1. Com
- *   M = 0 o x do original é um resíduo positivo e sai o mínimo (flexao.ts;
- *   v2par_laje_balanco: 1,50 e 1,50 com M+ = −0,28).
+ *   M = 0 o x do original é o resíduo do x87 (X − SQR(X^2), flexao.ts): positivo em
+ *   v2par_laje_balanco, que sai com o mínimo (1,50 e 1,50 com M+ = −0,28). No
+ *   corrigido, em float64, x = 0: aceita x ≥ 0, como na principal, e sai o mínimo.
  * Mais a seção de maior x e a barra do relatório da imposição (`secaoDeMaiorX`).
  * E2E H 10: 1,50 / 1,50 / 2,13 / 1,68 (livros_laje.md 2.3).
  */
@@ -118,7 +119,8 @@ export const armadurasLaje: ArmadurasLaje = (momentos, materiais, parametros, mo
   };
 
   const secundaria = flexao(mPositivo > 0 ? momentos.mPositivoSecundarioTcm : 0, false);
-  const asPositivaSecundaria = secundaria.x > 0 ? secundaria.as : -1;
+  const aceitaSecundaria = modo === "original" ? secundaria.x > 0 : secundaria.x >= 0;
+  const asPositivaSecundaria = aceitaSecundaria ? secundaria.as : -1;
 
   const maiorX = secaoDeMaiorX(momentos, materiais, parametros, modo);
   return {

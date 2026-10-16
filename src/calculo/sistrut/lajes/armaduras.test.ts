@@ -220,6 +220,11 @@ describe("regras −1 e 0 das colunas (LAJECALC.BAS:663-731)", () => {
     expect(a.asPositivaSecundaria).toBeCloseTo(1.5, 6);
     expect(a.asNegativaMaior).toBe(0);
     expect(a.asNegativaMenor).toBe(0);
+    // corrigido: em float64 x = 0; a secundária aceita x = 0 e sai o mesmo mínimo
+    // (v2par_laje_balanco imprime 1,50 nas duas)
+    const c = armadurasLaje(m, E2E, PARAM, "corrigido");
+    expect(c.asPositivaPrincipal).toBeCloseTo(1.5, 6);
+    expect(c.asPositivaSecundaria).toBeCloseTo(1.5, 6);
   });
   it("negativa que não passa: −1, e a imposição fica sem barra", () => {
     // H 6 com o M do E2E: x/d 0,64 > ξlim (livros_laje.md 2.4).
