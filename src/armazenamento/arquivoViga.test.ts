@@ -48,6 +48,7 @@ const completa: Partial<Viga> = {
     lajesNoCorte: "nao",
   },
   pilaresNoRep: [7, null, 9],
+  continuaSeExcederLimite: true,
   repeticoes: 3,
   armaduraDigitada: [
     {

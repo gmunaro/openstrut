@@ -1060,6 +1060,10 @@ export interface DimensionamentoViga extends ComMemoria {
   xiLimite: number;
   /** Os esforços do DESCALC que o dimensionamento usou. */
   esforcos: EsforcosDesdim;
+  /** Tensão de cisalhamento acima do limite (τwd ≥ 0,25·fcd, DESDIM.BAS:2984-2990) ou
+   *  momento acima de 40 % do limite da armadura simples (3713): o que faz o DESDIM
+   *  perguntar "Continuo com o processamento desta Viga S/*N*" (3062-3080). */
+  limitesExcedidos?: ("cisalhamento" | "momento")[];
 }
 /** Os esforços saem do DESCALC refeito a partir de `entrada.viga` (o original roda o
  *  DESCALC antes de dimensionar, DESDIM.BAS:795-797): não recebe a análise do VICALC. */

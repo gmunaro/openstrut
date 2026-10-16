@@ -446,3 +446,61 @@ describe("armadura digitada no DESDIM pela obra (motor → DESDIM → DESINIT)",
     expect(v.detalhamento!.posicoes).not.toEqual(sem.detalhamento!.posicoes);
   });
 });
+
+describe('"Continuo com o processamento desta Viga" (DESDIM.BAS:3062-3080)', () => {
+  /** 20 t/m em 2 tramos de 4 m, 20 × 50: τwd = V/(bw·d)·γf ≈ 50/(20·46)·1,4·1000 = 76 t/m²
+   *  > 0,25·fcd = 250·0,15/1,4 = 26,8 (DESDIM.BAS:2984-2988). */
+  const V9: RegistroTeste = {
+    nome: "V9",
+    trechos: [
+      { vao: 0, j: 1.00001, divs: [] },
+      { vao: 4, j: 1.00002, divs: [[20, 4, 0, 0, 0]] },
+      { vao: 4, j: 1.00003, divs: [[20, 4, 0, 0, 0]] },
+      { vao: 0, j: 0, divs: [] },
+    ],
+  };
+  const obra = importa([vig([V9])]).obra;
+  const roda = (o: Obra, modo: "original" | "corrigido") => {
+    const r = calcularObraSistrut(o, { modo });
+    return { r, v: r.pavimentos[0]!.vigas[0]! };
+  };
+
+  it('padrão "N" no modo original: a viga para com a tela do DESDIM; sem detalhamento, quadro nem resumo', () => {
+    const { r, v } = roda(obra, "original");
+    expect(v.dimensionamento!.limitesExcedidos).toContain("cisalhamento");
+    expect(v.interrompida).toEqual({
+      motivos: v.dimensionamento!.limitesExcedidos,
+      impressa: true,
+    });
+    expect(v.detalhamento).toBeUndefined();
+    expect(v.quadro).toBeUndefined();
+    expect(r.quadros).toEqual([]);
+    expect(r.resumoVigas.porViga).toEqual([]);
+    expect(v.avisos.at(-1)).toContain("Atencao !!! Tensao de Cisalhamento acima do Limite.");
+    expect(v.avisos.at(-1)).toContain("Continuo com o processamento desta Viga  S/*N*");
+  });
+
+  it('com a resposta "S" (continuaSeExcederLimite) a viga segue até o DESINIT e o quadro', () => {
+    const o = structuredClone(obra);
+    o.pavimentos[0]!.vigas[0]!.continuaSeExcederLimite = true;
+    const { r, v } = roda(o, "original");
+    expect(v.interrompida).toBeUndefined();
+    expect(v.detalhamento).toBeDefined();
+    expect(r.quadros.map((q) => q.nome)).toEqual(["V9"]);
+  });
+
+  it("modo corrigido: segue, com o aviso do cisalhamento", () => {
+    const { v } = roda(obra, "corrigido");
+    expect(v.interrompida).toBeUndefined();
+    expect(v.detalhamento).toBeDefined();
+    expect(
+      v.dimensionamento!.avisos.some((a) => a.includes("tensão de cisalhamento acima do limite")),
+    ).toBe(true);
+  });
+
+  it("com a verificação de fissuração, a passada que para não imprime (V_187a = 0)", () => {
+    const o = structuredClone(obra);
+    o.parametrosViga = { dsp: { verificaFissuracao: true } };
+    expect(roda(o, "original").v.interrompida?.impressa).toBe(false);
+  });
+});

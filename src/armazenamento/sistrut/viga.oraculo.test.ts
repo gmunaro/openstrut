@@ -434,6 +434,9 @@ interface Caso {
   obra?: () => Obra;
   /** Obra montada à mão, quando o original não gravou arquivo (v2par_viga_r6). */
   obraPronta?: () => Obra;
+  /** Respostas do roteiro que nenhum arquivo grava (ex.: "S" em "Continuo com o
+   *  processamento desta Viga"). */
+  respostas?: (o: Obra) => void;
   oraculo: string;
   /** "VIGA": a análise impressa é a do VIGA; "DESDIM": a do DESCALC do DESDIM. */
   analise: "VIGA" | "DESDIM";
@@ -625,6 +628,11 @@ const CASOS: Caso[] = [
   },
   {
     nome: "v2par_des_especial (DSX.VIG/.SEC/.FOR do run e V2P.DSP)",
+    // o roteiro responde S a "Continuo com o processamento desta Viga" (momento acima de
+    // 40 % no apoio 1), nas duas passadas
+    respostas: (o) => {
+      o.pavimentos[0]!.vigas.find((v) => v.nome === "D1")!.continuaSeExcederLimite = true;
+    },
     requer: [`${RUN.esp}/obra/DSX.VIG`, `${CORRIGIDOS}/v2par_des_especial.json`],
     arquivos: [
       `${RUN.esp}/obra/DSX.VIG`,
@@ -696,6 +704,7 @@ describe.each(CASOS)("$nome", (c) => {
     return;
   }
   const imp = c.obraPronta ? { obra: c.obraPronta(), avisos: [] } : importa(c.arquivos, c.obra?.());
+  c.respostas?.(imp.obra);
   const r = calcularObraSistrut(imp.obra, { modo: "original" });
   const oraculo = json(c.oraculo);
 

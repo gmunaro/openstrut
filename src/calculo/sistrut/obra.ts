@@ -256,6 +256,13 @@ export interface VigaSistrut {
   detalhamento?: DetalhamentoViga;
   quadro?: QuadroViga;
   avisos: string[];
+  /** A viga parou em "Continuo com o processamento desta Viga S/N" com o padrão "N"
+   *  (modo original, sem `Viga.continuaSeExcederLimite`; DESDIM.BAS:3062-3080): o DESDIM
+   *  passa à viga seguinte sem chamar o DESINIT (DESDIM.BAS:799-800), então não há
+   *  detalhamento nem quadro (.TAB) e ela fica fora do resumo. `impressa` = a tabela de
+   *  apoios e tramos já saiu na impressora: só na passada que imprime (V_187a = 1, sem
+   *  fissuração nem "Altero a armadura", DESDIM.BAS:2771-2776, 3058-3060). */
+  interrompida?: { motivos: ("cisalhamento" | "momento")[]; impressa: boolean };
 }
 
 export interface PavimentoSistrut {
@@ -786,6 +793,19 @@ function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
   return { predominanteKgPorM: predominante, excecoes };
 }
 
+/** A tela do DESDIM quando a viga para (DESDIM.BAS:3062-3080). */
+function textoInterrompida(nome: string, motivos: readonly ("cisalhamento" | "momento")[]) {
+  const tela = [
+    "Atencao !!!",
+    ...(motivos.includes("cisalhamento") ? ["Tensao de Cisalhamento acima do Limite."] : []),
+    ...(motivos.includes("momento")
+      ? ["Momento Aplicado acima de 40% do Momento Limite da Armadura simples."]
+      : []),
+    "Continuo com o processamento desta Viga  S/*N*",
+  ].join(" ");
+  return `${nome}: o DESDIM para a viga com a resposta padrão N ("${tela}"): sem detalhamento nem quadro (.TAB). Para seguir, marque continuaSeExcederLimite na viga.`;
+}
+
 /** A armadura comprimida digitada no DESDIM ("Armadura Comprimida", S_60137/S_61fbe) vai
  *  ao DESINIT pelo COMMON (A_13d0$, A_13a2$); os outros elementos ficam com o padrão. */
 function comprimidaDigitada(viga: Pavimento["vigas"][number], dim: DimensionamentoViga) {
@@ -990,7 +1010,20 @@ function calcularPavimentoSistrut(
     };
     const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: avisosForma };
     try {
-      v.dimensionamento = dimensionaViga(entrada, modo, g.viga.armaduraDigitada);
+      v.dimensionamento = dimensionaViga(entrada, modo);
+      const motivos = v.dimensionamento.limitesExcedidos ?? [];
+      if (modo === "original" && motivos.length > 0 && !g.viga.continuaSeExcederLimite) {
+        // a pergunta vem antes de "Altero a Armação" (DESDIM.BAS:3074, 3086): nada é alterado
+        v.interrompida = {
+          motivos,
+          impressa: !par.dsp.verificaFissuracao && g.viga.armaduraDigitada === undefined,
+        };
+        v.avisos.push(textoInterrompida(dados.nome, motivos));
+        vigas.push(v);
+        continue;
+      }
+      if (g.viga.armaduraDigitada)
+        v.dimensionamento = dimensionaViga(entrada, modo, g.viga.armaduraDigitada);
       v.detalhamento = detalhaViga(entrada, v.dimensionamento, modo, {
         apoios,
         ...(eixos ? { eixos } : {}),

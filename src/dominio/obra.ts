@@ -218,6 +218,11 @@ export interface Viga {
    *  Armação" (S_60137 nos apoios, S_61fbe nos tramos) e as de "Modifico as Armaduras" da
    *  fissuração (S_20137). */
   armaduraDigitada?: ArmaduraDigitada[];
+  /** Resposta "S" a "Continuo com o processamento desta Viga S/*N*", que o DESDIM faz com
+   *  tensão de cisalhamento acima do limite ou momento acima de 40 % do limite da armadura
+   *  simples (DESDIM.BAS:3062-3080). Ausente = o padrão "N": no modo original a viga para
+   *  ali, sem detalhamento nem quadro (.TAB). O modo corrigido sempre segue, com aviso. */
+  continuaSeExcederLimite?: boolean;
   /** Seção de cada trecho e de cada apoio no DESENHO (.SEC). Ausente = bw × h. */
   secoes?: { trechos?: SecaoTrechoViga[]; apoios?: SecaoApoioViga[] };
   /** Dados de forma do DESENHO (.FOR) que substituem os tirados da planta.

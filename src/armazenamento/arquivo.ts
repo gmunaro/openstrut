@@ -982,6 +982,8 @@ class Validador {
       this.armaduraDigitada(this.objeto(x, cx), cx),
     );
     if (armadura) r.armaduraDigitada = armadura;
+    if (d.continuaSeExcederLimite !== undefined)
+      r.continuaSeExcederLimite = this.booleano(d, "continuaSeExcederLimite", c);
     return r;
   }
 

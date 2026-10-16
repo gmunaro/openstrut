@@ -219,7 +219,11 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
       b.n1 * areaBitola(b.bitola1, p, modo) +
         (b.n2 > (segundoSeMaisDeUm ? 1 : 0) ? b.n2 * areaBitola(b.bitola2, p, modo) : 0),
     );
+  /** O que vai para V_0E0C$ e faz o DESDIM perguntar "Continuo com o processamento desta
+   *  Viga" (DESDIM.BAS:2990, 3713, 3062-3080). */
+  const limitesExcedidos = new Set<"cisalhamento" | "momento">();
   const avisaFlexao = (r: ReturnType<typeof flexaoSecao>, onde: string) => {
+    if (r.acimaDoLimite) limitesExcedidos.add("momento");
     if (r.acimaDoLimite)
       avisos.push(
         `${viga.nome} ${onde}: momento aplicado acima de 40% do momento limite da armadura simples.`,
@@ -341,6 +345,8 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
     const tauAcima = (v: number) =>
       (v / (sec.d * sec.bw)) * p.coeficienteForca * materiais.gamaF * 1000 >=
       (250 * mult * materiais.fck) / materiais.gamaC;
+    if ((temEsquerda && tauAcima(t.ve)) || (temDireita && tauAcima(t.vd)))
+      limitesExcedidos.add("cisalhamento");
     if ((temEsquerda && tauAcima(t.ve)) || (temDireita && tauAcima(t.vd)))
       avisos.push(`${viga.nome} tramo ${t.indice}: tensão de cisalhamento acima do limite.`);
     const lado = estribosLadoALado(sec.bw, p);
@@ -498,6 +504,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
     ...(balancoEsquerdo ? { balancoEsquerdo } : {}),
     ...(balancoDireito ? { balancoDireito } : {}),
     bitolasEstribo: bitolas,
+    ...(limitesExcedidos.size > 0 ? { limitesExcedidos: [...limitesExcedidos] } : {}),
     xiLimite: xiLim,
     esforcos,
     avisos,
