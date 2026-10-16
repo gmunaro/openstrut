@@ -77,7 +77,7 @@ describe("tela da obra: arquivo", () => {
       throw new DOMException("cancelado", "AbortError");
     });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    expect(screen.queryByText(/Salvo em|Erro ao salvar/)).toBeNull();
+    expect(screen.queryByText(/Salvo em|Não foi possível salvar/)).toBeNull();
     expect(screen.getByText(/sem arquivo/)).toBeTruthy();
   });
 
@@ -259,7 +259,7 @@ describe("tela da obra: avisos de salvar", () => {
       throw new Error("disco cheio");
     });
     await user.click(screen.getByRole("button", { name: "Salvar" }));
-    const erro = await screen.findByText(/^Erro ao salvar: /);
+    const erro = await screen.findByText(/^Não foi possível salvar o arquivo: /);
     expect(erro.getAttribute("role")).toBe("alert");
   });
 });

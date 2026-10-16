@@ -20,7 +20,13 @@ import { criarSalvadorRascunho } from "../../armazenamento/rascunho";
 import type { Obra } from "../../dominio/obra";
 import { useObra } from "../../estado/obra";
 import { EditorPlanta } from "../../planta/EditorPlanta";
-import { baixarArmacaoDxf, baixarFormasDxf, useAbrirObra, useSalvarArquivo } from "../acoes";
+import {
+  baixarArmacaoDxf,
+  baixarFormasDxf,
+  type FalhaDxf,
+  useAbrirObra,
+  useSalvarArquivo,
+} from "../acoes";
 import { calcular, NOME_NORMA } from "../calculo";
 import { DetalhamentoContexto, type DetalhamentoObra, detalharObra } from "../detalhamento";
 import { Erros } from "../Erros";
@@ -86,7 +92,6 @@ const detalheDe = (m: object) =>
   "detalhe" in m && typeof m.detalhe === "string" ? m.detalhe : undefined;
 
 /** Resultado de exportar um DXF: null quando deu certo; senão, os erros e o detalhe técnico. */
-type FalhaDxf = { erros: string[]; detalhe?: string } | null;
 
 /** Motivo para a armação não sair, ou undefined quando dá para exportar. */
 function motivoSemArmacao(d: DetalhamentoObra | null) {
@@ -271,9 +276,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
             aria-disabled={motivoArmacao !== undefined}
             title={motivoArmacao}
             onClick={() =>
-              void exportar(
-                motivoArmacao,
-                () => detalhamento && baixarArmacaoDxf(obra, detalhamento),
+              void exportar(motivoArmacao, () =>
+                detalhamento ? baixarArmacaoDxf(obra, detalhamento) : null,
               )
             }
           >
