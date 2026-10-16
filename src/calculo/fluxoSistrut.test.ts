@@ -235,7 +235,7 @@ describe("direção do M+ principal pelo μ", () => {
 });
 
 describe("falhas que o caminho do SISTRUT marca", () => {
-  it("pilar que some num pavimento do meio: a carga de cima não chega à fundação", () => {
+  it("pilar que some num pavimento do meio: nasce sobre viga de transição, carga da base como falha", () => {
     const base = obraE2E("original");
     const pav = base.pavimentos[0]!;
     const meio = {
@@ -254,11 +254,34 @@ describe("falhas que o caminho do SISTRUT marca", () => {
     };
     const r = calcularObra(obra, nb178);
     const falhas = r.pavimentos.flatMap((p) => p.falhas.map((f) => `${p.pavimento.id}: ${f}`));
-    expect(falhas.some((f) => f.startsWith("COB: Pilar P5") && f.includes("fundação"))).toBe(true);
-    expect(falhas.some((f) => f.startsWith("COB: Carga de 17.37 t do pilar P5"))).toBe(true);
-    // o P5 do térreo continua dimensionado, só com a carga do próprio nível
+    // o P5 do COB é uma coluna que nasce no nível do MEIO (PILGEEDI com nível inferior
+    // > 1): o PILAREDI a dimensiona; a carga na base, 17,37 + 0,20·0,20·3·2,5 = 17,67 t,
+    // fica para a viga de transição do MEIO, e sem `transicao` é falha ali
+    const daBase = falhas.find((f) => f.startsWith("MEIO: Pilar P5 do pavimento COB"));
+    expect(daBase).toContain("17.67 t");
+    expect(falhas.some((f) => f.includes("não foi levada a nenhuma coluna"))).toBe(false);
     const p5 = r.pilares.filter((p) => p.pilar.nome === "P5");
-    expect(p5.map((p) => p.pavimentoId)).toEqual(["TERREO"]);
+    expect(p5.map((p) => p.pavimentoId).sort()).toEqual(["COB", "TERREO"]);
+    // com `transicao`, a falha vira aviso no lance
+    const comTransicao: Obra = {
+      ...obra,
+      pavimentos: obra.pavimentos.map((p) =>
+        p.id !== "COB"
+          ? p
+          : {
+              ...p,
+              pilares: p.pilares.map((q) =>
+                q.nome === "P5" ? { ...q, transicao: true as const } : q,
+              ),
+            },
+      ),
+    };
+    const r2 = calcularObra(comTransicao, nb178);
+    expect(r2.pavimentos.flatMap((p) => p.falhas).some((f) => f.includes("nasce acima"))).toBe(
+      false,
+    );
+    const cob = r2.pilares.find((p) => p.pilar.nome === "P5" && p.pavimentoId === "COB")!;
+    expect(cob.resultado.avisos.some((a) => a.includes("viga de transição"))).toBe(true);
   });
 
   it("laje com os quatro bordos livres: sem mecanismo, falha explícita e momentos 0", () => {

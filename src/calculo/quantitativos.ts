@@ -36,6 +36,7 @@
 //   (o original não calcula volume, fôrma nem aço de laje e de pilar).
 // Os itens E, F e G antigos (negativa contada duas vezes, volume e fôrma da "tela" e
 // do "relatório") reproduziam a V1 antiga, não o SISTRUT, e saíram.
+import { geometriaPilar } from "./secaoPilar";
 import type {
   Bordo,
   Laje,
@@ -368,7 +369,7 @@ export interface PilarArmado {
  *  `peDireito` em m, `cobrimento` em cm; `encontro` = laje e vigas que a fôrma
  *  desconta (formas.ts; padrão: nenhuma, perímetro × pé-direito). */
 export function quantPilar(
-  pilar: Pick<Pilar, "nome" | "b" | "h">,
+  pilar: Pick<Pilar, "nome" | "b" | "h" | "secao">,
   peDireito: number,
   armado: PilarArmado | undefined,
   cobrimento: number,
@@ -377,12 +378,16 @@ export function quantPilar(
   const { nome } = pilar;
   const b = pilar.b / 100;
   const h = pilar.h / 100;
-  const concreto = b * h * peDireito;
+  // seção circular ou poligonal: a área real (secaoPilar.ts)
+  const geo = geometriaPilar(pilar);
+  const concreto = pilar.secao ? (geo.area / 10_000) * peDireito : b * h * peDireito;
   const forma = formaPilar(pilar, peDireito, encontro);
   const memoria: Etapa[] = [
     {
       descricao: `${nome}: concreto`,
-      formula: `b·h·pé-direito = ${f(b, 3)}·${f(h, 3)}·${f(peDireito)}`,
+      formula: pilar.secao
+        ? `A·pé-direito = ${f(geo.area / 10_000, 4)}·${f(peDireito)} (seção ${pilar.secao.tipo})`
+        : `b·h·pé-direito = ${f(b, 3)}·${f(h, 3)}·${f(peDireito)}`,
       valor: concreto,
       unidade: "m³",
       ref: REF,
@@ -404,7 +409,7 @@ export function quantPilar(
   const lBarra = peDireito + (EMENDA_PILAR * phi) / 1000;
   const longitudinal = n * lBarra * pesoPorMetro(phi);
   const e = armado.estribo;
-  const perimetro = 2 * (pilar.b - 2 * cobrimento) + 2 * (pilar.h - 2 * cobrimento);
+  const perimetro = geo.estribo(cobrimento);
   const nEstribos = e.espacamento > 0 ? Math.ceil((peDireito * 100) / e.espacamento) : 0;
   const estribos = e.phi > 0 ? ((nEstribos * perimetro) / 100) * pesoPorMetro(e.phi) : 0;
   if (!(e.phi > 0 && e.espacamento > 0))

@@ -337,6 +337,11 @@ class Validador {
           if (!Number.isInteger(v)) this.erro(`${cy}.${k}`, "esperado um número inteiro", v);
           return v;
         },
+        maximoVariacoes: (y, k, cy) => {
+          const v = this.numero(y, k, cy, "positivo");
+          if (!Number.isInteger(v)) this.erro(`${cy}.${k}`, "esperado um número inteiro", v);
+          return v;
+        },
         coeficienteMedida: num("positivo"),
         coeficienteForca: num("positivo"),
         coeficienteTensao: num("positivo"),
@@ -414,6 +419,13 @@ class Validador {
       ini,
       pip,
       predimensionamento: (y, k, cy) => this.opcao(y, k, cy, PREDIMENSIONAMENTOS),
+      variaArmadura: (y, k, cy) => {
+        const v = this.numero(y, k, cy, "naoNegativo");
+        if (!Number.isInteger(v)) this.erro(`${cy}.${k}`, "esperado um número inteiro", v);
+        return v;
+      },
+      rlp: (y, k, cy) => this.booleano(y, k, cy),
+      rigidezVigas: (y, k, cy) => this.booleano(y, k, cy),
     });
   }
 
@@ -499,6 +511,50 @@ class Validador {
           );
       });
       r.cargaTopo = { normal: this.numero(v, "normal", cc), momentos };
+      if (v.modo !== undefined) r.cargaTopo.modo = this.opcao(v, "modo", cc, MODOS_CARGA_TOPO);
+    }
+    if (d.cargaBase !== undefined) {
+      const cb = `${c}.cargaBase`;
+      const v = this.objeto(d.cargaBase, cb);
+      r.cargaBase = {
+        normal: this.numero(v, "normal", cb),
+        momentos: this.momentos(v, cb, ["m", "inclinacao", "vao", "rigidez"], 4),
+      };
+    }
+    if (d.transicao !== undefined) {
+      if (d.transicao !== true) this.erro(`${c}.transicao`, "esperado true", d.transicao);
+      r.transicao = true;
+    }
+    if (d.armadura !== undefined) {
+      const ca = `${c}.armadura`;
+      const a = this.objeto(d.armadura, ca);
+      const barras =
+        a.barras === undefined
+          ? undefined
+          : this.lista(a.barras, `${ca}.barras`).map((b, j) => {
+              const cb = `${ca}.barras[${j}]`;
+              const o = this.objeto(b, cb);
+              return {
+                x: this.numero(o, "x", cb),
+                y: this.numero(o, "y", cb),
+                bitola: this.numero(o, "bitola", cb, "positivo"),
+              };
+            });
+      if (barras && barras.length === 0)
+        this.erro(`${ca}.barras`, "a armadura dada precisa de ao menos uma barra", a.barras);
+      const ce = `${ca}.estribo`;
+      const e = a.estribo === undefined ? undefined : this.objeto(a.estribo, ce);
+      r.armadura = {
+        ...(barras ? { barras } : {}),
+        ...(e
+          ? {
+              estribo: {
+                bitola: this.numero(e, "bitola", ce, "positivo"),
+                espacamento: this.numero(e, "espacamento", ce, "positivo"),
+              },
+            }
+          : {}),
+      };
     }
     if (d.verificacoes !== undefined)
       r.verificacoes = this.lista(d.verificacoes, `${c}.verificacoes`).map((x, i) => {
@@ -1258,3 +1314,4 @@ function mesmaForma<T>(x: unknown, padrao: T): x is T {
 const TIPOS_SECAO_PILAR = ["circular", "poligonal"] as const;
 const EXCENTRICIDADES = ["isoladas", "simultaneas"] as const;
 const PREDIMENSIONAMENTOS = ["tensoes", "secao"] as const;
+const MODOS_CARGA_TOPO = ["soma", "substitui", "maxima"] as const;

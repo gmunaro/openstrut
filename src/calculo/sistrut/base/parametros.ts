@@ -381,6 +381,11 @@ export const PARAMETROS_PILAR = {
    *  fábrica traz 200 ("NUMERO MAXIMO DE BARRAS INTERNAS A UMA SECAO",
    *  C:/tmp/oraculo/orig/PILAR.INI, linha 6). */
   maximoBarras: 200,
+  /** Número máximo de variações de armadura numa coluna: V_0e3c% = valor − 1
+   *  (PILAR.BAS:632); 10 antes da leitura do INI (PILAR.BAS:563), 15 no PILAR.INI de
+   *  fábrica ("NUMERO MAXIMO DE VARIACOES DE ARMADURA EM UMA COLUNA",
+   *  C:/tmp/oraculo/orig/PILAR.INI, linha 10). */
+  maximoVariacoes: 15,
   /** Coeficientes de medida, força e de fck/fyk (PILAR.BAS:566, 567, 569). */
   coeficienteMedida: 1,
   coeficienteForca: 1,

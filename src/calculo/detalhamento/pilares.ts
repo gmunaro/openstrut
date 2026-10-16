@@ -5,7 +5,8 @@
 // (REGRAS_PILAR_6118 e REGRAS_PILAR_NB178); lb e ganchos vêm de ancoragem.ts
 // via RegrasDetalhamento (vigas.ts).
 // Unidades: comprimentos e cotas em cm, φ em mm.
-import type { NormaId } from "../../dominio/obra";
+import type { NormaId, Pilar } from "../../dominio/obra";
+import { geometriaPilar } from "../secaoPilar";
 import { arranjoBarras } from "../normas/nb1-78/pilares";
 import { estriboPilar } from "../normas/nbr6118-2023/pilares";
 import type { Barra, ComMemoria, Etapa, MateriaisCalc, PilarResultado } from "../tipos";
@@ -149,6 +150,8 @@ export interface LancePilarDetalhamento {
   /** Seção, cm: b na direção x, h na direção y. */
   b: number;
   h: number;
+  /** Seção circular ou poligonal (`Pilar.secao`); ausente = retângulo b × h. */
+  secao?: Pilar["secao"] | undefined;
   /** Barras, com o arranjo por face verificado, e estribo adotados (Norma.pilar). */
   resultado: Pick<PilarResultado, "barras" | "estribo">;
 }
@@ -316,7 +319,7 @@ export function detalharPilar(
       phi: estribo.phi,
       quantidade: nEstribos,
       aco: mat.acoEstribo,
-      reto: 2 * (lance.b - 2 * c) + 2 * (lance.h - 2 * c) + ganchos,
+      reto: geometriaPilar(lance).estribo(c) + ganchos,
       ganchoInicio: 0,
       ganchoFim: 0,
       xInicio: z0,
@@ -324,7 +327,13 @@ export function detalharPilar(
       espacamento: estribo.espacamento,
     });
 
-    // grampos (estribos suplementares)
+    // grampos (estribos suplementares): só na retangular, que tem faces b e h
+    if (lance.secao) {
+      avisos.push(
+        `${rotulo}: seção ${lance.secao.tipo}: estribo pelo perímetro recuado do cobrimento; grampos não detalhados.`,
+      );
+      return;
+    }
     const { porFaceX, porFaceY, origem } = arranjoDetalhado(barras, lance.b, lance.h);
     if (origem === "padrao")
       avisos.push(
