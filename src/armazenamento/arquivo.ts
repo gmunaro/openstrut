@@ -39,6 +39,7 @@ import type {
   TrechoPilar,
 } from "../dominio/obra";
 import type { ContinuidadeLajes } from "../dominio/obra";
+import { LIMITES_EDICAO_VIGA, type EdicaoVigaSistrut } from "../dominio/edicaoViga";
 import {
   PARAMETROS_DSP,
   PARAMETROS_LAJE,
@@ -1137,6 +1138,139 @@ class Validador {
     if (armadura) r.armaduraDigitada = armadura;
     if (d.continuaSeExcederLimite !== undefined)
       r.continuaSeExcederLimite = this.booleano(d, "continuaSeExcederLimite", c);
+    // campo opcional novo, sem migração: ausente = detalhamento automático
+    if (d.armaduraEditada !== undefined)
+      r.armaduraEditada = this.edicaoViga(
+        this.objeto(d.armaduraEditada, `${c}.armaduraEditada`),
+        `${c}.armaduraEditada`,
+      );
+    return r;
+  }
+
+  /** O .EDV importado (`Viga.armaduraEditada`), com os limites dos arrays do original. */
+  private edicaoViga(d: Dados, c: string): EdicaoVigaSistrut {
+    const inteiro = (o: Dados, campo: string, cx: string, limite: "positivo" | "naoNegativo") => {
+      const k = this.numero(o, campo, cx, limite);
+      if (!Number.isInteger(k)) this.erro(`${cx}.${campo}`, "esperado um número inteiro", k);
+      return k;
+    };
+    const lista = <T>(campo: string, max: number, f: (o: Dados, cx: string) => T) => {
+      const r = this.opcional(d, campo, c, (x, cx) => f(this.objeto(x, cx), cx)) ?? [];
+      if (r.length > max)
+        this.erro(
+          `${c}.${campo}`,
+          `esperados no máximo ${max} itens (limite do SISTRUT)`,
+          r.length,
+        );
+      return r;
+    };
+    const barra = (o: Dados, cx: string) => {
+      const dobras = this.lista(o.dobras, `${cx}.dobras`);
+      if (dobras.length !== 2) this.erro(`${cx}.dobras`, "esperados 2 números", o.dobras);
+      return {
+        quantidade: inteiro(o, "quantidade", cx, "naoNegativo"),
+        bitola: this.numero(o, "bitola", cx, "naoNegativo"),
+        inicio: this.numero(o, "inicio", cx),
+        fim: this.numero(o, "fim", cx),
+        dobras: [
+          this.numeroSolto(dobras[0], `${cx}.dobras[0]`, "naoNegativo"),
+          this.numeroSolto(dobras[1], `${cx}.dobras[1]`, "naoNegativo"),
+        ] as [number, number],
+      };
+    };
+    const grampo = (o: Dados, cx: string) => ({
+      quantidade: inteiro(o, "quantidade", cx, "naoNegativo"),
+      bitola: this.numero(o, "bitola", cx, "naoNegativo"),
+      inicio: this.numero(o, "inicio", cx),
+      fim: this.numero(o, "fim", cx),
+      lado: this.opcao(o, "lado", cx, ["esquerdo", "direito"] as const),
+      largura: this.numero(o, "largura", cx, "naoNegativo"),
+    });
+    const m = this.objeto(d.materiais, `${c}.materiais`);
+    const cm = `${c}.materiais`;
+    const tramos = inteiro(d, "tramos", c, "positivo");
+    const L = LIMITES_EDICAO_VIGA;
+    let pele: EdicaoVigaSistrut["pele"] = null;
+    if (d.pele !== null) {
+      const p = this.objeto(d.pele, `${c}.pele`);
+      const cp = `${c}.pele`;
+      pele = {
+        linhas: inteiro(p, "linhas", cp, "naoNegativo"),
+        trechos:
+          this.opcional(p, "trechos", cp, (x, cx) => {
+            const o = this.objeto(x, cx);
+            const trecho = inteiro(o, "trecho", cx, "naoNegativo");
+            if (trecho > L.trechos) this.erro(`${cx}.trecho`, `esperado até ${L.trechos}`, trecho);
+            return {
+              trecho,
+              quantidadePorFace: inteiro(o, "quantidadePorFace", cx, "naoNegativo"),
+              bitola: this.numero(o, "bitola", cx, "naoNegativo"),
+              inicio: this.numero(o, "inicio", cx),
+              fim: this.numero(o, "fim", cx),
+            };
+          }) ?? [],
+        trechosPorBitola: (
+          this.opcional(p, "trechosPorBitola", cp, (x, cx) =>
+            this.numeroSolto(x, cx, "naoNegativo"),
+          ) ?? []
+        ).slice(0, 6),
+      };
+    }
+    const r: EdicaoVigaSistrut = {
+      registro: inteiro(d, "registro", c, "positivo"),
+      pavimento: this.texto(d, "pavimento", c),
+      viga: this.texto(d, "viga", c),
+      comprimento: this.numero(d, "comprimento", c, "positivo"),
+      materiais: {
+        fck: this.numero(m, "fck", cm),
+        fyk: this.numero(m, "fyk", cm),
+        fatorUnidade: this.numero(m, "fatorUnidade", cm),
+        unidade: this.texto(m, "unidade", cm),
+      },
+      cobrimento: this.numero(d, "cobrimento", c, "naoNegativo"),
+      cobrimentoMaisAcrescimo: this.numero(d, "cobrimentoMaisAcrescimo", c, "naoNegativo"),
+      repeticoes: this.numero(d, "repeticoes", c),
+      tramos,
+      balancoEsquerdo: this.booleano(d, "balancoEsquerdo", c),
+      balancoDireito: this.booleano(d, "balancoDireito", c),
+      negativas: lista("negativas", L.longitudinais, barra),
+      grampoNegativos: lista("grampoNegativos", L.grampos, grampo),
+      positivas: lista("positivas", L.longitudinais, barra),
+      grampoPositivos: lista("grampoPositivos", L.grampos, grampo),
+      portaEstribos: lista("portaEstribos", L.portaEstribos, (o, cx) => ({
+        quantidade: inteiro(o, "quantidade", cx, "naoNegativo"),
+        bitola: this.numero(o, "bitola", cx, "naoNegativo"),
+        inicio: this.numero(o, "inicio", cx),
+        fim: this.numero(o, "fim", cx),
+      })),
+      pele,
+      estribos: lista("estribos", L.estribos, (o, cx) => ({
+        inicio: this.numero(o, "inicio", cx),
+        fim: this.numero(o, "fim", cx),
+        bitola: this.numero(o, "bitola", cx, "naoNegativo"),
+        espacamento: this.numero(o, "espacamento", cx, "positivo"),
+        ladoALado: inteiro(o, "ladoALado", cx, "positivo"),
+        bw: this.numero(o, "bw", cx, "naoNegativo"),
+        h: this.numero(o, "h", cx, "naoNegativo"),
+        posicao: inteiro(o, "posicao", cx, "positivo"),
+      })),
+      notasForma: lista("notasForma", 4, (o, cx) => ({
+        trecho: this.numero(o, "trecho", cx),
+        local: this.opcao(o, "local", cx, ["E", "C", "D"] as const),
+        texto: this.texto(o, "texto", cx),
+      })),
+      momentosPositivos:
+        this.opcional(d, "momentosPositivos", c, (x, cx) => {
+          if (typeof x !== "number" || !Number.isFinite(x)) this.erro(cx, "esperado um número", x);
+          return typeof x === "number" ? x : 0;
+        }) ?? [],
+      notasArmadura: lista("notasArmadura", L.notasArmadura, (o, cx) => ({
+        posicao: inteiro(o, "posicao", cx, "positivo"),
+        texto: this.texto(o, "texto", cx),
+      })),
+    };
+    if (tramos + (r.balancoDireito ? 1 : 0) > L.trechos)
+      this.erro(`${c}.tramos`, `mais de ${L.trechos} trechos com o balanço direito`, tramos);
     return r;
   }
 
