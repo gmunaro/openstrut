@@ -557,9 +557,12 @@ function quantPavimento(
       }
       const d = quantVigaDesinit(v.nome, quadro);
       if (modo === "original") return junta(d);
+      // `eixos` saiu sem dimensionamento só para o volume e a fôrma: o aço é o do quadro,
+      // completo, e o acoIncompleto dele não vale
       return junta({
         ...eixos,
         aco: d.aco,
+        acoIncompleto: false,
         avisos: [],
         memoria: [...eixos.memoria, ...d.memoria.slice(2)],
       });
@@ -656,8 +659,8 @@ export function calcularQuantitativos(obra: Obra, r: ResultadoObra): Quantitativ
       ? {
           descricao:
             modo === "original"
-              ? "Vigas: volume, fôrma e aço do quadro do DESINIT (vão livre, altura inteira, INT no centésimo)"
-              : "Vigas: volume e fôrma pelos eixos e abaixo da laje; aço do quadro do DESINIT",
+              ? `Vigas: volume, fôrma e aço do quadro do DESINIT (vão livre, altura inteira, INT no centésimo)${semDesinit ? "; as vigas sem quadro do DESINIT, pela regra da V2" : ""}`
+              : `Vigas: volume e fôrma pelos eixos e abaixo da laje; aço do quadro do DESINIT${semDesinit ? " (as vigas sem quadro, pela estimativa da V2)" : ""}`,
           ref: "DESINIT.BAS:763-852",
         }
       : {
