@@ -200,3 +200,222 @@ test("setas selecionam a planta pelo teclado e Delete apaga a laje", async ({ pa
   writeFileSync(`${SAIDA}/teclado-erros.txt`, erros.join("\n") || "(nenhum)");
   expect(erros).toEqual([]);
 });
+
+/** Espera o React pintar a última alteração de estado (dois quadros de animação). */
+async function pintar(page: Page) {
+  await page.evaluate(
+    () => new Promise<void>((ok) => requestAnimationFrame(() => requestAnimationFrame(() => ok()))),
+  );
+}
+
+/** Grava observações da sondagem em `${SAIDA}/${nome}.txt`. Não são asserções. */
+function anotar(nome: string, linhas: string[]) {
+  mkdirSync(SAIDA, { recursive: true });
+  writeFileSync(`${SAIDA}/${nome}.txt`, linhas.join("\n") || "(vazio)");
+}
+
+test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e Ctrl+Z", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const erros: string[] = [];
+  page.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  await page.keyboard.press("v");
+  await clicar(page, svg, { x: 2, y: 2.5 });
+
+  const painel = page.locator("aside");
+  const lx = painel.getByLabel(/^lx/);
+  await expect(lx).toHaveValue(/^4([,.]0+)?$/);
+
+  await lx.fill("3");
+  await lx.press("Enter");
+  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+
+  await lx.fill("2");
+  await lx.press("Escape");
+  await expect(lx).toHaveValue(/^3([,.]0+)?$/);
+  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+  await expect(painel.getByText("Laje", { exact: true })).toBeVisible();
+
+  await lx.fill("abc");
+  await lx.press("Enter");
+  await expect(page.getByText("Número inválido.", { exact: true })).toBeVisible();
+  await expect(lx).toHaveAttribute("aria-invalid", "true");
+  // o erro é o texto apontado por aria-describedby, e fica fora do nome do campo
+  const idErro = await lx.getAttribute("aria-describedby");
+  expect(idErro).not.toBeNull();
+  await expect(page.locator(`[id="${idErro}"]`)).toHaveText("Número inválido.");
+  await expect(painel.getByLabel(/^lx/)).toHaveAccessibleName(/^lx/);
+  expect((await lx.evaluate((el) => el.closest("label")?.textContent ?? "")).includes("Número")).toBe(false);
+
+  // abaixo do vão mínimo (0,1 m): o campo marca erro e não grava
+  await lx.fill("0,05");
+  await lx.press("Enter");
+  await expect(lx).toHaveAttribute("aria-invalid", "true");
+  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+
+  // invade L2 (x de 4 a 8 m): a mensagem de sobreposição nomeia a laje
+  await lx.fill("6");
+  await lx.press("Enter");
+  await expect(page.getByText("A laje se sobrepõe à L2.", { exact: true })).toBeVisible();
+
+  await lx.fill("4");
+  await lx.press("Enter");
+  await expect(lx).toHaveAttribute("aria-invalid", "false");
+  await expect(page.getByText("A laje se sobrepõe à L2.", { exact: true })).toHaveCount(0);
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+
+  // Ctrl+Z com o foco fora do campo desfaz a última gravação válida (4 m → 3 m)
+  await painel.getByText("Laje", { exact: true }).click();
+  await page.keyboard.press("Control+z");
+  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+
+  expect(erros).toEqual([]);
+});
+
+test("pavimentos: criar, renomear, recusar nome repetido, repetir e apagar", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const erros: string[] = [];
+  const dialogos: string[] = [];
+  page.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+  page.on("dialog", (d) => {
+    dialogos.push(`${d.type()}: ${d.message()}`);
+    void d.accept();
+  });
+
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+
+  const nav = page.getByRole("navigation", { name: "Pavimentos" });
+  // botões de pavimento não têm aria-label; os de ação (Novo, Subir, Apagar...) têm
+  const pavimentos = nav.locator("button:not([aria-label])");
+  const novo = page.getByRole("button", { name: "Novo pavimento", exact: true });
+  const nome = page.getByLabel("Nome", { exact: true });
+  await expect(pavimentos).toHaveCount(1);
+
+  await novo.click();
+  await expect(pavimentos).toHaveCount(2);
+  await nome.fill("Cobertura");
+  await nome.press("Enter");
+  await expect(nav.getByRole("button", { name: /^Cobertura/ })).toBeVisible();
+
+  await novo.click();
+  await expect(pavimentos).toHaveCount(3);
+  await nome.fill("Cobertura");
+  await nome.press("Enter");
+  await expect(page.getByText(/Já existe um pavimento/)).toBeVisible();
+  // com erro, o texto da mensagem entra no nome acessível do campo: o nome exato deixa de achar
+  anotar("pavimentos-nome-com-erro", [
+    `getByLabel exato "Nome": ${await page.getByLabel("Nome", { exact: true }).count()}`,
+    `getByLabel /^Nome/: ${await page.getByLabel(/^Nome/).count()}`,
+  ]);
+  await page.getByLabel(/^Nome/).fill("Tipo");
+  await page.getByLabel(/^Nome/).press("Enter");
+  await expect(nav.getByRole("button", { name: /^Tipo/ })).toBeVisible();
+
+  const repeticoes = page.getByLabel("Repetições", { exact: true });
+  await repeticoes.fill("3");
+  await repeticoes.press("Enter");
+  await expect(nav.getByRole("button", { name: /^Tipo/ })).toContainText("×3");
+
+  // pé-direito zero: registra o que o usuário vê (hipótese i), sem asserção
+  // o rótulo inclui a unidade "m" (span dentro do label): o nome acessível é "Pé-direito m"
+  const peDireito = page.getByLabel(/^Pé-direito/);
+  await peDireito.fill("0");
+  await peDireito.press("Enter");
+  anotar("pavimentos-pe-direito", [
+    `aria-invalid=${(await peDireito.getAttribute("aria-invalid")) ?? "(ausente)"}`,
+    `valor no campo=${await peDireito.inputValue()}`,
+  ]);
+
+  // a lista vai do topo à base: o último é o pavimento original, com a planta desenhada
+  await pavimentos.last().click();
+  await page.getByRole("button", { name: "Apagar pavimento", exact: true }).click();
+  await expect(pavimentos).toHaveCount(2);
+  anotar("pavimentos-confirmacao", dialogos);
+  expect(dialogos.join("\n")).toMatch(/lajes/);
+  expect(erros).toEqual([]);
+});
+
+test("zoom com a roda muda a escala e volta ao girar de volta", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+
+  const e0 = (await calibrar(page, svg)).escala.x;
+  await svg.hover();
+  await page.mouse.wheel(0, -300);
+  await pintar(page);
+  const e1 = (await calibrar(page, svg)).escala.x;
+  expect(e1).toBeGreaterThan(e0 * 1.2);
+
+  await svg.hover();
+  await page.mouse.wheel(0, 300);
+  await pintar(page);
+  const e2 = (await calibrar(page, svg)).escala.x;
+  expect(Math.abs(e2 - e0) / e0).toBeLessThan(0.02);
+});
+
+test("atalhos V, L, P trocam a ferramenta; Ctrl+Z e Ctrl+Y desfazem e refazem", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const erros: string[] = [];
+  page.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  const ferramenta = (nome: RegExp) => page.getByRole("button", { name: nome }).first();
+
+  await page.keyboard.press("l");
+  await expect(ferramenta(/^Laje/)).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("p");
+  await expect(ferramenta(/^Pilar/)).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("v");
+  await expect(ferramenta(/^Selec/)).toHaveAttribute("aria-pressed", "true");
+
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await svg.focus();
+  await page.keyboard.press("Control+z");
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(3);
+  await page.keyboard.press("Control+y");
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+
+  expect(erros).toEqual([]);
+});
+
+test("erros de geometria: sobreposição e pilar fora de viga aparecem na mensagem de status", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  const mensagem = page.getByRole("status").first();
+
+  // laje desenhada sobre L1 é recusada
+  await page.getByRole("button", { name: "Laje", exact: true }).click();
+  await arrastar(page, svg, { x: 1, y: 1 }, { x: 3, y: 3 });
+  await expect(mensagem).toContainText("A laje se sobrepõe à L1.");
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+
+  // pilar no miolo de uma laje, sem viga: recusado
+  await page.getByRole("button", { name: /^Pilar/ }).click();
+  await clicar(page, svg, { x: 2, y: 2.5 });
+  await expect(mensagem).toContainText("O pilar precisa ficar sobre o eixo de uma viga.");
+
+  // tempo que a mensagem fica na tela (observação; o código tem 7 s)
+  // o span só existe enquanto há mensagem: some do DOM quando o timer limpa
+  const t0 = Date.now();
+  await expect(page.getByRole("status")).toHaveCount(0, { timeout: 15_000 });
+  anotar("erros-geometria-tempo", [
+    `mensagem sumiu após ${Date.now() - t0} ms, medido a partir da leitura (o código tem 7000 ms)`,
+  ]);
+});
