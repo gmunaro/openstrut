@@ -101,8 +101,14 @@ export function LinhaElemento({
             )}
             {nome}
             {temAviso && (
-              <span title={avisos.join("\n")} aria-label={`${avisos.length} aviso(s)`}>
-                <TriangleAlert className="text-aviso size-3.5" />
+              // Contagem visível (sai na impressão e é lida por leitor de tela); o texto
+              // completo fica na memória aberta e no bloco de avisos.
+              <span
+                title={avisos.join("\n")}
+                className="text-aviso inline-flex items-center gap-0.5 text-[11px] font-normal whitespace-nowrap"
+              >
+                <TriangleAlert aria-hidden className="size-3.5" />
+                {avisos.length} aviso(s)
               </span>
             )}
           </span>

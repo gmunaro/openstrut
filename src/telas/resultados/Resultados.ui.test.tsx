@@ -289,8 +289,9 @@ describe("resultados com falha no pavimento", () => {
         .getByText(/^Laje L1 sem cálculo/)
         .closest("ul")?.className,
     ).toContain("text-destructive");
-    // o bloco de falhas vem antes da lista de avisos
-    const avisos = within(painel).getByText(/aviso\(s\)/);
+    // o bloco de falhas vem antes da lista de avisos (a primeira contagem é a da lista;
+    // as dos elementos vêm depois, na memória)
+    const avisos = within(painel).getAllByText(/aviso\(s\)/)[0]!;
     expect(alerta.compareDocumentPosition(avisos) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
