@@ -5,7 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ResultadoObra } from "../../calculo/fluxo";
 import { ListaAvisos } from "./avisos";
-import { BlocoMotorSistrut, coletarMarcasMotor } from "./motorSistrut";
+import { BlocoMotorSistrut, coletarMarcasMotor, semMarcasDuplicadas } from "./motorSistrut";
 
 function resultadoCom(
   pavimentos: unknown[],
@@ -83,6 +83,34 @@ describe("coletarMarcasMotor", () => {
   });
 });
 
+describe("coletarMarcasMotor: orientação da viga interrompida", () => {
+  it("diz como seguir: marcar continuaSeExcederLimite na viga", () => {
+    const marca = coletarMarcasMotor(resultadoCom([pavimentoComMarcas])).find(
+      (m) => m.elemento === "V1",
+    );
+    expect(marca?.texto).toContain("Para seguir, marque continuaSeExcederLimite na viga.");
+  });
+});
+
+describe("semMarcasDuplicadas", () => {
+  const avisos = [
+    { local: "Pavimento 1", elemento: "V1", texto: "V1: o DESDIM não dimensiona (momento)." },
+    { local: "Pavimento 1", elemento: "V1 (detalhamento)", texto: "V1: armadura dupla." },
+    { local: "Pavimento 1", elemento: "V2", texto: "V2: aviso de outra viga." },
+    { local: "Pavimento 1", elemento: "L1", texto: "L1: sem momentos." },
+  ];
+
+  it("tira só o aviso geral da viga interrompida; o de detalhamento da mesma viga fica", () => {
+    const filtrados = semMarcasDuplicadas(avisos, resultadoCom([pavimentoComMarcas]));
+    expect(filtrados.map((a) => a.elemento)).toEqual(["V1 (detalhamento)", "V2", "L1"]);
+  });
+
+  it("não mexe na lista quando nenhuma viga está interrompida", () => {
+    const semInterrompida = resultadoCom([{ nome: "Pavimento 1", vigas: [{ nome: "V1" }] }]);
+    expect(semMarcasDuplicadas(avisos, semInterrompida)).toEqual(avisos);
+  });
+});
+
 describe("ListaAvisos", () => {
   it("mostra o texto de vazio dado", () => {
     render(<ListaAvisos avisos={[]} vazio="Nenhum aviso geral; as marcas estão abaixo." />);
@@ -109,6 +137,13 @@ describe("BlocoMotorSistrut", () => {
       "corrigido",
     );
     expect(screen.getByText("4 aviso(s)")).toBeTruthy();
+  });
+
+  it("afasta o bloco da caixa de cima (margem superior)", () => {
+    const { container } = render(
+      <BlocoMotorSistrut resultado={resultadoCom([{ nome: "P1", vigas: [] }])} />,
+    );
+    expect(container.querySelector("section")?.className).toContain("mt-4");
   });
 
   it("não renderiza sem resultado do motor", () => {

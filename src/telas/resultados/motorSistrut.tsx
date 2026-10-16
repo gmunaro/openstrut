@@ -38,7 +38,8 @@ export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
         elemento: v.nome,
         texto:
           'parou em "Continuo com o processamento desta Viga S/N" com o padrão N (motivo: ' +
-          `${v.interrompida.motivos.join(" e ")}); sem detalhamento nem quadro${impressa}.`,
+          `${v.interrompida.motivos.join(" e ")}); sem detalhamento nem quadro${impressa}. ` +
+          "Para seguir, marque continuaSeExcederLimite na viga.",
       });
     }
   }
@@ -62,13 +63,25 @@ export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
   return marcas;
 }
 
+/**
+ * Tira dos avisos gerais as linhas de viga interrompida: o bloco de marcas já traz a
+ * mesma situação (com o motivo). Compara por local e elemento; os avisos de detalhamento
+ * (elemento "V3 (detalhamento)") são outra situação e ficam.
+ */
+export function semMarcasDuplicadas(avisos: readonly Aviso[], r: ResultadoObra): Aviso[] {
+  const interrompidas = new Set<string>();
+  for (const ps of r.sistrut?.pavimentos ?? [])
+    for (const v of ps.vigas) if (v.interrompida) interrompidas.add(`${ps.nome}|${v.nome}`);
+  return avisos.filter((a) => !interrompidas.has(`${a.local}|${a.elemento}`));
+}
+
 /** Bloco com o modo do motor e as marcas dele, ou o estado vazio explícito. */
 export function BlocoMotorSistrut({ resultado }: { resultado: ResultadoObra }) {
   if (!resultado.sistrut) return null;
   const modo = resultado.sistrut.modo === "original" ? "como o SISTRUT original" : "corrigido";
   const marcas = coletarMarcasMotor(resultado);
   return (
-    <section className="mb-3" aria-labelledby="marcas-motor">
+    <section className="mt-4 mb-3" aria-labelledby="marcas-motor">
       <h2 id="marcas-motor" className="mb-2 text-sm font-semibold">
         Marcas do motor SISTRUT{" "}
         <span className="text-muted-foreground font-normal">(modo {modo})</span>
