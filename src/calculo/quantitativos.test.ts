@@ -6,7 +6,8 @@ import { lajeNova, obraNova } from "../dominio/criar";
 import { gerarEstrutura } from "../dominio/gerar";
 import type { Obra } from "../dominio/obra";
 import { calcularObra } from "./fluxo";
-import { nbr6118 } from "./normas";
+import { nb178, nbr6118 } from "./normas";
+import { obraE2E } from "./sistrut/__e2e__/obraE2E";
 import {
   calcularQuantitativos,
   espessuraLajeNaViga,
@@ -300,5 +301,41 @@ describe("pavimentos com o mesmo nome", () => {
     expect(aco("cima")).not.toBeCloseTo(aco("baixo"), 3);
     perto(q.pavimentos[0]!.pilares.aco, aco("cima"), 1e-9);
     perto(q.pavimentos[1]!.pilares.aco, aco("baixo"), 1e-9);
+  });
+});
+
+describe("NB-1/78: viga sem quadro do DESINIT e o que o aço é", () => {
+  // E2E no modo original: o DESINIT dá 175 kg nas 6 vigas, 20 kg na V1 (quadro da V1:
+  // 7 + 3 + 10 kg nas bitolas 5, 6,3 e 8). Sem o quadro da V1 (como a viga que para no
+  // DESDIM), ela entra pela estimativa da V2 em vez de 0
+  const obra = obraE2E("original");
+  const r = calcularObra(obra, nb178);
+  const ps = r.sistrut!.pavimentos[0]!;
+  const v1 = ps.vigas.find((v) => v.nome === "V1")!;
+
+  it("com todos os quadros: 175 kg, fonte sistrut, nada incompleto", () => {
+    const q = calcularQuantitativos(obra, r);
+    expect(q.vigas.aco).toBe(175);
+    expect(q.fonte.vigas.aco).toBe("sistrut");
+    expect(q.definicaoAco).toMatch(/^Estimativa: vigas pelo quadro do DESINIT/);
+  });
+
+  it("V1 sem quadro: 155 kg das outras + a estimativa da V1 (> 0), fonte misto", () => {
+    const quadro = v1.quadro;
+    delete v1.quadro;
+    try {
+      const q = calcularQuantitativos(obra, r);
+      expect(q.fonte.vigas.aco).toBe("misto");
+      expect(q.pavimentos[0]!.vigasSemDesinit).toEqual(["V1"]);
+      // estimativa da V1 pelas barras adotadas: da ordem dos 20 kg do DESINIT
+      const v1Estimada = q.vigas.aco - 155;
+      expect(v1Estimada).toBeGreaterThan(10);
+      expect(v1Estimada).toBeLessThan(30);
+      expect(q.avisos).toContain(
+        "PAV1: V1: sem o quadro do DESINIT; volume, fôrma e aço estimados pela regra da V2.",
+      );
+    } finally {
+      v1.quadro = quadro;
+    }
   });
 });

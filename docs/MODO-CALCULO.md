@@ -220,7 +220,7 @@ D-2 (laço sem fim no PILAREDI) para nos dois modos com `ErroNaoConverge`, porqu
 - **Materiais:** aço de 500 MPa (5,0986 t/cm²) no lugar de 5 t/cm²; concreto de 25 kN/m³ (2,5493 t/m³) no lugar de 2,5 t/m³; fck convertido exato.
 - **Cobrimentos:** os da obra no lugar dos do .LAP/.DSP/.PIP.
 - **Falha numa laje:** no original, o erro de execução numa laje (a divisão por zero do tipo 3 sem μ, o coeficiente de carga nulo) volta ao menu no meio da opção 5 "todas" e da 3, e as lajes seguintes ficam sem cálculo nessa rodada; o modo original reproduz (`esforcosDoPainelCom(…, paraNaPrimeiraFalha)`), e o corrigido calcula as outras.
-- **Quantitativos de viga:** volume e fôrma pelos eixos e abaixo da laje, a regra da V2. O DESINIT usa vão livre e altura inteira e conta de novo a faixa da laje que a laje já conta. O aço é o do DESINIT nos dois modos.
+- **Quantitativos de viga:** volume e fôrma pelos eixos e abaixo da laje, a regra da V2. O DESINIT usa vão livre e altura inteira e conta de novo a faixa da laje que a laje já conta. O aço é o do DESINIT nos dois modos; a viga sem quadro do DESINIT (a que para no DESDIM no modo original, ou cujo detalhamento falhou) entra pela estimativa da V2 (`fonte.vigas.aco = "misto"`), e não com 0. O peso de aço dos quantitativos é estimativa e não é a soma da tabela de barras do detalhamento da tela: `Quantitativos.definicaoAco` diz o que ele é e `Quantitativos.acoIncompleto` lista os elementos cujo aço não entra inteiro.
 
 ### Defeitos reproduzidos nos dois modos
 
