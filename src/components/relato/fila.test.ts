@@ -10,6 +10,7 @@ const relato = (titulo: string): RelatoEnviado => ({
   esperado: "",
   diagnostico: [{ rotulo: "Rota", valor: "/" }],
   erros: [],
+  build: "abc123",
   turnstile: "token-velho",
 });
 

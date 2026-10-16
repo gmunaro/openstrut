@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   AVISO_CORTE,
   LIMITE_URL,
+  marcadorRelato,
   corpoRelato,
   cortar,
   tituloRelato,
@@ -17,6 +18,7 @@ const diag: Diagnostico = {
     { rotulo: "Obra", valor: 'Casa | "A", 2 pavimentos' },
   ],
   erros: [],
+  build: "dd703d2",
 };
 const texto = { aconteceu: "O momento saiu negativo\nna viga V3", esperado: "Positivo", email: "" };
 const github: AnexosCorpo = { destino: "github", print: "relato.png", obra: "casa.openstrut.json" };
@@ -76,6 +78,36 @@ describe("corpo", () => {
   test("e-mail preenchido entra na seção de contato", () => {
     expect(corpoRelato({ ...texto, email: " eng@x.com " }, diag, github)).toContain(
       "### Contato\n\neng@x.com",
+    );
+  });
+});
+
+describe("marcador da triagem", () => {
+  const MARCADOR = "<!-- openstrut-relato v1 build=dd703d2 -->";
+  test("o corpo termina com o marcador oculto e o build", () => {
+    expect(
+      corpoRelato(texto, diag, github).endsWith(`
+
+${MARCADOR}`),
+    ).toBe(true);
+  });
+  test("continua no fim quando a URL corta erros e textos", () => {
+    const enorme = "x".repeat(20_000);
+    const erros = Array.from({ length: 20 }, (_, i) => `erro ${i} ${"y".repeat(1990)}`);
+    const { url, cortado } = urlNovaIssue(
+      { aconteceu: enorme, esperado: enorme, email: "" },
+      { ...diag, erros },
+      github,
+    );
+    expect(cortado).toBe(true);
+    expect(new URL(url).searchParams.get("body")?.endsWith(MARCADOR)).toBe(true);
+    expect(new URL(url).searchParams.get("title")?.startsWith("[Relato] ")).toBe(true);
+  });
+  test("o build não fecha o comentário nem injeta texto", () => {
+    expect(marcadorRelato("abc--> <b>x</b>")).toBe("<!-- openstrut-relato v1 build=abc-bxb -->");
+    expect(marcadorRelato("")).toBe("<!-- openstrut-relato v1 build=desconhecido -->");
+    expect(marcadorRelato("index-B2x9.js")).toBe(
+      "<!-- openstrut-relato v1 build=index-B2x9.js -->",
     );
   });
 });

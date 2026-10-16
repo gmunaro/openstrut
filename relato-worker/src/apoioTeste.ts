@@ -122,6 +122,7 @@ export function relatoBase(extra: Partial<RelatoEnviado> = {}): RelatoEnviado {
       { rotulo: "Navegador", valor: "Firefox" },
     ],
     erros: [],
+    build: "dd703d2",
     ...extra,
   };
 }

@@ -82,6 +82,7 @@ describe("diagnóstico", () => {
     expect(valor(d.itens, "Navegador")).toBe("Mozilla/5.0 (Linux; Android 14)");
     expect(valor(d.itens, "Data")).toBe("2026-10-16T12:34:56.000Z");
     expect(d.erros).toEqual(["2026-10-16T12:00:00.000Z [promessa] TypeError: x"]);
+    expect(d.build).toBe("dd703d2");
   });
 
   test("com obra NB-1/78 no modo original", () => {
@@ -104,6 +105,8 @@ describe("diagnóstico", () => {
   test("sem commit no build, diz que não foi informado", () => {
     const d = montarDiagnostico({ ...ambiente, commit: undefined });
     expect(valor(d.itens, "Versão (commit)")).toBe("não informado no build");
+    // sem commit, a triagem identifica o build pelo arquivo do bundle
+    expect(d.build).toBe("index-AbC123.js");
   });
 
   test("arquivo do build é o nome do bundle", () => {

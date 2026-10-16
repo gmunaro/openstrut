@@ -18,6 +18,8 @@ export interface Diagnostico {
   itens: ItemDiagnostico[];
   /** Últimos erros, já em texto (`quando [origem] texto`). */
   erros: string[];
+  /** Identificação do build para a triagem: o commit, ou o arquivo do bundle sem ele. */
+  build: string;
 }
 
 /** O que o diagnóstico lê do ambiente. Separado para testar sem navegador. */
@@ -98,6 +100,7 @@ export function montarDiagnostico(a: AmbienteDiagnostico): Diagnostico {
   return {
     itens: itens.map((i) => ({ ...i, valor: i.valor.slice(0, LIMITE_VALOR) })),
     erros: a.erros.map((e) => `${e.quando} [${e.origem}] ${e.texto}`.slice(0, LIMITE_ERRO)),
+    build: a.commit || a.arquivoBuild,
   };
 }
 

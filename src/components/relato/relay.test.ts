@@ -8,6 +8,7 @@ const relato: RelatoEnviado = {
   esperado: "",
   diagnostico: [],
   erros: [],
+  build: "abc123",
 };
 
 const responder = (status: number, corpo: unknown) =>

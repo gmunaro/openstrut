@@ -12,6 +12,8 @@ export interface RelatoEnviado {
   email?: string;
   diagnostico: Diagnostico["itens"];
   erros: string[];
+  /** Commit ou arquivo do build, para o marcador da triagem. */
+  build: string;
   /** PNG em base64, sem o prefixo `data:`. */
   print?: string;
   obra?: { nome: string; json: string };

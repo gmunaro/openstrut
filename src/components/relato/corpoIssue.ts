@@ -24,6 +24,19 @@ export interface AnexosCorpo {
   obra: string | null;
 }
 
+/**
+ * Marcador oculto no fim do corpo: a triagem acha por ele as issues do botão, também as
+ * abertas por quem não é colaborador (o GitHub ignora o `labels` da URL nesse caso).
+ * O build só leva [A-Za-z0-9._-], sem "--", para não fechar o comentário.
+ */
+export function marcadorRelato(build: string) {
+  const limpo = build
+    .replace(/[^A-Za-z0-9._-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .slice(0, 80);
+  return `<!-- openstrut-relato v1 build=${limpo || "desconhecido"} -->`;
+}
+
 /** Corta por caractere (code point), sem partir emoji nem par substituto. */
 export function cortar(texto: string, max: number, sufixo = "…") {
   const cps = Array.from(texto);
@@ -93,7 +106,11 @@ export function corpoRelato(
   if (fora > 0)
     partes.push(`_${fora} erro(s) mais antigo(s) ficaram de fora pelo limite do link._`);
   if (d.erros.length === 0) partes.push("_Nenhum erro registrado no console._");
-  partes.push("---", '_Relato enviado pelo botão "Relatar problema" do OpenStrut._');
+  partes.push(
+    "---",
+    '_Relato enviado pelo botão "Relatar problema" do OpenStrut._',
+    marcadorRelato(d.build),
+  );
   return partes.join("\n\n");
 }
 

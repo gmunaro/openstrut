@@ -284,7 +284,13 @@ describe("GitHub", () => {
 
     const issue = chamadas[3];
     expect(issue?.token).toBe("Bearer token-principal");
-    expect(issue?.corpo).toMatchObject({ title: "[Relato] Viga V3 sem armadura", labels: ["bug"] });
+    expect(issue?.corpo).toMatchObject({
+      title: "[Relato] Viga V3 sem armadura",
+      labels: ["relato", "triagem", "bug"],
+    });
+    expect(campo(issue?.corpo, "body").endsWith("<!-- openstrut-relato v1 build=dd703d2 -->")).toBe(
+      true,
+    );
     const corpoIssue = campo(issue?.corpo, "body");
     expect(corpoIssue).toContain(
       `![print](https://raw.githubusercontent.com/gmunaro/openstrut/relatos/relatos/${id}/print.png)`,

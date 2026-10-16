@@ -47,6 +47,8 @@ describe("validarRelato", () => {
       /20 itens/,
     );
     expect(mensagem(relatoBase({ erros: ["x".repeat(2001)] }))).toMatch(/2000 caracteres/);
+    expect(mensagem(relatoBase({ build: "x".repeat(101) }))).toMatch(/build/);
+    expect(mensagem({ ...relatoBase(), build: 7 })).toMatch(/build/);
   });
 
   it("recusa mais de 5 links somando aconteceu e esperado", () => {

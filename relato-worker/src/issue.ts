@@ -63,6 +63,19 @@ function tabelaDiagnostico(itens: ItemDiagnostico[]) {
   return ["| Item | Valor |", "| --- | --- |", ...linhas].join("\n");
 }
 
+/**
+ * Marcador oculto no fim do corpo: a triagem acha por ele as issues do botão (o mesmo
+ * do caminho sem relay, src/components/relato/corpoIssue.ts). O build só leva
+ * [A-Za-z0-9._-], sem "--", para não fechar o comentário.
+ */
+export function marcadorRelato(build: string | undefined) {
+  const limpo = (build ?? "")
+    .replace(/[^A-Za-z0-9._-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .slice(0, 80);
+  return `<!-- openstrut-relato v1 build=${limpo || "desconhecido"} -->`;
+}
+
 /** Corpo da issue. O e-mail nunca entra: só a informação de que o autor deixou contato. */
 export function corpoIssue(relato: Relato, anexos: Anexos) {
   const secoes = [
@@ -91,6 +104,10 @@ export function corpoIssue(relato: Relato, anexos: Anexos) {
     secoes.push(`### Últimos erros\n\n${blocoDeCodigo(erros)}`);
   }
 
+  // o marcador fica sempre no fim, também quando o corpo é cortado
+  const marcador = marcadorRelato(relato.build);
+  const teto = LIMITE_CORPO - marcador.length - 20;
   const corpo = [...secoes, ...fim].join("\n\n");
-  return corpo.length > LIMITE_CORPO ? `${corpo.slice(0, LIMITE_CORPO)}\n\n… (truncado)` : corpo;
+  const cortado = corpo.length > teto ? `${corpo.slice(0, teto)}\n\n… (truncado)` : corpo;
+  return `${cortado}\n\n${marcador}`;
 }

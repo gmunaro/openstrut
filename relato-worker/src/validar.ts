@@ -12,6 +12,8 @@ export interface RelatoEnviado {
   email?: string;
   diagnostico: ItemDiagnostico[];
   erros: string[];
+  /** Commit ou arquivo do build do app, para o marcador da triagem. */
+  build?: string;
   print?: string;
   obra?: { nome: string; json: string };
   turnstile?: string;
@@ -71,6 +73,7 @@ function lerRelato(corpo: unknown): Relato {
     email: lerEmail(corpo.email),
     diagnostico: lerDiagnostico(corpo.diagnostico),
     erros: lerErros(corpo.erros),
+    build: lerBuild(corpo.build),
     print: lerPrint(corpo.print),
     obra: lerObra(corpo.obra),
     turnstile: typeof corpo.turnstile === "string" && corpo.turnstile ? corpo.turnstile : undefined,
@@ -110,6 +113,15 @@ function texto(valor: unknown, campo: string, maximo: number, obrigatorio: boole
     throw new Invalido(`O campo "${campo}" passa de ${maximo} caracteres.`);
   }
   return limpo;
+}
+
+/** Build do app: texto curto; o marcador (issue.ts) filtra os caracteres. */
+function lerBuild(valor: unknown) {
+  if (valor === undefined || valor === null || valor === "") return undefined;
+  if (typeof valor !== "string" || valor.length > 100) {
+    throw new Invalido("A identificação do build chegou inválida.");
+  }
+  return valor;
 }
 
 function lerEmail(valor: unknown) {

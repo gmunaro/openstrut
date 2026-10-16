@@ -108,7 +108,7 @@ async function publicar(relato: Relato, env: Env) {
   const repo = env.GITHUB_REPO || "gmunaro/openstrut";
   const repoArquivos = env.GITHUB_REPO_ARQUIVOS || repo;
   const branch = env.BRANCH_ARQUIVOS || "relatos";
-  const labels = (env.LABELS ?? "bug")
+  const labels = (env.LABELS ?? "relato,triagem,bug")
     .split(",")
     .map((l) => l.trim())
     .filter(Boolean);

@@ -40,6 +40,15 @@ O GitHub recusa URL longa demais, então o link fica em até 7500 caracteres. Se
 
 Na fila, um relato que o relay recusa (conteúdo inválido) não é reenviado. O diálogo mostra esse relato com as opções "Baixar arquivo" e "Descartar".
 
+## Como a triagem acha os relatos
+
+Quem não é colaborador do repositório abre a issue sem label, porque o GitHub ignora o `labels=bug` da URL. Por isso, nos dois caminhos:
+
+- o título começa com `[Relato] `;
+- o corpo termina com o marcador oculto `<!-- openstrut-relato v1 build=<build> -->`. O `<build>` é o commit (`VITE_COMMIT`) ou, sem ele, o arquivo do bundle (ex.: `index-B2x9.js`), só com `[A-Za-z0-9._-]`, para não fechar o comentário. O marcador continua no fim mesmo quando o texto é cortado pelo limite do link ou do GitHub.
+
+O relay põe as labels `relato`, `triagem` e `bug` (var `LABELS`). Para a triagem, busque `repo:gmunaro/openstrut is:issue "[Relato]" in:title` e confirme pelo marcador no `body` que a API do GitHub devolve. O comentário HTML não aparece na página da issue, mas vem cru no `body`.
+
 ## Variáveis de build
 
 O Vite lê variáveis `VITE_*` do ambiente do `bun run build:pages`.
@@ -103,7 +112,7 @@ Cuidado: com Contents: write, o token escreve em qualquer branch do repositório
 
 Assim, um token vazado não escreve no código. O branch `relatos` é criado sozinho no primeiro relato com anexo, como branch órfão, sem histórico do código.
 
-Confira também se a label `bug` existe no repositório (Issues → Labels). Ela vem por padrão.
+As labels `relato`, `triagem` e `bug` já existem no repositório (Issues → Labels).
 
 ### 3. Secrets e variáveis do Worker
 
@@ -121,7 +130,7 @@ As variáveis ficam em `[vars]` no `wrangler.toml` e já têm padrão:
 | `GITHUB_REPO` | `gmunaro/openstrut` |
 | `GITHUB_REPO_ARQUIVOS` | igual a `GITHUB_REPO` |
 | `BRANCH_ARQUIVOS` | `relatos` |
-| `LABELS` | `bug` |
+| `LABELS` | `relato,triagem,bug` (já existem no repositório) |
 | `LIMITE_DIA_IP` | `10` |
 | `LIMITE_DIA_TOTAL` | `50` |
 | `SAL_IP` | `openstrut-relato` (sal do hash do IP; troque por um texto qualquer) |
@@ -186,6 +195,7 @@ Os tipos estão em `src/components/relato/relay.ts` (`RelatoEnviado`) e em `rela
   email?: string,        // não vai para a issue
   diagnostico: { rotulo: string; valor: string }[],  // ≤ 30; valor ≤ 1000
   erros: string[],       // ≤ 20, cada ≤ 2000
+  build?: string,        // ≤ 100; commit ou arquivo do build, vai no marcador oculto
   print?: string,        // PNG em base64, ≤ 3 MiB
   obra?: { nome: string; json: string },             // ≤ 2 MiB
   turnstile?: string,

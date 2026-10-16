@@ -50,6 +50,8 @@ export interface Relato {
   email: string | undefined;
   diagnostico: ItemDiagnostico[];
   erros: string[];
+  /** Commit ou arquivo do build do app (sem filtrar; o marcador filtra). */
+  build: string | undefined;
   /** PNG em base64, já conferido. */
   print: string | undefined;
   /** Obra com nome seguro para caminho e o JSON original. */

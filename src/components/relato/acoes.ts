@@ -82,6 +82,7 @@ export async function relatoParaRelay(d: DadosRelato): Promise<RelatoEnviado> {
     ...(t.email.trim() ? { email: t.email.trim() } : {}),
     diagnostico: d.diagnostico.itens,
     erros: d.diagnostico.erros,
+    build: d.diagnostico.build,
     ...(d.print ? { print: paraBase64(new Uint8Array(await d.print.arrayBuffer())) } : {}),
     ...(d.obra && n.obra ? { obra: { nome: n.obra, json: d.obra.json } } : {}),
   };
@@ -121,7 +122,7 @@ export const enviarFilaAgora = (url: string) => enviarFila((r) => enviarComToken
 export function zipDaFila(item: RelatoNaFila) {
   const r = item.relato;
   const texto = { aconteceu: r.aconteceu, esperado: r.esperado, email: r.email ?? "" };
-  const diagnostico = { itens: r.diagnostico, erros: r.erros };
+  const diagnostico = { itens: r.diagnostico, erros: r.erros, build: r.build };
   const n = nomesRelato(new Date(item.criado), null);
   const a: AnexosCorpo = {
     destino: "arquivo",

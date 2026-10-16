@@ -10,7 +10,8 @@ GITHUB_REPO = "gmunaro/openstrut"
 # Repositório dos anexos (print e obra). Sem esta var, vai para GITHUB_REPO.
 # GITHUB_REPO_ARQUIVOS = "gmunaro/openstrut-relatos"
 BRANCH_ARQUIVOS = "relatos"
-LABELS = "bug"
+# labels da issue; a triagem diária procura "relato" e o marcador oculto do corpo
+LABELS = "relato,triagem,bug"
 LIMITE_DIA_IP = "10"
 LIMITE_DIA_TOTAL = "50"
 # Sal do hash do IP. Sem esta var, usa "openstrut-relato".

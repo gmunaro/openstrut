@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { blocoDeCodigo, celula, citar, corpoIssue, neutralizarMencoes, tituloIssue } from "./issue";
+import {
+  blocoDeCodigo,
+  celula,
+  citar,
+  corpoIssue,
+  marcadorRelato,
+  neutralizarMencoes,
+  tituloIssue,
+} from "./issue";
 import type { Relato } from "./tipos";
 
 const ZWSP = "​";
@@ -11,6 +19,7 @@ const relato: Relato = {
   email: undefined,
   diagnostico: [],
   erros: [],
+  build: "dd703d2",
   print: undefined,
   obra: undefined,
   turnstile: undefined,
@@ -85,5 +94,27 @@ describe("corpoIssue", () => {
       anexos,
     );
     expect(corpo.length).toBeLessThanOrEqual(65_536);
+  });
+});
+
+describe("marcador da triagem", () => {
+  const MARCADOR = "<!-- openstrut-relato v1 build=dd703d2 -->";
+  it("o corpo termina com o marcador oculto e o build", () => {
+    expect(
+      corpoIssue(relato, anexos).endsWith(`
+
+${MARCADOR}`),
+    ).toBe(true);
+  });
+  it("continua no fim quando o corpo passa do limite do GitHub", () => {
+    const grande = { ...relato, aconteceu: "x".repeat(70_000) };
+    const corpo = corpoIssue(grande, anexos);
+    expect(corpo.length).toBeLessThanOrEqual(65_536);
+    expect(corpo.endsWith(MARCADOR)).toBe(true);
+    expect(corpo).toContain("… (truncado)");
+  });
+  it("sem build vira desconhecido; build sujo não fecha o comentário", () => {
+    expect(marcadorRelato(undefined)).toBe("<!-- openstrut-relato v1 build=desconhecido -->");
+    expect(marcadorRelato("abc--> <b>x</b>")).toBe("<!-- openstrut-relato v1 build=abc-bxb -->");
   });
 });
