@@ -6,6 +6,8 @@
 // A_1014 com o fechamento da última área, pavimento só com buracos) e um .COL montado
 // aqui no formato do PIGRAEDI.
 import { describe, expect, it } from "vitest";
+import { importarLaj } from "../armazenamento/sistrut/laje";
+import { importarVigasSistrut } from "../armazenamento/sistrut/viga";
 import { KN_POR_TF } from "../calculo/sistrut/base/unidades";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
 import {
@@ -431,5 +433,33 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
       "COB.LAJ: carga de ocupação A1 (polígono): esperados pelo menos 3 pontos; o arquivo deu 2 itens. Abra o COB.LAJ no LAJEGEOM do SISTRUT, corrija e grave de novo, ou importe sem ele. O pavimento COB ficou de fora.",
     );
     for (const e of r.erros) expect(e).not.toMatch(/pavimentos\[|cargasOcupacao|\[\]/);
+  });
+});
+
+describe("importarVigasSistrut: a montagem calculada uma vez", () => {
+  // a importação calcula a obra uma vez e passa a montagem de cada pavimento ao
+  // importador de vigas, no lugar de recalcular o prédio inteiro a cada .VIG
+  const laj = importarLaj(Buffer.from(arquivo("E2E.LAJ").dados).toString("latin1"), {
+    pavimento: { id: "E2E", nome: "E2E" },
+  });
+  if (!laj.ok) throw new Error(laj.erros.join("\n"));
+  const vig = arquivo("E2E.VIG");
+
+  it("com a montagem dada, é ela que vale (vazia: nenhuma viga casa)", () => {
+    const r = importarVigasSistrut([vig], laj.obra, "E2E", []);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.avisos).toContain("Viga V1 do .VIG não existe no pavimento E2E: ignorada.");
+  });
+
+  it("a montagem certa dá a mesma obra que recalcular", () => {
+    const montagem = calcularObraSistrut(laj.obra, { modo: "original" }).pavimentos[0]!.montagem
+      .vigas;
+    const dada = importarVigasSistrut([vig], laj.obra, "E2E", montagem);
+    const recalculada = importarVigasSistrut([vig], laj.obra, "E2E");
+    expect(dada.ok && recalculada.ok).toBe(true);
+    if (!dada.ok || !recalculada.ok) return;
+    expect(dada.obra).toEqual(recalculada.obra);
+    expect(dada.avisos).toEqual(recalculada.avisos);
   });
 });
