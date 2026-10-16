@@ -1,6 +1,6 @@
 # Relatar problema
 
-O botão redondo com um inseto, no canto inferior direito de todas as telas, abre o relato de problema. O atalho é **Alt+Shift+R**. Na impressão o botão some.
+O botão redondo com um inseto, no canto inferior direito de todas as telas, abre o relato de problema. O atalho é **Alt+Shift+R**. Na impressão o botão some. O botão fica acima dos diálogos para continuar clicável. Se o canto tiver um controle, como a barra Aplicar/Cancelar de um diálogo ou folha em tela cheia no celular, ele sobe pela borda direita até um lugar livre (`src/components/relato/posicao.ts`).
 
 No clique, o app faz três coisas antes de abrir qualquer janela:
 
