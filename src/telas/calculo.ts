@@ -8,6 +8,7 @@ import {
   type ResultadoObra,
   type ResultadoViga,
 } from "../calculo/fluxo";
+import type { AvisoComOpcao } from "../calculo/avisos";
 import { normaPorId } from "../calculo/normas";
 import type { ModoCalculo, NormaId, Obra } from "../dominio/obra";
 import type { DetalhamentoObra } from "./detalhamento";
@@ -60,7 +61,16 @@ export interface Aviso {
   /** Elemento ("" quando o aviso é do pavimento). */
   elemento: string;
   texto: string;
+  /** O aviso tem uma opção no elemento (ResultadoObra.avisosComOpcao): a tela põe o botão. */
+  opcao?: AvisoComOpcao;
 }
+
+/** A opção de um aviso, pelo texto: o motor dá o mesmo texto na lista do elemento ou nas
+ *  falhas do pavimento e em `avisosComOpcao`. */
+const comOpcao = (r: ResultadoObra, a: Aviso): Aviso => {
+  const opcao = r.avisosComOpcao?.find((o) => o.texto === a.texto);
+  return opcao ? { ...a, opcao } : a;
+};
 
 export const avisosLaje = (r: ResultadoLaje) => [...r.esforcos.avisos, ...r.armadura.avisos];
 
@@ -114,7 +124,7 @@ export function coletarAvisos(r: ResultadoObra, detalhamento?: DetalhamentoObra 
         texto,
       });
   }
-  return avisos;
+  return avisos.map((a) => comOpcao(r, a));
 }
 
 /** Falhas dos pavimentos (ResultadoPavimento.falhas): carga que não chegou às vigas
@@ -122,7 +132,7 @@ export function coletarAvisos(r: ResultadoObra, detalhamento?: DetalhamentoObra 
  *  também estão nos avisos do equilíbrio; aqui vão à parte para o destaque. */
 export const coletarFalhas = (r: ResultadoObra): Aviso[] =>
   r.pavimentos.flatMap((p) =>
-    p.falhas.map((texto) => ({ local: p.pavimento.nome, elemento: "", texto })),
+    p.falhas.map((texto) => comOpcao(r, { local: p.pavimento.nome, elemento: "", texto })),
   );
 
 /** Nome do nível de um pilar: o pavimento e, se ele se repete, "(k/n)". O

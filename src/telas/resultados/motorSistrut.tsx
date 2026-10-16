@@ -7,7 +7,8 @@ import { formatarNumero } from "../formato";
 import { ListaAvisos } from "./avisos";
 
 const TEXTO_ERRO: Record<string, string> = {
-  "nao-converge": "não converge; o original trava em laço sem fim (defeito D-2). Sem resultado.",
+  "nao-converge":
+    "a busca do equilíbrio não converge; o original fica em laço sem fim (defeito D-2). Sem resultado.",
   "nk-nulo": "Nk nulo; o original divide por zero (defeito D-3). Sem resultado.",
 };
 
@@ -26,20 +27,23 @@ export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
         local: ps.nome,
         elemento: parada.laje,
         texto:
-          `otimização dos negativos parada no lado ${parada.lado + 1} (relação ` +
-          `${formatarNumero(parada.relacaoNova, 2)}, código ${parada.codigo} repetido); os esforços ficam os de ` +
-          "antes da otimização.",
+          `a otimização dos negativos não converge: no lado ${parada.lado + 1} a relação Mneg/Mpos ` +
+          `passa a ${formatarNumero(parada.relacaoNova, 2)}, mas o código do lado continua ${parada.codigo}, ` +
+          "e o original repete este lado sem fim (defeito R3). Valem os esforços de antes da otimização.",
       });
     for (const v of ps.vigas) {
       if (!v.interrompida) continue;
       const impressa = v.interrompida.impressa ? "; tabela de apoios e tramos já impressa" : "";
+      const opcao = r.avisosComOpcao?.find(
+        (a) => a.id === "viga.continuar-acima-do-limite" && a.elemento.id === v.id,
+      );
       marcas.push({
         local: ps.nome,
         elemento: v.nome,
         texto:
           'parou em "Continuo com o processamento desta Viga S/N" com o padrão N (motivo: ' +
-          `${v.interrompida.motivos.join(" e ")}); sem detalhamento nem quadro${impressa}. ` +
-          "Para seguir, marque continuaSeExcederLimite na viga.",
+          `${v.interrompida.motivos.join(" e ")}); sem detalhamento nem quadro${impressa}.`,
+        ...(opcao ? { opcao } : {}),
       });
     }
   }
@@ -54,7 +58,7 @@ export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
           marcas.push({
             local: p.pavimento,
             elemento: p.pilar.nome,
-            texto: `caso ${caso.rotulo}: ${textoErro(caso.erro)}`,
+            texto: `Caso ${caso.rotulo}: ${textoErro(caso.erro)}`,
           });
       }
       for (const texto of v.avisos)
@@ -82,7 +86,13 @@ export const vazioComMarcas = (r: ResultadoObra) =>
     : undefined;
 
 /** Bloco com o modo do motor e as marcas dele, ou o estado vazio explícito. */
-export function BlocoMotorSistrut({ resultado }: { resultado: ResultadoObra }) {
+export function BlocoMotorSistrut({
+  resultado,
+  comOpcoes = false,
+}: {
+  resultado: ResultadoObra;
+  comOpcoes?: boolean;
+}) {
   if (!resultado.sistrut) return null;
   const modo = resultado.sistrut.modo === "original" ? "como o SISTRUT original" : "corrigido";
   const marcas = coletarMarcasMotor(resultado);
@@ -98,7 +108,7 @@ export function BlocoMotorSistrut({ resultado }: { resultado: ResultadoObra }) {
           resultado.
         </p>
       ) : (
-        <ListaAvisos avisos={marcas} />
+        <ListaAvisos avisos={marcas} comOpcoes={comOpcoes} />
       )}
     </section>
   );

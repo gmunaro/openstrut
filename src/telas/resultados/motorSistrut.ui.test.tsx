@@ -52,11 +52,11 @@ describe("coletarMarcasMotor", () => {
       expect.objectContaining({ local: "Pavimento 1", elemento: "P3" }),
     ]);
     const textos = marcas.map((m) => m.texto).join("\n");
-    expect(textos).toContain("lado 2");
-    expect(textos).toContain("relação 1,50");
+    expect(textos).toContain("a otimização dos negativos não converge: no lado 2");
+    expect(textos).toContain("passa a 1,50");
     expect(textos).toContain('"Continuo com o processamento desta Viga S/N"');
     expect(textos).toContain("tabela de apoios e tramos já impressa");
-    expect(textos).toContain("caso 1/2: não converge");
+    expect(textos).toContain("Caso 1/2: a busca do equilíbrio não converge");
     expect(textos).toContain("PILAR opção 6: verificação incompleta.");
   });
 
@@ -83,12 +83,23 @@ describe("coletarMarcasMotor", () => {
   });
 });
 
-describe("coletarMarcasMotor: orientação da viga interrompida", () => {
-  it("diz como seguir: marcar continuaSeExcederLimite na viga", () => {
-    const marca = coletarMarcasMotor(resultadoCom([pavimentoComMarcas])).find(
-      (m) => m.elemento === "V1",
-    );
-    expect(marca?.texto).toContain("Para seguir, marque continuaSeExcederLimite na viga.");
+describe("coletarMarcasMotor: opção da viga interrompida", () => {
+  it("leva a opção do motor (avisosComOpcao) e não cita nome de campo", () => {
+    const opcao = {
+      id: "viga.continuar-acima-do-limite",
+      pavimentoId: "pav1",
+      elemento: { tipo: "viga", id: "v1" },
+      texto: "V1: …",
+    };
+    const r = {
+      ...resultadoCom([
+        { ...pavimentoComMarcas, vigas: [{ ...pavimentoComMarcas.vigas[0], id: "v1" }] },
+      ]),
+      avisosComOpcao: [opcao],
+    } as unknown as ResultadoObra;
+    const marca = coletarMarcasMotor(r).find((m) => m.elemento === "V1");
+    expect(marca?.opcao).toEqual(opcao);
+    expect(marca?.texto).not.toMatch(/continuaSeExcederLimite/);
   });
 });
 

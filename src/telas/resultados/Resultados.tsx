@@ -125,12 +125,13 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
           </Badge>
         )}
       </p>
-      <ListaFalhas falhas={coletarFalhas(r)} />
+      <ListaFalhas falhas={coletarFalhas(r)} comOpcoes />
       <ListaAvisos
         avisos={semMarcasDuplicadas(coletarAvisos(r, detalhamento), r)}
         vazio={vazioComMarcas(r)}
+        comOpcoes
       />
-      <BlocoMotorSistrut resultado={r} />
+      <BlocoMotorSistrut resultado={r} comOpcoes />
       <TabelasObra resultado={r} comMemoria />
       {obra && <BlocoQuantitativos obra={obra} resultado={r} />}
     </div>

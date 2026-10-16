@@ -30,7 +30,7 @@ const CASOS: {
     arquivo: "obra-paradas-original.openstrut.json",
     selo: true,
     marcas: [
-      "otimização dos negativos parada no lado 3 (relação 0,35, código 5",
+      "a otimização dos negativos não converge: no lado 3 a relação Mneg/Mpos passa a 0,35, mas o código do lado continua 5",
       'parou em "Continuo com o processamento desta Viga S/N" com o padrão N',
     ],
   },

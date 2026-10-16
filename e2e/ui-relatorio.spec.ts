@@ -342,7 +342,8 @@ test("relatório de obra no modo original: os avisos e a marca 'não existe no S
 
   const texto = paginas.join(" ");
   expect(texto).toContain("Avisos");
-  expect(texto).toMatch(/Otimização dos negativos não converge: L1/);
+  // a otimização parada (resultado.sistrut.otimizacaoParada) sai na marca do motor
+  expect(texto).toMatch(/a otimização dos negativos não converge: no lado 3/);
   // a viga interrompida sai uma vez, na marca do motor (como na aba Resultados)
   expect(texto).toMatch(/parou em "Continuo com o processamento desta Viga S\/N"/);
   expect(texto).not.toMatch(/V4: o DESDIM para a viga com a resposta padrão N/);

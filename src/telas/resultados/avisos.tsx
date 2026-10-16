@@ -2,9 +2,17 @@
 // calculados, equilíbrio). Nada é filtrado.
 import { CircleAlert, TriangleAlert } from "lucide-react";
 import type { Aviso } from "../calculo";
+import { BotaoOpcao } from "./opcaoAviso";
 
-/** Falhas dos pavimentos (carga incompleta), em vermelho; nada sem falha. */
-export function ListaFalhas({ falhas }: { falhas: Aviso[] }) {
+/** Falhas dos pavimentos (carga incompleta), em vermelho; nada sem falha. `comOpcoes`: o
+ *  aviso com opção ganha o botão (na tela; o relatório não). */
+export function ListaFalhas({
+  falhas,
+  comOpcoes = false,
+}: {
+  falhas: Aviso[];
+  comOpcoes?: boolean;
+}) {
   if (falhas.length === 0) return null;
   return (
     <div
@@ -18,7 +26,10 @@ export function ListaFalhas({ falhas }: { falhas: Aviso[] }) {
         {falhas.map((a, i) => (
           <li key={i} className="grid grid-cols-[minmax(6rem,auto)_1fr] gap-x-3">
             <span className="font-medium">{a.local || "obra"}</span>
-            <span>{a.texto}</span>
+            <span>
+              {a.texto}
+              {comOpcoes && a.opcao && <BotaoOpcao opcao={a.opcao} elemento={a.elemento} />}
+            </span>
           </li>
         ))}
       </ul>
@@ -30,9 +41,11 @@ export function ListaFalhas({ falhas }: { falhas: Aviso[] }) {
 export function ListaAvisos({
   avisos,
   vazio = "Nenhum aviso: todos os elementos dentro dos limites verificados.",
+  comOpcoes = false,
 }: {
   avisos: Aviso[];
   vazio?: string | undefined;
+  comOpcoes?: boolean;
 }) {
   if (avisos.length === 0) return <p className="text-ok text-sm">{vazio}</p>;
   return (
@@ -45,7 +58,10 @@ export function ListaAvisos({
           <li key={i} className="grid grid-cols-[minmax(6rem,auto)_minmax(3rem,auto)_1fr] gap-x-3">
             <span className="text-muted-foreground">{a.local || "obra"}</span>
             <span className="font-medium">{a.elemento}</span>
-            <span>{a.texto}</span>
+            <span>
+              {a.texto}
+              {comOpcoes && a.opcao && <BotaoOpcao opcao={a.opcao} elemento={a.elemento} />}
+            </span>
           </li>
         ))}
       </ul>

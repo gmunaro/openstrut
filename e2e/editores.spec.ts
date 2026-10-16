@@ -178,3 +178,24 @@ test("editor de parâmetros: rodada, .LAP e .DSP com os campos do modo original 
   await dialogo.getByRole("button", { name: "Cancelar" }).click();
   await expect(dialogo).toBeHidden();
 });
+
+test("aviso com opção: o botão da V4 liga 'Continuar mesmo acima do limite' e recalcula", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await abrirFixture(page);
+  await page.getByRole("tab", { name: "Resultados", exact: true }).click();
+  const resultados = page.getByRole("tabpanel", { name: "Resultados" });
+  const parou = resultados.getByText(/parou em "Continuo com o processamento/);
+  await expect(parou).toBeVisible();
+  const botao = resultados.getByRole("button", { name: "Continuar mesmo acima do limite (V4)" });
+  await botao.scrollIntoViewIfNeeded();
+  await foto(page, "13-aviso-com-opcao");
+  await botao.click();
+  // a V4 segue: sem a marca e sem o botão
+  await expect(parou).toHaveCount(0);
+  await expect(botao).toHaveCount(0);
+  // a opção ficou na viga (editor) e o desfazer volta numa entrada só
+  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+  await expect(parou).toBeVisible();
+});
