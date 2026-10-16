@@ -22,7 +22,7 @@ import { useObra } from "../../estado/obra";
 import { EditorPlanta } from "../../planta/EditorPlanta";
 import { baixarArmacaoDxf, baixarFormasDxf, useAbrirObra, useSalvarArquivo } from "../acoes";
 import { calcular, NOME_NORMA } from "../calculo";
-import { DetalhamentoContexto, detalharObra } from "../detalhamento";
+import { DetalhamentoContexto, type DetalhamentoObra, detalharObra } from "../detalhamento";
 import { Erros } from "../Erros";
 import { Relatorio } from "../relatorio/Relatorio";
 import { Resultados } from "../resultados/Resultados";
@@ -80,6 +80,44 @@ function useRascunhoAutomatico(obra: Obra) {
   return erro;
 }
 
+/** Detalhe técnico de uma falha, quando a ação traz um (`{ mensagem, detalhe? }`). */
+const detalheDe = (m: object) =>
+  "detalhe" in m && typeof m.detalhe === "string" ? m.detalhe : undefined;
+
+/** Motivo para a armação não sair, ou undefined quando dá para exportar. */
+function motivoSemArmacao(d: DetalhamentoObra | null) {
+  if (!d) return "Calcule a obra primeiro: sem cálculo não há armação para exportar.";
+  if (d.vigas.length === 0) return "Não há viga calculada para exportar.";
+  return undefined;
+}
+
+/** Frase da tela e, embaixo, o detalhe técnico recolhido quando a falha traz um. */
+function Recado({
+  role,
+  texto,
+  detalhe,
+  className,
+}: {
+  role: "status" | "alert";
+  texto: string;
+  detalhe?: string | undefined;
+  className: string;
+}) {
+  return (
+    <div className="grid gap-1">
+      <p role={role} className={className}>
+        {texto}
+      </p>
+      {detalhe && (
+        <details className="text-muted-foreground text-xs">
+          <summary className="cursor-pointer">Detalhe técnico</summary>
+          <p className="font-mono break-all">{detalhe}</p>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function ObraAberta({ obra }: { obra: Obra }) {
   const pavimentoId = useObra((e) => e.pavimentoId);
   const podeDesfazer = useObra((e) => e.passado.length > 0);
@@ -108,7 +146,18 @@ function ObraAberta({ obra }: { obra: Obra }) {
       ? calculo.resultado.pavimentos.find((p) => p.pavimento.id === pavimentoId)
       : undefined;
   const naoSalvo = obra !== obraSalva;
+  // Exportações bloqueadas não baixam nada; o motivo aparece na tela (também para teclado).
+  const [bloqueio, setBloqueio] = useState<string | null>(null);
+  const motivoFormas = obra.pavimentos.every((p) => p.lajes.length === 0)
+    ? "Não há lajes para exportar as formas."
+    : undefined;
+  const motivoArmacao = motivoSemArmacao(detalhamento);
+  const exportar = (motivo: string | undefined, fazer: () => void) => {
+    setBloqueio(motivo ?? null);
+    if (!motivo) fazer();
+  };
 
+  // Sem arquivo (obraSalva null), o confirm também aparece: a obra só existe no rascunho.
   const abrirOutra = () => {
     if (
       naoSalvo &&
@@ -184,26 +233,44 @@ function ObraAberta({ obra }: { obra: Obra }) {
           <Button variant="ghost" size="sm" onClick={() => void salvar(true)}>
             Salvar como…
           </Button>
-          <Button variant="outline" size="sm" onClick={() => baixarFormasDxf(obra)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="aria-disabled:opacity-50"
+            aria-disabled={motivoFormas !== undefined}
+            title={motivoFormas}
+            onClick={() => exportar(motivoFormas, () => baixarFormasDxf(obra))}
+          >
             <FileDown /> Exportar DXF (formas)
           </Button>
           <Button
             variant="outline"
             size="sm"
-            disabled={!detalhamento || detalhamento.vigas.length === 0}
-            title={detalhamento ? undefined : "Sem cálculo: não há armação para exportar"}
-            onClick={() => detalhamento && baixarArmacaoDxf(obra, detalhamento)}
+            className="aria-disabled:opacity-50"
+            aria-disabled={motivoArmacao !== undefined}
+            title={motivoArmacao}
+            onClick={() =>
+              exportar(motivoArmacao, () => detalhamento && baixarArmacaoDxf(obra, detalhamento))
+            }
           >
             <FileDown /> Exportar DXF (armação)
           </Button>
         </div>
       </header>
 
-      {(mensagem || erroRascunho || erros.length > 0) && (
+      {(mensagem || bloqueio || erroRascunho || erros.length > 0) && (
         <div className="grid gap-2 px-4 pt-2 print:hidden">
           {mensagem && (
-            <p className={mensagem.tipo === "ok" ? "text-ok text-xs" : "text-destructive text-xs"}>
-              {mensagem.texto}
+            <Recado
+              role={mensagem.tipo === "ok" ? "status" : "alert"}
+              texto={mensagem.texto}
+              detalhe={detalheDe(mensagem)}
+              className={mensagem.tipo === "ok" ? "text-ok text-xs" : "text-destructive text-xs"}
+            />
+          )}
+          {bloqueio && (
+            <p role="status" className="text-muted-foreground text-xs">
+              {bloqueio}
             </p>
           )}
           {erroRascunho && <p className="text-destructive text-xs">{erroRascunho}</p>}
