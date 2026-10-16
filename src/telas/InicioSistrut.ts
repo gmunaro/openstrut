@@ -411,6 +411,26 @@ const resumoDe = (obra: Obra | undefined, c: Coleta): ResumoImportacao => ({
   ignorados: c.ignorados,
 });
 
+/** Aviso de parâmetros próprios da instalação do usuário que não vieram: há .TAB (o
+ *  DESENHO detalhou vigas com algum .DSP) e nenhum .DSP, ou o .COL usa uma parametrização
+ *  de pilar que não é a SISTRUT e o .PIP dela não veio. Sem eles valem os de fábrica, e o
+ *  detalhamento e o quadro podem divergir do .TAB (docs/sistrut/ARQUIVOS.md, seção 2). */
+function parametrosProprios(
+  grupo: (ext: string) => ArquivoEntrada[],
+  pipDoCol: string | undefined,
+): string | undefined {
+  const pip = pipDoCol?.trim().toUpperCase();
+  const pipFaltando =
+    pip !== undefined && pip !== "SISTRUT" && !grupo("PIP").some((a) => baseDe(a.nome) === pip);
+  const dspFaltando = grupo("TAB").length > 0 && grupo("DSP").length === 0;
+  if (!pipFaltando && !dspFaltando) return undefined;
+  const indicios = [
+    ...(dspFaltando ? ["há .TAB do DESENHO e nenhum .DSP"] : []),
+    ...(pipFaltando ? [`o .COL usa a parametrização ${pip}, que não veio`] : []),
+  ];
+  return `A obra parece usar parâmetros próprios (${indicios.join("; ")}): selecione também os arquivos de C:\\SISTRUT\\EXEC40 (o .DSP, o .LAP, o .PIP e os .INI), junto com os da obra. Sem eles valem os parâmetros de fábrica (SISTRUT), e o detalhamento e o quadro das vigas podem sair diferentes do .TAB do original.`;
+}
+
 /**
  * Monta uma obra a partir dos arquivos de uma obra do SISTRUT. Cada .LAJ vira um
  * pavimento; sem .LAJ, a obra sai do .VIG ou do .COL. Nunca lança: o que um arquivo não
@@ -715,6 +735,9 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       obra = pilares.obra;
     }
   }
+
+  const proprios = parametrosProprios(grupo, colOk?.valor.parametros.pip);
+  if (proprios) avisos.push(proprios);
 
   if (!obra)
     return {

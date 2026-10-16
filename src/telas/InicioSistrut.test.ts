@@ -291,4 +291,18 @@ describe("importarObraSistrut: armadura editada (.EDV)", () => {
     const q = res.pavimentos[0]!.vigas.find((v) => v.nome === "V1")?.quadro;
     expect(q?.comprimentoPorBitola).toEqual(comprimentos);
   });
+
+  it(".TAB sem .DSP: avisa que a obra parece usar parâmetros próprios; com o .DSP, não", () => {
+    const comTab = [...arquivos, doOraculo(`${caso}/E2E.TAB`)];
+    const aviso =
+      /^A obra parece usar parâmetros próprios \(há \.TAB do DESENHO e nenhum \.DSP\): selecione também os arquivos de C:\\SISTRUT\\EXEC40 /;
+    expect(importa(comTab).avisos).toContainEqual(expect.stringMatching(aviso));
+    expect(importa(arquivos).avisos).not.toContainEqual(
+      expect.stringMatching(/parâmetros próprios/),
+    );
+    const dsp = doOraculo("oraculo/orig/SISTRUT.DSP");
+    expect(importa([...comTab, dsp]).avisos).not.toContainEqual(
+      expect.stringMatching(/parâmetros próprios/),
+    );
+  });
 });
