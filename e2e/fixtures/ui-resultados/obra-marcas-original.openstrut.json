@@ -1,0 +1,254 @@
+{
+  "versao": 3,
+  "nome": "Teste UI resultados",
+  "norma": "nb1-78",
+  "modoCalculo": "original",
+  "materiais": {
+    "fck": 15,
+    "aco": "CA-50",
+    "acoEstribo": "CA-50",
+    "classeAco": "A",
+    "caa": 1,
+    "cobrimentoLaje": 1.5,
+    "cobrimentoViga": 2.5,
+    "cobrimentoPilar": 2.5
+  },
+  "pavimentos": [
+    {
+      "id": "1ab4cbd4-0b06-4437-8ef0-b4c5186ae4ca",
+      "nome": "Pavimento 1",
+      "peDireito": 3,
+      "repeticoes": 1,
+      "lajes": [
+        {
+          "id": "ce3a0c0d-63ba-43e0-8114-0f148d165798",
+          "nome": "L1",
+          "x": 0,
+          "y": 0,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "cd79cc2e-94f9-447c-99ae-2b3e89b04c7b",
+          "nome": "L2",
+          "x": 4,
+          "y": 0,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "390755ac-cfff-4215-80c0-5d7d014bc164",
+          "nome": "L3",
+          "x": 0,
+          "y": 5,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "74580ede-6df2-4fc3-b228-f6d82546926c",
+          "nome": "L4",
+          "x": 4,
+          "y": 5,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        }
+      ],
+      "vigas": [
+        {
+          "id": "a4fb2f5c-93d9-4a80-b2c8-f00bd5793060",
+          "nome": "V1",
+          "x1": 0,
+          "y1": 10,
+          "x2": 8,
+          "y2": 10,
+          "bw": 12,
+          "h": 40,
+          "cargaLinear": 0
+        },
+        {
+          "id": "d3176337-37ab-4a11-a04d-75b96c5cae0d",
+          "nome": "V2",
+          "x1": 0,
+          "y1": 5,
+          "x2": 8,
+          "y2": 5,
+          "bw": 12,
+          "h": 40,
+          "cargaLinear": 0
+        },
+        {
+          "id": "3ceab580-b4fc-490c-aefd-dfa4fb96ffaa",
+          "nome": "V3",
+          "x1": 0,
+          "y1": 0,
+          "x2": 8,
+          "y2": 0,
+          "bw": 12,
+          "h": 40,
+          "cargaLinear": 0
+        },
+        {
+          "id": "909a9ec9-351b-408f-b469-385e033ad496",
+          "nome": "V4",
+          "x1": 0,
+          "y1": 0,
+          "x2": 0,
+          "y2": 10,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "d01c5976-13b4-4a90-a51f-415e5262e8f3",
+          "nome": "V5",
+          "x1": 4,
+          "y1": 0,
+          "x2": 4,
+          "y2": 10,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "803e9a84-c19e-4a7f-a73f-6af401f0a7d6",
+          "nome": "V6",
+          "x1": 8,
+          "y1": 0,
+          "x2": 8,
+          "y2": 10,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        }
+      ],
+      "pilares": [
+        {
+          "id": "afde8891-599e-4032-aff9-522d1e3a3f83",
+          "nome": "P1",
+          "x": 0,
+          "y": 10,
+          "b": 20,
+          "h": 20,
+          "verificacoes": [
+            {
+              "barras": [
+                {
+                  "x": -7,
+                  "y": -7,
+                  "bitola": 16
+                },
+                {
+                  "x": 7,
+                  "y": -7,
+                  "bitola": 16
+                },
+                {
+                  "x": -7,
+                  "y": 7,
+                  "bitola": 16
+                },
+                {
+                  "x": 7,
+                  "y": 7,
+                  "bitola": 16
+                }
+              ],
+              "esforcos": {
+                "nk": 300,
+                "mxk": 10,
+                "myk": 5,
+                "lex": 3,
+                "ley": 3
+              }
+            }
+          ]
+        },
+        {
+          "id": "200e72c2-5dcf-476e-a2e3-0c41485c3bbd",
+          "nome": "P2",
+          "x": 4,
+          "y": 10,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "bec11d44-9d00-4aa2-b6fe-9fef2e35fcb7",
+          "nome": "P3",
+          "x": 8,
+          "y": 10,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "93933f4f-e948-48bf-a724-e6e5082b8fe8",
+          "nome": "P4",
+          "x": 0,
+          "y": 5,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "acae5013-5199-41dc-9c86-9011d52bb117",
+          "nome": "P5",
+          "x": 4,
+          "y": 5,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "666d7bf2-04a7-4bb8-961a-14177e1d40b3",
+          "nome": "P6",
+          "x": 8,
+          "y": 5,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "8ebfa306-8805-4b53-8ffa-303c98d4251d",
+          "nome": "P7",
+          "x": 0,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "d64dcc44-1ad4-42f2-ae51-14bf459e1bab",
+          "nome": "P8",
+          "x": 4,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "517d1b82-cea0-4722-9fa4-1e45e31725df",
+          "nome": "P9",
+          "x": 8,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        }
+      ],
+      "pilaresRemovidos": []
+    }
+  ]
+}

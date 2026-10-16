@@ -1,0 +1,163 @@
+{
+  "versao": 3,
+  "nome": "Teste UI paradas",
+  "norma": "nb1-78",
+  "modoCalculo": "original",
+  "materiais": {
+    "fck": 15,
+    "aco": "CA-50",
+    "acoEstribo": "CA-50",
+    "classeAco": "A",
+    "caa": 1,
+    "cobrimentoLaje": 1.5,
+    "cobrimentoViga": 2.5,
+    "cobrimentoPilar": 2.5
+  },
+  "pavimentos": [
+    {
+      "id": "60e97fb3-d155-433d-8b63-99e03a9cf2bc",
+      "nome": "Pavimento 1",
+      "peDireito": 3,
+      "repeticoes": 1,
+      "lajes": [
+        {
+          "id": "95148893-f2f6-405d-a654-c646d5e9c2ba",
+          "nome": "L1",
+          "x": 0,
+          "y": 0,
+          "lx": 6,
+          "ly": 6,
+          "h": 10,
+          "revestimento": 0.1,
+          "sobrecarga": 25,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "ecc7f9b9-66a7-4731-a944-3ccde0ccd0d8",
+          "nome": "L2",
+          "x": 6,
+          "y": 0,
+          "lx": 1.8,
+          "ly": 6,
+          "h": 10,
+          "revestimento": 0.1,
+          "sobrecarga": 25,
+          "vinculos": {},
+          "mu": 1
+        }
+      ],
+      "vigas": [
+        {
+          "id": "1ac261d9-3fc6-4592-b05a-3ab25fc4eff1",
+          "nome": "V1",
+          "x1": 0,
+          "y1": 6,
+          "x2": 7.8,
+          "y2": 6,
+          "bw": 12,
+          "h": 60,
+          "cargaLinear": 0
+        },
+        {
+          "id": "83fb97cf-b250-4bda-aae1-ddc405c0999f",
+          "nome": "V2",
+          "x1": 0,
+          "y1": 0,
+          "x2": 7.8,
+          "y2": 0,
+          "bw": 12,
+          "h": 60,
+          "cargaLinear": 0
+        },
+        {
+          "id": "0352a23e-0761-41da-8311-e0578a1b099a",
+          "nome": "V3",
+          "x1": 0,
+          "y1": 0,
+          "x2": 0,
+          "y2": 6,
+          "bw": 12,
+          "h": 60,
+          "cargaLinear": 0
+        },
+        {
+          "id": "18975aa7-ef55-4b77-8adb-deb55334fcfc",
+          "nome": "V4",
+          "x1": 6,
+          "y1": 0,
+          "x2": 6,
+          "y2": 6,
+          "bw": 12,
+          "h": 60,
+          "cargaLinear": 0
+        },
+        {
+          "id": "ebaa1a00-e54b-4b40-86fe-6d2be94bca36",
+          "nome": "V5",
+          "x1": 7.8,
+          "y1": 0,
+          "x2": 7.8,
+          "y2": 6,
+          "bw": 12,
+          "h": 60,
+          "cargaLinear": 0
+        }
+      ],
+      "pilares": [
+        {
+          "id": "82aeaa6c-6469-46d0-a423-a929c1cb8c2a",
+          "nome": "P1",
+          "x": 0,
+          "y": 6,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "77488a12-33cc-400f-8a6f-101b184ddeca",
+          "nome": "P2",
+          "x": 6,
+          "y": 6,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "45529c3d-2e39-425b-a618-8dbee2499dce",
+          "nome": "P3",
+          "x": 7.8,
+          "y": 6,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "8fe28081-bdea-48b8-9381-439c41cf99a2",
+          "nome": "P4",
+          "x": 0,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "74afac3f-7677-46c9-a58f-48799f3bb2b5",
+          "nome": "P5",
+          "x": 6,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "11bafd05-5c6b-46cd-93e7-a33d8bf19f7d",
+          "nome": "P6",
+          "x": 7.8,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        }
+      ],
+      "pilaresRemovidos": []
+    }
+  ],
+  "parametrosLaje": {
+    "relacaoNegPosMin": 0.35
+  }
+}

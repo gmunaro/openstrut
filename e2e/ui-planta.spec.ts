@@ -1,11 +1,12 @@
 // Revisão da área PLANTA (instância 1): desenhar, selecionar, apagar, propriedades,
-// pavimentos, zoom, atalhos e mensagens de geometria. Prints e relatório ficam fora
-// do repo, em C:/tmp/v2-paridade/ui-planta/.
+// pavimentos, zoom, atalhos e mensagens de geometria. Prints e relatório ficam em
+// e2e/prints/ui-planta/ (ignorado pelo git).
 import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { arrastar, calibrar, clicar, irPara } from "./planta";
 
-const SAIDA = "C:/tmp/v2-paridade/ui-planta";
+const SAIDA = path.resolve(process.cwd(), "e2e/prints/ui-planta");
 
 /** Cria a obra de teste e abre a aba Planta. Sem o seletor nativo de salvar. */
 async function abrirPlanta(page: Page) {
