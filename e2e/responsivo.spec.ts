@@ -374,7 +374,7 @@ async function calibrarToque(page: Page, cdp: CDPSession, svg: Locator) {
   if (!b) throw new Error("planta sem caixa");
   const d = dedo(cdp);
   const p1 = { x: b.x + 30, y: b.y + 30 };
-  const p2 = { x: b.x + b.width - 30, y: b.y + b.height - 30 };
+  const p2 = { x: b.x + b.width - 90, y: b.y + b.height - 30 };
   await d.encostar(p1);
   const m1 = await lerDedo(page);
   await d.soltar();
