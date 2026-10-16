@@ -121,13 +121,14 @@ describe("caso b: quadro de reações e E2E.REP", () => {
     );
   });
 
-  it("corrigido (R5): soma sem truncar e arredonda o total: P5 = 6,939745 + 10,447119 → 17,39", () => {
+  it("corrigido (R5, D-21): soma sem truncar; o .REP grava 17,39 e o pilar recebe 6,939745 + 10,447119 = 17,386864", () => {
     const corr = repDoCaso("caso_b", caso.vigas, "corrigido").linhas;
     const p5 = corr.find((l) => l.pilar === "P5")!;
     expect(p5.parcelas[0]!.valor).toBeCloseTo(6.939745, 5);
     expect(p5.parcelas[1]!.valor).toBeCloseTo(10.447119, 5);
-    expect(p5.total).toBe(17.39);
-    expect(corr.find((l) => l.pilar === "P7")!.total).toBe(1.83);
+    expect(p5.total).toBeCloseTo(17.386864, 5);
+    expect(qbUsing("#####.##", p5.total).trim()).toBe("17.39");
+    expect(corr.find((l) => l.pilar === "P7")!.total).toBeCloseTo(1.83, 2);
   });
 });
 
@@ -193,6 +194,8 @@ describe("v2par_viga_fluxo: R5 com reação negativa", () => {
     const corr = repDoCaso("v2par_viga_fluxo", caso.vigas, "corrigido").linhas.find(
       (l) => l.pilar === "P4",
     )!;
-    expect(Math.abs(corr.total)).toBe(0);
+    // a soma sem truncar é 0,00023 t (D-21: o pilar recebe esse valor); o .REP grava 0,00
+    expect(corr.total).toBeCloseTo(0, 3);
+    expect(qbUsing("####.##", corr.total).trim()).toBe("0.00");
   });
 });

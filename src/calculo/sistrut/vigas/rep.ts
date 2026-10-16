@@ -5,8 +5,8 @@
 //
 // Modo "original": cada parcela é INT(R·100)/100 (VIGA.BAS:2413), e o total, a soma
 // em SINGLE das parcelas truncadas (caso b, P5: 6,93 + 10,44 = 17,37). Modo
-// "corrigido" (R5, PLANO.md 4.2): soma as reações sem truncar e arredonda só o total
-// em 2 casas.
+// "corrigido" (R5, PLANO.md 4.2): soma as reações sem truncar; o .REP grava o total
+// em 2 casas, e o pilar recebe a soma com todas as casas (D-21).
 //
 // Texto das parcelas e dos momentos: o original corta STR$(x) em INSTR(".") + 2
 // (VIGA.BAS:2501, 2506), e sem ponto (valor inteiro) sobram o sinal e o 1º dígito: 30
@@ -67,9 +67,9 @@ export const somaReacoesPilares: SomaReacoesPilares = (analises, vigas, parametr
       }
     }
   }
-  const linhas = [...porPilar.values()];
-  if (modo === "corrigido") for (const l of linhas) l.total = Math.round(l.total * 100) / 100;
-  return linhas;
+  // corrigido: a soma com todas as casas; o .REP a grava com 2 (PRINT USING) e o pilar
+  // recebe o valor (D-21)
+  return [...porPilar.values()];
 };
 
 /** Texto de uma parcela ou de um momento no .REP: o corte do STR$ no original; no

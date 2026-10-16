@@ -1328,7 +1328,8 @@ function calcularPilaresSistrut(
       // o PILGEEDI lê o total do texto do .REP, gravado com PRINT USING "#####.##"
       // (VIGA.BAS:2545; PILGEEDI.BAS:541-544: N = VAL(MID$(L1, 10))): 17,3699989 da soma
       // em SINGLE vira VAL("17.37") = 17,3700008
-      const total = s(qbVal(qbUsing("#####.##", linha.total)));
+      // no corrigido, o valor com todas as casas, como o momento (D-21)
+      const total = modo === "original" ? s(qbVal(qbUsing("#####.##", linha.total))) : linha.total;
       const lida: LinhaRep = { ...linha, pilar: c.nome, total, momentos };
       const base = baseDa(colunas.indexOf(c));
       porBase.set(base, [...(porBase.get(base) ?? []), lida]);
