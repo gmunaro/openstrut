@@ -4,7 +4,11 @@
 @custom-variant dark (&:is(.dark *));
 /* Celular em retrato ou deitado. As mesmas consultas estão em src/telas/tela.ts
    (useCompacto), que troca a estrutura das telas; mude as duas juntas. */
-@custom-variant compacto (@media screen and (max-width: 767px), screen and (max-height: 500px));
+@custom-variant compacto {
+  @media screen and (max-width: 767px), screen and (max-height: 500px) {
+    @slot;
+  }
+}
 
 /* Tema escuro sóbrio (base zinc do shadcn/ui, destaque azul-aço). O app põe a
    classe .dark no <html>; na impressão as variáveis voltam para papel branco. */
@@ -90,9 +94,35 @@
     /* o Chrome do Android não aumenta a letra sozinho no celular deitado */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* sem zoom por toque duplo: o toque logo depois de outro (lançar e escolher a próxima
+       ferramenta) vale na hora, sem o navegador esperar um segundo toque. A pinça na
+       página continua; na planta, a pinça é do desenho (touch-none no svg). */
+    touch-action: manipulation;
   }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Moldura do app (src/routes/__root.tsx, que tem outro dono; por isso o seletor pela
+   estrutura): ocupa a altura visível (dvh: sem a barra do navegador do celular, e
+   encolhe com o teclado virtual) e deixa livres as bordas do aparelho (safe-area:
+   entalhe da câmera e barra de gestos, no app instalado e com viewport-fit=cover). */
+@media screen {
+  #root > div:first-child {
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  #root > div:first-child > footer {
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  }
+}
+/* celular: o aviso de conferência continua à vista, em letra menor */
+@media screen and (max-width: 767px), screen and (max-height: 500px) {
+  #root > div:first-child > footer {
+    padding-top: 0.125rem;
+    font-size: 11px;
+    line-height: 1.25;
   }
 }
 
