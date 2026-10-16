@@ -355,7 +355,7 @@ describe("rodada 2: casos v2par_* (T10; valores de C:/tmp/v2-paridade/oraculo-no
       })),
     });
     const viga = gera(dadosViga(caso.vigas[0]!, ORIGINAL));
-    for (const v of (caso.valores ?? []).filter((x) => /\.Pac$/.test(x.id))) {
+    for (const v of (caso.valores ?? []).filter((x) => x.id.endsWith(".Pac"))) {
       const t = viga.tramos[Number(v.id.split(".")[1]!.slice(1)) - 1]!;
       expect(qbUsing("##.###", t.divisoes[0]!.pAcidental).trim(), v.id).toBe(v.impresso);
     }
