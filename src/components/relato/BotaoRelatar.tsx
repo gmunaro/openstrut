@@ -44,7 +44,6 @@ const segurar = (e: SyntheticEvent) => {
  */
 function useDeslocamentoLivre(caixa: RefObject<HTMLDivElement | null>, ativo: boolean) {
   const [deslocamento, setDeslocamento] = useState(0);
-  const atual = useRef(0);
   useEffect(() => {
     if (!ativo) return;
     let quadro = 0;
@@ -53,10 +52,15 @@ function useDeslocamentoLivre(caixa: RefObject<HTMLDivElement | null>, ativo: bo
       quadro = 0;
       const el = caixa.current;
       if (!el) return;
-      const r = el.getBoundingClientRect();
-      const padrao = { left: r.left, top: r.top + atual.current, width: r.width, height: r.height };
+      // posição padrão pelos offsets, que ignoram o transform: no meio da transição o
+      // getBoundingClientRect daria um ponto de partida errado
+      const padrao = {
+        left: el.offsetLeft,
+        top: el.offsetTop,
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+      };
       const d = deslocamentoLivre(padrao, (c) => cobreControle(c, el), padrao.top - 8);
-      atual.current = d;
       setDeslocamento(d);
     };
     const agendar = () => {

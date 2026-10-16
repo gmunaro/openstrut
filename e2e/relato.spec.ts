@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { serializarObra } from "../src/armazenamento/arquivo";
@@ -57,11 +57,13 @@ async function abrirGrade(page: Page) {
 type Regiao = { x: number; y: number; w: number; h: number };
 
 /**
- * Luminância média (0 a 255) de regiões, em px CSS, no print do diálogo e num PNG de
- * referência (o screenshot do Playwright), cada um na sua escala.
+ * Brilho médio (0 a 255) de cada bloco de uma grade 12 × 12 sobre a região `r` (px CSS),
+ * no print da prévia e em PNGs de referência (screenshots do Playwright), cada imagem na
+ * sua escala. Blocos, e não pixels, para a suavização do texto não pesar.
  */
-function medirNoNavegador(args: { alt: string; referencia: string; regioes: Regiao[] }) {
-  async function medir(img: HTMLImageElement) {
+function blocosNoNavegador(args: { alt: string; referencias: string[]; r: Regiao }) {
+  const N = 12;
+  async function blocos(img: HTMLImageElement) {
     await img.decode();
     const c = document.createElement("canvas");
     c.width = img.naturalWidth;
@@ -70,25 +72,59 @@ function medirNoNavegador(args: { alt: string; referencia: string; regioes: Regi
     if (!ctx) throw new Error("sem canvas 2d");
     ctx.drawImage(img, 0, 0);
     const k = img.naturalWidth / innerWidth;
-    return args.regioes.map((r) => {
-      const d = ctx.getImageData(r.x * k, r.y * k, Math.max(1, r.w * k), Math.max(1, r.h * k)).data;
-      let soma = 0;
-      for (let i = 0; i < d.length; i += 4) {
-        soma += 0.2126 * (d[i] ?? 0) + 0.7152 * (d[i + 1] ?? 0) + 0.0722 * (d[i + 2] ?? 0);
+    const saida: number[] = [];
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
+        const x = (args.r.x + (args.r.w * j) / N) * k;
+        const y = (args.r.y + (args.r.h * i) / N) * k;
+        const w = Math.max(1, (args.r.w / N) * k);
+        const h = Math.max(1, (args.r.h / N) * k);
+        const d = ctx.getImageData(x, y, w, h).data;
+        let soma = 0;
+        for (let p = 0; p < d.length; p += 4) {
+          soma += 0.2126 * (d[p] ?? 0) + 0.7152 * (d[p + 1] ?? 0) + 0.0722 * (d[p + 2] ?? 0);
+        }
+        saida.push(soma / (d.length / 4));
       }
-      return soma / (d.length / 4);
-    });
+    }
+    return saida;
   }
   const print = document.querySelector<HTMLImageElement>(`img[alt="${args.alt}"]`);
   if (!print) throw new Error("prévia do print ausente");
-  const ref = new Image();
-  ref.src = `data:image/png;base64,${args.referencia}`;
-  return Promise.all([medir(print), medir(ref)]).then(([p, r]) => ({
+  const refs = args.referencias.map((b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    return img;
+  });
+  return Promise.all([blocos(print), ...refs.map(blocos)]).then(([p = [], ...r]) => ({
     largura: print.naturalWidth,
     altura: print.naturalHeight,
     print: p,
-    referencia: r,
+    referencias: r,
   }));
+}
+
+/** Diferença média, bloco a bloco, entre duas grades de brilho. */
+const diferenca = (a: number[], b: number[]) =>
+  a.reduce((s, v, i) => s + Math.abs(v - (b[i] ?? 0)), 0) / Math.max(1, a.length);
+
+/** Abre o diálogo de materiais: no celular pelo menu "Mais ações", no desktop direto. */
+async function abrirMateriais(page: Page) {
+  const mais = page.getByRole("button", { name: "Mais ações" });
+  if (await mais.isVisible()) {
+    await mais.click();
+    await page
+      .getByRole("dialog", { name: "Ações da obra" })
+      .getByRole("button", { name: "Materiais" })
+      .click();
+  } else {
+    await page.getByRole("button", { name: "Materiais", exact: true }).click();
+  }
+  const materiais = page.getByRole("dialog", { name: "Obra e materiais" });
+  await expect(materiais).toBeVisible();
+  // espera a animação de entrada terminar
+  await materiais.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  return materiais;
 }
 
 const TAMANHOS = [
@@ -118,14 +154,11 @@ for (const t of TAMANHOS) {
       expect(caixaBotao?.height).toBeGreaterThanOrEqual(44);
       await page.screenshot({ path: path.join(PASTA, `${t.nome}-01-obra.png`) });
 
-      // abre um diálogo do app e espera a animação de entrada terminar
-      await page.getByRole("button", { name: "Materiais", exact: true }).click();
-      const materiais = page.getByRole("dialog", { name: "Obra e materiais" });
-      await expect(materiais).toBeVisible();
-      await materiais.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+      const semDialogo = await page.screenshot();
+      const materiais = await abrirMateriais(page);
       const caixa = await materiais.boundingBox();
       if (!caixa) throw new Error("diálogo sem caixa");
-      const referencia = await page.screenshot({
+      const comDialogo = await page.screenshot({
         path: path.join(PASTA, `${t.nome}-02-dialogo-aberto.png`),
       });
 
@@ -139,33 +172,28 @@ for (const t of TAMANHOS) {
       await expect(relato.getByText("NB-1/78")).toBeVisible();
       await expect(relato.getByRole("img", { name: ALT_PRINT })).toBeVisible();
 
-      // regiões em px CSS: o miolo do diálogo e uma faixa de fora (só a sobreposição escura)
-      const dentro = {
-        x: caixa.x + caixa.width * 0.1,
-        y: caixa.y + caixa.height * 0.1,
-        w: caixa.width * 0.8,
-        h: caixa.height * 0.8,
-      };
-      const fora =
-        caixa.y >= 8
-          ? { x: 0, y: 0, w: t.viewport.width, h: caixa.y - 2 }
-          : { x: 0, y: 0, w: Math.max(1, caixa.x - 2), h: t.viewport.height * 0.8 };
-      const m = await page.evaluate(medirNoNavegador, {
+      // na região do diálogo (miolo, px CSS), o print tem de ser a tela com o diálogo, e
+      // não a tela sem ele (no celular o diálogo ocupa a tela toda, sem sobreposição)
+      const m = await page.evaluate(blocosNoNavegador, {
         alt: ALT_PRINT,
-        referencia: referencia.toString("base64"),
-        regioes: [dentro, fora],
+        referencias: [comDialogo.toString("base64"), semDialogo.toString("base64")],
+        r: {
+          x: caixa.x + caixa.width * 0.05,
+          y: caixa.y + caixa.height * 0.05,
+          w: caixa.width * 0.9,
+          h: caixa.height * 0.9,
+        },
       });
-      const [pDentro = 0, pFora = 0] = m.print;
-      const [rDentro = 0, rFora = 0] = m.referencia;
+      const [com = [], sem = []] = m.referencias;
+      const dCom = diferenca(m.print, com);
+      const dSem = diferenca(m.print, sem);
       // largura: densidade da tela, limitada a 1600 px (360 × 3 = 1080; 1920 → 1600)
       expect(m.largura).toBe(Math.min(1600, t.viewport.width * t.dpr));
       expect(m.altura).toBeCloseTo((m.largura * t.viewport.height) / t.viewport.width, -1);
-      // o print mostra o mesmo que a tela: diálogo e sobreposição com o mesmo brilho
-      expect(Math.abs(pDentro - rDentro)).toBeLessThan(15);
-      expect(Math.abs(pFora - rFora)).toBeLessThan(15);
-      // o diálogo aparece no print (mais claro que a sobreposição) e o tema é o escuro
-      expect(pDentro).toBeGreaterThan(pFora + 3);
-      expect(pDentro).toBeLessThan(110);
+      expect(dCom).toBeLessThan(8);
+      expect(dSem).toBeGreaterThan(dCom * 2);
+      // tema escuro no print: brilho médio baixo
+      expect(m.print.reduce((s, v) => s + v, 0) / m.print.length).toBeLessThan(110);
       await page.screenshot({ path: path.join(PASTA, `${t.nome}-03-relato.png`) });
 
       // abre a issue: copia o print, baixa o PNG e abre a aba (interceptada)
@@ -190,6 +218,8 @@ for (const t of TAMANHOS) {
       expect(corpo).toContain("Grade-2x2.openstrut.json");
       expect(corpo).toContain("| Norma | NB-1/78 |");
       expect(corpo).not.toContain('"versao"'); // o JSON da obra não vai na URL
+      // marcador oculto da triagem no fim (sem VITE_COMMIT, o build é o arquivo do bundle)
+      expect(corpo).toMatch(/\n\n<!-- openstrut-relato v1 build=[\w.-]+\.js -->$/);
       expect(aba.url().length).toBeLessThanOrEqual(7500);
       await aba.close();
 
@@ -241,76 +271,156 @@ test.describe("relato: atalho, impressão e arquivo", () => {
 });
 
 /**
- * Controles visíveis do diálogo aberto que o botão de relatar cobre (recortados pela
- * área visível do diálogo, que rola). Lista vazia = o botão não cobre nada.
+ * Controles que o usuário tocaria onde está o botão de relatar: em cada ponto de uma
+ * grade 5 × 5 sobre o botão, o elemento de cima (fora o próprio botão) e o controle que
+ * o contém. Atrás de modal o body não recebe toque, então só conta o que dá para tocar.
+ * Lista vazia = o botão não cobre controle.
  */
-function controlesCobertos(seletor: string) {
-  const botao = document.querySelector('[aria-label="Relatar problema"]')?.getBoundingClientRect();
-  const dialogos = [...document.querySelectorAll('[role="dialog"][data-state="open"]')];
-  const dialogo = dialogos.at(-1);
-  if (!botao || !dialogo) throw new Error("sem botão ou sem diálogo");
-  const area = dialogo.getBoundingClientRect();
-  const cobre = (r: DOMRect) => {
-    const left = Math.max(r.left, area.left);
-    const right = Math.min(r.right, area.right);
-    const top = Math.max(r.top, area.top);
-    const bottom = Math.min(r.bottom, area.bottom);
-    if (right <= left || bottom <= top) return false; // fora da parte visível
-    return left < botao.right && right > botao.left && top < botao.bottom && bottom > botao.top;
-  };
-  return [...dialogo.querySelectorAll(seletor)]
-    .filter((el) => el.getClientRects().length > 0 && cobre(el.getBoundingClientRect()))
-    .map((el) => `${el.tagName} ${el.textContent?.trim().slice(0, 30) ?? ""}`);
+function controlesSobOBotao(seletor: string) {
+  const botao = document.querySelector('[aria-label="Relatar problema"]');
+  const caixa = botao?.closest("[aria-live]");
+  if (!botao || !caixa) throw new Error("botão de relatar ausente");
+  const r = botao.getBoundingClientRect();
+  const achados = new Set<string>();
+  for (let i = 0; i <= 4; i++) {
+    for (let j = 0; j <= 4; j++) {
+      const x = r.left + (r.width * j) / 4;
+      const y = r.top + (r.height * i) / 4;
+      const alvo = document.elementsFromPoint(x, y).find((e) => !caixa.contains(e));
+      const c = alvo?.closest(seletor);
+      if (c) {
+        const nome = (c.getAttribute("aria-label") ?? c.textContent ?? "").trim().slice(0, 30);
+        achados.add(`${c.tagName} ${nome}`);
+      }
+    }
+  }
+  return [...achados];
 }
 
-test.describe("relato no celular com o editor de viga aberto", () => {
+const CONTROLES = [
+  "button",
+  "a[href]",
+  "input",
+  "select",
+  "textarea",
+  "summary",
+  "label",
+  '[role="tab"]',
+  '[role="checkbox"]',
+  '[role="switch"]',
+  '[role="combobox"]',
+  '[role="menuitem"]',
+].join(",");
+
+/** Rola até o fim tudo o que rola dentro de `alvo` (diálogo, folha). */
+async function rolarAteOFim(alvo: Locator) {
+  await alvo.evaluate((el) => {
+    const rolaveis = [el, ...el.querySelectorAll("*")].filter(
+      (e) =>
+        e.scrollHeight > e.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(e).overflowY),
+    );
+    for (const e of rolaveis) e.scrollTop = e.scrollHeight;
+  });
+}
+
+test.describe("relato no celular: o botão não cobre controle no layout compacto", () => {
   test.use({ viewport: { width: 360, height: 800 }, deviceScaleFactor: 3 });
 
-  test("o botão não cobre controle do diálogo, no topo e no fim da rolagem", async ({ page }) => {
-    test.setTimeout(120_000);
+  test("início, planta, folha de propriedades, Mais ações, materiais, editor de viga e resultados", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    // a posição assenta depois do debounce da rolagem (150 ms), da reconferência (300 ms)
+    // e da transição: espera duas leituras iguais e sem controle coberto
+    const livre = async (nome: string) => {
+      let antes = "";
+      await expect
+        .poll(
+          async () => {
+            const caixa = JSON.stringify(
+              await page.getByRole("button", { name: "Relatar problema" }).boundingBox(),
+            );
+            const cobertos = await page.evaluate(controlesSobOBotao, CONTROLES);
+            const estavel = caixa === antes;
+            antes = caixa;
+            return estavel ? cobertos : ["(posição mudando)"];
+          },
+          { message: nome, intervals: [400] },
+        )
+        .toEqual([]);
+      await expect(page.getByRole("button", { name: "Relatar problema" })).toBeInViewport();
+    };
+    const foto = (nome: string) =>
+      page.screenshot({ path: path.join(PASTA, `celular-${nome}.png`) });
+
     await page.addInitScript(() => {
       const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
       delete w.showOpenFilePicker;
       delete w.showSaveFilePicker;
     });
     await page.goto("/");
+    await livre("início");
     const [escolha] = await Promise.all([
       page.waitForEvent("filechooser"),
-      page.getByRole("button", { name: /Abrir arquivo \.openstrut\.json/ }).click(),
+      page.getByRole("button", { name: /Abrir arquivo .openstrut.json/ }).click(),
     ]);
     await escolha.setFiles(
       path.resolve(process.cwd(), "e2e/fixtures/laje-r3-original.openstrut.json"),
     );
     await expect(page.getByRole("heading", { name: "Laje R3 original" })).toBeVisible();
 
-    // seleciona a V4 pelas setas na planta e abre o editor da viga
-    const painel = page.getByRole("complementary", { name: "Propriedades" });
+    // planta e ferramentas
+    await livre("planta");
+    await foto("06-planta");
+
+    // folha de propriedades, no topo e no fim; com ela aberta, a V4 pelas setas
+    await page.getByRole("button", { name: "Propriedades", exact: true }).click();
+    const folha = page.getByRole("complementary", { name: "Propriedades" });
+    await expect(folha).toBeVisible();
+    const nome = folha.getByRole("textbox", { name: "Nome" });
     await page.getByRole("application", { name: "Planta do pavimento" }).focus();
-    const nome = painel.getByRole("textbox", { name: "Nome" });
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press("ArrowRight");
       if ((await nome.count()) > 0 && (await nome.inputValue()) === "V4") break;
     }
     await expect(nome).toHaveValue("V4");
-    await painel.getByRole("button", { name: "Dados do SISTRUT da viga…" }).click();
-    const dialogo = page.getByRole("dialog", { name: "Viga V4: entrada do VIGA e do DESENHO" });
-    await expect(dialogo).toBeVisible();
+    await livre("folha de propriedades, topo");
+    await rolarAteOFim(folha);
+    await livre("folha de propriedades, fim");
+    await foto("07-folha-propriedades");
 
-    const SELETOR =
-      'button, a[href], input, select, textarea, [role="tab"], [role="checkbox"], [role="switch"], [role="combobox"]';
-    await expect.poll(() => page.evaluate(controlesCobertos, SELETOR)).toEqual([]);
-    await page.screenshot({ path: path.join(PASTA, "celular-06-viga-topo.png") });
+    // editor da viga em tela cheia, no topo e no fim da rolagem (Aplicar/Cancelar)
+    await folha.getByRole("button", { name: "Dados do SISTRUT da viga…" }).click();
+    const viga = page.getByRole("dialog", { name: "Viga V4: entrada do VIGA e do DESENHO" });
+    await expect(viga).toBeVisible();
+    await livre("editor de viga, topo");
+    await foto("08-viga-topo");
+    await rolarAteOFim(viga);
+    await livre("editor de viga, fim");
+    await foto("09-viga-fim");
+    await viga.getByRole("button", { name: "Cancelar" }).click();
+    await expect(viga).toBeHidden();
+    await folha.getByRole("button", { name: "Fechar propriedades" }).click();
 
-    // rola o diálogo até o fim, onde ficam Aplicar e Cancelar
-    await dialogo.evaluate((el) => {
-      const rolaveis = [el, ...el.querySelectorAll("*")].filter(
-        (e) =>
-          e.scrollHeight > e.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(e).overflowY),
-      );
-      for (const e of rolaveis) e.scrollTop = e.scrollHeight;
-    });
-    await expect.poll(() => page.evaluate(controlesCobertos, SELETOR)).toEqual([]);
-    await expect(page.getByRole("button", { name: "Relatar problema" })).toBeInViewport();
-    await page.screenshot({ path: path.join(PASTA, "celular-07-viga-fim.png") });
+    // menu Mais ações e o diálogo de materiais que sai dele
+    await page.getByRole("button", { name: "Mais ações" }).click();
+    const acoes = page.getByRole("dialog", { name: "Ações da obra" });
+    await expect(acoes).toBeVisible();
+    await livre("Mais ações");
+    await foto("10-mais-acoes");
+    await acoes.getByRole("button", { name: "Materiais" }).click();
+    const materiais = page.getByRole("dialog", { name: "Obra e materiais" });
+    await expect(materiais).toBeVisible();
+    await livre("materiais, topo");
+    await rolarAteOFim(materiais);
+    await livre("materiais, fim");
+    await foto("11-materiais-fim");
+    await page.keyboard.press("Escape");
+    await expect(materiais).toBeHidden();
+
+    // resultados
+    await page.getByRole("tab", { name: "Resultados", exact: true }).click();
+    await livre("resultados");
+    await foto("12-resultados");
   });
 });
