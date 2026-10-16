@@ -11,10 +11,11 @@
 import { describe, expect, it } from "vitest";
 import { sng } from "../base/f32";
 import { lajeMontagem, PadraoMontagem } from "./charneiras";
+import type { Tolerancias } from "./geometria";
 import { regiaoDoBordo } from "./regioes";
 
-const original = { s: sng, tol: sng(0.005), eps: sng(0.002) };
-const corrigido = { s: (x: number) => x, tol: 0.005, eps: 0.002 };
+const original: Tolerancias = { modo: "original", s: sng, tol: sng(0.005), eps: sng(0.002) };
+const corrigido: Tolerancias = { modo: "corrigido", s: (x: number) => x, tol: 0.005, eps: 0.002 };
 
 /** Áreas das regiões por bordo (null no bordo livre). */
 function areas(pts: [number, number][], codigos: number[], t = original, tipo = 0, angulo = 0) {

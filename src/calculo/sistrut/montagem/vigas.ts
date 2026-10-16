@@ -17,7 +17,7 @@ import type {
   TramoViga,
 } from "../base/tipos";
 import { qbCint } from "../base/f32";
-import { distancia, maior, menor, type Tolerancias } from "./geometria";
+import { distancias, maior, menor, type Tolerancias } from "./geometria";
 import type { TrechoAlvenaria } from "./cargas";
 
 /** J do .VIG quando o apoio não tem número de pilar: 1 + 471/100000 em SINGLE
@@ -90,6 +90,7 @@ export function tabelaPilares(eixos: readonly EixoViga[], geometria?: readonly P
  *  distância² < V_133a de uma ponta ou o ponto sobre a reta. */
 function pilarDoPonto(x: number, y: number, geometria: readonly PilarMontagem[], t: Tolerancias) {
   const { s, tol } = t;
+  const { dist2 } = distancias(t.modo);
   for (let k = 0; k < geometria.length; k++) {
     const p = geometria[k];
     if (!p) continue;
@@ -109,7 +110,7 @@ function pilarDoPonto(x: number, y: number, geometria: readonly PilarMontagem[],
       if (x > maior(s, x0, x2) || x < menor(s, x0, x2)) continue;
       return k + 1;
     }
-    if ((x - x2) ** 2 + (y - y2) ** 2 < tol || (x - x0) ** 2 + (y - y0) ** 2 < tol) return k + 1;
+    if (dist2(x, y, x2, y2) < tol || dist2(x, y, x0, y0) < tol) return k + 1;
     if (Math.abs(x - x2) < tol || Math.abs(x - x0) < tol) continue;
     if (x > maior(s, x0, x2) || x < menor(s, x0, x2)) continue;
     if (y > maior(s, y0, y2) || y < menor(s, y0, y2)) continue;
@@ -318,6 +319,7 @@ export function montaTramos(
   acumulado: number,
 ) {
   const { s } = t;
+  const { distanciaSingle } = distancias(t.modo);
   const m = v.x.length - 1;
   const J = (cod: number) => {
     const val = numeroDoPilar(pilares[cod - 1000] ?? "");
@@ -356,7 +358,7 @@ export function montaTramos(
       if (j === 2) v.bda[3] = 1;
     } else {
       v.c64[tr] = (v.c64[tr] ?? 0) + 1;
-      v.b50[k] = s(distancia(v.x[j] ?? 0, v.y[j] ?? 0, x16, y1a));
+      v.b50[k] = s(distanciaSingle(v.x[j] ?? 0, v.y[j] ?? 0, x16, y1a));
       v.af4[k] = pesoDiv;
       if (f04 === 3000) v.indexada[k + (tr === 0 ? 1 : 0)] = { viga: cod - 3000, apoio: 0 };
       if (f04 === 2000 || f04 === 1000) {
@@ -459,6 +461,7 @@ export function alvenariaNoTrecho(
   t: Tolerancias,
 ) {
   const { s, eps } = t;
+  const { distancia } = distancias(t.modo);
   const mn = (a: number, b: number) => menor(s, a, b);
   const mx = (a: number, b: number) => maior(s, a, b);
   let total = 0;

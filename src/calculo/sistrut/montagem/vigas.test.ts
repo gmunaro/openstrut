@@ -212,7 +212,12 @@ describe("viga sobre viga, balanço e carga indexada (obra VBX)", () => {
 });
 
 describe("pontos do eixo e pilar-parede (S_3014b)", () => {
-  const t = { s: Math.fround, tol: Math.fround(0.005), eps: Math.fround(0.002) };
+  const t = {
+    modo: "original" as const,
+    s: Math.fround,
+    tol: Math.fround(0.005),
+    eps: Math.fround(0.002),
+  };
   const pesoNulo = { predominanteKgPorM: 0, excecoes: {} };
   const eixo = (pontos: [number, number][], apoios: EixoViga["apoios"]): EixoViga => ({
     nome: "V1",

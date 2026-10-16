@@ -18,7 +18,7 @@ import {
   type PoligonoCarga,
   type TrechoAlvenaria,
 } from "./cargas";
-import { distancia, sobreLado, type Tolerancias } from "./geometria";
+import { distancias, sobreLado, type Tolerancias } from "./geometria";
 import { regiaoDoBordo } from "./regioes";
 import {
   alvenariaNoTrecho,
@@ -75,7 +75,9 @@ export const montaPavimento: MontaPavimento = (
   geometriaPilares,
 ) => {
   const s = atribuicao(modo);
+  const { distancia, distanciaSingle } = distancias(modo);
   const t: Tolerancias = {
+    modo,
     s,
     tol: parametros.toleranciaComprimento,
     eps: parametros.toleranciaAngulo,
@@ -174,7 +176,7 @@ export const montaPavimento: MontaPavimento = (
     let somaAreas = 0; // L_BPde
     for (let k = 1; k <= lm.n; k++) {
       if ((lm.codigos[k] ?? 0) === 1) continue;
-      const reg = regiaoDoBordo(lm, padrao, k, t, modo);
+      const reg = regiaoDoBordo(lm, padrao, k, t);
       const A = reg.area;
       somaAreas = s(somaAreas + A);
       if (!(A > t.tol)) continue;
@@ -210,8 +212,9 @@ export const montaPavimento: MontaPavimento = (
           ? undefined
           : trechoDoBordo(vigas, indicado?.viga, x1, y1, x2, y2);
       if (trecho) {
+        // Lx: divisor das cargas (LAJEMONT.BAS:2730-2731, 3963-3965); L: V_0ef0! = RT_SQR##(..) (2728)
         const Lx = distancia(trecho.a.x, trecho.a.y, trecho.b.x, trecho.b.y);
-        const L = s(Lx);
+        const L = s(distanciaSingle(trecho.a.x, trecho.a.y, trecho.b.x, trecho.b.y));
         const v = trecho.viga;
         const d = divisaoDoTrecho(v, trecho.j);
         v.af4[d] = s((alv + cargaArea) / Lx + (v.af4[d] ?? 0));
@@ -238,7 +241,9 @@ export const montaPavimento: MontaPavimento = (
           laje: laje.nome,
           bordo: k - 1,
           apoio: indicado,
-          comprimento: s(distancia(x1, y1, x2, y2)),
+          // o original não mede o bordo apoiado em pilar (V_0ef0! = 1, L_207a5); aqui
+          // ele sai pela mesma conta do bordo em viga (LAJEMONT.BAS:2728)
+          comprimento: s(distanciaSingle(x1, y1, x2, y2)),
           area: A,
           linear: alv,
           cargaArea,

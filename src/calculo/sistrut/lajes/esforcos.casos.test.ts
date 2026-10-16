@@ -221,6 +221,7 @@ describe.each(CASOS.map((c) => [c.caso, c] as const))("%s", (_, c) => {
           // o padrão é o do porte da montagem (i sem truncar), não o do LAJECALC
           const t = {
             s: atribuicao(modo),
+            modo,
             tol: p.toleranciaComprimento,
             eps: p.toleranciaAngulo,
           };
@@ -228,7 +229,7 @@ describe.each(CASOS.map((c) => [c.caso, c] as const))("%s", (_, c) => {
           const padrao = new PadraoMontagem(lm, t);
           padrao.executa();
           const regioes = l.codigos
-            .flatMap((cod, k) => (cod === 1 ? [] : [regiaoDoBordo(lm, padrao, k + 1, t, modo)]))
+            .flatMap((cod, k) => (cod === 1 ? [] : [regiaoDoBordo(lm, padrao, k + 1, t)]))
             .filter((r) => r.area > 0.005);
           expect(regioes.length, l.nome).toBe(ids.length);
           regioes.forEach((r, i) => {

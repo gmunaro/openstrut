@@ -28,9 +28,10 @@
 // LAJEMONT nem a pré-moldada) e que só o próprio teste usava: saiu, com a chave
 // `truncaIDaBissetriz`. As áreas do LAJEMONT nos casos v2par (lajes/esforcos.casos.test.ts)
 // e o 6 × 6 com i 0,3 (10,22 m², charneiras.test.ts) são conferidos contra este porte.
+import { potencia, raiz } from "../base/x87";
 import {
-  dist2,
   direcao,
+  distancias,
   intersecaoRetas,
   intersecaoSegmentos,
   maior,
@@ -143,7 +144,13 @@ type Rotulo =
 /** Porte do S_401b9 para uma laje. Uso: `new PadraoMontagem(laje, t).executa()`. */
 export class PadraoMontagem {
   readonly seg: TabelaSegmentos;
+  private readonly t: Tolerancias;
   private readonly s: Arred;
+  /** RT_POT## e RT_SQR## do modo (destino DOUBLE: todos ficam dentro de expressões). */
+  private readonly pot: (a: number, b: number) => number;
+  private readonly sqr: (x: number) => number;
+  private readonly dist2: (x1: number, y1: number, x2: number, y2: number) => number;
+  private readonly distancia: (x1: number, y1: number, x2: number, y2: number) => number;
   private readonly tol: number;
   private readonly eps: number;
   private readonly N0: number;
@@ -192,7 +199,11 @@ export class PadraoMontagem {
     private readonly laje: LajeMontagem,
     t: Tolerancias,
   ) {
+    this.t = t;
     this.s = t.s;
+    this.pot = potencia(t.modo);
+    this.sqr = raiz(t.modo);
+    ({ dist2: this.dist2, distancia: this.distancia } = distancias(t.modo));
     this.tol = t.tol;
     this.eps = t.eps;
     this.N0 = laje.n + 1;
@@ -205,9 +216,6 @@ export class PadraoMontagem {
     this.m1342 = z();
   }
 
-  private get t(): Tolerancias {
-    return { s: this.s, tol: this.tol, eps: this.eps };
-  }
   private px(k: number) {
     return this.laje.x[k] ?? 0;
   }
@@ -255,7 +263,7 @@ export class PadraoMontagem {
   iDoBordo(k: number) {
     const s = this.s;
     const comp = (a: number, b: number) =>
-      Math.sqrt((this.px(a) - this.px(b)) ** 2 + (this.py(a) - this.py(b)) ** 2);
+      this.distancia(this.px(a), this.py(a), this.px(b), this.py(b));
     let soma = 0;
     let b12 = k;
     let b1a = k;
@@ -300,13 +308,13 @@ export class PadraoMontagem {
         const ia = this.iDoBordo(fa);
         const ib = this.iDoBordo(f02);
         if (ia > ib && this.cod(f02) !== 1 && (ib > 0 || ia > 0)) {
-          const q = Math.sqrt((ib + 1) / (ia + 1)) + Math.cos(b - a);
+          const q = this.sqr((ib + 1) / (ia + 1)) + Math.cos(b - a);
           r = Math.abs(q) < eps ? PI / 2 : Math.atan(Math.sin(b - a) / q);
           if (Math.abs(q) >= eps && r < 0) r = PI + r;
           r = a + r;
         }
         if (ib > ia && (ib > 0 || ia > 0) && this.cod(fa) !== 1) {
-          const q = Math.sqrt((ia + 1) / (ib + 1)) + Math.cos(b - a);
+          const q = this.sqr((ia + 1) / (ib + 1)) + Math.cos(b - a);
           r = Math.abs(q) < eps ? PI / 2 : Math.atan(Math.sin(b - a) / q);
           if (Math.abs(q) >= eps && r < 0) r = PI + r;
           r = b - r;
@@ -321,13 +329,13 @@ export class PadraoMontagem {
         const ib = this.iDoBordo(f02);
         const d = 2 * PI - a + b;
         if (ia > ib && this.cod(f02) !== 1 && (ib > 0 || ia > 0)) {
-          const q = Math.sqrt((ib + 1) / (ia + 1)) + Math.cos(d);
+          const q = this.sqr((ib + 1) / (ia + 1)) + Math.cos(d);
           r = Math.abs(q) < eps ? PI / 2 : Math.atan(Math.sin(d) / q);
           if (Math.abs(q) >= eps && r < 0) r = PI + r;
           r = a + r;
         }
         if (ib > ia && (ib > 0 || ia > 0) && this.cod(fa) !== 1) {
-          const q = Math.sqrt((ia + 1) / (ib + 1)) + Math.cos(d);
+          const q = this.sqr((ia + 1) / (ib + 1)) + Math.cos(d);
           r = Math.abs(q) < eps ? PI / 2 : Math.atan(Math.sin(d) / q);
           if (Math.abs(q) >= eps && r < 0) r = PI + r;
           r = b - r;
@@ -503,8 +511,8 @@ export class PadraoMontagem {
       const i22 = this.iDoBordo(this.v15fa);
       const i26 = this.iDoBordo(this.v1602);
       if (i22 !== i26) {
-        const e2 = Math.sin(PI / 2) / (Math.sqrt(1 / (i22 + 1)) + Math.cos(PI / 2));
-        const ea = Math.sin(PI / 2) / (Math.sqrt(1 / (i26 + 1)) + Math.cos(PI / 2));
+        const e2 = Math.sin(PI / 2) / (this.sqr(1 / (i22 + 1)) + Math.cos(PI / 2));
+        const ea = Math.sin(PI / 2) / (this.sqr(1 / (i26 + 1)) + Math.cos(PI / 2));
         const f = s(i22 > i26 ? 1 / (ea / e2 + 1) : 1 - 1 / (e2 / ea + 1));
         x = xa;
         if (xa > xb) x = xa - f * (xa - xb);
@@ -664,15 +672,15 @@ export class PadraoMontagem {
       if (this.a14(ea, 2) !== 100) {
         if (this.a14(ee, 2) !== 100) {
           if (
-            dist2(this.a14(ea, 0), this.a14(ea, 1), xa, ya) >=
-            dist2(this.a14(ee, 0), this.a14(ee, 1), xa, ya)
+            this.dist2(this.a14(ea, 0), this.a14(ea, 1), xa, ya) >=
+            this.dist2(this.a14(ee, 0), this.a14(ee, 1), xa, ya)
           )
             this.m100[ea] = 100;
         }
         if (this.a14(f2, 2) !== 100) {
           if (
-            dist2(this.a14(ea, 0), this.a14(ea, 1), x2, y2) >=
-            dist2(this.a14(f2, 0), this.a14(f2, 1), x2, y2)
+            this.dist2(this.a14(ea, 0), this.a14(ea, 1), x2, y2) >=
+            this.dist2(this.a14(f2, 0), this.a14(f2, 1), x2, y2)
           )
             this.m100[ea] = 100;
         }
@@ -721,7 +729,7 @@ export class PadraoMontagem {
       const xa = this.a14(fa, 0);
       const ya = this.a14(fa, 1);
       const anga = this.a14(fa, 2);
-      const dRef = dist2(xa, ya, this.px(fa), this.py(fa));
+      const dRef = this.dist2(xa, ya, this.px(fa), this.py(fa));
       let f02 = fa;
       for (let g = 0; g <= this.laje.n + 1; g++) {
         f02 = this.prox(f02);
@@ -729,7 +737,7 @@ export class PadraoMontagem {
       }
       if (this.a14(f02, 2) !== 100) {
         const r = this.retas(xa, ya, anga, this.a14(f02, 0), this.a14(f02, 1), this.a14(f02, 2));
-        if (dist2(r.x, r.y, this.px(fa), this.py(fa)) < dRef && !r.nao) {
+        if (this.dist2(r.x, r.y, this.px(fa), this.py(fa)) < dRef && !r.nao) {
           this.aa[fa] = 100;
           this.aa[fe] = 100;
           continue;
@@ -742,7 +750,7 @@ export class PadraoMontagem {
       }
       if (this.a14(f02, 2) !== 100) {
         const r = this.retas(xa, ya, anga, this.a14(f02, 0), this.a14(f02, 1), this.a14(f02, 2));
-        if (dist2(r.x, r.y, this.px(fa), this.py(fa)) < dRef && !r.nao) {
+        if (this.dist2(r.x, r.y, this.px(fa), this.py(fa)) < dRef && !r.nao) {
           this.aa[fa] = 100;
           this.aa[fe] = 100;
         }
@@ -806,15 +814,15 @@ export class PadraoMontagem {
             // V_0f18$ = "NAO" vem do S_15189 feito dentro do L_4dbbe
             if (this.ultimoNao) {
               if (
-                dist2(this.px(this.v15fa), this.py(this.v15fa), q.x, q.y) <
-                dist2(this.px(this.v15fe), this.py(this.v15fe), q.x, q.y)
+                this.dist2(this.px(this.v15fa), this.py(this.v15fa), q.x, q.y) <
+                this.dist2(this.px(this.v15fe), this.py(this.v15fe), q.x, q.y)
               ) {
                 pc = "FIM";
                 break;
               }
               if (
-                dist2(this.px(this.v1606), this.py(this.v1606), q.x, q.y) <
-                dist2(this.px(this.v1602), this.py(this.v1602), q.x, q.y)
+                this.dist2(this.px(this.v1606), this.py(this.v1606), q.x, q.y) <
+                this.dist2(this.px(this.v1602), this.py(this.v1602), q.x, q.y)
               ) {
                 pc = "FIM";
                 break;
@@ -1046,9 +1054,9 @@ export class PadraoMontagem {
           {
             const r = this.retas(x164, y165, a14e2, x165, y166, a14ea);
             if (
-              dist2(r.x, r.y, this.v15c2, this.v15c6) + tol <
-                dist2(x157, y158, this.v15c2, this.v15c6) &&
-              dist2(r.x, r.y, x157, y158) < dist2(this.v15c2, this.v15c6, x157, y158)
+              this.dist2(r.x, r.y, this.v15c2, this.v15c6) + tol <
+                this.dist2(x157, y158, this.v15c2, this.v15c6) &&
+              this.dist2(r.x, r.y, x157, y158) < this.dist2(this.v15c2, this.v15c6, x157, y158)
             ) {
               x153 = r.x;
               y154 = r.y;
@@ -1085,8 +1093,10 @@ export class PadraoMontagem {
                 a14ea = this.a14(fe, 2);
               }
               const r2 = this.retas(x164, y165, a14e2, x165, y166, a14ea);
-              if (dist2(r2.x, r2.y, x164, y165) + tol >= dist2(x153, y154, x164, y165)) bp96 = true;
-              else if (dist2(r2.x, r2.y, x153, y154) > dist2(x164, y165, x153, y154)) bp96 = true;
+              if (this.dist2(r2.x, r2.y, x164, y165) + tol >= this.dist2(x153, y154, x164, y165))
+                bp96 = true;
+              else if (this.dist2(r2.x, r2.y, x153, y154) > this.dist2(x164, y165, x153, y154))
+                bp96 = true;
             }
           }
           pc = "L45a9c";
@@ -1179,9 +1189,9 @@ export class PadraoMontagem {
           {
             const r = this.retas(x164, y165, a14e2, x165, y166, a14ea);
             if (
-              dist2(r.x, r.y, this.v15ba, this.v15be) + tol <
-                dist2(x158, y159, this.v15ba, this.v15be) &&
-              dist2(r.x, r.y, x158, y159) < dist2(this.v15ba, this.v15be, x158, y159)
+              this.dist2(r.x, r.y, this.v15ba, this.v15be) + tol <
+                this.dist2(x158, y159, this.v15ba, this.v15be) &&
+              this.dist2(r.x, r.y, x158, y159) < this.dist2(this.v15ba, this.v15be, x158, y159)
             ) {
               x153 = r.x;
               y154 = r.y;
@@ -1219,9 +1229,10 @@ export class PadraoMontagem {
                 a14e2 = this.a14(fe, 2);
               }
               const r2 = this.retas(x164, y165, a14e2, x165, y166, a14ea);
-              if (dist2(r2.x, r2.y, x165, y166) + tol >= dist2(x153, y154, x165, y166))
+              if (this.dist2(r2.x, r2.y, x165, y166) + tol >= this.dist2(x153, y154, x165, y166))
                 bp110 = true;
-              else if (dist2(r2.x, r2.y, x153, y154) > dist2(x165, y166, x153, y154)) bp110 = true;
+              else if (this.dist2(r2.x, r2.y, x153, y154) > this.dist2(x165, y166, x153, y154))
+                bp110 = true;
             }
           }
           pc = "L46893";
@@ -1237,10 +1248,10 @@ export class PadraoMontagem {
             let sai = false;
             for (; e2 <= sg.n; e2++) {
               if (sg.get(e2, 0) !== -ea) continue;
-              const d = dist2(sg.get(e2, 2), sg.get(e2, 3), this.v15ca, this.v15ce);
-              const c144 = dist2(x157, y158, this.v15ca, this.v15ce) + tol >= d;
+              const d = this.dist2(sg.get(e2, 2), sg.get(e2, 3), this.v15ca, this.v15ce);
+              const c144 = this.dist2(x157, y158, this.v15ca, this.v15ce) + tol >= d;
               if (bp96 || c144) {
-                const c146 = dist2(x158, y159, this.v15ca, this.v15ce) + tol >= d;
+                const c146 = this.dist2(x158, y159, this.v15ca, this.v15ce) + tol >= d;
                 if (bp110 || c146) {
                   sai = true;
                   break;
@@ -1286,7 +1297,8 @@ export class PadraoMontagem {
         }
         case "L473a3": {
           const c14e =
-            dist2(x157, y158, this.v15ca, this.v15ce) <= dist2(x158, y159, this.v15ca, this.v15ce);
+            this.dist2(x157, y158, this.v15ca, this.v15ce) <=
+            this.dist2(x158, y159, this.v15ca, this.v15ce);
           if (!((bp110 || c14e) && !bp96)) {
             pc = "L47f32";
             break;
@@ -1335,7 +1347,8 @@ export class PadraoMontagem {
         }
         case "L47f32": {
           const c156 =
-            dist2(x157, y158, this.v15ca, this.v15ce) > dist2(x158, y159, this.v15ca, this.v15ce);
+            this.dist2(x157, y158, this.v15ca, this.v15ce) >
+            this.dist2(x158, y159, this.v15ca, this.v15ce);
           if (!((bp96 || c156) && !bp110)) {
             pc = "L48a96";
             break;
@@ -1460,8 +1473,8 @@ export class PadraoMontagem {
   private anulaEncontro(ea: number, ee: number, f2: number, x: number, y: number) {
     if (!(this.a14(ea, 2) !== 100 && this.v1526 === 1)) return;
     if (
-      dist2(x, y, this.v15ca, this.v15ce) + this.tol <
-      dist2(this.a14(ea, 0), this.a14(ea, 1), this.v15ca, this.v15ce)
+      this.dist2(x, y, this.v15ca, this.v15ce) + this.tol <
+      this.dist2(this.a14(ea, 0), this.a14(ea, 1), this.v15ca, this.v15ce)
     ) {
       this.aa[ea] = 100;
       if (this.mesmoPonto(ee, ea)) this.aa[ee] = 100;
@@ -1496,8 +1509,8 @@ export class PadraoMontagem {
                     const vx = this.px(vfa);
                     const vy = this.py(vfa);
                     if (
-                      dist2(vx, vy, sg.get(i, 2), sg.get(i, 3)) >
-                      dist2(vx, vy, sg.get(j, 2), sg.get(j, 3))
+                      this.dist2(vx, vy, sg.get(i, 2), sg.get(i, 3)) >
+                      this.dist2(vx, vy, sg.get(j, 2), sg.get(j, 3))
                     )
                       sg.troca(i, j);
                     sg.remove(j);
@@ -1841,7 +1854,7 @@ export class PadraoMontagem {
         if (j === i || !b) continue;
         const db = raio(b.a, eps);
         const q = intersecaoSegmentos(a.x, a.y, x6, y6, b.x, b.y, db.dx + b.x, db.dy + b.y, this.t);
-        if (q.ok && dist2(x6, y6, a.x, a.y) > dist2(q.x, q.y, a.x, a.y)) {
+        if (q.ok && this.dist2(x6, y6, a.x, a.y) > this.dist2(q.x, q.y, a.x, a.y)) {
           x6 = q.x;
           y6 = q.y;
           achou = true;
@@ -2057,7 +2070,8 @@ export class PadraoMontagem {
     b30 = (b30 * PI) / 180;
     const proj = (k: number) =>
       Math.sin(b30) * sg.get(k, 1) +
-      ((1 - Math.sin(b30) ** 2) * sg.get(k, 0)) / (Math.cos(b30) - Math.cos(b30) === 0 ? -1 : 0);
+      ((1 - this.pot(Math.sin(b30), 2)) * sg.get(k, 0)) /
+        (Math.cos(b30) - Math.cos(b30) === 0 ? -1 : 0);
     let menorProj = 100000;
     let primeiro = -1;
     for (let k = nRaios + 1; k <= sg.n; k++) {

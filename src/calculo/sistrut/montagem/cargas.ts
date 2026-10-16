@@ -4,6 +4,7 @@
 import type { LajeMontagem } from "./charneiras";
 import {
   cruzamentos,
+  distancias,
   intersecaoSegmentos,
   maior,
   menor,
@@ -85,6 +86,7 @@ export function alvenariaNaRegiao(
   t: Tolerancias,
 ) {
   const { s, tol } = t;
+  const { distancia } = distancias(t.modo);
   const cx = caixaRegiao(regiao, t);
   let total = 0;
   for (const a of alvenarias) {
@@ -141,7 +143,7 @@ export function alvenariaNaRegiao(
       const x2 = px[i + 1] ?? 0;
       const y2 = py[i + 1] ?? 0;
       const f = fatorAlvenaria(laje, regiao, x1, y1, x2, y2, t);
-      total = s(Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) * a.carga * f + total);
+      total = s(distancia(x1, y1, x2, y2) * a.carga * f + total);
     }
   }
   return total;

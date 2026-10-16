@@ -5,7 +5,6 @@
 // alinhados são retirados e a área sai pelos trapézios (positiva quando o polígono
 // da laje é horário, como o LAJEGEOM grava).
 import { type PadraoMontagem, inicioSegmento, type LajeMontagem } from "./charneiras";
-import type { ModoSistrut } from "../base/tipos";
 import { areaTrapezios, PI, perto, type PoligonoFechado, type Tolerancias } from "./geometria";
 
 /** Direção (fx, fy) → (tx, ty) com o teste de vertical por tolerância e as fórmulas
@@ -45,9 +44,8 @@ export function regiaoDoBordo(
   padrao: PadraoMontagem,
   k: number,
   t: Tolerancias,
-  modo: ModoSistrut = "original",
 ): { poligono: PoligonoFechado; area: number } {
-  const { s, tol, eps } = t;
+  const { s, tol, eps, modo } = t;
   const sg = padrao.seg;
   const fimIdx = k + 1 === laje.n + 1 ? 1 : k + 1;
   const xi = s(laje.x[k] ?? 0);

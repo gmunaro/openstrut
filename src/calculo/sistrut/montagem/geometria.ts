@@ -7,12 +7,16 @@
 // passam por `s` (= `atribuicao(modo)` de base/f32.ts). Os argumentos das rotinas
 // MIXT_0877_Menor/MIXT_082a_Maior são SINGLE: o original grava `V# / 1.0#` numa
 // local `!` antes de comparar, por isso `menor`/`maior` arredondam os dois lados.
+import type { ModoSistrut } from "../base/tipos";
+import { potencia, raiz } from "../base/x87";
 
 /** Arredondamento de atribuição do modo (`sng` no original, identidade no corrigido). */
 export type Arred = (x: number) => number;
 
 /** Contexto numérico de uma montagem: arredondamento e tolerâncias do .LAP. */
 export interface Tolerancias {
+  modo: ModoSistrut;
+  /** `atribuicao(modo)`. */
   s: Arred;
   /** V_133a: tolerância de comprimento, m. */
   tol: number;
@@ -36,13 +40,25 @@ export function maior(s: Arred, a: number, b: number) {
   return x > y ? x : y;
 }
 
-/** Quadrado da distância, calculado como o original (RT_POT##(dx, 2) + RT_POT##(dy, 2)). */
-export const dist2 = (x1: number, y1: number, x2: number, y2: number) =>
-  (x1 - x2) ** 2 + (y1 - y2) ** 2;
-
-/** Distância (RT_SQR## da soma dos quadrados). */
-export const distancia = (x1: number, y1: number, x2: number, y2: number) =>
-  Math.sqrt(dist2(x1, y1, x2, y2));
+/** Distâncias do modo. Uso: `const { dist2, distancia } = distancias(t.modo)`.
+ *  No original são RT_POT##(dx, 2) + RT_POT##(dy, 2) e o RT_SQR## disso (B$POW e FSQRT
+ *  do x87, base/x87.ts); no corrigido, `**` e `Math.sqrt`. */
+export function distancias(modo: ModoSistrut) {
+  const pot = potencia(modo);
+  const sqr = raiz(modo);
+  const sqrSingle = raiz(modo, "single");
+  /** Quadrado da distância (em IF ou dentro de uma expressão: destino DOUBLE). */
+  const dist2 = (x1: number, y1: number, x2: number, y2: number) =>
+    pot(x1 - x2, 2) + pot(y1 - y2, 2);
+  return {
+    dist2,
+    /** Distância dentro de uma expressão maior (destino DOUBLE). */
+    distancia: (x1: number, y1: number, x2: number, y2: number) => sqr(dist2(x1, y1, x2, y2)),
+    /** Distância gravada inteira numa variável SINGLE (`V! = RT_SQR##(...)`). */
+    distanciaSingle: (x1: number, y1: number, x2: number, y2: number) =>
+      sqrSingle(dist2(x1, y1, x2, y2)),
+  };
+}
 
 /** Os dois pontos coincidem dentro da tolerância de comprimento, coordenada a
  *  coordenada (o teste `ABS(y1 - y2) < V_133a AND ABS(x1 - x2) < V_133a` do original). */
