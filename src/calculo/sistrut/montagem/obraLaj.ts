@@ -1,8 +1,13 @@
 // Leitor do arquivo de obra .LAJ do original (texto gravado pelo LAJEGRAV,
 // LAJEGRAV.BAS:484-626) para a entrada da montagem: lajes (polígono, códigos finais
-// de bordo, tipo, cargas), cargas por área, alvenarias, pilares e vigas. Uso: testes
-// contra as obras gravadas pelo original nos runs do oráculo.
-import type { EixoViga, LajeSistrut, PainelLajes, Ponto } from "../base/tipos";
+// de bordo, tipo, cargas, ângulo e μ do polígono, H), cargas por área, alvenarias,
+// pilares, vigas e continuidades. Uso: testes contra as obras gravadas pelo original
+// nos runs do oráculo e o importador de obra do SISTRUT (armazenamento/sistrut/laje.ts).
+import type { EixoViga, LajeSistrut, PainelLajes, Ponto, TipoLaje } from "../base/tipos";
+
+/** Tipo de laje do A_10cc(·,1) (LAJEGEOM.BAS:3489), ou undefined se não é um dos quatro. */
+const tipoDeLaje = (t: number | undefined): TipoLaje | undefined =>
+  t === 0 || t === 1 || t === 2 || t === 3 ? t : undefined;
 
 /** Obra lida do .LAJ, pronta para `montaPavimento`. */
 export interface ObraLaj {
@@ -10,7 +15,14 @@ export interface ObraLaj {
   /** Área de cada laje (A_10cc(·,2)), por nome. */
   areas: Record<string, number>;
   eixos: EixoViga[];
-  pilares: { nome: string; x: number; y: number }[];
+  /** Pilares (A_1156): o ponto x1, y1 e, no pilar-parede, a outra ponta x2, y2. */
+  pilares: { nome: string; x: number; y: number; fim?: Ponto }[];
+  /** Nome da obra (linha "Obra - X" do cabeçalho). */
+  nome: string;
+  /** Espessura mínima do LAJECALC 3 (A_12ca), cm, por nome; ausente se não calculada. */
+  hMinimos: Record<string, number>;
+  /** O que o leitor não entendeu (tipo de laje desconhecido). */
+  avisos: string[];
 }
 
 /** Lê o .LAJ. `apoiosEmViga` diz, por viga e ponto ("V5@8,0"), a viga em que ela se
@@ -18,6 +30,7 @@ export interface ObraLaj {
  *  fica no .LAJ). Pilares: o ponto do eixo a menos de 0,005 m de um pilar. */
 export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> = {}): ObraLaj {
   const linhas = texto.split(/\r?\n/);
+  const nomeObra = (linhas[1] ?? "").replace(/^\s*Obra\s*-\s*/, "").trim();
   let i = 3;
   const num = () => Number(linhas[i++] ?? "");
   const txt = () => (linhas[i++] ?? "").trim();
@@ -64,6 +77,9 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
   const vertices: Ponto[] = [];
   const lajes: LajeSistrut[] = [];
   const areas: Record<string, number> = {};
+  const avisos: string[] = [];
+  /** Laje de cada linha p de A_10cc (1-based; null = vazio, tipo 2) e o polígono dela. */
+  const daLinha: ({ laje: LajeSistrut; poligono: number } | null)[] = [null];
   if (num() === 1) {
     // A_1070(0,0) e depois os pares k = 0..n (o par 0 repete a contagem)
     const nv = num();
@@ -88,25 +104,36 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
     for (let p = 0; p < np; p++) {
       const r: number[] = [];
       for (let j = 0; j < 9; j++) r.push(num());
-      const [poli, tipo, area, , perm, pp] = r;
+      const [poli, tipo, area, grupo, perm, pp] = r;
       const pol = polis[(poli ?? 1) - 1];
-      if (!pol) continue;
-      if (tipo === 2) continue;
+      if (!pol || tipo === 2) {
+        daLinha.push(null);
+        continue;
+      }
       ordem += 1;
       const nome = `${prefixo}${nivel + ordem}`;
       areas[nome] = area ?? 0;
-      lajes.push({
+      const t = tipoDeLaje(tipo);
+      if (t === undefined)
+        avisos.push(`${nome}: tipo de laje ${tipo} desconhecido; lido como maciça.`);
+      // pré-moldada: a coluna 5 é a inclinação das nervuras e o peso dela já está na
+      // permanente (coluna 4) (LAJEGEOM.BAS:3383-3386, 3521-3532; LAJEMONT 2331, 2514)
+      const preMoldada = t === 1;
+      const laje: LajeSistrut = {
         nome,
-        tipo: (tipo ?? 0) as LajeSistrut["tipo"],
+        tipo: t ?? 0,
         vertices: pol.idx.map((k) => vertices[k] ?? { x: 0, y: 0 }),
         indicesVertices: pol.idx,
-        grupo: 0,
+        grupo: grupo ?? 0,
         codigos: pol.cod,
-        angulo: 0,
+        // ângulo e μ são do polígono, lidos no fim (A_1210(A_10cc(i,0)))
+        angulo: preMoldada ? (pp ?? 0) : 0,
         mu: 1,
         cargaPermanente: perm ?? 0,
-        pesoProprio: pp ?? 0,
-      });
+        pesoProprio: preMoldada ? 0 : (pp ?? 0),
+      };
+      lajes.push(laje);
+      daLinha.push({ laje, poligono: poli ?? 1 });
     }
   }
   const pilares: ObraLaj["pilares"] = [];
@@ -117,9 +144,10 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
       // A_1156: x1, y1, x2, y2 (pilar pontual: as duas pontas iguais) e o nome
       const x = num();
       const y = num();
-      num();
-      num();
-      pilares.push({ nome: `P${txt()}`, x, y });
+      const x2 = num();
+      const y2 = num();
+      const parede = x2 !== x || y2 !== y;
+      pilares.push({ nome: `P${txt()}`, x, y, ...(parede ? { fim: { x: x2, y: y2 } } : {}) });
     }
   }
   const eixos: EixoViga[] = [];
@@ -148,10 +176,65 @@ export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> =
       });
     }
   }
+  // continuidades (A_11e0, linhas 0..n; a 0 é a contagem): laje A (linha de A_10cc),
+  // lado A (1-based), laje B (−1 = trecho engastado sem vizinha), lado B, armadura
+  // imposta (LAJEGRAV.BAS:613-620)
+  const continuidades: PainelLajes["continuidades"] = [];
+  // com a seção, as continuidades são as confirmadas no LAJECALC 1
+  const continuidadesConfirmadas = num() === 1;
+  if (continuidadesConfirmadas) {
+    const n = num();
+    for (let c = 0; c <= n; c++) {
+      const [la, ba, lb, bb, arm] = [num(), num(), num(), num(), num()];
+      const a = c > 0 ? daLinha[la]?.laje : undefined;
+      if (!a) continue;
+      const b = lb > 0 ? daLinha[lb]?.laje : undefined;
+      continuidades.push({
+        lajeA: a.nome,
+        bordoA: ba - 1,
+        lajeB: b?.nome ?? null,
+        bordoB: (b ? bb : ba) - 1,
+        ...(arm !== 0 ? { armaduraImposta: arm } : {}),
+      });
+    }
+  }
+  // ângulo e μ por POLÍGONO (A_1210(p, 0..1), p = 0..nº de polígonos; LAJEGRAV.BAS:622-626)
+  const anguloMu: [number, number][] = [];
+  if (num() === 1) for (let p = 0; p < daLinha.length; p++) anguloMu.push([num(), num()]);
+  // por LAJE (linha de A_10cc): espessura mínima (A_12ca) e H com as positivas (A_12fc)
+  const hMinimos: Record<string, number> = {};
+  if (num() === 1)
+    for (let p = 0; p < daLinha.length; p++) {
+      const h = num();
+      const l = daLinha[p]?.laje;
+      if (l && h > 0) hMinimos[l.nome] = h;
+    }
+  if (num() === 1)
+    for (let p = 0; p < daLinha.length; p++) {
+      const [h, , principal, secundaria] = [num(), num(), num(), num()];
+      const l = daLinha[p]?.laje;
+      if (l && h > 0) l.h = h;
+      // positivas impostas pelo usuário no LAJEPROC: código negativo (LAJEPROC.BAS:451)
+      if (l && (principal < 0 || secundaria < 0))
+        l.armaduraImposta = {
+          ...(principal < 0 ? { principal } : {}),
+          ...(secundaria < 0 ? { secundaria } : {}),
+        };
+    }
+  for (const d of daLinha) {
+    const am = d ? anguloMu[d.poligono] : undefined;
+    if (!d || !am) continue;
+    // na pré-moldada o A_1210(·,0) é −1 (LAJECALC.BAS:4548): vale o das nervuras
+    if (d.laje.tipo !== 1) d.laje.angulo = am[0];
+    d.laje.mu = am[1];
+  }
   return {
-    painel: { lajes, cargasPorArea, alvenarias, continuidades: [] },
+    painel: { lajes, cargasPorArea, alvenarias, continuidades, continuidadesConfirmadas },
     areas,
     eixos,
     pilares,
+    nome: nomeObra,
+    hMinimos,
+    avisos,
   };
 }

@@ -1,0 +1,393 @@
+/// <reference types="node" />
+// De ponta a ponta: a obra que o próprio SISTRUT original gravou (o .LAJ de cada run do
+// oráculo, versionado em `calculo/sistrut/__oraculo__/__laj__/`) é importada por
+// `importarLaj` e passa por `calcularObraSistrut` no modo original; os números de laje
+// (LAJECALC, LAJEPROC), da montagem (LAJEMONT: reações e totais) e, no
+// v2par_laje_cargas, do VIGA e do .REP saem iguais aos impressos (meia unidade da
+// última casa, ou FIX onde o original trunca). Casos: caso_a_laje e os v2par_laje_*
+// (índice em C:/wt/v1-v2par/tests/retraducao/V2PAR.md; os JSONs de
+// C:/tmp/v2-paridade/oraculo-novos ficam ao lado dos .LAJ). E as variantes do E2E com a
+// entrada editada no original (retrad_laje_calc2: direção 90°, μ informado,
+// continuidade eliminada e um trecho engastado sem vizinha; retrad_laje_param: γf 1,5,
+// eficiência 90 %, fck 0,2, aço A) e o que o importador representa ou avisa, sobre o
+// E2E.LAJ com linhas trocadas.
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { CASOS_ORACULO, type CasoOraculo } from "../../calculo/sistrut/__oraculo__/index";
+import { confereCaso } from "../../calculo/sistrut/__oraculo__/confere";
+import assim from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_assim.json";
+import balanco from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_balanco.json";
+import cargas from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_cargas.json";
+import livre from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_livre.json";
+import otim from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_otim.json";
+import r2 from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_r2.json";
+import r3 from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_r3.json";
+import umadir from "../../calculo/sistrut/__oraculo__/__laj__/v2par_laje_umadir.json";
+import t1Assim from "../../calculo/sistrut/lajes/__casos_t1__/v2par_laje_assim.json";
+import t1Balanco from "../../calculo/sistrut/lajes/__casos_t1__/v2par_laje_balanco.json";
+import { calcularObraSistrut } from "../../calculo/sistrut/obra";
+import type { Obra } from "../../dominio/obra";
+import { importarLaj, type OpcoesImportacaoLaj } from "./laje";
+
+/** O .LAJ que o original gravou no run do caso (cópia versionada). */
+const laj = (caso: string) =>
+  readFileSync(
+    new URL(`../../calculo/sistrut/__oraculo__/__laj__/${caso}.LAJ`, import.meta.url),
+    "latin1",
+  );
+
+/** Ids que o motor não produz: os da tela (parâmetros de fábrica antes da edição,
+ *  unidades) e a coluna L/f, que o original imprime sempre 0 porque não calcula flecha
+ *  (R1). */
+const IGNORA = [/^param\.(.+\.padrao|unidade.+|coef.+|multiplicador.+)$/, /vigente$/, /L\/f$/];
+/** O μ é conferido à parte, calculado pelas cordas (abaixo). */
+const MU = /\.mu$/;
+
+/** Pesos do E2E: 12 × 40 nas vigas de 4 m (0,12 t/m) e 12 × 50 nas de 5 m. */
+const VIGAS_E2E: NonNullable<OpcoesImportacaoLaj["vigas"]> = {
+  V1: { h: 40 },
+  V2: { h: 40 },
+  V3: { h: 40 },
+};
+
+interface Caso {
+  caso: CasoOraculo;
+  opcoes?: OpcoesImportacaoLaj;
+  /** Caso cujo run gravou o .LAJ, quando o próprio run não gravou (o r3 trava antes). */
+  obraDe?: string;
+}
+
+const CASOS: Caso[] = [
+  { caso: CASOS_ORACULO.caso_a_laje!, opcoes: { vigas: VIGAS_E2E } },
+  { caso: livre },
+  { caso: balanco },
+  { caso: umadir },
+  { caso: assim },
+  { caso: otim },
+  // roteiro sem a opção 6 do LAJECALC
+  { caso: r2, opcoes: { otimizaNegativos: false } },
+  // a obra do otim com o piso Mneg/Mpos 0,35 (LAJECALC 7, item 6): a otimização trava
+  {
+    caso: r3,
+    opcoes: { parametrosLaje: { relacaoNegPosMin: 0.35 } },
+    obraDe: "v2par_laje_otim",
+  },
+  { caso: cargas },
+];
+
+/** μ que a T1 corrigiu: o JSON da T10 o leu pela linha da laje, e o .LAJ o grava pelo
+ *  polígono (A_1210(A_10cc(i,0))). Vale o de `lajes/__casos_t1__`. */
+const CORRIGIDOS_T1: Pick<CasoOraculo, "caso" | "valores">[] = [t1Assim, t1Balanco];
+function comCorrecoesDaT1(caso: CasoOraculo): CasoOraculo {
+  const t1 = CORRIGIDOS_T1.find((c) => c.caso === caso.caso);
+  const corrigidos = new Map(
+    (t1?.valores ?? []).filter((v) => v.obs?.startsWith("corrigido pela T1")).map((v) => [v.id, v]),
+  );
+  return { ...caso, valores: caso.valores.map((v) => corrigidos.get(v.id) ?? v) };
+}
+
+function importa(texto: string, opcoes?: OpcoesImportacaoLaj) {
+  const imp = importarLaj(texto, opcoes);
+  if (!imp.ok) throw new Error(imp.erros.join("\n"));
+  return imp;
+}
+
+/** A obra com o μ das maciças não informado: o LAJECALC 2 o calcula pelas cordas, como
+ *  nos roteiros ("direção padrão"). */
+const muPelasCordas = (o: Obra): Obra => ({
+  ...o,
+  pavimentos: o.pavimentos.map((p) => ({
+    ...p,
+    lajes: p.lajes.map((l) => ({ ...l, mu: 1 })),
+  })),
+});
+
+describe.each(CASOS.map((c) => [c.caso.caso, c] as const))(
+  "%s: .LAJ do original importado",
+  (_, { caso, opcoes, obraDe }) => {
+    const imp = importa(laj(obraDe ?? caso.caso), opcoes);
+    const r = calcularObraSistrut(imp.obra, { modo: "original" });
+    const esperado = comCorrecoesDaT1(caso);
+
+    it("importa sem avisos; o polígono de cada laje é o do .LAJ", () => {
+      expect(imp.avisos).toEqual([]);
+      for (const l of imp.obra.pavimentos[0]!.lajes) expect(l.poligono?.length).toBeGreaterThan(2);
+    });
+
+    it("todos os números impressos (lajes, montagem, reações; VIGA e .REP no cargas)", () => {
+      const { faltando, difere, conferidos } = confereCaso(esperado, r, [...IGNORA, MU]);
+      expect(faltando, "ids sem cálculo no motor").toEqual([]);
+      expect(difere).toEqual([]);
+      const ignorados = esperado.valores.filter((v) =>
+        [...IGNORA, MU].some((re) => re.test(v.id)),
+      ).length;
+      expect(conferidos).toBe(esperado.valores.length - ignorados);
+    });
+
+    it("μ pelas cordas (o importado vira não informado): o μ corrigido pela T1 e os mesmos números", () => {
+      const rc = calcularObraSistrut(muPelasCordas(imp.obra), { modo: "original" });
+      const { faltando, difere, conferidos } = confereCaso(esperado, rc, IGNORA);
+      expect(faltando).toEqual([]);
+      expect(difere).toEqual([]);
+      expect(conferidos).toBeGreaterThan(0);
+    });
+
+    if (caso.caso === "v2par_laje_r3") {
+      it("a otimização não converge no original (R3): aviso e a tela parada", () => {
+        const p = r.pavimentos[0]!;
+        expect(p.avisos.some((a) => a.includes("não converge"))).toBe(true);
+        expect(p.otimizacaoParada).toMatchObject({ laje: "L1", lado: 2, codigo: 5 });
+        expect(p.esforcos).toBe(p.esforcosAntesOtimizacao);
+      });
+      it("no corrigido a otimização converge: sem tela parada e o código da L1 cai", () => {
+        const rc = calcularObraSistrut(
+          { ...imp.obra, modoCalculo: "corrigido" },
+          { modo: "corrigido" },
+        );
+        const p = rc.pavimentos[0]!;
+        expect(p.otimizacaoParada).toBeUndefined();
+        expect(p.esforcos).not.toBe(p.esforcosAntesOtimizacao);
+        const l1 = (e: typeof p.esforcos) => e.lajes.find((l) => l.nome === "L1")!.codigos[2]!;
+        expect(l1(p.esforcosAntesOtimizacao)).toBe(22);
+        expect(l1(p.esforcos)).toBeLessThan(22);
+      });
+    } else
+      it("sem avisos no motor", () => {
+        const p = r.pavimentos[0]!;
+        expect(r.avisos).toEqual([]);
+        expect(p.avisos).toEqual([]);
+        expect(p.montagem.avisos).toEqual([]);
+        expect(p.otimizacaoParada).toBeUndefined();
+      });
+
+    it("modo corrigido roda o mesmo caminho sem avisos", () => {
+      const rc = calcularObraSistrut(
+        { ...imp.obra, modoCalculo: "corrigido" },
+        { modo: "corrigido" },
+      );
+      expect(rc.avisos).toEqual([]);
+      expect(rc.pavimentos[0]!.avisos).toEqual([]);
+    });
+  },
+);
+
+describe("v2par_laje_umadir: total do painel (1 ulp)", () => {
+  // As 5 parcelas somadas em SINGLE dão 27,675001 (imprime 27,68) com as regiões na ordem
+  // do polígono gravado; o mesmo painel com os retângulos da V2 (do canto inferior
+  // esquerdo) soma as cargas por região em outra ordem: 6,75 em vez de 6,7500005, e o
+  // total cai no meio exato entre dois SINGLE e arredonda para 27,674999 (imprime 27,67).
+  const imp = importa(laj("v2par_laje_umadir"));
+  const total = (o: Obra) =>
+    calcularObraSistrut(o, { modo: "original" }).pavimentos[0]!.montagem.totais;
+  it("pelo polígono do .LAJ: cargas 6,7500005 e painel 27,675001", () => {
+    const t = total(imp.obra);
+    expect(t.cargasPorArea).toBe(Math.fround(6.7500005));
+    expect(t.painel).toBe(Math.fround(27.675001));
+  });
+  it("com os retângulos da V2 o painel perde 1 ulp (a ordem dos vértices importa)", () => {
+    const p = imp.obra.pavimentos[0]!;
+    const retangulos = p.lajes.map(({ poligono: _p, vinculosLados: _v, ...l }) => l);
+    const t = total({ ...imp.obra, pavimentos: [{ ...p, lajes: retangulos }] });
+    expect(t.cargasPorArea).toBe(6.75);
+    expect(t.painel).toBe(Math.fround(27.674999));
+  });
+});
+
+/** O E2E importado com a entrada editada no original, laje a laje. */
+const e2e = (f: (o: Obra) => Obra) => f(importa(laj("caso_a_laje"), { vigas: VIGAS_E2E }).obra);
+
+describe("variantes do E2E editadas no original", () => {
+  it("retrad_laje_calc2: direção 90° na L1, μ 1,5 na L2, continuidade eliminada e o lado x = 0 da L1 engastado sem vizinha", () => {
+    const obra = e2e((o) => {
+      const p = o.pavimentos[0]!;
+      const lajes = p.lajes.map((l) => ({
+        ...l,
+        // E + T elimina toda a continuidade; S engasta o primeiro trecho da L1
+        vinculosLados: l.poligono!.map((_, k) =>
+          l.nome === "L1" && k === 0 ? ("engastado" as const) : ("apoiado" as const),
+        ),
+        // nova direção: o μ volta a sair das cordas (o gravado era o de 0°)
+        ...(l.nome === "L1" ? { anguloArmadura: 90, mu: 1 } : {}),
+        ...(l.nome === "L2" ? { mu: 1.5 } : {}),
+      }));
+      return { ...o, otimizaNegativos: false, pavimentos: [{ ...p, lajes }] };
+    });
+    const r = calcularObraSistrut(obra, { modo: "original" });
+    const caso = CASOS_ORACULO.retrad_laje_calc2!;
+    const { faltando, difere, conferidos } = confereCaso(caso, r, IGNORA);
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+    expect(conferidos).toBe(78);
+    expect(r.pavimentos[0]!.painel.continuidades).toEqual([
+      { lajeA: "L1", bordoA: 0, lajeB: null, bordoB: 0 },
+    ]);
+  });
+
+  it("retrad_laje_param: γf 1,5 e eficiência 90 % do .LAP, fck 0,2 e aço A dos materiais", () => {
+    const obra = e2e((o) => ({
+      ...o,
+      otimizaNegativos: false,
+      materiais: { ...o.materiais, fck: 20, classeAco: "A" },
+      parametrosLaje: { gamaF: 1.5, eficienciaNegativa: 0.9 },
+    }));
+    const r = calcularObraSistrut(obra, { modo: "original" });
+    const caso = CASOS_ORACULO.retrad_laje_param!;
+    const { faltando, difere, conferidos } = confereCaso(caso, r, IGNORA);
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+    expect(conferidos).toBe(85);
+    // γ do .LAP só nas lajes; vigas e pilares seguem com os de fábrica
+    expect(r.parametros.laje.gamaF).toBe(Math.fround(1.5));
+    expect(r.materiais.gamaF).toBe(Math.fround(1.4));
+  });
+});
+
+/** O E2E.LAJ com linhas trocadas (`troca`, 1-based) e intervalos apagados. Linhas do
+ *  E2E.LAJ: 141 código do lado 3 da L1; 158 grupo da L2; 174 tipo e 178 coluna 5 da L4
+ *  (A_10cc); 183 nº de pilares e 185-229 os pilares (x1, y1, x2, y2, nome); 265-291 as
+ *  continuidades (276 = armadura da L1 lado 3 × L2); 297-298 ângulo e μ do polígono 2
+ *  (a L4) e 302 μ do polígono 4 (a L1); 316 positiva principal da L1 (A_12fc(1,2)). */
+function e2eLaj(troca: Record<number, string>, apaga: [number, number][] = []) {
+  const linhas = laj("caso_a_laje").split(/\r?\n/);
+  for (const [k, v] of Object.entries(troca)) linhas[Number(k) - 1] = ` ${v} `;
+  for (const [a, b] of [...apaga].sort((x, y) => y[0] - x[0])) linhas.splice(a - 1, b - a + 1);
+  return linhas.join("\r\n");
+}
+const importaE2e = (texto: string, opcoes: OpcoesImportacaoLaj = {}) => {
+  const imp = importa(texto, { vigas: VIGAS_E2E, ...opcoes });
+  const p = calcularObraSistrut(imp.obra, { modo: "original" }).pavimentos[0]!;
+  const laje = (nome: string) => imp.obra.pavimentos[0]!.lajes.find((l) => l.nome === nome)!;
+  return { imp, p, laje };
+};
+
+describe("importarLaj: o que o .LAJ tem e a obra representa", () => {
+  it("pré-moldada: a coluna 5 é a inclinação das nervuras e o peso já está na permanente", () => {
+    // L4 pré-moldada com nervuras a 90°; o LAJECALC 2 grava −1 no ângulo do polígono
+    const { imp, p, laje } = importaE2e(e2eLaj({ 174: "1", 178: "90", 297: "-1", 298: "0" }));
+    expect(laje("L4")).toMatchObject({ tipo: "pre-moldada", anguloArmadura: 90, mu: 1 });
+    // o .LAJ editado tem engaste na L4, que o original não daria: avisado e ignorado
+    expect(imp.avisos).toContain("L4 lado 2: código 22 em laje não maciça; ignorado.");
+    // nervuras em y: (0,15 + 0,10)·5/2 = 0,375 + 0,25 t/m nas vigas y = 0 e y = 5, sem peso próprio
+    const r = p.montagem.reacoes.filter((x) => x.laje === "L4");
+    expect(r.map((x) => (x.apoio.tipo === "viga" ? x.apoio.viga : ""))).toEqual(["V3", "V2"]);
+    for (const x of r) {
+      expect(x.cargaArea).toBeCloseTo(0.375, 6);
+      expect(x.estrutura).toBeCloseTo(0.25, 6);
+      expect(x.peso).toBe(0);
+    }
+  });
+
+  it("comum não calculada sem <R>elação: ângulo −1 e μ 0; o original para em 1/√μ", () => {
+    const { laje, p } = importaE2e(e2eLaj({ 174: "3", 297: "-1", 298: "0" }));
+    expect(laje("L4")).toMatchObject({ tipo: "comum-nao-calculada", mu: 1 });
+    expect(laje("L4").anguloArmadura).toBeUndefined();
+    expect(p.painel.lajes[3]).toMatchObject({ angulo: -1, mu: 0 });
+    expect(p.esforcos.momentos.L4).toBeUndefined();
+    expect(p.esforcos.avisos.join()).toContain("LAJECALC.BAS:7239");
+  });
+
+  it("comum não calculada com μ 0,8 por <R>: fatores de direção a −1° e M+ secundário = 0,8·M+ (momentos.ts:63)", () => {
+    const { laje, p } = importaE2e(e2eLaj({ 174: "3", 297: "-1", 298: ".8" }));
+    expect(laje("L4").mu).toBeCloseTo(0.8, 7);
+    const m = p.esforcos.momentos.L4!;
+    const [c, s] = [Math.cos(Math.PI / 180), Math.sin(Math.PI / 180)];
+    // lado horizontal girado de −1°: |dy|/L = sen 1°, |dx|/L = cos 1° → 0,8·cos 1° + sen 1°
+    expect(m.bordos[0]!.fatorDirecao).toBeCloseTo(0.8 * c + s, 6);
+    // lado vertical: 0,8·sen 1° + cos 1°
+    expect(m.bordos[1]!.fatorDirecao).toBeCloseTo(0.8 * s + c, 6);
+    expect(m.mPositivoSecundarioTcm).toBe(Math.fround(m.mPositivoPrincipalTcm * Math.fround(0.8)));
+    // sem continuidade (o original não a liga ao tipo 3): M− 0
+    expect(m.mNegativoMaiorTcm).toBe(0);
+  });
+
+  it("pilar-parede (x2, y2 ≠ x1, y1): pilar no centro com o comprimento e o trecho na montagem", () => {
+    const { imp, p } = importaE2e(e2eLaj({ 187: "2" }));
+    const pav = imp.obra.pavimentos[0]!;
+    expect(pav.trechosPilares).toEqual([
+      { pilar: "P1", inicio: { x: 0, y: 0 }, fim: { x: 2, y: 0 } },
+    ]);
+    expect(pav.pilares[0]).toMatchObject({ x: 1, y: 0, b: 200, h: 20 });
+    // o bordo y = 0 da L3 contém o pilar-parede: vai ao pilar, como no original (L_29708)
+    const r = p.montagem.reacoes.find((x) => x.laje === "L3" && x.bordo === 3)!;
+    expect(r.apoio).toEqual({ tipo: "pilar", pilar: "P1" });
+  });
+
+  it("positiva imposta no LAJEPROC (A_12fc negativo): fica se basta", () => {
+    // −3002: bitola de índice 3 (8 mm), espaçamento de índice 2 (10 cm)
+    const { laje, p } = importaE2e(e2eLaj({ 316: "-3002" }));
+    expect(laje("L1").armaduraImposta).toEqual({ principal: { bitola: 8, espacamento: 10 } });
+    // φ8 c/10 = 5,0 cm²/m ≥ As 1,50 necessária: o LAJEPROC a mantém
+    const b = p.lajeproc.positivas.L1!.principal.barra;
+    expect(b.ok && [b.bitola, b.espacamento]).toEqual([8, 10]);
+  });
+
+  it("negativa imposta no LAJECALC (A_11e0 positivo): vai à continuidade; o código negativo do LAJEPROC não é entrada", () => {
+    // 1000·índice da bitola + espaçamento: 3010 = φ8 c/10
+    const { laje, p } = importaE2e(e2eLaj({ 276: "3010" }));
+    expect(laje("L1").negativasImpostas).toEqual([
+      null,
+      null,
+      { bitola: 8, espacamento: 10 },
+      null,
+    ]);
+    expect(p.painel.continuidades[0]).toMatchObject({
+      lajeA: "L1",
+      lajeB: "L2",
+      armaduraImposta: 3010,
+    });
+    const pelaProc = importaE2e(e2eLaj({ 276: "-2001" }));
+    expect(pelaProc.laje("L1").negativasImpostas).toBeUndefined();
+  });
+
+  it("sem a seção de continuidades: a automática do original só liga lajes do mesmo grupo", () => {
+    // L2 no grupo 1: os lados comuns com a L1 e a L4 (grupo 0) ficam apoiados
+    const { laje, p } = importaE2e(e2eLaj({ 265: "0", 158: "1" }, [[266, 291]]));
+    expect(laje("L1").vinculosLados).toEqual([null, null, "apoiado", null]);
+    expect(laje("L2").vinculosLados).toEqual(["apoiado", "apoiado", null, null]);
+    expect(laje("L3").vinculosLados).toBeUndefined();
+    expect(p.painel.continuidades).toEqual([
+      { lajeA: "L1", bordoA: 3, lajeB: "L3", bordoB: 1 },
+      { lajeA: "L3", bordoA: 2, lajeB: "L4", bordoB: 1 },
+    ]);
+  });
+});
+
+describe("importarLaj: o que a obra não representa vira aviso", () => {
+  const avisos = (texto: string, opcoes?: OpcoesImportacaoLaj) =>
+    importaE2e(texto, opcoes).imp.avisos;
+  it("tipo de laje desconhecido", () => {
+    expect(avisos(e2eLaj({ 174: "5" }))).toEqual([
+      "L4: tipo de laje 5 desconhecido; lido como maciça.",
+    ]);
+  });
+  it("μ = 1 digitado numa laje cujas cordas dão outro μ", () => {
+    expect(avisos(e2eLaj({ 302: "1" }))).toEqual([
+      "L1: μ = 1 informado (as cordas dão 0.8); a V2 calcula μ = 1 pelas cordas e não o representa.",
+    ]);
+  });
+  it("código de continuidade ≠ 22 sem a otimização (i digitado no LAJECALC 1)", () => {
+    const texto = e2eLaj({ 141: "17" });
+    expect(avisos(texto, { otimizaNegativos: false })).toEqual([
+      "L1 lado 3: código 17 (i = 1.5) sem a otimização; a V2 só representa o i da continuidade automática (código 22).",
+    ]);
+    // com a otimização, o 17 é dela e a V2 o refaz
+    expect(avisos(texto)).toEqual([]);
+  });
+  it("pilar-parede", () => {
+    expect(avisos(e2eLaj({ 187: "2" }))).toEqual([
+      "Pilar-parede P1: o trecho vale na montagem; os apoios das vigas sobre ele seguem a regra da V2 (pilar no centro).",
+    ]);
+  });
+  it('cruzamento sem pilar ("Vx apoia em Vy" do LAJEMONT, que não fica no .LAJ)', () => {
+    // sem o P5 em (4; 5)
+    expect(avisos(e2eLaj({ 183: "8" }, [[205, 209]]))).toEqual([
+      'Cruzamento sem pilar em (4; 5) entre V2 e V5: a escolha "apoia em" do LAJEMONT não fica no .LAJ; vale a regra da V2.',
+    ]);
+  });
+  it("arquivo sem o cabeçalho do SISTRUT", () => {
+    expect(importarLaj("{}")).toEqual({
+      ok: false,
+      erros: ["O arquivo não é um .LAJ do SISTRUT (falta o cabeçalho)."],
+    });
+  });
+});
