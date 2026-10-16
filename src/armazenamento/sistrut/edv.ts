@@ -23,129 +23,46 @@
 // Unidades do original: posições e comprimentos em cm a partir da ponta esquerda da viga,
 // bitolas em mm, fck e fyk em t/cm² (vezes `fatorUnidade`).
 
-/** Barra longitudinal (A_1AF2 negativas, A_1AC4 positivas; dobras em A_1B4E/A_1B20). */
-export interface BarraEditada {
-  quantidade: number;
-  /** mm */
-  bitola: number;
-  /** cm a partir da ponta esquerda da viga. */
-  inicio: number;
-  fim: number;
-  /** Dobras (ganchos) na ponta esquerda e na direita, cm. */
-  dobras: [number, number];
-}
+import {
+  LIMITES_EDICAO_VIGA,
+  nomeArquivoEdv,
+  type BarraEditada,
+  type EdicaoVigaSistrut,
+  type GrampoEditado,
+  type NotaArmadura,
+  type NotaForma,
+  type PeleEditada,
+  type PortaEstriboEditado,
+  type TrechoEstriboEditado,
+} from "../../dominio/edicaoViga";
+import type { Obra } from "../../dominio/obra";
+import { lerVig } from "./viga";
 
-/** Grampo (A_1BD8 negativos, A_1BAA positivos). */
-export interface GrampoEditado {
-  quantidade: number;
-  bitola: number;
-  inicio: number;
-  fim: number;
-  /** Coluna 4: 0 grampo no apoio esquerdo do tramo, 1 no direito. */
-  lado: "esquerdo" | "direito";
-  /** Coluna 5: largura do grampo, cm (o comprimento é 2·(fim − início) + largura). */
-  largura: number;
-}
-
-/** Porta-estribo (A_1B7C). */
-export interface PortaEstriboEditado {
-  quantidade: number;
-  bitola: number;
-  inicio: number;
-  fim: number;
-}
-
-/** Armadura de pele de um trecho (A_1C34), com o índice do original: 0 balanço esquerdo,
- *  1..n tramos, n + 1 balanço direito. */
-export interface PeleEditada {
-  trecho: number;
-  quantidadePorFace: number;
-  bitola: number;
-  inicio: number;
-  fim: number;
-}
-
-/** Trecho de estribos (A_1C06). */
-export interface TrechoEstriboEditado {
-  inicio: number;
-  fim: number;
-  bitola: number;
-  espacamento: number;
-  /** Estribos lado a lado (1 simples, 2 duplo, 3 triplo). */
-  ladoALado: number;
-  /** Seção do tramo, cm: a coluna 5 grava INT(bw) + h·0,0001 (DESINIT, desinitBarras.ts). */
-  bw: number;
-  h: number;
-  /** Nº da posição de estribo (1 = a primeira). */
-  posicao: number;
-}
-
-/** Nota de observação na forma (A_1C90$(2..5), DESEDCAO.BAS:4404-4470). */
-export interface NotaForma {
-  trecho: number;
-  /** <E>squerda, <C>entro ou <D>ireita do trecho. */
-  local: "E" | "C" | "D";
-  texto: string;
-}
-
-/** Nota de observação na armadura (A_1C90$(6..14), DESEDCAO.BAS:4480-4570). */
-export interface NotaArmadura {
-  /** Nº da posição de barra (1 = a primeira negativa, na ordem do quadro de ferros). */
-  posicao: number;
-  texto: string;
-}
-
-/** Um .EDV lido. */
-export interface EdicaoVigaSistrut {
-  /** Do nome do arquivo: o registro da viga no .SEC/.FOR e os 4 primeiros caracteres do
-   *  pavimento, em maiúsculas. */
-  registro: number;
-  pavimento: string;
-  /** Nome da viga (V_0DD4$). */
-  viga: string;
-  /** Comprimento total da viga, cm, de ponta a ponta (DESEDCAO.BAS:466). */
-  comprimento: number;
-  /** fck e fyk, t/cm² na unidade do DESENHO (V_0EBA, V_0EBE), o multiplicador da unidade
-   *  (V_0EC6) e o nome dela (V_0ECA$, "t/cm2"). */
-  materiais: { fck: number; fyk: number; fatorUnidade: number; unidade: string };
-  /** Cobrimento e cobrimento + acréscimo (d'), cm (V_0EAA, V_0EA6). */
-  cobrimento: number;
-  cobrimentoMaisAcrescimo: number;
-  /** Repetições da viga no DESENHO (A_1CBE%); o DESEDITA só o usa se a viga ainda não
-   *  tiver repetições (DESEDITA.BAS:755-756). */
-  repeticoes: number;
-  /** Nº de tramos e balanços (V_0DDC, V_0DE0, V_0DE4). */
-  tramos: number;
-  balancoEsquerdo: boolean;
-  balancoDireito: boolean;
-  negativas: BarraEditada[];
-  grampoNegativos: GrampoEditado[];
-  positivas: BarraEditada[];
-  grampoPositivos: GrampoEditado[];
-  portaEstribos: PortaEstriboEditado[];
-  /** Pele (V_186E ≠ 0): os trechos com pele (o arquivo grava todos, de 0 a n + balanço
-   *  direito) e o nº de trechos com pele por bitola 0..5 (A_1A96%). null sem pele. */
-  pele: { linhas: number; trechos: PeleEditada[]; trechosPorBitola: number[] } | null;
-  estribos: TrechoEstriboEditado[];
-  notasForma: NotaForma[];
-  /** M+ do detalhamento de cada trecho 0..n + balanço direito, t·m na unidade do DESENHO
-   *  (A_128E(t,4), DESINIT, desinit.ts). */
-  momentosPositivos: number[];
-  notasArmadura: NotaArmadura[];
-}
+export { nomeArquivoEdv };
+export type {
+  BarraEditada,
+  GrampoEditado,
+  PortaEstriboEditado,
+  PeleEditada,
+  TrechoEstriboEditado,
+  NotaForma,
+  NotaArmadura,
+  EdicaoVigaSistrut,
+};
 
 export type LeituraEdv =
   | { ok: true; edicao: EdicaoVigaSistrut; avisos: string[] }
   | { ok: false; erros: string[] };
 
 // Limites dos arrays do COMMON (DESEDITA.BAS:729-746): passar deles é o erro 9 do QB.
-const MAX_LONGITUDINAIS = 60;
-const MAX_GRAMPOS = 10;
-const MAX_PORTA_ESTRIBOS = 30;
-const MAX_ESTRIBOS = 50;
-const MAX_TRECHOS = 14;
-/** A_1C90$ vai de 0 a 15 (DESENHO.BAS:613); as notas da armadura começam no 6. */
-const MAX_NOTAS_ARMADURA = 10;
+const {
+  longitudinais: MAX_LONGITUDINAIS,
+  grampos: MAX_GRAMPOS,
+  portaEstribos: MAX_PORTA_ESTRIBOS,
+  estribos: MAX_ESTRIBOS,
+  trechos: MAX_TRECHOS,
+  notasArmadura: MAX_NOTAS_ARMADURA,
+} = LIMITES_EDICAO_VIGA;
 
 /** Registro e pavimento a partir do nome do arquivo; null se o nome não é de .EDV. */
 export function nomeEdv(nome: string): { registro: number; pavimento: string } | null {
@@ -159,12 +76,6 @@ export function nomeEdv(nome: string): { registro: number; pavimento: string } |
   if (sublinhados.length < enchimento) return null;
   const pavimento = sublinhados.slice(enchimento) + (m[3] ?? "");
   return { registro: Number(m[1]), pavimento };
-}
-
-/** Nome do .EDV da viga do registro `registro` no pavimento (DESEDCAO.BAS:464). */
-export function nomeArquivoEdv(registro: number, pavimento: string): string {
-  const n = String(registro);
-  return `R${n}${"_".repeat(Math.max(0, 3 - n.length))}${pavimento.slice(0, 4).toUpperCase()}.EDV`;
 }
 
 class ErroLeitura extends Error {}
@@ -514,4 +425,101 @@ export function casarEdv(
       };
     return { ok: true, arquivo, viga, edicao };
   });
+}
+
+/** Resultado de `aplicarEdv`: a obra com `Viga.armaduraEditada` nas vigas casadas, os
+ *  avisos e os arquivos que ficaram de fora, com o motivo. */
+export interface AplicacaoEdv {
+  obra: Obra;
+  avisos: string[];
+  ignorados: { arquivo: string; motivo: string }[];
+}
+
+/** Lê os .EDV (texto já decodificado) e guarda cada edição na viga dela: pavimento = nome
+ *  do .VIG, registro = ordem da viga no .VIG (a do .SEC e do .FOR) e nome (`casarEdv`). O
+ *  .EDV que não lê, não casa ou cuja viga não entrou na obra fica de fora com o motivo. */
+export function aplicarEdv(
+  obra: Obra,
+  edvs: readonly { nome: string; texto: string }[],
+  vigs: readonly { nome: string; dados: Uint8Array }[],
+): AplicacaoEdv {
+  const avisos: string[] = [];
+  const ignorados: AplicacaoEdv["ignorados"] = [];
+  const ignora = (arquivo: string, motivo: string) => {
+    ignorados.push({ arquivo, motivo });
+    avisos.push(`${arquivo}: ${motivo}`);
+  };
+  const lidas: { arquivo: string; edicao: EdicaoVigaSistrut }[] = [];
+  for (const { nome, texto } of edvs) {
+    const r = lerEdv(nome, texto);
+    if (!r.ok) {
+      ignora(
+        nome,
+        `armadura editada no DESEDCAO que não foi possível ler (${r.erros.join(" ")}); ficou de fora.`,
+      );
+      continue;
+    }
+    avisos.push(...r.avisos.map((a) => `${nome}: ${a}`));
+    lidas.push({ arquivo: nome, edicao: r.edicao });
+  }
+  const vigas: VigaDoVig[] = vigs.flatMap((v) => {
+    try {
+      const pavimento = v.nome
+        .replace(/^.*[\\/]/, "")
+        .replace(/\.[^.]*$/, "")
+        .trim()
+        .toUpperCase();
+      return lerVig(v.dados).map((r, i) => ({ pavimento, registro: i + 1, nome: r.nome }));
+    } catch {
+      return []; // o importador de vigas já avisou do .VIG ilegível
+    }
+  });
+  const aplicadas = new Map<string, Map<string, EdicaoVigaSistrut>>();
+  for (const c of casarEdv(lidas, vigas)) {
+    if (!c.ok) {
+      ignora(c.arquivo, c.aviso);
+      continue;
+    }
+    const pav = obra.pavimentos.find((p) => p.id.toUpperCase() === c.viga.pavimento);
+    const viga = pav?.vigas.find(
+      (v) => v.nome.trim().toUpperCase() === c.viga.nome.trim().toUpperCase(),
+    );
+    if (!pav || !viga) {
+      ignora(
+        c.arquivo,
+        `a viga ${c.viga.nome} do ${c.viga.pavimento}.VIG não entrou na obra; a armadura editada dela ficou de fora.`,
+      );
+      continue;
+    }
+    const doPav = aplicadas.get(pav.id) ?? new Map<string, EdicaoVigaSistrut>();
+    doPav.set(viga.id, c.edicao);
+    aplicadas.set(pav.id, doPav);
+  }
+  if (aplicadas.size === 0) return { obra, avisos, ignorados };
+  const nomes = [...aplicadas].map(([pav, vs]) => {
+    const p = obra.pavimentos.find((x) => x.id === pav);
+    const n = [...vs.keys()].map((id) => p?.vigas.find((v) => v.id === id)?.nome ?? id);
+    return `${p?.nome ?? pav} ${n.join(", ")}`;
+  });
+  avisos.push(
+    `Armadura editada no DESEDCAO (.EDV) em ${nomes.join("; ")}: o detalhamento e o quadro de ferros dessas vigas saem da armadura editada, como no original. Se a viga mudar (tramos, balanços ou comprimento), a edição é descartada com aviso.`,
+  );
+  return {
+    obra: {
+      ...obra,
+      pavimentos: obra.pavimentos.map((p) => {
+        const vs = aplicadas.get(p.id);
+        if (!vs) return p;
+        return {
+          ...p,
+          vigas: p.vigas.map((v) => {
+            const e = vs.get(v.id);
+            return e ? { ...v, armaduraEditada: e } : v;
+          }),
+        };
+      }),
+    },
+    avisos,
+    ignorados,
+  };
 }

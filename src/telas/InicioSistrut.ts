@@ -18,6 +18,7 @@
 // .INI) vão como bytes.
 import { lerObra, serializarObra } from "../armazenamento/arquivo";
 import { importarV1 } from "../armazenamento/importarV1";
+import { aplicarEdv } from "../armazenamento/sistrut/edv";
 import { importarLaj } from "../armazenamento/sistrut/laje";
 import { explicarErros, type OrigemPavimento } from "../armazenamento/sistrut/mensagens";
 import {
@@ -64,7 +65,6 @@ const VIGAS_DA_OBRA = new Set(["DSP", "INI"]);
 export const NAO_LIDOS: Record<string, string> = {
   BAK: "cópia de segurança do .LAJ ou do .COL anterior, que o LAJEGRAV e o PIGRAEDI guardam ao gravar (LAJEGRAV.BAS:484, PIGRAEDI.BAS:467); não usada.",
   FOK: "cópia de segurança do .FOR anterior, que o FORMEDCA guarda ao gravar (FORMEDCA.BAS:2974); não usada.",
-  EDV: "desenho de armadura editado de uma viga, do DESEDCAO; não importado.",
   FRM: "fôrma do pavimento montada no FORMEDCA (FORMEDCA.BAS:2722), para o desenho de fôrmas, que a V2 não faz; não importada.",
   CFO: "fôrma dos pilares do FORMEDCA, para o desenho de fôrmas, que a V2 não faz; não importada.",
   LAP: "parametrização das lajes, que a importação ainda não lê; valem os parâmetros de fábrica (SISTRUT.LAP).",
@@ -78,8 +78,9 @@ export const NAO_LIDOS: Record<string, string> = {
   EIX: "eixos de auxílio do desenho da OpenStrut V1, não do SISTRUT original; não usados no cálculo.",
 };
 /** Leitor de uma extensão que completa a obra já montada (lajes, vigas, pilares), como o
- *  .EDV para o detalhamento das vigas. Recebe a obra e todos os arquivos da extensão
- *  (com o texto lido como o QuickBASIC lê) e devolve a obra completa. Uma exceção vira
+ *  .EDV para o detalhamento das vigas. Recebe a obra, todos os arquivos da extensão
+ *  (com o texto lido como o QuickBASIC lê) e todos os arquivos selecionados (o .EDV casa
+ *  pela ordem das vigas no .VIG) e devolve a obra completa. Uma exceção vira
  *  aviso e os arquivos ficam de fora; `ignorados` são os que ele não usou, com o motivo.
  *  Com um leitor registrado, a extensão sai de `NAO_LIDOS`. */
 export interface LeitorExtra {
@@ -87,10 +88,21 @@ export interface LeitorExtra {
   completa(
     obra: Obra,
     arquivos: readonly (ArquivoEntrada & { texto: string })[],
+    todos: readonly ArquivoEntrada[],
   ): { obra: Obra; avisos: string[]; ignorados?: { arquivo: string; motivo: string }[] };
 }
 /** Os leitores extras, na ordem em que rodam. */
-export const LEITORES_EXTRA: LeitorExtra[] = [];
+export const LEITORES_EXTRA: LeitorExtra[] = [
+  {
+    extensao: "EDV",
+    completa: (obra, edvs, todos) =>
+      aplicarEdv(
+        obra,
+        edvs,
+        todos.filter((a) => extensaoDe(a.nome) === "VIG"),
+      ),
+  },
+];
 
 /** .INI de configuração que não mudam o cálculo, por nome. O VIGA.INI e o DESENHO.INI
  *  entram nas vigas. */
@@ -730,6 +742,7 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       leitor.completa(
         base,
         arqs.map((a) => ({ ...a, texto: textoDe(a) })),
+        arquivos,
       ),
     );
     if (!r) continue;
