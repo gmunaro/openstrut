@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Celular em retrato ou deitado. As mesmas consultas estão em src/telas/tela.ts
+   (useCompacto), que troca a estrutura das telas; mude as duas juntas. */
+@custom-variant compacto (@media screen and (max-width: 767px), screen and (max-height: 500px));
 
 /* Tema escuro sóbrio (base zinc do shadcn/ui, destaque azul-aço). O app põe a
    classe .dark no <html>; na impressão as variáveis voltam para papel branco. */
@@ -83,8 +86,44 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* o Chrome do Android não aumenta a letra sozinho no celular deitado */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Monitores grandes com pouca densidade (4K a 100%): a interface toda é medida em rem,
+   então aumentar a letra-base aumenta tudo junto. Com densidade 2 a largura em CSS
+   fica em 1920 px e nada muda. */
+@media screen and (min-width: 2400px) {
+  html {
+    font-size: 125%;
+  }
+}
+@media screen and (min-width: 3200px) {
+  html {
+    font-size: 150%;
+  }
+}
+
+/* No celular, campos com altura de alvo de toque (44 px) e letra de 16 px, que não
+   faz o navegador ampliar a página ao focar. */
+@layer components {
+  @variant compacto {
+    input:not([type="checkbox"], [type="radio"], [type="file"]),
+    select,
+    [data-slot="select-trigger"] {
+      min-height: 2.75rem;
+      font-size: 1rem;
+    }
+    input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
   }
 }
 
@@ -111,8 +150,14 @@
     font-size: 9pt;
   }
   /* o Table põe overflow-x-auto: no papel isso corta a coluna da direita */
-  [data-slot="table-container"] {
+  [data-slot="table-container"],
+  [data-slot="tabela-rolagem"] {
     overflow: visible;
+  }
+  /* a primeira coluna fixa (tabela.tsx) só faz sentido na tela */
+  [data-slot="table-head"],
+  [data-slot="table-cell"] {
+    position: static !important;
   }
   table {
     break-inside: auto;
