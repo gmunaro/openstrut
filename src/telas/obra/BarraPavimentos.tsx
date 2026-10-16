@@ -40,7 +40,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
   const apagar = () => {
     if (!ativo) return;
     const conteudo = ativo.lajes.length + ativo.vigas.length + ativo.pilares.length;
-    const msg = `Apagar o pavimento "${ativo.nome}"${conteudo > 0 ? ` e a planta dele (${ativo.lajes.length} lajes)` : ""}? Dá para desfazer.`;
+    const msg = `Apagar o pavimento "${ativo.nome}"${conteudo > 0 ? ` e a planta dele (${ativo.lajes.length} lajes, ${ativo.vigas.length} vigas, ${ativo.pilares.length} pilares)` : ""}? Dá para desfazer.`;
     if (window.confirm(msg)) editar((o) => apagarPavimento(o, ativo.id));
   };
 
