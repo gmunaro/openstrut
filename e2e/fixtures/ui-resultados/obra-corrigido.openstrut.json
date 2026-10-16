@@ -1,0 +1,221 @@
+{
+  "versao": 3,
+  "nome": "Teste UI resultados",
+  "norma": "nb1-78",
+  "modoCalculo": "corrigido",
+  "materiais": {
+    "fck": 15,
+    "aco": "CA-50",
+    "acoEstribo": "CA-50",
+    "classeAco": "A",
+    "caa": 1,
+    "cobrimentoLaje": 1.5,
+    "cobrimentoViga": 2.5,
+    "cobrimentoPilar": 2.5
+  },
+  "pavimentos": [
+    {
+      "id": "7a8c6895-905a-4505-938a-a826998adc75",
+      "nome": "Pavimento 1",
+      "peDireito": 3,
+      "repeticoes": 1,
+      "lajes": [
+        {
+          "id": "62bf5ac0-2aab-4565-8a90-6739c784939b",
+          "nome": "L1",
+          "x": 0,
+          "y": 0,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "d8858298-da58-4b77-bdfe-1e5ec84881eb",
+          "nome": "L2",
+          "x": 4,
+          "y": 0,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "f40bce27-ab42-4e51-9a05-501411733cb2",
+          "nome": "L3",
+          "x": 0,
+          "y": 5,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        },
+        {
+          "id": "5e030b46-98ea-4463-9338-c771c82fa1f7",
+          "nome": "L4",
+          "x": 4,
+          "y": 5,
+          "lx": 4,
+          "ly": 5,
+          "h": 10,
+          "revestimento": 1,
+          "sobrecarga": 1.5,
+          "vinculos": {},
+          "mu": 1
+        }
+      ],
+      "vigas": [
+        {
+          "id": "9c297946-f8ee-445d-8bee-39a0839c7874",
+          "nome": "V1",
+          "x1": 0,
+          "y1": 10,
+          "x2": 8,
+          "y2": 10,
+          "bw": 12,
+          "h": 40,
+          "cargaLinear": 0
+        },
+        {
+          "id": "6a599418-c3be-4c4f-9aee-3b0e3f2cef64",
+          "nome": "V2",
+          "x1": 0,
+          "y1": 5,
+          "x2": 8,
+          "y2": 5,
+          "bw": 12,
+          "h": 40,
+          "cargaLinear": 0
+        },
+        {
+          "id": "527627d9-f0b6-48f0-8282-f778fab4da0a",
+          "nome": "V3",
+          "x1": 0,
+          "y1": 0,
+          "x2": 8,
+          "y2": 0,
+          "bw": 12,
+          "h": 40,
+          "cargaLinear": 0
+        },
+        {
+          "id": "76dc8848-aa35-46be-b39b-aed1fdd4bf1a",
+          "nome": "V4",
+          "x1": 0,
+          "y1": 0,
+          "x2": 0,
+          "y2": 10,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "a48410e2-4610-45db-817c-1baa3a16e6aa",
+          "nome": "V5",
+          "x1": 4,
+          "y1": 0,
+          "x2": 4,
+          "y2": 10,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        },
+        {
+          "id": "63ad3d6f-aab2-47d6-8bef-0b1c15100124",
+          "nome": "V6",
+          "x1": 8,
+          "y1": 0,
+          "x2": 8,
+          "y2": 10,
+          "bw": 12,
+          "h": 50,
+          "cargaLinear": 0
+        }
+      ],
+      "pilares": [
+        {
+          "id": "f70eed42-5174-42ef-adc9-8128bb6fb6a0",
+          "nome": "P1",
+          "x": 0,
+          "y": 10,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "ba133dff-3a80-4b43-9f57-ee2f12285dd5",
+          "nome": "P2",
+          "x": 4,
+          "y": 10,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "720e94dd-9199-4975-8a61-3663d0ae8fa0",
+          "nome": "P3",
+          "x": 8,
+          "y": 10,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "1312e2d0-d72f-42be-9516-d08a3762d04c",
+          "nome": "P4",
+          "x": 0,
+          "y": 5,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "565413aa-4627-41a1-afcb-a8c437648349",
+          "nome": "P5",
+          "x": 4,
+          "y": 5,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "41b31148-8d9c-48c6-822d-81e33caed44e",
+          "nome": "P6",
+          "x": 8,
+          "y": 5,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "ee80377b-428b-4552-a86a-fe17b010e644",
+          "nome": "P7",
+          "x": 0,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "a6fc7473-5716-4658-a347-dcda55761c60",
+          "nome": "P8",
+          "x": 4,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "32917b3b-6081-4e68-bff7-1d6bb6364d1c",
+          "nome": "P9",
+          "x": 8,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        }
+      ],
+      "pilaresRemovidos": []
+    }
+  ]
+}

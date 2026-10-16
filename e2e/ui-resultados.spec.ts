@@ -2,11 +2,11 @@ import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
-// Revisão de RESULTADOS (instância 3): abre obras de teste geradas fora do repo
-// (C:/tmp/v2-paridade/ui-resultados/gerar-obra.ts), confere o selo do modo, o bloco de
+// Revisão de RESULTADOS (instância 3): abre as obras de teste de e2e/fixtures/ui-resultados
+// (geradas por gerar-obra.ts, na mesma pasta), confere o selo do modo, o bloco de
 // marcas do motor SISTRUT e o console. Prints e textos em e2e/prints/ui-resultados.
 const PASTA = path.resolve(process.cwd(), "e2e/prints/ui-resultados");
-const OBRAS = "C:/tmp/v2-paridade/ui-resultados";
+const OBRAS = path.resolve(process.cwd(), "e2e/fixtures/ui-resultados");
 const SELO = "Modo: como o SISTRUT original";
 
 // `marcas`: trechos que o bloco de marcas do motor precisa mostrar nesse caso.
