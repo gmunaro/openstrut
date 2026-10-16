@@ -11,7 +11,9 @@ import { useObra } from "../../estado/obra";
 import {
   coletarAvisos,
   coletarFalhas,
+  AVISOS_OBRA_VAZIA,
   mensagemSemNorma,
+  obraSemElementos,
   SELO_MODO_ORIGINAL,
   type Calculo,
 } from "../calculo";
@@ -20,7 +22,7 @@ import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
 import { TabelasLajes } from "./lajes";
-import { BlocoMotorSistrut, coletarMarcasMotor, semMarcasDuplicadas } from "./motorSistrut";
+import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "./motorSistrut";
 import { TabelaPilares } from "./pilares";
 import { ResumoQuantitativos } from "./quantitativos";
 import { TabelaVigas } from "./vigas";
@@ -51,6 +53,14 @@ export function SemCalculo({ calculo }: { calculo: Exclude<Calculo, { tipo: "ok"
   );
 }
 
+/** Nomes das vigas do pavimento que o motor SISTRUT parou no DESDIM (só no modo original). */
+const vigasInterrompidas = (r: ResultadoObra, pavimentoId: string) =>
+  new Set(
+    (r.sistrut?.pavimentos.find((p) => p.pavimentoId === pavimentoId)?.vigas ?? [])
+      .filter((v) => v.interrompida)
+      .map((v) => v.nome),
+  );
+
 /** Tabelas de todos os pavimentos e dos pilares (também usadas no relatório). */
 export function TabelasObra({
   resultado,
@@ -74,6 +84,7 @@ export function TabelasObra({
           <TabelasLajes lajes={rp.lajes} comMemoria={comMemoria} />
           <TabelaVigas
             vigas={rp.vigas}
+            interrompidas={vigasInterrompidas(resultado, rp.pavimento.id)}
             naoCalculadas={rp.montagem.naoCalculadas}
             gamaF={gamaF}
             comMemoria={comMemoria}
@@ -93,6 +104,13 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
   const obra = useObra((e) => e.obra);
   const detalhamento = useContext(DetalhamentoContexto);
   if (calculo.tipo !== "ok") return <SemCalculo calculo={calculo} />;
+  // obra vazia: sem "Nenhum aviso" nem tabelas vazias, que sugerem uma verificação que não houve
+  if (obra && obraSemElementos(obra))
+    return (
+      <p role="status" className="text-muted-foreground text-sm">
+        {AVISOS_OBRA_VAZIA}
+      </p>
+    );
   const r = calculo.resultado;
   return (
     <div className="pb-8">
@@ -110,11 +128,7 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
       <ListaFalhas falhas={coletarFalhas(r)} />
       <ListaAvisos
         avisos={semMarcasDuplicadas(coletarAvisos(r, detalhamento), r)}
-        vazio={
-          coletarMarcasMotor(r).length > 0
-            ? "Nenhum aviso geral; as marcas do motor SISTRUT estão abaixo."
-            : undefined
-        }
+        vazio={vazioComMarcas(r)}
       />
       <BlocoMotorSistrut resultado={r} />
       <TabelasObra resultado={r} comMemoria />

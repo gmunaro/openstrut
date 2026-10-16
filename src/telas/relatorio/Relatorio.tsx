@@ -12,7 +12,9 @@ import {
   AVISO_CONFERENCIA,
   coletarAvisos,
   coletarFalhas,
+  AVISOS_OBRA_VAZIA,
   NOME_MODO,
+  obraSemElementos,
   NOME_NORMA,
   type Calculo,
 } from "../calculo";
@@ -21,6 +23,7 @@ import { AVISO_RECONSTRUCAO, NOME_APP } from "../marca";
 import { ListaAvisos, ListaFalhas } from "../resultados/avisos";
 import { DetalhamentoContexto, detalharObra } from "../detalhamento";
 import { TabelaQuantitativos, TabelasAco } from "../resultados/quantitativos";
+import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "../resultados/motorSistrut";
 import { SemCalculo, TabelasObra } from "../resultados/Resultados";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "../resultados/tabela";
 import { useUnidades } from "../sessao";
@@ -206,7 +209,21 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
                     {calculo.tipo === "ok" ? (
                       <>
                         <ListaFalhas falhas={coletarFalhas(calculo.resultado)} />
-                        <ListaAvisos avisos={coletarAvisos(calculo.resultado, detalhamento)} />
+                        {/* como na aba Resultados: a viga interrompida sai uma vez, na marca do motor */}
+                        <ListaAvisos
+                          avisos={semMarcasDuplicadas(
+                            coletarAvisos(calculo.resultado, detalhamento),
+                            calculo.resultado,
+                          )}
+                          vazio={
+                            obraSemElementos(obra)
+                              ? AVISOS_OBRA_VAZIA
+                              : vazioComMarcas(calculo.resultado)
+                          }
+                        />
+                        {!obraSemElementos(obra) && (
+                          <BlocoMotorSistrut resultado={calculo.resultado} />
+                        )}
                       </>
                     ) : (
                       <SemCalculo calculo={calculo} />

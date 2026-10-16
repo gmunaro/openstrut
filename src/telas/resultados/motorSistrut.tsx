@@ -75,6 +75,12 @@ export function semMarcasDuplicadas(avisos: readonly Aviso[], r: ResultadoObra):
   return avisos.filter((a) => !interrompidas.has(`${a.local}|${a.elemento}`));
 }
 
+/** Texto da lista de avisos gerais vazia quando há marcas do motor (elas vêm logo abaixo). */
+export const vazioComMarcas = (r: ResultadoObra) =>
+  coletarMarcasMotor(r).length > 0
+    ? "Nenhum aviso geral; as marcas do motor SISTRUT estão abaixo."
+    : undefined;
+
 /** Bloco com o modo do motor e as marcas dele, ou o estado vazio explícito. */
 export function BlocoMotorSistrut({ resultado }: { resultado: ResultadoObra }) {
   if (!resultado.sistrut) return null;

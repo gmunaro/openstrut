@@ -9,6 +9,7 @@ import type { PosicaoArmadura } from "../../calculo/detalhamento/vigas";
 import type { ResultadoViga, SecaoViga } from "../../calculo/fluxo";
 import type { VigaMontada } from "../../calculo/montagem";
 import type { Etapa } from "../../calculo/tipos";
+import { cn } from "@/lib/utils";
 import { avisosViga } from "../calculo";
 import { DetalhamentoContexto, rotuloPosicao, type DetalhamentoVigaObra } from "../detalhamento";
 import {
@@ -57,11 +58,14 @@ export function TabelaVigas({
   naoCalculadas,
   gamaF,
   comMemoria,
+  interrompidas,
 }: {
   vigas: ResultadoViga[];
   naoCalculadas: VigaMontada[];
   gamaF: number;
   comMemoria: boolean;
+  /** Nomes das vigas que o motor SISTRUT parou no DESDIM (modo original). */
+  interrompidas?: ReadonlySet<string> | undefined;
 }) {
   const s = useUnidades();
   const uM = unidade("momento", s);
@@ -216,7 +220,11 @@ export function TabelaVigas({
           ))}
         </Corpo>
       </Tabela>
-      <DetalhamentosDoPavimento vigas={vigas} comMemoria={comMemoria} />
+      <DetalhamentosDoPavimento
+        vigas={vigas}
+        comMemoria={comMemoria}
+        interrompidas={interrompidas}
+      />
     </>
   );
 }
@@ -225,14 +233,23 @@ export function TabelaVigas({
 function DetalhamentosDoPavimento({
   vigas,
   comMemoria,
+  interrompidas,
 }: {
   vigas: ResultadoViga[];
   comMemoria: boolean;
+  interrompidas?: ReadonlySet<string> | undefined;
 }) {
   const det = useContext(DetalhamentoContexto);
   if (!det) return null;
   const doPavimento = vigas.flatMap((r) => det.vigas.find((d) => d.vigaId === r.viga.id) ?? []);
-  return doPavimento.map((d) => <BlocoDetalhamento key={d.vigaId} d={d} comMemoria={comMemoria} />);
+  return doPavimento.map((d) => (
+    <BlocoDetalhamento
+      key={d.vigaId}
+      d={d}
+      comMemoria={comMemoria}
+      interrompida={interrompidas?.has(d.nome) ?? false}
+    />
+  ));
 }
 
 export const phiTexto = (phi: number) => formatarNumero(phi, phi % 1 === 0 ? 0 : 1);
@@ -355,10 +372,26 @@ export function MemoriaDetalhamento({
   );
 }
 
-function BlocoDetalhamento({ d, comMemoria }: { d: DetalhamentoVigaObra; comMemoria: boolean }) {
+/** Bloco do detalhamento de uma viga. `interrompida`: no modo original o SISTRUT para a
+ *  viga no DESDIM e não a detalha; o bloco fica marcado como regra da V2. */
+function BlocoDetalhamento({
+  d,
+  comMemoria,
+  interrompida,
+}: {
+  d: DetalhamentoVigaObra;
+  comMemoria: boolean;
+  interrompida: boolean;
+}) {
   const { posicoes, avisos, memoria } = d.detalhamento;
   return (
-    <section aria-label={`Detalhamento ${d.nome}`} className="break-inside-avoid">
+    <section
+      aria-label={`Detalhamento ${d.nome}`}
+      className={cn(
+        "break-inside-avoid",
+        interrompida && "border-aviso/60 mt-2 border-l-2 pl-3 opacity-90",
+      )}
+    >
       <TituloBloco
         extra={
           <span className="text-muted-foreground text-xs">
@@ -369,6 +402,12 @@ function BlocoDetalhamento({ d, comMemoria }: { d: DetalhamentoVigaObra; comMemo
       >
         Detalhamento {d.nome}
       </TituloBloco>
+      {interrompida && (
+        <p role="note" className="text-aviso mb-1 max-w-3xl text-xs font-medium">
+          No SISTRUT original a {d.nome} para no DESDIM e fica sem detalhamento. Este detalhamento
+          segue as regras da OpenStrut e serve só de referência.
+        </p>
+      )}
       <AvisosDetalhamento avisos={avisos} />
       <div className="flex flex-wrap items-start gap-4">
         <TabelaPosicoes posicoes={posicoes} />

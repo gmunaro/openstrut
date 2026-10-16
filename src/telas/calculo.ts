@@ -32,6 +32,14 @@ export type Calculo =
   | { tipo: "semNorma"; norma: NormaId }
   | { tipo: "erro"; mensagem: string };
 
+/** Obra sem laje, viga nem pilar em pavimento nenhum: não há o que verificar. */
+export const obraSemElementos = (obra: Obra) =>
+  obra.pavimentos.every((p) => p.lajes.length + p.vigas.length + p.pilares.length === 0);
+
+/** Texto da lista de avisos vazia numa obra sem elementos (no lugar de "Nenhum aviso"). */
+export const AVISOS_OBRA_VAZIA =
+  "A obra ainda não tem elementos: desenhe as lajes e os pilares na aba Planta.";
+
 /** Calcula a obra pela norma dela. Não lança: devolve o motivo quando não dá. */
 export function calcular(obra: Obra): Calculo {
   const norma = normaPorId(obra.norma);

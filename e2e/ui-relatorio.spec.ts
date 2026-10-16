@@ -13,7 +13,8 @@ import { arrastar, clicar } from "./planta";
 
 const PASTA = path.resolve(process.cwd(), "e2e/prints/ui-relatorio");
 const NOME_OBRA = "Edificio Relatorio UI";
-const NAO_EXISTE = "não existe no SISTRUT";
+// marca das quantidades que o SISTRUT não calcula, na nota das fontes
+const NAO_EXISTE = "o SISTRUT não calcula";
 
 /** Abre o diálogo de materiais, alterna o switch do modo pelo teclado e aplica. */
 async function alternarModo(page: Page, esperado: "true" | "false") {
@@ -342,7 +343,11 @@ test("relatório de obra no modo original: os avisos e a marca 'não existe no S
   const texto = paginas.join(" ");
   expect(texto).toContain("Avisos");
   expect(texto).toMatch(/Otimização dos negativos não converge: L1/);
-  expect(texto).toMatch(/V4: o DESDIM para a viga com a resposta padrão N/);
+  // a viga interrompida sai uma vez, na marca do motor (como na aba Resultados)
+  expect(texto).toMatch(/parou em "Continuo com o processamento desta Viga S\/N"/);
+  expect(texto).not.toMatch(/V4: o DESDIM para a viga com a resposta padrão N/);
   expect(texto).toContain("sem detalhamento nem quadro");
+  // o detalhamento da V4 (regras da V2) fica marcado: no original ela não é detalhada
+  expect(texto).toContain("No SISTRUT original a V4 para no DESDIM e fica sem detalhamento.");
   expect(texto).toContain(NAO_EXISTE);
 });

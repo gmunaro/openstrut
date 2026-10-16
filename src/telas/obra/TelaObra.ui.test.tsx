@@ -301,6 +301,9 @@ describe("tela da obra: exportar DXF sem o que exportar", () => {
       const dxf = screen.getByRole("button", { name: botao });
       expect(dxf.getAttribute("aria-disabled")).toBe("true");
       expect(dxf.hasAttribute("disabled")).toBe(false);
+      // o motivo está à vista antes do clique e é a descrição acessível do botão
+      const descricao = document.getElementById(dxf.getAttribute("aria-describedby") ?? "");
+      expect(descricao?.textContent).toMatch(/(Não há|Calcule a obra primeiro)/);
       dxf.focus();
       expect(document.activeElement).toBe(dxf);
 
@@ -311,4 +314,22 @@ describe("tela da obra: exportar DXF sem o que exportar", () => {
       clique.mockRestore();
     },
   );
+});
+
+describe("tela da obra: obra sem elementos", () => {
+  it("Resultados e Relatório não dizem 'Nenhum aviso' numa obra vazia", async () => {
+    abrirObra(obraNova("Casa", "nb1-78"));
+    const { user } = renderizarApp("/obra");
+    await screen.findByRole("heading", { level: 1, name: "Casa" });
+
+    await user.click(screen.getByRole("tab", { name: "Resultados" }));
+    let painel = screen.getByRole("tabpanel", { name: "Resultados" });
+    expect(within(painel).getByRole("status").textContent).toMatch(/ainda não tem elementos/);
+    expect(painel.textContent).not.toMatch(/Nenhum aviso/);
+
+    await user.click(screen.getByRole("tab", { name: "Relatório" }));
+    painel = screen.getByRole("tabpanel", { name: "Relatório" });
+    expect(painel.textContent).toMatch(/ainda não tem elementos/);
+    expect(painel.textContent).not.toMatch(/Nenhum aviso/);
+  });
 });
