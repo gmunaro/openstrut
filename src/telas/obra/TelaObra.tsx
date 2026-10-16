@@ -30,6 +30,7 @@ import { useSessao } from "../sessao";
 import { BarraPavimentos } from "./BarraPavimentos";
 import { DialogoMateriais } from "./DialogoMateriais";
 import { DialogoUnidades } from "./DialogoUnidades";
+import { useConfirmacao } from "./useConfirmacao";
 
 export function TelaObra() {
   const obra = useObra((e) => e.obra);
@@ -84,11 +85,25 @@ function useRascunhoAutomatico(obra: Obra) {
 const detalheDe = (m: object) =>
   "detalhe" in m && typeof m.detalhe === "string" ? m.detalhe : undefined;
 
+/** Resultado de exportar um DXF: null quando deu certo; senão, os erros e o detalhe técnico. */
+type FalhaDxf = { erros: string[]; detalhe?: string } | null;
+
 /** Motivo para a armação não sair, ou undefined quando dá para exportar. */
 function motivoSemArmacao(d: DetalhamentoObra | null) {
   if (!d) return "Calcule a obra primeiro: sem cálculo não há armação para exportar.";
   if (d.vigas.length === 0) return "Não há viga calculada para exportar.";
   return undefined;
+}
+
+/** Detalhe técnico recolhido em <details>; não renderiza nada quando não há texto. */
+function Detalhe({ texto }: { texto: string | null | undefined }) {
+  if (!texto) return null;
+  return (
+    <details className="text-muted-foreground text-xs">
+      <summary className="cursor-pointer">Detalhe técnico</summary>
+      <p className="font-mono break-all">{texto}</p>
+    </details>
+  );
 }
 
 /** Frase da tela e, embaixo, o detalhe técnico recolhido quando a falha traz um. */
@@ -108,12 +123,7 @@ function Recado({
       <p role={role} className={className}>
         {texto}
       </p>
-      {detalhe && (
-        <details className="text-muted-foreground text-xs">
-          <summary className="cursor-pointer">Detalhe técnico</summary>
-          <p className="font-mono break-all">{detalhe}</p>
-        </details>
-      )}
+      <Detalhe texto={detalhe} />
     </div>
   );
 }
@@ -134,6 +144,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
   // Os diálogos devolvem o foco a estes botões ao fechar.
   const botaoMateriais = useRef<HTMLButtonElement>(null);
   const botaoUnidades = useRef<HTMLButtonElement>(null);
+  const botaoAbrir = useRef<HTMLButtonElement>(null);
+  const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao(botaoAbrir);
   const [aba, setAba] = useState("planta");
 
   const calculo = useMemo(() => calcular(obra), [obra]);
@@ -148,22 +160,31 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const naoSalvo = obra !== obraSalva;
   // Exportações bloqueadas não baixam nada; o motivo aparece na tela (também para teclado).
   const [bloqueio, setBloqueio] = useState<string | null>(null);
+  // Falha ao gerar o DXF: os erros ficam na tela até fechar; uma exportação bem-sucedida limpa.
+  const [falhaDxf, setFalhaDxf] = useState<FalhaDxf>(null);
   const motivoFormas = obra.pavimentos.every((p) => p.lajes.length === 0)
     ? "Não há lajes para exportar as formas."
     : undefined;
   const motivoArmacao = motivoSemArmacao(detalhamento);
-  const exportar = (motivo: string | undefined, fazer: () => void) => {
+  const exportar = async (
+    motivo: string | undefined,
+    fazer: () => FalhaDxf | Promise<FalhaDxf>,
+  ) => {
     setBloqueio(motivo ?? null);
-    if (!motivo) fazer();
+    if (motivo) return;
+    setFalhaDxf(await fazer());
   };
 
-  // Sem arquivo (obraSalva null), o confirm também aparece: a obra só existe no rascunho.
-  const abrirOutra = () => {
+  // Sem arquivo (obraSalva null), a confirmação também aparece: a obra só existe no rascunho.
+  const abrirOutra = async () => {
     if (
       naoSalvo &&
-      !window.confirm(
-        "A obra atual tem alterações não salvas em arquivo (o rascunho fica no navegador). Abrir outra?",
-      )
+      !(await confirmar({
+        titulo: "Abrir outra obra?",
+        descricao:
+          "A obra atual tem alterações não salvas em arquivo (o rascunho fica no navegador).",
+        acao: "Abrir outra",
+      }))
     )
       return;
     void abrirArquivo();
@@ -224,7 +245,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
           >
             <Ruler /> Unidades
           </Button>
-          <Button variant="outline" size="sm" onClick={abrirOutra}>
+          <Button ref={botaoAbrir} variant="outline" size="sm" onClick={() => void abrirOutra()}>
             <FolderOpen /> Abrir
           </Button>
           <Button size="sm" onClick={() => void salvar(false)}>
@@ -239,7 +260,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
             className="aria-disabled:opacity-50"
             aria-disabled={motivoFormas !== undefined}
             title={motivoFormas}
-            onClick={() => exportar(motivoFormas, () => baixarFormasDxf(obra))}
+            onClick={() => void exportar(motivoFormas, () => baixarFormasDxf(obra))}
           >
             <FileDown /> Exportar DXF (formas)
           </Button>
@@ -250,7 +271,10 @@ function ObraAberta({ obra }: { obra: Obra }) {
             aria-disabled={motivoArmacao !== undefined}
             title={motivoArmacao}
             onClick={() =>
-              exportar(motivoArmacao, () => detalhamento && baixarArmacaoDxf(obra, detalhamento))
+              void exportar(
+                motivoArmacao,
+                () => detalhamento && baixarArmacaoDxf(obra, detalhamento),
+              )
             }
           >
             <FileDown /> Exportar DXF (armação)
@@ -258,7 +282,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
         </div>
       </header>
 
-      {(mensagem || bloqueio || erroRascunho || erros.length > 0) && (
+      {(mensagem || bloqueio || erroRascunho || falhaDxf || erros.length > 0) && (
         <div className="grid gap-2 px-4 pt-2 print:hidden">
           {mensagem && (
             <Recado
@@ -274,6 +298,12 @@ function ObraAberta({ obra }: { obra: Obra }) {
             </p>
           )}
           {erroRascunho && <p className="text-destructive text-xs">{erroRascunho}</p>}
+          {falhaDxf && (
+            <div className="grid gap-1">
+              <Erros erros={falhaDxf.erros} aoFechar={() => setFalhaDxf(null)} />
+              <Detalhe texto={falhaDxf.detalhe} />
+            </div>
+          )}
           <Erros erros={erros} aoFechar={limparErros} />
         </div>
       )}
@@ -318,6 +348,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
         aoMudarAberto={(a) => setDialogo(a ? "unidades" : null)}
         botaoOrigem={botaoUnidades}
       />
+      {dialogoConfirmacao}
     </div>
   );
 }

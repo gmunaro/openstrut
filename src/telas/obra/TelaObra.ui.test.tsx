@@ -265,23 +265,24 @@ describe("tela da obra: avisos de salvar", () => {
 });
 
 describe("tela da obra: abrir com alterações não salvas", () => {
-  it("cancelar a confirmação não abre o seletor; confirmar abre", async () => {
+  it("cancelar o diálogo não abre o seletor; 'Abrir outra' abre", async () => {
     const { user } = await abrirTela();
     const seletor = vi.fn(async () => {
       throw new DOMException("cancelado", "AbortError");
     });
     instalar("showOpenFilePicker", seletor);
-    const confirma = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     await user.click(screen.getByRole("button", { name: "Abrir" }));
-    expect(confirma).toHaveBeenCalledOnce();
+    const dialogo = await screen.findByRole("dialog", { name: "Abrir outra obra?" });
+    await user.click(within(dialogo).getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(seletor).not.toHaveBeenCalled();
     expect(useObra.getState().obra?.nome).toBe("Casa");
 
-    confirma.mockReturnValue(true);
     await user.click(screen.getByRole("button", { name: "Abrir" }));
+    const outra = await screen.findByRole("dialog", { name: "Abrir outra obra?" });
+    await user.click(within(outra).getByRole("button", { name: "Abrir outra" }));
     await waitFor(() => expect(seletor).toHaveBeenCalledOnce());
-    confirma.mockRestore();
   });
 });
 
