@@ -5,7 +5,7 @@
 // entra: PIGRAEDI.BAS:466-583 não grava posição). Obra: a E2E (9 pilares 20 × 20) em
 // dois pavimentos.
 import { describe, expect, it } from "vitest";
-import type { Obra, Pavimento } from "../../dominio/obra";
+import type { Obra, Pavimento, Pilar } from "../../dominio/obra";
 import { obraE2E } from "./__e2e__/obraE2E";
 import { calcularObraSistrut } from "./obra";
 
@@ -24,7 +24,7 @@ function pavimento(prefixo: string): Pavimento {
 }
 
 /** Dois pavimentos (CIMA sobre BAIXO); `muda` altera o P5 de BAIXO, em (4; 5). */
-function predio(muda: { x?: number; nome?: string }): Obra {
+function predio(muda: Partial<Pilar>): Obra {
   const baixo = pavimento("BAIXO");
   baixo.pilares = baixo.pilares.map((p) => (p.nome === "P5" ? { ...p, ...muda } : p));
   return { ...obraE2E("original"), pavimentos: [pavimento("CIMA"), baixo] };
@@ -34,9 +34,10 @@ function predio(muda: { x?: number; nome?: string }): Obra {
 const colunas = (obra: Obra) => {
   const r = calcularObraSistrut(obra, { modo: "original" });
   const porColuna = new Map<string, string[]>();
+  const avisos = r.lances.flatMap((l) => l.avisos).filter((a) => /deslocado/.test(a));
   for (const l of r.lances)
     porColuna.set(l.coluna, [...(porColuna.get(l.coluna) ?? []), l.pilarId]);
-  return { lista: [...porColuna.values()], falhas: r.falhas.map((f) => f.texto) };
+  return { lista: [...porColuna.values()], falhas: r.falhas.map((f) => f.texto), avisos };
 };
 
 describe("colunas: o mesmo pilar em posições diferentes", () => {
@@ -65,5 +66,36 @@ describe("colunas: o mesmo pilar em posições diferentes", () => {
   it("deslocado 50 cm com o mesmo nome (seções sem sobreposição): são dois pilares", () => {
     const { lista } = colunas(predio({ x: 4.5 }));
     expect(lista).toHaveLength(10);
+  });
+
+  it("a fusão avisa no lance de cima, com o deslocamento em cm", () => {
+    const { avisos } = colunas(predio({ x: 4.05 }));
+    expect(avisos).toEqual([
+      "P5: lance deslocado 5 cm do de baixo na planta; tratado como a mesma coluna, como no .COL do original, e o deslocamento não entra no cálculo (sem excentricidade).",
+    ]);
+  });
+
+  it("pilar de cima marcado sobre viga de transição não continua o de baixo", () => {
+    const obra = predio({});
+    const [cima] = obra.pavimentos;
+    cima!.pilares = cima!.pilares.map((p) =>
+      p.nome === "P5" ? { ...p, x: 4.05, transicao: true } : p,
+    );
+    const { lista, avisos } = colunas(obra);
+    expect(lista).toHaveLength(10);
+    expect(avisos).toEqual([]);
+  });
+
+  it("a sobreposição usa a seção girada: 60 × 20 a 90° tem 20 cm em x", () => {
+    // deslocado 25 cm em x: sem giro, 60 + 60 cm se sobrepõem; girados, 20 + 20 cm não
+    const giro = (rotacao: number) => {
+      const obra = predio({ x: 4.25, b: 60, h: 20, rotacao });
+      obra.pavimentos[0]!.pilares = obra.pavimentos[0]!.pilares.map((p) =>
+        p.nome === "P5" ? { ...p, b: 60, h: 20, rotacao } : p,
+      );
+      return colunas(obra).lista.length;
+    };
+    expect(giro(0)).toBe(9);
+    expect(giro(90)).toBe(10);
   });
 });

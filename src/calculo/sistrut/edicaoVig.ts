@@ -219,7 +219,13 @@ export function editaVig(
     // última divisão. Até a tolerância de comprimento (TOL_VAO) além da ponta, a carga
     // vai para a ponta; dentro de `tol` nada muda
     const fora = (u: number) => u < -TOL_VAO || u > vao + TOL_VAO;
+    const alem = (u: number) => u < -tol || u > vao + tol;
     const naPonta = (u: number) => (u < -tol ? 0 : u > vao + tol ? vao : u);
+    /** Aviso da carga levada à ponta, com quanto ela passava, em mm. */
+    const avisaPonta = (oque: string, u: number) =>
+      aviso(
+        `${oque} a ${numAte(u, 4)} m do trecho ${i}, ${numAte(Math.abs(u < 0 ? u : u - vao) * 1000, 3)} mm além da ponta (${numAte(vao, 4)} m): levada para a ponta.`,
+      );
     for (const c of viga.cargas ?? []) {
       if (c.trecho !== i) continue;
       if (c.tipo === "concentrada" || c.tipo === "reacao") {
@@ -229,6 +235,8 @@ export function editaVig(
           );
           continue;
         }
+        if (alem(c.posicao))
+          avisaPonta(c.tipo === "reacao" ? "carga indexada" : "carga concentrada", c.posicao);
         let x = doApoio(naPonta(c.posicao));
         if (Math.abs(x) <= tol) {
           // em cima do apoio: divisão de comprimento zero no começo (P > 0 da vizinha)
@@ -258,12 +266,16 @@ export function editaVig(
         if (c.acidental === undefined) alvo.digitada = true;
         continue;
       }
-      if (fora(c.inicio) || fora(c.fim)) {
+      // inteira além da mesma ponta, ela não tem comprimento no trecho
+      const inteiraAlem =
+        (c.inicio > vao + tol && c.fim > vao + tol) || (c.inicio < -tol && c.fim < -tol);
+      if (fora(c.inicio) || fora(c.fim) || inteiraAlem) {
         aviso(
           `carga distribuída fora do trecho ${i} (${numAte(c.inicio, 3)} a ${numAte(c.fim, 3)} m): ignorada.`,
         );
         continue;
       }
+      for (const u of [c.inicio, c.fim]) if (alem(u)) avisaPonta("ponta da carga distribuída", u);
       const [a, b] = [doApoio(naPonta(c.inicio)), doApoio(naPonta(c.fim))].sort(
         (x, y) => x - y,
       ) as [number, number];
