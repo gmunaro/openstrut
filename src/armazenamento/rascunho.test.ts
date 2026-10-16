@@ -26,7 +26,7 @@ describe("rascunho", () => {
     const obra = obraNova("Casa A", "nb1-78");
     await salvarRascunho("r1", obra, 1000);
     const lida = await abrirRascunho("r1");
-    expect(lida).toEqual({ ok: true, obra });
+    expect(lida).toEqual({ ok: true, obra, versaoOrigem: 3, migrada: false });
   });
 
   it("lista do mais recente para o mais antigo, só com o resumo", async () => {

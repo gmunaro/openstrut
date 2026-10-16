@@ -61,14 +61,14 @@ describe("campos de laje do SISTRUT no arquivo", () => {
   it("salvar e abrir devolve a mesma obra", () => {
     const obra = obraComLajeSistrut();
     const r = lerObra(serializarObra(obra));
-    expect(r).toEqual({ ok: true, obra });
+    expect(r).toEqual({ ok: true, obra, versaoOrigem: 3, migrada: false });
   });
 
   it("arquivo sem os campos novos abre igual a antes (nada acrescentado)", () => {
     const obra = obraNova("FLUXO", "nb1-78");
     obra.pavimentos[0]!.lajes.push(lajeNova(obra.pavimentos[0]!, { x: 0, y: 0, lx: 4, ly: 5 }));
     const r = lerObra(serializarObra(obra));
-    expect(r).toEqual({ ok: true, obra });
+    expect(r).toEqual({ ok: true, obra, versaoOrigem: 3, migrada: false });
     if (!r.ok) return;
     expect(r.obra.parametrosLaje).toBeUndefined();
     expect(r.obra.pavimentos[0]!).not.toHaveProperty("cargasOcupacao");
@@ -209,7 +209,12 @@ describe("campos de laje do SISTRUT no arquivo, rodada 2", () => {
 
   it("salvar e abrir devolve a mesma obra", () => {
     const obra = obraRodada2();
-    expect(lerObra(serializarObra(obra))).toEqual({ ok: true, obra });
+    expect(lerObra(serializarObra(obra))).toEqual({
+      ok: true,
+      obra,
+      versaoOrigem: 3,
+      migrada: false,
+    });
   });
 
   it("recusa referências que não existem e listas que não casam com os lados", () => {

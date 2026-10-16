@@ -69,7 +69,12 @@ function comEnvolventes(obra: Obra): Obra {
   };
 }
 
-export type LeituraObra = { ok: true; obra: Obra } | { ok: false; erros: string[] };
+/** Resultado de `lerObra`. No sucesso, `versaoOrigem` é a versão gravada no arquivo e
+ *  `migrada` diz se a obra foi convertida para a VERSAO_ATUAL (a tela avisa o usuário;
+ *  salvar grava na versão atual). Os `erros` são frases para o usuário. */
+export type LeituraObra =
+  | { ok: true; obra: Obra; versaoOrigem: number; migrada: boolean }
+  | { ok: false; erros: string[] };
 
 type Dados = Record<string, unknown>;
 
@@ -114,17 +119,30 @@ export function lerObra(texto: string): LeituraObra {
   let dados: unknown;
   try {
     dados = JSON.parse(texto);
-  } catch (e) {
-    const detalhe = e instanceof Error ? e.message : String(e);
-    return { ok: false, erros: [`O arquivo não é um JSON válido (${detalhe}).`] };
+  } catch {
+    // a mensagem do JSON.parse muda de navegador para navegador e não ajuda o usuário
+    return {
+      ok: false,
+      erros: [
+        "O arquivo não é um JSON válido: está incompleto, corrompido ou não é uma obra do OpenStrut.",
+      ],
+    };
   }
   if (!ehObjeto(dados))
     return { ok: false, erros: ["O arquivo não contém uma obra do OpenStrut."] };
   const versao = dados.versao;
   if (versao === undefined)
-    return { ok: false, erros: ["O arquivo não tem o campo versao: não é uma obra do OpenStrut."] };
+    return {
+      ok: false,
+      erros: ["O arquivo não tem o número de versão da obra: não é uma obra do OpenStrut."],
+    };
   if (typeof versao !== "number" || !Number.isInteger(versao) || versao < 1)
-    return { ok: false, erros: [`versao: esperado um inteiro ≥ 1, veio ${mostra(versao)}.`] };
+    return {
+      ok: false,
+      erros: [
+        `O número de versão da obra no arquivo (${mostra(versao)}) não é válido: o arquivo foi editado à mão ou está corrompido.`,
+      ],
+    };
   if (versao > VERSAO_ATUAL)
     return {
       ok: false,
@@ -135,12 +153,19 @@ export function lerObra(texto: string): LeituraObra {
   let migrados: Dados;
   try {
     migrados = migrar(dados, versao);
-  } catch (e) {
-    return { ok: false, erros: [e instanceof Error ? e.message : String(e)] };
+  } catch {
+    return {
+      ok: false,
+      erros: [
+        `Não foi possível converter a obra da versão ${versao} para a versão atual (${VERSAO_ATUAL}).`,
+      ],
+    };
   }
   const v = new Validador();
   const obra = v.obra(migrados);
-  return v.erros.length > 0 ? { ok: false, erros: v.erros } : { ok: true, obra };
+  return v.erros.length > 0
+    ? { ok: false, erros: v.erros }
+    : { ok: true, obra, versaoOrigem: versao, migrada: versao < VERSAO_ATUAL };
 }
 
 const ehObjeto = (x: unknown): x is Dados =>

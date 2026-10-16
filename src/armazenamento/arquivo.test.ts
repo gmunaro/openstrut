@@ -48,7 +48,7 @@ describe("arquivo .openstrut.json", () => {
     obra.pavimentos[0]!.lajes[0]!.mu = 1.5;
     expect(obra.pavimentos[0]?.pilaresRemovidos).toEqual([{ x: 0, y: 5 }]);
     const r = lerObra(serializarObra(obra));
-    expect(r).toEqual({ ok: true, obra });
+    expect(r).toEqual({ ok: true, obra, versaoOrigem: 3, migrada: false });
   });
 
   it("migra a versão 1: pavimentos ganham pilaresRemovidos vazio (e passam pela 2 → 3)", () => {
@@ -58,6 +58,8 @@ describe("arquivo .openstrut.json", () => {
     expect(lerObra(texto)).toEqual({
       ok: true,
       obra: { ...obra, pavimentos: obra.pavimentos.map((p) => ({ ...p, pilaresRemovidos: [] })) },
+      versaoOrigem: 1,
+      migrada: true,
     });
   });
 
@@ -67,7 +69,7 @@ describe("arquivo .openstrut.json", () => {
     expect(texto).not.toContain("classeAco");
     expect(texto).not.toContain('"mu"');
     const r = lerObra(texto);
-    expect(r).toEqual({ ok: true, obra });
+    expect(r).toEqual({ ok: true, obra, versaoOrigem: 2, migrada: true });
     expect(r.ok && r.obra.materiais.classeAco).toBe("A");
     expect(r.ok && r.obra.pavimentos[0]!.lajes.map((l) => l.mu)).toEqual([1, 1]);
   });
@@ -96,15 +98,21 @@ describe("arquivo .openstrut.json", () => {
   });
 
   it("texto que não é JSON", () => {
-    expect(erros("{ nao é json")[0]).toMatch(/^O arquivo não é um JSON válido/);
+    // sem a mensagem do JSON.parse, que muda com o navegador
+    expect(erros("{ nao é json")).toEqual([
+      "O arquivo não é um JSON válido: está incompleto, corrompido ou não é uma obra do OpenStrut.",
+    ]);
   });
 
   it("JSON que não é objeto ou não tem versao", () => {
     expect(erros("[1, 2]")).toEqual(["O arquivo não contém uma obra do OpenStrut."]);
     expect(erros('{"nome": "x"}')).toEqual([
-      "O arquivo não tem o campo versao: não é uma obra do OpenStrut.",
+      "O arquivo não tem o número de versão da obra: não é uma obra do OpenStrut.",
     ]);
-    expect(erros('{"versao": "1"}')).toEqual(['versao: esperado um inteiro ≥ 1, veio "1".']);
+    expect(erros('{"versao": "1"}')).toEqual([
+      'O número de versão da obra no arquivo ("1") não é válido: o arquivo foi editado à mão ou está corrompido.',
+    ]);
+    expect(erros('{"versao": 0}')[0]).toMatch(/^O número de versão da obra no arquivo \(0\)/);
   });
 
   it("versão mais nova que a suportada", () => {
