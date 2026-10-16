@@ -174,7 +174,7 @@ export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza, paraNaPrimeira
       if (n > LIMITE_RECALCULOS) {
         throw new ErroNaoConverge(
           `${laje.nome}: a otimização dos negativos não converge (${LIMITE_RECALCULOS} recálculos; ` +
-            `códigos ${laje.codigos.join(", ")}). No original o laço não termina (defeito R3).`,
+            `códigos ${laje.codigos.join(", ")}). No original o laço não termina.`,
         );
       }
       const { preparada, coeficiente } = calculaSemH(laje, painel, parametros, modo);

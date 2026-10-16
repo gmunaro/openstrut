@@ -450,7 +450,7 @@ describe(".COL montado à mão", () => {
       "vento no nível 4",
       "P10 começa no nível 2",
       "MEUPIP.PIP, que não foi passada",
-      "ini.fyk",
+      "não é de CA-25/50/60; gravado nos parâmetros de pilar da obra (PILAR.INI)",
     ])
       expect(
         avisos.some((a) => a.includes(trecho)),

@@ -21,7 +21,7 @@ export const LIMITE_INTEGRACOES = 400_000;
 
 /** Erro de convergência da busca do equilíbrio: o original ficaria em laço (D-2). */
 export const naoConverge = () =>
-  new ErroNaoConverge("Busca do equilíbrio sem convergência (o original fica em laço, D-2)");
+  new ErroNaoConverge("Busca do equilíbrio sem convergência (o original fica em laço sem fim)");
 
 /** Esforços atuantes de um caso, como o ELU recebe. */
 export interface AtuanteCaso {

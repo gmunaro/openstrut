@@ -618,7 +618,7 @@ export function lajeArmaduraNb178(
     // [VERIFICAR] pendencias.md item 7 só traz a taxa de flexão de vigas (0,25 % para
     // CA-25, fonte secundária); para lajes não há fonte. Mantidas as taxas da V1.
     avisos.push(
-      `${e.nome}: taxas mínimas da V1 (0,15 % e 0,10 %) com CA-25 não conferidas na NB-1/78; confira As,mín.`,
+      `${e.nome}: taxas mínimas adotadas (0,15 % e 0,10 %) com CA-25 não conferidas na NB-1/78; confira As,mín.`,
     );
   if ([asx, asy, ...BORDOS.map((b) => asNegativos[b])].some(Number.isNaN)) {
     avisos.push(

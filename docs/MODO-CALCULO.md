@@ -15,6 +15,9 @@ Referências: `<EXE>.BAS:<linha>` é a V1 nova, retradução fiel do original (`
 - `ResultadoObra.sistrut` (`ResultadoSistrut`, `calculo/sistrut/obra.ts`) guarda tudo o que o original imprime, nas unidades dele e sem conversão. É isso que o comparador lê; ver "Formato de `resultado.sistrut`".
 - `calcularObraSistrut(obra, { modo })` (`calculo/sistrut/obra.ts`) faz o mesmo cálculo sem a projeção em SI.
 - `calcularQuantitativos(obra, resultado)` (`calculo/quantitativos.ts`) devolve os quantitativos, com a fonte de cada número em `Quantitativos.fonte`.
+- `ResultadoObra.avisosComOpcao` (também em `resultado.sistrut`): os avisos que a tela liga a uma opção do elemento, com id estável (`calculo/avisos.ts`, `OPCOES_AVISO`), o pavimento, o elemento e o mesmo texto das listas de avisos e falhas. Hoje: `viga.continuar-acima-do-limite` (`Viga.continuaSeExcederLimite`, a viga que parou no DESDIM) e `pilar.nasce-em-transicao` (`Pilar.transicao`, a falha do pilar que nasce acima da fundação).
+
+Textos para o usuário (avisos, falhas, memória): números com vírgula (`calculo/texto.ts`), sem nome de campo da obra nem variável do .BAS. Onde o aviso pede uma ação, ele cita o rótulo da opção da tela. A linha do .BAS e o código do defeito ficam na memória de cálculo (campo `ref`) e neste documento.
 
 ### Como montar uma obra que reproduz um caso do original
 

@@ -182,7 +182,7 @@ describe("laje comum não calculada (tipo 3)", () => {
     expect(p.painel.lajes[0]).toMatchObject({ tipo: 3, angulo: -1, mu: 0 });
     expect(p.esforcos.momentos.L1).toBeUndefined();
     expect(p.esforcos.avisos).toEqual([
-      "L1: não calculada (Division by zero: 1/SQR(μ) com μ 0 (LAJECALC.BAS:7239) (erro 11 do QuickBASIC))",
+      "L1: não calculada (Division by zero: 1/√μ com μ = 0 (erro 11 do QuickBASIC))",
     ]);
     // a montagem a carrega mesmo assim: 20·(0,30 + 0,10 + 0,25) = 13 t
     const soma = p.montagem.reacoes.reduce(

@@ -3,7 +3,7 @@
 // cuja altura é b (λx = 3,464·lex/b); My flete na direção y, altura h.
 // A V1 trata 0,15 tf/cm² como 15 MPa (1 tf = 10 kN); com tensões em MPa e Es =
 // 210 000 MPa a física é a mesma.
-import { num } from "../../texto";
+import { num, numAte } from "../../texto";
 import type {
   Barra,
   BarrasPilar,
@@ -231,7 +231,7 @@ export function pilarNb178(
   // abaixo de 20 cm, sem majorar esforços (resultado igual ao da V1).
   if (Math.min(b, h) < DIMENSAO_MINIMA)
     avisos.push(
-      `${e.nome}: menor dimensão ${Math.min(b, h)} cm < ${DIMENSAO_MINIMA} cm; a NB-1/78 pede dimensão mínima e majoração para seção pequena (não aplicada, confira) [VERIFICAR]`,
+      `${e.nome}: menor dimensão ${numAte(Math.min(b, h), 1)} cm < ${DIMENSAO_MINIMA} cm; a NB-1/78 pede dimensão mínima e majoração para seção pequena (não aplicada, confira) [VERIFICAR]`,
     );
 
   if (lambda > LAMBDA_MAXIMO) {
@@ -336,7 +336,7 @@ export function pilarNb178(
   memoria.push(
     {
       descricao: "Armadura mínima",
-      formula: `As,min = ${taxaMin * 100}%·Ac (0,8% se λ > 30)`,
+      formula: `As,min = ${numAte(taxaMin * 100, 2)} %·Ac (0,8 % se λ > 30)`,
       valor: asMin,
       unidade: "cm²",
       ref: REF_DIM,

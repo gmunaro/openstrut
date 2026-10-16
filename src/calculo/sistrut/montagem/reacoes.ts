@@ -263,7 +263,7 @@ export const montaPavimento: MontaPavimento = (
     if (Math.abs(somaAreas - areaLaje) / areaLaje > TRES_POR_CENTO)
       avisos.push(
         `A soma das áreas parciais da laje ${laje.nome} (${num(somaAreas, 2)} m²) difere ` +
-          `em mais de 3 % da área total (${num(areaLaje, 2)} m²) (LAJEMONT.BAS:2742).`,
+          `em mais de 3 % da área total (${num(areaLaje, 2)} m²).`,
       );
     memoria.push({
       descricao: `Laje ${laje.nome}: soma das áreas de influência`,

@@ -683,7 +683,7 @@ export function lajeArmadura6118(
       avisos.push(`${e.nome}: seção insuficiente para ${nome}, aumente a espessura.`);
     } else if (fl.xd > xdLim + EPS) {
       avisos.push(
-        `${e.nome}: x/d = ${fmt(fl.xd)} > ${xdLim} em ${nome} (dutilidade); aumente a espessura.`,
+        `${e.nome}: x/d = ${fmt(fl.xd)} > ${fmt(xdLim)} em ${nome} (dutilidade); aumente a espessura.`,
       );
     }
     memoria.push({
@@ -814,7 +814,7 @@ export function lajeArmadura6118(
         `${e.nome}: nenhuma malha de φ ≥ ${MALHA.phiMin} mm com s ≥ ${MALHA.sMin} cm atende ${posicao}.`,
       );
     } else if (barra.phi > phiMax + EPS) {
-      avisos.push(`${e.nome}: φ ${barra.phi} mm > h/8 = ${fmt(phiMax)} mm em ${posicao}.`);
+      avisos.push(`${e.nome}: φ ${fmt(barra.phi)} mm > h/8 = ${fmt(phiMax)} mm em ${posicao}.`);
     }
     return barra;
   };

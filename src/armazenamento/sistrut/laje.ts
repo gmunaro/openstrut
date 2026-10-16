@@ -20,6 +20,7 @@
 //
 // Unidades: o .LAJ grava planta em m e cargas em t/m² e t/m; a V2 guarda kN/m² e
 // kN/m (1 tf = 9,80665 kN, `tfParaKn`).
+import { numAte } from "../../calculo/texto";
 import { qbCint, sng } from "../../calculo/sistrut/base/f32";
 import { emSingle, PARAMETROS_LAJE } from "../../calculo/sistrut/base/parametros";
 import { direcaoMu } from "../../calculo/sistrut/lajes/momentos";
@@ -330,7 +331,7 @@ export function importarLaj(
     );
     if (vs.length > 1 && !comPilar && !escolhido(vs))
       avisos.push(
-        `Cruzamento sem pilar em (${x}; ${y}) entre ${vs.join(" e ")}: a escolha "apoia em" do LAJEMONT não fica no .LAJ; vale a regra da V2 (ou informe opcoes.apoiosEmViga).`,
+        `Cruzamento sem pilar em (${numAte(x!, 3)}; ${numAte(y!, 3)}) entre ${vs.join(" e ")}: a escolha "apoia em" do LAJEMONT não fica no .LAJ; vale a regra da V2 (a viga que termina se apoia na que passa). Confira na planta qual viga apoia em qual.`,
       );
   }
 

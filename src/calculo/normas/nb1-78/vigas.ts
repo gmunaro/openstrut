@@ -4,7 +4,7 @@
 // Contas internas em kN, cm e kN/cm² (1 MPa = 0,1 kN/cm²). A V1 trabalha em
 // tf/cm², mas as fórmulas são homogêneas e as constantes com unidade
 // (τwu ≤ 4,5 MPa, τc = ψ1·√fck com fck em MPa) foram convertidas sem mudar valor.
-import { num } from "../../texto";
+import { num, numAte } from "../../texto";
 import { espacamentoMaximoEstribo } from "../../barras";
 import { type ClasseAco, epsYd, tensaoAco } from "../../pilares/flexaoComposta";
 import type { CortanteResultado, Etapa, FlexaoResultado, MateriaisCalc } from "../../tipos";
@@ -152,7 +152,7 @@ export function vigaFlexaoNb178(
     xd = xdLim;
     if (d <= D_LINHA) {
       avisos.push(
-        `Md acima do limite e d = ${d} cm ≤ d' = ${D_LINHA} cm: sem solução, aumente a seção.`,
+        `Md acima do limite e d = ${numAte(d, 2)} cm ≤ d' = ${numAte(D_LINHA, 2)} cm: sem solução, aumente a seção.`,
       );
       return { as: Number.NaN, asComprimida: Number.NaN, xd, avisos, memoria };
     }
@@ -166,7 +166,7 @@ export function vigaFlexaoNb178(
     const sigmaLinha = kNcm2(tensaoAco(epsLinha, t));
     if (sigmaLinha <= 0) {
       avisos.push(
-        `Md acima do limite e d' = ${D_LINHA} cm ≥ x_lim = ${num(xl, 2)} cm: a armadura de compressão ficaria tracionada; aumente a seção.`,
+        `Md acima do limite e d' = ${numAte(D_LINHA, 2)} cm ≥ x_lim = ${num(xl, 2)} cm: a armadura de compressão ficaria tracionada; aumente a seção.`,
       );
       return { as: Number.NaN, asComprimida: Number.NaN, xd, avisos, memoria };
     }

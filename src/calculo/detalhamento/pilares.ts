@@ -274,7 +274,7 @@ export function detalharPilar(
       fim = L + t.l0;
       if (acima.b !== lance.b || acima.h !== lance.h)
         avisos.push(
-          `${rotulo}: a seção muda para ${acima.b} × ${acima.h} cm no lance de cima; a dobra ou espera das barras não está detalhada.`,
+          `${rotulo}: a seção muda para ${fmt(acima.b)} × ${fmt(acima.h)} cm no lance de cima; a dobra ou espera das barras não está detalhada.`,
         );
     }
     adiciona({
@@ -308,7 +308,7 @@ export function detalharPilar(
       });
       if (estribo.phi < minimo.phi || estribo.espacamento > minimo.espacamento + 1e-9)
         avisos.push(
-          `${rotulo}: estribo φ ${estribo.phi} c/ ${estribo.espacamento} cm fora do mínimo da norma (φ ${minimo.phi} c/ ${minimo.espacamento} cm, 18.4.3).`,
+          `${rotulo}: estribo φ ${fmt(estribo.phi)} c/ ${fmt(estribo.espacamento)} cm fora do mínimo da norma (φ ${fmt(minimo.phi)} c/ ${fmt(minimo.espacamento)} cm, 18.4.3).`,
         );
     }
     const nEstribos = Math.ceil(L / estribo.espacamento - 1e-9) + (i === 0 ? 1 : 0);
@@ -338,7 +338,7 @@ export function detalharPilar(
     const { porFaceX, porFaceY, origem } = arranjoDetalhado(barras, lance.b, lance.h);
     if (origem === "padrao")
       avisos.push(
-        `${rotulo}: o arranjo do cálculo (${barras.porFaceX} e ${barras.porFaceY} barras por face) não fecha com ${barras.n} barras; usada a distribuição da V1 (${porFaceX} e ${porFaceY}), que pode não ser a verificada.`,
+        `${rotulo}: o arranjo do cálculo (${barras.porFaceX} e ${barras.porFaceY} barras por face) não fecha com ${barras.n} barras; usada a distribuição padrão (${porFaceX} e ${porFaceY}, as barras intermediárias a mais nas faces maiores), que pode não ser a verificada.`,
       );
     const dLinha = c + estribo.phi / 10 + barras.phi / 20;
     const faces = [

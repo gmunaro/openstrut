@@ -9,7 +9,7 @@
 // diagrama de momentos por pontos (estática do tramo sobre as cargas do .VIG), a flecha
 // da laje no modo original (o original não calcula: 0) e o Nd/Md dos pilares (γf × as
 // ações características que o original usa).
-import { num } from "./texto";
+import { num, numAte } from "./texto";
 import type { Bordo, Laje, Obra, Pavimento } from "../dominio/obra";
 import type { BarrasNaAlma } from "./barras";
 import type {
@@ -228,13 +228,15 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
       flechaLimite = f.limite;
       if (!f.atende)
         avisos.push(
-          `${nome}: flecha ${num(f.flecha, 2)} cm acima do limite ${num(f.limite, 2)} cm (corrigido, R1).`,
+          `${nome}: flecha ${num(f.flecha, 2)} cm acima do limite ${num(f.limite, 2)} cm (verificação do modo corrigido).`,
         );
     }
   }
   const esp = ps.espessuras[nome];
   if (esp?.ok && esp.h > laje.h)
-    avisos.push(`${nome}: H ${laje.h} cm abaixo da espessura mínima ${esp.h} cm (LAJECALC 3).`);
+    avisos.push(
+      `${nome}: H ${numAte(laje.h, 1)} cm abaixo da espessura mínima ${numAte(esp.h, 1)} cm (LAJECALC 3).`,
+    );
   if (esp && !esp.ok) avisos.push(`${nome}: H necessário > H máximo configurado (LAJECALC 3).`);
   const mPrincipal = mom ? tmPorMParaKnmPorM(Math.max(mom.mPositivoPrincipalTcm, 0) / 100) : 0;
   const mSecundario = mom ? tmPorMParaKnmPorM(mom.mPositivoSecundarioTcm / 100) : 0;

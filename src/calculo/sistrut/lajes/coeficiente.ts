@@ -642,7 +642,7 @@ export function S_50187(g: EstadoLajecalc): void {
         // μ 0 (o da laje comum não calculada sem <R>elação no LAJECALC 2): o QB4.5 para
         // com "Division by zero" e o ON ERROR volta ao menu (LAJECALC.BAS:169-174)
         if (g.A_1210.get(qbCint(g.V_177c), 1) === 0)
-          throw new ErroQB(11, "Division by zero: 1/SQR(μ) com μ 0 (LAJECALC.BAS:7239)");
+          throw new ErroQB(11, "Division by zero: 1/√μ com μ = 0");
         L_BP52 = 1.0 / g.raiz(g.A_1210.get(qbCint(g.V_177c), 1)); // 7239
         L_BPf4 = g.s(g.A_15b0.get(0)); // 7240
         g.V_0f10 = g.s(1.0); // 7241

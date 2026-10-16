@@ -130,11 +130,16 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
       const bordoVizinho = ladoA ? (c.lajeB === null ? c.bordoA : c.bordoB) : c.bordoA;
       // R2: o original pula o vizinho quando o lado dele tem o mesmo número.
       const recalculaVizinho = vizinho !== null && (modo === "corrigido" || bordoVizinho !== bordo);
-      if (vizinho !== null && !recalculaVizinho)
+      if (vizinho !== null && !recalculaVizinho) {
         avisos.push(
           `${laje.nome}, lado ${bordo + 1}: o vizinho ${vizinho} tem o mesmo número de lado e não foi ` +
-            "recalculado, como no SISTRUT original (defeito R2).",
+            "recalculado, como no SISTRUT original: a negativa pode sair só com a armadura desta laje.",
         );
+        memoria.push({
+          descricao: `${laje.nome}, lado ${bordo + 1}: vizinho ${vizinho} não recalculado (R2)`,
+          ref: "LAJEPROC.BAS:836, 855",
+        });
+      }
       if (recalculaVizinho) {
         const mv = esforcos.momentos[vizinho];
         const lv = lajes.get(vizinho);
@@ -164,11 +169,16 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
         // Imposta pelo LAJECALC: só confere (LAJEPROC.BAS:865-889).
         barra = barraImpostaNaContinuidade(imposta, parametros, modo);
         const area = barra.ok ? parametros.bitolas[barra.indiceBitola]!.area : 0;
-        if (!barra.ok || as > (area * 100) / barra.espacamento || as === 0)
+        if (!barra.ok || as > (area * 100) / barra.espacamento || as === 0) {
           avisos.push(
             `Continuidade ${c.lajeA} × ${c.lajeB ?? "engaste"}: armadura negativa imposta menor que a ` +
-              "necessária; acione a otimização (LAJEPROC.BAS:881-882).",
+              "necessária; rode a otimização dos negativos.",
           );
+          memoria.push({
+            descricao: `Continuidade ${c.lajeA} × ${c.lajeB ?? "engaste"}: negativa imposta insuficiente`,
+            ref: "LAJEPROC.BAS:881-882",
+          });
+        }
       } else {
         // LAJEPROC.BAS:892: CINT(−1000·bitola − espaçamento); "NAO" grava −10000 (D7).
         codigosNegativos[indice] = automatica.ok ? -automatica.codigo : -10000;

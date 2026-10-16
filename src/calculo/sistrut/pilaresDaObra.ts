@@ -335,7 +335,7 @@ export function planoDeVariacoes(
   for (let j = 1; j < topo; j++) if (chave(j) !== chave(j - 1)) secoes.push(j);
   if (secoes.length > 4)
     avisos.push(
-      `${coluna.nome}: ${secoes.length} seções; o PILAREDI aceita no máximo 4 por coluna (V_0e3e% = 3, PILAREDI.BAS:70, 4307).`,
+      `${coluna.nome}: ${secoes.length} seções; o PILAREDI aceita no máximo 4 por coluna.`,
     );
   const livre = (j: number) => nv[j]?.vinculoX === 3 && nv[j]?.vinculoY === 3;
   const inicios: number[] = [];
@@ -354,7 +354,7 @@ export function planoDeVariacoes(
         continue;
       }
       avisos.push(
-        `${coluna.nome}: o limite de variações (V_0ff8% + V_0e3c% − V_0e3e% > V_0fec!, PILAREDI.BAS:5999; máximo ${maximoVariacoes}) corta o "de ${n} em ${n}" no nível ${j}: os lances seguintes do trecho ficam com a armadura da variação de baixo.`,
+        `${coluna.nome}: o limite de variações de armadura do PILAREDI (máximo ${maximoVariacoes}) corta o "de ${n} em ${n}" no nível ${j}: os lances seguintes do trecho ficam com a armadura da variação de baixo.`,
       );
       break;
     }
@@ -364,7 +364,7 @@ export function planoDeVariacoes(
   );
   if (todos.length > maximoVariacoes)
     avisos.push(
-      `${coluna.nome}: ${todos.length} variações de armadura; o PILAREDI guarda no máximo ${maximoVariacoes} (PILAR.INI, PILAR.BAS:632).`,
+      `${coluna.nome}: ${todos.length} variações de armadura; o PILAREDI guarda no máximo ${maximoVariacoes} (PILAR.INI).`,
     );
   return todos.map((inicio, i) => ({ inicio, fim: todos[i + 1] ?? topo }));
 }

@@ -4,7 +4,7 @@
 // Fontes: docs/norma/vigas-pilares.md, seções 2 e 3 (apostilas de Bastos,
 // UNESP: F1 = Flexão Normal Simples out/2023; F3 = Cortante mar/2025).
 // Contas internas em kN, cm e kN/cm² (1 MPa = 0,1 kN/cm²).
-import { num } from "../../texto";
+import { num, numAte } from "../../texto";
 import type { CortanteResultado, Etapa, FlexaoResultado, MateriaisCalc } from "../../tipos";
 import { FYK, fctm, GAMA_C } from "./materiais";
 
@@ -153,7 +153,7 @@ export function vigaFlexao6118(
     xd = xdLim;
     if (d <= dLinha) {
       avisos.push(
-        `Md acima do limite e d = ${d} cm ≤ d' = ${dLinha} cm: sem solução, aumente a seção.`,
+        `Md acima do limite e d = ${numAte(d, 2)} cm ≤ d' = ${numAte(dLinha, 2)} cm: sem solução, aumente a seção.`,
       );
       return { as: Number.NaN, asComprimida: Number.NaN, xd, avisos, memoria };
     }
@@ -169,7 +169,7 @@ export function vigaFlexao6118(
     asComprimida = m2 / (sigmaLinha * (d - dLinha));
     as = as1 + as2;
     avisos.push(
-      `x/d = ${num(xdLivre, 3)} passaria do limite ${xdLim}: armadura dupla com x = ${xdLim} d (A's = ${num(asComprimida, 2)} cm²).`,
+      `x/d = ${num(xdLivre, 3)} passaria do limite ${numAte(xdLim, 2)}: armadura dupla com x = ${numAte(xdLim, 2)} d (A's = ${num(asComprimida, 2)} cm²).`,
     );
     memoria.push(
       {
@@ -250,7 +250,9 @@ export function vigaFlexao6118(
       unidade: "cm²",
       ref: `6118:2023 17.3.5.2.3 (${F1}, Eq. 11) [VERIFICAR taxa]`,
     });
-    avisos.push(`h = ${h} cm > 60 cm: armadura de pele de ${num(asPele, 2)} cm² em cada face.`);
+    avisos.push(
+      `h = ${numAte(h, 1)} cm > 60 cm: armadura de pele de ${num(asPele, 2)} cm² em cada face.`,
+    );
   }
   return { as, asComprimida, xd, avisos, memoria };
 }

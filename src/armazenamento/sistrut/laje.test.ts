@@ -296,7 +296,7 @@ describe("importarLaj: o que o .LAJ tem e a obra representa", () => {
     expect(laje("L4").anguloArmadura).toBeUndefined();
     expect(p.painel.lajes[3]).toMatchObject({ angulo: -1, mu: 0 });
     expect(p.esforcos.momentos.L4).toBeUndefined();
-    expect(p.esforcos.avisos.join()).toContain("LAJECALC.BAS:7239");
+    expect(p.esforcos.avisos.join()).toContain("Division by zero: 1/√μ com μ = 0");
   });
 
   it("comum não calculada com μ 0,8 por <R>: fatores de direção a −1° e M+ secundário = 0,8·M+ (momentos.ts:63)", () => {
@@ -478,7 +478,7 @@ describe("importarLaj: o que a obra não representa vira aviso", () => {
     // sem o P5 em (4; 5)
     const texto = e2eLaj({ 183: "8" }, [[205, 209]]);
     expect(avisos(texto)).toEqual([
-      'Cruzamento sem pilar em (4; 5) entre V2 e V5: a escolha "apoia em" do LAJEMONT não fica no .LAJ; vale a regra da V2 (ou informe opcoes.apoiosEmViga).',
+      'Cruzamento sem pilar em (4; 5) entre V2 e V5: a escolha "apoia em" do LAJEMONT não fica no .LAJ; vale a regra da V2 (a viga que termina se apoia na que passa). Confira na planta qual viga apoia em qual.',
     ]);
     expect(avisos(texto, { apoiosEmViga: { V5: ["V2"] } })).toEqual([]);
   });

@@ -1,7 +1,7 @@
 // Cálculo da obra inteira: lajes → vigas → pilares, pavimento por pavimento,
 // com verificação de equilíbrio. Orquestra as peças comuns (vinculação,
 // compatibilização, montagem, viga contínua, acumulação) e as da norma.
-import { num } from "./texto";
+import { num, numAte } from "./texto";
 import type { AvisoComOpcao } from "./avisos";
 import type { Laje, Obra, Pavimento, Pilar } from "../dominio/obra";
 import { calcularObraPeloSistrut } from "./fluxoSistrut";
@@ -650,11 +650,11 @@ export function dimensionarViga(
       if (s.flexao && Number.isFinite(s.flexao.as) && !s.barras)
         avisos.push(`${nome}: armadura acima de 8 barras de 32 mm, aumente a seção.`);
       if (s.barras && !s.barras.cabe)
-        avisos.push(`${nome}: barras não cabem em uma camada (bw = ${viga.bw} cm).`);
+        avisos.push(`${nome}: barras não cabem em uma camada (bw = ${numAte(viga.bw, 1)} cm).`);
       if (s.barras && s.barras.phi > PHI_MAX_ALTURA_UTIL) {
         const real = viga.h - cobrimento - (estribo?.phi ?? 5) / 10 - s.barras.phi / 20;
         avisos.push(
-          `${nome}: barras de φ ${s.barras.phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d real = h − c − φt − φ/2 = ${num(real, 2)} cm, menor que o d adotado (${num(d, 2)} cm); confira.`,
+          `${nome}: barras de φ ${numAte(s.barras.phi, 1)} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d real = h − c − φt − φ/2 = ${num(real, 2)} cm, menor que o d adotado (${num(d, 2)} cm); confira.`,
         );
       }
     }
