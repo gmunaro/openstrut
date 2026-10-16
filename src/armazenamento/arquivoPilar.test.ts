@@ -118,6 +118,16 @@ describe("arquivo: campos de pilar da NB-1/78", () => {
     expect(erros.some((e) => e.includes("transicao"))).toBe(true);
   });
 
+  it("armadura dada sem barras é erro", () => {
+    const o = obraCompleta();
+    o.pavimentos[0]!.pilares[0] = { ...o.pavimentos[0]!.pilares[0]!, armadura: { barras: [] } };
+    const r = lerObra(serializarObra(o));
+    const erros = r.ok ? [] : r.erros;
+    expect(
+      erros.some((e) => e.includes("armadura.barras") && e.includes("ao menos uma barra")),
+    ).toBe(true);
+  });
+
   it("rotação só na retangular, de 0 a 360 graus", () => {
     const o = obraCompleta();
     const pilares = o.pavimentos[0]!.pilares;

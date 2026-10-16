@@ -39,6 +39,7 @@ import { qbCint } from "../../calculo/sistrut/base/f32";
 import {
   PARAMETROS_DSP,
   PARAMETROS_LAJE,
+  PARAMETROS_PILAR,
   PARAMETROS_PIP,
 } from "../../calculo/sistrut/base/parametros";
 import type {
@@ -723,9 +724,13 @@ export function lerRlp(texto: string): Lido<PilarRlp[]> {
     };
   for (let i = inicio + 1; i < linhas.length; i++) {
     const l = linhas[i]!;
-    if (l.includes("FIM")) break;
-    if (!/^\S/.test(l) || l.includes("[") || l.trim() === "") continue;
-    if (l.includes("OBRA") || l.includes("GERADO")) continue;
+    // linha do pilar: número em MID$(l, 2, 5) e sem "["; testada antes do "FIM", como
+    // o original (PILGEEDI.BAS:1013-1015, 1033)
+    const pilar = !l.includes("[") && qbVal(l.slice(1, 6)) > 0;
+    if (!pilar) {
+      if (l.includes("FIM")) break;
+      continue;
+    }
     pilares.push({
       pilar: l.slice(0, 15).trim(),
       normal: qbVal(l.slice(14)),
@@ -1115,13 +1120,17 @@ function parametrosPilarDe(
   col?: ArquivoCol,
 ): ParametrosPilarObra | undefined {
   const dif = pip ? diferencasPip(pip) : {};
-  // com as armaduras do .COL, as variações são as gravadas (`Pilar.armadura`) e o
-  // motor não acrescenta as de "n em n": "N" (V_168c$ = "0")
-  const comArmaduras = col?.colunas.some((c) => c.armaduras.length > 0) ?? false;
+  // [2]: o leitor do .COL só aumenta V_0e3c% (máximo de variações − 1) se o gravado for
+  // maior (PIGRAEDI.BAS:969-971). As variações gravadas vão em `Pilar.armadura`; com o
+  // padrão "N" da obra, o motor não acrescenta outras.
+  const maxVar = col ? col.parametros.maximoVariacoes + 1 : 0;
+  const ini2: Partial<IniPilar> =
+    maxVar > (ini.maximoVariacoes ?? PARAMETROS_PILAR.maximoVariacoes)
+      ? { ...ini, maximoVariacoes: maxVar }
+      : ini;
   const r: ParametrosPilarObra = {
-    ...(Object.keys(ini).length > 0 ? { ini } : {}),
+    ...(Object.keys(ini2).length > 0 ? { ini: ini2 } : {}),
     ...(Object.keys(dif).length > 0 ? { pip: dif } : {}),
-    ...(comArmaduras ? { variaArmadura: 0 } : {}),
   };
   return Object.keys(r).length > 0 ? r : undefined;
 }
@@ -1320,7 +1329,6 @@ function completarObra(ctx: Contexto, base: Obra, cargas: boolean): Obra {
     ...antigos,
     ...(novos?.ini ? { ini: novos.ini } : {}),
     ...(ctx.pip ? { pip: novos?.pip ?? {} } : {}),
-    ...(novos?.variaArmadura !== undefined ? { variaArmadura: novos.variaArmadura } : {}),
   };
   return Object.keys(parametrosPilar).length > 0 ? { ...resto, parametrosPilar } : resto;
 }
@@ -1336,6 +1344,12 @@ export function importarPilaresSistrut(
   if (!lidoCol.ok) return { erros: lidoCol.erros };
   const col = lidoCol.valor;
   const avisos = [...lidoCol.avisos];
+  // [1] aumenta V_0e3e% (máximo de seções − 1, 3 no PILAREDI.BAS:70) no leitor
+  // (PIGRAEDI.BAS:924-926); o motor usa o 3 fixo no limite de variações
+  if (col.parametros.maximoSecoes > 3)
+    avisos.push(
+      `.COL: [1] = ${col.parametros.maximoSecoes} seções; o motor usa o limite de 4 do PILAREDI (V_0e3e% = 3) no plano de variações de armadura.`,
+    );
   const pip = pipDaObra(col, arquivos.pip, avisos);
   if (!pip.ok) return { erros: pip.erros };
   let pil: SecaoPil | undefined;

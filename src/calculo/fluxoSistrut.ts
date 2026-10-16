@@ -873,8 +873,7 @@ function extrasDoLance(
       })),
       avisos: v.avisos,
     }));
-  const p =
-    l.nivelColuna === 0 ? r.predimensionamentos.find((x) => x.coluna === l.coluna) : undefined;
+  const p = l.nivelColuna ? undefined : r.predimensionamentos.find((x) => x.coluna === l.coluna);
   const pr = p?.resultado;
   const predimensionamento: PredimensionamentoPilarResultado | undefined = p && {
     modo: p.modo,

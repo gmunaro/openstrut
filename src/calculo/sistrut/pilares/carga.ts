@@ -89,10 +89,17 @@ export function casaNome(nome: string, numero: number) {
 
 /** Inclinação de um momento pelo .RLP (PILGEEDI.BAS:1021-1023): INSTR do rótulo da
  *  viga na linha de inclinações e VAL logo depois do caractere que o segue (o "[");
- *  sem o rótulo, `undefined`. */
-export function inclinacaoDoRlp(linha: string, viga: string) {
-  const p = linha.length > 0 ? linha.indexOf(viga) : -1;
-  return p < 0 ? undefined : qbVal(linha.slice(p + viga.length + 1));
+ *  sem o rótulo, `undefined`. No original o INSTR acha "V1" dentro de "V10[90] >" e lê
+ *  o VAL de "[90]" = 0 (D-20); no corrigido vale só o rótulo inteiro, "V1[". */
+export function inclinacaoDoRlp(linha: string, viga: string, modo: ModoSistrut = "original") {
+  if (linha.length === 0) return undefined;
+  if (modo === "original") {
+    const p = linha.indexOf(viga);
+    return p < 0 ? undefined : qbVal(linha.slice(p + viga.length + 1));
+  }
+  for (let p = linha.indexOf(`${viga}[`); p >= 0; p = linha.indexOf(`${viga}[`, p + 1))
+    if (p === 0 || /[>\s]/.test(linha[p - 1]!)) return qbVal(linha.slice(p + viga.length + 1));
+  return undefined;
 }
 
 const slotsVazios = (): MomentoNivel[] =>
@@ -147,7 +154,7 @@ export function leCargasRep(
           const mo = linha.momentos[i]!;
           const v = qbVal(mo.texto);
           // inclinação do .RLP pelo rótulo (L_14aad, V_1946 = 2)
-          const doRlp = rlp ? inclinacaoDoRlp(rlp.inclinacoes, mo.viga) : undefined;
+          const doRlp = rlp ? inclinacaoDoRlp(rlp.inclinacoes, mo.viga, modo) : undefined;
           slots[k] = {
             m: s(Math.abs(v)),
             inclinacao: s(doRlp ?? mo.inclinacao ?? 0),

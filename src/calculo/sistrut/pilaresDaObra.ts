@@ -177,7 +177,7 @@ export function cargaDoNivel(
       vao: s(m.vao),
       rigidez: s(m.rigidez),
     })),
-    ...(c.modo ? { modo: c.modo } : {}),
+    ...(qual === "cargaTopo" && "modo" in c && c.modo ? { modo: c.modo } : {}),
   };
 }
 
@@ -348,8 +348,15 @@ export function planoDeVariacoes(
       j += n - 1;
       do j += 1;
       while (j < topo && livre(j));
-      if (s + (maximoVariacoes - 1) - 3 > inicios.length - 1 && j < b) inicios.push(j);
-      else break;
+      if (!(j < b)) break;
+      if (s + (maximoVariacoes - 1) - 3 > inicios.length - 1) {
+        inicios.push(j);
+        continue;
+      }
+      avisos.push(
+        `${coluna.nome}: o limite de variações (V_0ff8% + V_0e3c% − V_0e3e% > V_0fec!, PILAREDI.BAS:5999; máximo ${maximoVariacoes}) corta o "de ${n} em ${n}" no nível ${j}: os lances seguintes do trecho ficam com a armadura da variação de baixo.`,
+      );
+      break;
     }
   });
   const todos = [...new Set([...inicios, ...manuais.filter((k) => k >= 0 && k < topo)])].sort(
@@ -372,7 +379,8 @@ export function anguloRlp(de: Ponto, para: Ponto, modo: ModoSistrut) {
   const x1 = de.x;
   const x2 = para.x;
   const y1 = de.y;
-  const y2 = Math.abs(de.y - para.y) < 1e-6 ? de.y : para.y;
+  // V_133a = 0,005 m (LAJE.BAS:121; LAJEMONT.BAS:4581)
+  const y2 = Math.abs(de.y - para.y) < 0.005 ? de.y : para.y;
   let t = 0;
   if (x1 === x2) t = y1 > y2 ? (3 * Math.PI) / 2 : Math.PI / 2;
   else if (y1 <= y2 && x1 < x2) t = Math.atan((y2 - y1) / (x2 - x1));
@@ -407,4 +415,18 @@ export function inclinacoesRlp(eixos: readonly EixoViga[], modo: ModoSistrut) {
   return new Map(
     [...porPilar].map(([p, l]) => [p, l.map((x) => `${x.viga}[${x.angulo}] >`).join("")]),
   );
+}
+
+/** Inclinação de um momento do .REP no PILGEEDI: a do .RLP, se o rótulo da viga está
+ *  na linha do pilar (PILGEEDI.BAS:1021-1023); senão a gravada (0 sem edição, como o
+ *  PILGEEDI deixa) no original e a direção da viga (0 ou 90) no corrigido (P-a). */
+export function inclinacaoDoMomento(
+  doRlp: number | undefined,
+  gravada: number | undefined,
+  horizontal: boolean,
+  modo: ModoSistrut,
+) {
+  if (doRlp !== undefined) return doRlp;
+  if (modo === "original") return gravada ?? 0;
+  return horizontal ? 0 : 90;
 }

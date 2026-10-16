@@ -1433,8 +1433,10 @@ export type CargasPilares = (
 
 /** Situação que interrompe o dimensionamento, como o original avisa: "LAMBDA" (λ > 140,
  *  recusa), "NAOBARRA" (nem φ40 cabe), "NAOSUPORTA" (taxa máxima esgotada),
- *  "NAOCONVERGE" (laço sem fim do original, D-2), "NKNULO" (D-3). */
-export type RecusaPilar = "LAMBDA" | "NAOBARRA" | "NAOSUPORTA" | "NAOCONVERGE" | "NKNULO";
+ *  "NAOCONVERGE" (laço sem fim do original, D-2), "NKNULO" (D-3), "NAO" (a armadura
+ *  dada não resiste: com REDEFINE e "NAO" o PILAREDI volta à edição da armadura,
+ *  PILAREDI.BAS:5800-5808). */
+export type RecusaPilar = "LAMBDA" | "NAOBARRA" | "NAOSUPORTA" | "NAOCONVERGE" | "NKNULO" | "NAO";
 
 /** Dimensionamento PILAREDI de um nível (PILAREDI.BAS:4721-5885, 6649-6935): casos
  *  "e" (sem 2ª ordem) e "f" (flambagem), critério ≥, "DIMINUI" com 1,05; As

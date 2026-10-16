@@ -22,7 +22,8 @@ import { KN_POR_TF } from "./base/unidades";
 import type { CasoPilar, ColunaEdificio, VerificacaoPilar } from "./base/tipos";
 import { calcularObraSistrut, type LancePilarSistrut, type ResultadoSistrut } from "./obra";
 import { CASOS_PILAR } from "./pilares/__casos__";
-import { inclinacoesRlp, planoDeVariacoes } from "./pilaresDaObra";
+import { inclinacaoDoMomento, inclinacoesRlp, planoDeVariacoes } from "./pilaresDaObra";
+import { inclinacaoDoRlp } from "./pilares/carga";
 import { importarPilaresSistrut } from "../../armazenamento/sistrut/pilar";
 
 type Valor = number | string | undefined;
@@ -450,7 +451,10 @@ describe("PILAREDI pelo motor: retrad_pil_poliinv (poligonal anti-horária, D-6)
 });
 
 describe("PILAREDI pelo motor: v2par_pilar_niveis (P5 25×40, pavimento repetido 3 vezes)", () => {
-  const r = calcularObraSistrut(obraE2EComP5({ b: 25, h: 40 }, 3), { modo: "original" });
+  // o roteiro do caso responde "Vario a Armadura" S, "de quantos em quantos" 1
+  const obra = obraE2EComP5({ b: 25, h: 40 }, 3);
+  obra.parametrosPilar = { ...obra.parametrosPilar, variaArmadura: 1 };
+  const r = calcularObraSistrut(obra, { modo: "original" });
   const nivelDe: Record<string, number> = { FUND: 0, PAV1: 1, PAV2: 2 };
   it("três lances, um por repetição, e todos os valores impressos", () => {
     expect(r.lances.filter((l) => l.pilarId === "P5").map((l) => l.nivel)).toEqual([0, 1, 2]);
@@ -940,15 +944,28 @@ describe(".RLP: inclinações das vigas no pilar (LAJEMONT.BAS:4239-4310; PILGEE
     },
   );
 
-  it("P7: V1 −0,64 a 0° e V4 −1,22 a 270°: Mkx −0,64 e Mky +1,22; sem .RLP, Mkx −1,86", () => {
-    // no topo do único lance, e = −|M| (kCima = 0) e o componente é cos/sin da
-    // inclinação (PILAREDI.BAS:7505-7510): V1 → x −0,64; V4 a 270° → y −1,22·sin 270°
+  it("P7: V1 −0,64 a 0° e V4 −1,22 a 270°, com a rigidez do .SEC: Mkx −0,139 e Mky +0,184", () => {
+    // Topo do único lance (PILAREDI.BAS:7502-7510): kCima = 0, kBaixo = J/L =
+    // (20⁴/12)/3 = 4444,4; a viga leva Bw·Hw³/12/vão (PILGEEDI.BAS:983): V1 12×40,
+    // 64000/4 = 16000; V4 12×50, 125000/5 = 25000. e = −|M|·kBaixo/(kBaixo + kViga):
+    // V1 → x −0,64·4444,4/20444,4 = −0,1391; V4 a 270° → y +1,22·4444,4/29444,4 = +0,1842.
+    // A rigidez 64000 = 12·40³/12 é a que o original gravou no E2E.COL do
+    // retrad_frm_sonda_pil (linhas 51-60), lida do E2E.SEC; as inclinações 0 e 270, as do
+    // E2E.RLP.
     const p7 = (rr: ResultadoSistrut) => rr.lances.find((l) => l.pilarId === "P7")!.carga;
-    expect(p7(r).mkx).toBeCloseTo(-0.64, 4);
-    expect(p7(r).mky).toBeCloseTo(1.22, 4);
+    expect(p7(r).mkx).toBeCloseTo(-0.13913, 4);
+    expect(p7(r).mky).toBeCloseTo(0.18415, 4);
+    // sem o .SEC ("Defino seção" N): o pilar leva 100 % do MEP
     const o = obraE2E("original");
+    const semSec = calcularObraSistrut(
+      { ...o, parametrosPilar: { rigidezVigas: false } },
+      { modo: "original" },
+    );
+    expect(p7(semSec).mkx).toBeCloseTo(-0.64, 4);
+    expect(p7(semSec).mky).toBeCloseTo(1.22, 4);
+    // sem .SEC nem .RLP: os dois momentos a 0°, −0,64 − 1,22
     const sem = calcularObraSistrut(
-      { ...o, parametrosPilar: { rlp: false } },
+      { ...o, parametrosPilar: { rigidezVigas: false, rlp: false } },
       { modo: "original" },
     );
     expect(p7(sem).mkx).toBeCloseTo(-1.86, 4);
@@ -1002,5 +1019,118 @@ describe("Pilar.cargaBase: só o resumo na fundação a soma (PILAREDI.BAS:960-1
   it("Nk do lance 17,67 e carga na fundação 18,67", () => {
     expect(lanceP5(r)!.carga.nk).toBeCloseTo(17.67, 4);
     expect(r.fundacoes.find((f) => f.pilarId === "P5")!.fundacao).toBeCloseTo(18.67, 4);
+  });
+});
+
+// ---------------------------------------------------------------- revisão da rodada 2
+
+describe("armadura dada que não resiste: recusa NAO (REDEFINE, PILAREDI.BAS:5800-5808)", () => {
+  // P5 20 × 20 com 4 φ5 (0,8 cm²) e 1500 kN (153 t) a mais no topo: Nk ≈ 170 t contra
+  // uma capacidade da ordem de 0,85·0,15/1,4·400 + 0,8·4,35 ≈ 40 t: "NAO" no caso "e".
+  const barras = [
+    { x: 2.5, y: 2.5, bitola: 5 },
+    { x: 2.5, y: 17.5, bitola: 5 },
+    { x: 17.5, y: 17.5, bitola: 5 },
+    { x: 17.5, y: 2.5, bitola: 5 },
+  ];
+  const r = calcularObraSistrut(
+    obraE2EComP5({ armadura: { barras }, cargaTopo: { normal: 1500, momentos: [] } }),
+    { modo: "original" },
+  );
+  it("recusa NAO com o motivo, sem armadura aceita", () => {
+    const d = lanceP5(r)!.dimensionamento!;
+    expect(d.recusa).toBe("NAO");
+    expect(d.avisos.some((a) => a.includes("não resiste") && a.includes("REDEFINE"))).toBe(true);
+  });
+});
+
+describe("estribo da armadura dada (PILAREDI.BAS:5838-5839, 5862-5890)", () => {
+  // 1º grupo φ12,5 (V_1086): estribo da tabela 6,3 c/15; o dado 5 c/30 fica limitado
+  // ao menor lado, 20 cm
+  const barras = [
+    { x: 2.5, y: 2.5, bitola: 12.5 },
+    { x: 2.5, y: 17.5, bitola: 12.5 },
+    { x: 17.5, y: 17.5, bitola: 12.5 },
+    { x: 17.5, y: 2.5, bitola: 12.5 },
+    { x: 2.5, y: 10, bitola: 10 },
+    { x: 17.5, y: 10, bitola: 10 },
+  ];
+  const estribo = (dado?: { bitola: number; espacamento: number }) =>
+    lanceP5(
+      calcularObraSistrut(
+        obraE2EComP5({ armadura: { barras, ...(dado ? { estribo: dado } : {}) } }),
+        { modo: "original" },
+      ),
+    )!.dimensionamento!;
+  it("sem estribo dado: pela bitola do 1º grupo; com estribo dado: s ≤ menor lado", () => {
+    const d = estribo();
+    expect(d.barras.map((b) => [b.quantidade, Math.fround(b.bitola)])).toEqual([
+      [4, Math.fround(12.5)],
+      [2, Math.fround(10)],
+    ]);
+    expect(d.estribo.bitola).toBeCloseTo(6.3, 5);
+    expect(d.estribo.espacamento).toBe(15);
+    expect(estribo({ bitola: 5, espacamento: 30 }).estribo).toEqual({ bitola: 5, espacamento: 20 });
+  });
+});
+
+describe('variaArmadura ausente = "N", o padrão do original (PILAREDI.BAS:5612-5617)', () => {
+  it("o P5 25 × 40 em 3 níveis tem uma variação só, dimensionada no FUND", () => {
+    const r = calcularObraSistrut(obraE2EComP5({ b: 25, h: 40 }, 3), { modo: "original" });
+    const p5 = r.lances.filter((l) => l.pilarId === "P5");
+    expect(new Set(p5.map((l) => l.dimensionamento)).size).toBe(1);
+    expect(p5[1]!.avisos.some((a) => a.includes("dimensionada no nível PAV1 (3/3)"))).toBe(true);
+  });
+
+  it("o limite corta o de 1 em 1 com aviso", () => {
+    const avisos: string[] = [];
+    const col: ColunaEdificio = {
+      nome: "P 1",
+      pilarRep: "P 1",
+      niveis: Array.from({ length: 16 }, (_, k) => ({
+        cota: 3 * k,
+        secao: { tipo: "retangular" as const, b: 20, h: 20, barras: [] },
+        vinculoX: 2 as const,
+        vinculoY: 2 as const,
+        normalVento: 0,
+        mkx: 0,
+        mky: 0,
+      })),
+    };
+    planoDeVariacoes(col, [], 1, 15, avisos);
+    expect(avisos.some((a) => a.includes("corta") && a.includes("nível 12"))).toBe(true);
+  });
+});
+
+describe("de 2 em 2 com números que o de 1 em 1 não daria (v2par_pilar_niveis)", () => {
+  // O PAV1 herda a armadura e os casos do FUND (Nk 54,36): o Mkx do 1e é o do FUND do
+  // oráculo, não o do PAV1 (Nk menor, ea·Nk menor).
+  const caso = CASOS_PILAR.v2par_pilar_niveis!;
+  const o = obraE2EComP5({ b: 25, h: 40 }, 3);
+  o.parametrosPilar = { ...o.parametrosPilar, variaArmadura: 2 };
+  const r = calcularObraSistrut(o, { modo: "original" });
+  it("o PAV1 sai com o 1e do FUND", () => {
+    const mkx = lanceP5(r, 1)!.dimensionamento!.casos.find((c) => c.rotulo === "1e")!.mx;
+    const doFund = caso.valores.find((v) => v.id === "P5.FUND.1e.Mkx")!;
+    const doPav1 = caso.valores.find((v) => v.id === "P5.PAV1.1e.Mkx")!;
+    expect(bateComImpresso(doFund, mkx)).toBe(true);
+    expect(bateComImpresso(doPav1, mkx)).toBe(false);
+  });
+});
+
+describe("inclinação de um momento do .REP: .RLP, gravada ou direção (P-a)", () => {
+  it("com o rótulo no .RLP vale o .RLP; sem ele, 0 no original e a direção no corrigido", () => {
+    expect(inclinacaoDoMomento(270, 0, false, "original")).toBe(270);
+    expect(inclinacaoDoMomento(undefined, undefined, false, "original")).toBe(0);
+    expect(inclinacaoDoMomento(undefined, undefined, false, "corrigido")).toBe(90);
+    expect(inclinacaoDoMomento(undefined, undefined, true, "corrigido")).toBe(0);
+  });
+
+  it('D-20: o INSTR do original acha "V1" em "V10[90]"; o corrigido compara o rótulo inteiro', () => {
+    const linha = "V10[90] >V1[180] >";
+    // original: VAL("[90] >V1...") = 0 (PILGEEDI.BAS:1021-1023)
+    expect(inclinacaoDoRlp(linha, "V1", "original")).toBe(0);
+    expect(inclinacaoDoRlp(linha, "V1", "corrigido")).toBe(180);
+    expect(inclinacaoDoRlp(linha, "V10", "corrigido")).toBe(90);
   });
 });

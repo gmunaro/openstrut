@@ -400,6 +400,9 @@ function verificaArranjo(
   return saida;
 }
 
+/** O sinal que o ELU deixou no controle (lido por função: o TS não vê a mutação). */
+const sinalDe = (c: ControleDimensionamento) => c.sinal;
+
 /** Dimensionamento PILAREDI de um nível (PILAREDI.BAS:5711-6310 e 6599-6944).
  *  As0 = max[(Nk·γf − Nc/γf)·1,2/σs(2 ‰); Nk/(0,85·fck·100)·γf·γc·0,8 %; 0,5 %·A];
  *  barras a partir de φ10; caso "e" e depois "f" com a mesma armadura; "NAO" reescala
@@ -522,8 +525,8 @@ export const dimensionaPilar: DimensionaPilar = (
     return { ...resultado, casos: [...casosE, ...casosF], recusa: r };
   };
   /** Estribo pela tabela do .PIP, limitado a MIN(B, H) e a D − Dint (PILAREDI.BAS:5876-5885). */
-  const estriboDa = (indice: number) => {
-    const estribo = { ...pip.estriboPorBitola[indice]! };
+  const estriboDa = (indice: number, dado?: { bitola: number; espacamento: number }) => {
+    const estribo = { ...(dado ?? pip.estriboPorBitola[indice]!) };
     if (g.tipo === 1) {
       const b = Math.round(g.b);
       const h = Math.round(g.h);
@@ -547,16 +550,25 @@ export const dimensionaPilar: DimensionaPilar = (
       area: tab[indices[i]!]!.area,
     }));
     try {
+      // REDEFINE com "NAO": o original volta à edição da armadura (PILAREDI.BAS:5800-5808)
+      const naoResiste = (caso: string) =>
+        recusa(
+          "NAO",
+          `A armadura dada não resiste no caso "${caso}": o PILAREDI volta à redefinição da armadura (REDEFINE, PILAREDI.BAS:5800-5808).`,
+        );
       const e = verificaArranjo(ctx, secaoDe(calc), false, dados, par, ctl);
       casosE = e.casos;
       if (e.recusa === "LAMBDA")
         return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+      if (sinalDe(ctl) === "NAO") return naoResiste("e");
       ctl.anguloInicial = -1;
       const f = verificaArranjo(ctx, secaoDe(calc), true, dadosF, par, ctl);
       casosF = f.casos;
       lambdas = { lambdaX: f.lambdaX, lambdaY: f.lambdaY };
       if (f.recusa === "LAMBDA")
         return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+      // verificaArranjo regrava ctl.sinal: lido de novo depois da 2ª chamada
+      if (sinalDe(ctl) === "NAO") return naoResiste("f");
     } catch (erro) {
       if (erro instanceof ErroNaoConverge)
         return recusa(
@@ -567,9 +579,10 @@ export const dimensionaPilar: DimensionaPilar = (
     }
     let asDada = 0;
     for (const b of calc) asDada = s(asDada + b.area);
+    // grupos na ordem em que aparecem: o 1º é o da bitola V_1086 (A_141e 1..2)
     const grupos = new Map<number, number>();
     indices.forEach((i) => grupos.set(i, (grupos.get(i) ?? 0) + 1));
-    const ordem = [...grupos.keys()].sort((a, b) => b - a);
+    const ordem = [...grupos.keys()];
     memoria.push({
       descricao: "Armadura dada: verificada sem escolha nem ajuste",
       valor: asDada,
@@ -584,7 +597,9 @@ export const dimensionaPilar: DimensionaPilar = (
       as: asDada,
       taxa: s(qbInt((asDada * 10000) / area) / 100),
       barras: ordem.map((i) => ({ quantidade: grupos.get(i)!, bitola: tab[i]!.bitola })),
-      estribo: opcoes.estribo ? { ...opcoes.estribo } : estriboDa(ordem[0] ?? 0),
+      // estribo pela bitola V_1086 do 1º grupo, ou o dado, com o espaçamento limitado ao
+      // menor lado e a D − Dint (PILAREDI.BAS:5862-5890)
+      estribo: estriboDa(ordem[0] ?? 0, opcoes.estribo),
       secao: { ...nivel.secao, barras: dadas.map((b) => ({ ...b })) },
       armaduraDada: true,
     };

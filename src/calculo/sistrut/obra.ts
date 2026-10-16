@@ -118,6 +118,7 @@ import { somaReacoesPilares } from "./vigas/rep";
 import { analisaVigas } from "./vigas/vicalc";
 import {
   cargaDoNivel,
+  inclinacaoDoMomento,
   inclinacoesRlp,
   materiaisPilar,
   planoDeVariacoes,
@@ -330,9 +331,9 @@ export interface ResultadoSistrut {
   quadros: QuadroViga[];
   resumoVigas: ResumoVigas;
   avisos: string[];
-  /** Carga que não chegou à fundação, por pavimento: pilar que não continua até a
-   *  fundação (transição sobre viga, que o PILGEEDI não modela) e linha do .REP sem
-   *  coluna. A projeção marca o pavimento com falha. */
+  /** Carga que não chegou à fundação, por pavimento: a da base de um pilar que nasce
+   *  sobre viga de transição sem `Pilar.transicao` e a linha do .REP sem coluna. A
+   *  projeção marca o pavimento com falha. */
   falhas: { pavimentoId: string; texto: string }[];
   /** Materiais dos pilares: os da obra com os do PILAR.INI da obra por cima. */
   materiaisPilar: MateriaisSistrut;
@@ -1124,28 +1125,31 @@ function calcularPilaresSistrut(
         );
         return [];
       }
-      // Corrigido: a inclinação e a rigidez da viga, que o original deixa em 0 até o
-      // usuário digitar no PILGEEDI (PILGEEDI.BAS:597-640): com 0, o momento de uma viga
-      // vertical entra na direção x e o pilar leva 100 % do MEP (kViga = 0 na
-      // repartição por rigidez de PILAREDI.BAS:7470-7520).
-      // Com o .RLP (PILGEEDI.BAS:1021-1023), a inclinação de cada momento é a da viga no
-      // pilar, nos dois modos; o corrigido acrescenta a rigidez, e sem .RLP a inclinação
-      // pela direção da viga.
+      // Inclinação: a do .RLP (PILGEEDI.BAS:1021-1023), nos dois modos. Rigidez: a que o
+      // PILGEEDI lê do .SEC (Bw·Hw³/12 da seção do tramo "@n" do momento, com o "Prossigo
+      // com a Leitura N/*S*" no padrão S, PILGEEDI.BAS:779-797, 880-994), nos dois modos.
+      // Sem o .RLP (`rlp: false`) o original deixa a inclinação em 0, e sem o .SEC
+      // (`rigidezVigas: false`, o "Defino seção N") a rigidez em 0: o pilar leva 100 % do
+      // MEP (P-a). O corrigido troca o que falta pela direção e pela seção da viga.
       const linhaRlp = rlp?.get(linha.pilar) ?? "";
-      const doRlp = linha.momentos.map((m) => {
-        const i = rlp ? inclinacaoDoRlp(linhaRlp, m.viga) : undefined;
-        return i === undefined ? m : { ...m, inclinacao: s(i) };
+      const comSec = obra.parametrosPilar?.rigidezVigas ?? true;
+      const momentos = linha.momentos.map((m) => {
+        const doRlp = rlp ? inclinacaoDoRlp(linhaRlp, m.viga, modo) : undefined;
+        const v = pav.vigas.find((x) => x.nome === m.viga);
+        const horizontal = v ? Math.abs(v.y1 - v.y2) < 1e-9 : true;
+        const inclinacao = inclinacaoDoMomento(doRlp, m.inclinacao, horizontal, modo);
+        const secao = ps.vigas.find((x) => x.nome === m.viga)?.entrada.secoes.tramos;
+        const doSec = secao?.[m.apoio - 1] ?? secao?.at(-1);
+        // vão negativo (M > 0 no .REP) não leva rigidez (PILGEEDI.BAS:13d1b)
+        const rigidezSec = doSec && m.valor <= 0 ? s((s(doSec.hw) ** 3 * s(doSec.bw)) / 12) : 0;
+        const rigidez =
+          comSec && doSec
+            ? rigidezSec
+            : modo === "original" || !v
+              ? (m.rigidez ?? 0)
+              : (v.bw * v.h ** 3) / 12;
+        return { ...m, inclinacao: s(inclinacao), rigidez };
       });
-      const momentos =
-        modo === "original"
-          ? doRlp
-          : doRlp.map((m) => {
-              const v = pav.vigas.find((x) => x.nome === m.viga);
-              if (!v) return m;
-              const horizontal = Math.abs(v.y1 - v.y2) < 1e-9;
-              const inclinacao = rlp ? (m.inclinacao ?? 0) : horizontal ? 0 : 90;
-              return { ...m, inclinacao, rigidez: (v.bw * v.h ** 3) / 12 };
-            });
       // o PILGEEDI lê o total do texto do .REP, gravado com PRINT USING "#####.##"
       // (VIGA.BAS:2545; PILGEEDI.BAS:541-544: N = VAL(MID$(L1, 10))): 17,3699989 da soma
       // em SINGLE vira VAL("17.37") = 17,3700008
@@ -1197,7 +1201,13 @@ function calcularPilaresSistrut(
     forca: par.pilar.coeficienteForca,
   });
   const lances: LancePilarSistrut[] = [];
-  const n = obra.parametrosPilar?.variaArmadura ?? 1;
+  /** Nome do nível do edifício: o pavimento e, no pavimento-tipo, a repetição. */
+  const nivelNome = (k: number) => {
+    const { pav, repeticao } = niveis[k]!;
+    return pav.repeticoes > 1 ? `${pav.nome} (${repeticao}/${pav.repeticoes})` : pav.nome;
+  };
+  // padrão do original: "N" (S/*N*, PILAREDI.BAS:5612-5617)
+  const n = obra.parametrosPilar?.variaArmadura ?? 0;
   colunas.forEach((coluna, ci) => {
     const daColuna = cargas.filter((c) => c.coluna === coluna.nome);
     const lancesCol = lancesDasColunas[ci]!;
@@ -1253,16 +1263,12 @@ function calcularPilaresSistrut(
         };
         if (k !== v.inicio)
           l.avisos.push(
-            `${lance.pilar.nome}: armadura da variação dimensionada no nível da base dela (PILAREDI 3.2, "varia armadura").`,
+            `${lance.pilar.nome}: armadura dimensionada no nível ${nivelNome(lancesCol[v.inicio]!.nivel)} (a base da variação, PILAREDI 3.2); este lance a herda.`,
           );
         // a seção do predimensionamento vale em todos os lances da coluna: o aviso também
         if (predim?.modo === "secao" && predim.resultado)
           l.avisos.push(
             `${lance.pilar.nome}: dimensionado com a seção do predimensionamento, ${predim.resultado.b} × ${predim.resultado.h} cm, no lugar da seção da obra.`,
-          );
-        if (lance.pilar.armadura && k !== v.inicio)
-          l.avisos.push(
-            `${lance.pilar.nome}: armadura do pilar ignorada fora do início da variação.`,
           );
         lances.push(l);
       }

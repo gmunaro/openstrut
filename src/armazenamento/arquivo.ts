@@ -423,6 +423,7 @@ class Validador {
         return v;
       },
       rlp: (y, k, cy) => this.booleano(y, k, cy),
+      rigidezVigas: (y, k, cy) => this.booleano(y, k, cy),
     });
   }
 
@@ -507,11 +508,8 @@ class Validador {
             m.rigidez,
           );
       });
-      r.cargaTopo = {
-        normal: this.numero(v, "normal", cc),
-        momentos,
-        ...(v.modo === undefined ? {} : { modo: this.opcao(v, "modo", cc, MODOS_CARGA_TOPO) }),
-      };
+      r.cargaTopo = { normal: this.numero(v, "normal", cc), momentos };
+      if (v.modo !== undefined) r.cargaTopo.modo = this.opcao(v, "modo", cc, MODOS_CARGA_TOPO);
     }
     if (d.cargaBase !== undefined) {
       const cb = `${c}.cargaBase`;
@@ -519,7 +517,6 @@ class Validador {
       r.cargaBase = {
         normal: this.numero(v, "normal", cb),
         momentos: this.momentos(v, cb, ["m", "inclinacao", "vao", "rigidez"], 4),
-        ...(v.modo === undefined ? {} : { modo: this.opcao(v, "modo", cb, MODOS_CARGA_TOPO) }),
       };
     }
     if (d.transicao !== undefined) {
@@ -541,6 +538,8 @@ class Validador {
                 bitola: this.numero(o, "bitola", cb, "positivo"),
               };
             });
+      if (barras && barras.length === 0)
+        this.erro(`${ca}.barras`, "a armadura dada precisa de ao menos uma barra", a.barras);
       const ce = `${ca}.estribo`;
       const e = a.estribo === undefined ? undefined : this.objeto(a.estribo, ce);
       r.armadura = {

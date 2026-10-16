@@ -340,8 +340,11 @@ describe(".COL montado à mão", () => {
       classeAco: "B",
       cobrimentoPilar: 2.5,
     });
-    // com as armaduras do .COL, as variações são as gravadas: "N" (V_168c$ = "0")
-    expect(obra.parametrosPilar).toEqual({ ini: { fyk: 420 }, variaArmadura: 0 });
+    // as variações gravadas vão em Pilar.armadura; a obra fica no padrão "N"; [2] = 4 não
+    // passa do máximo de fábrica (15), e o leitor só aumenta (PIGRAEDI.BAS:969-971)
+    expect(obra.parametrosPilar).toEqual({ ini: { fyk: 420 } });
+    const com20 = importa({ col: COL_MONTADO.replace("[2] 4 [3]", "[2] 20 [3]") }).obra;
+    expect(com20.parametrosPilar?.ini?.maximoVariacoes).toBe(21);
     const barras = [
       { x: 2.5, y: 2.5, bitola: 12.5 },
       { x: 2.5, y: 27.5, bitola: 12.5 },
