@@ -152,7 +152,9 @@ export function leCargasRep(
         const slots = alvo.slots[nivel]!;
         for (let i = 0; i < linha.momentos.length; i++) {
           const mo = linha.momentos[i]!;
-          const v = qbVal(mo.texto);
+          // o original lê o texto gravado, VAL do STR$ cortado (PILGEEDI.BAS:606); o
+          // corrigido, o valor, sem o corte do .REP (D-21)
+          const v = modo === "original" ? qbVal(mo.texto) : mo.valor;
           // inclinação do .RLP pelo rótulo (L_14aad, V_1946 = 2)
           const doRlp = rlp ? inclinacaoDoRlp(rlp.inclinacoes, mo.viga, modo) : undefined;
           slots[k] = {

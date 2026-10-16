@@ -12,7 +12,7 @@ import {
 } from "../__oraculo__/index";
 import { casoVicalc, dadosViga, parametrosDoCaso, type VigaJson } from "./__casos__/index";
 import type { LinhaRep } from "../base/tipos";
-import { corteDuasCasas, linhasArquivoRep, somaReacoesPilares, tituloRep } from "./rep";
+import { corteDuasCasas, linhasArquivoRep, somaReacoesPilares, textoDoRep, tituloRep } from "./rep";
 import { analisaViga } from "./vicalc";
 
 /** O valor bate com o impresso truncado? Trunca para zero o STR$ do SINGLE (7
@@ -74,6 +74,18 @@ describe("corte textual de 2 casas (VIGA.BAS:2415-2419)", () => {
     [2, "2"],
     [6.93, "6.93"],
   ])("%d → %s", (x, texto) => expect(corteDuasCasas(Math.fround(x))).toBe(texto));
+
+  // D-21: sem ponto, o corte deixa o sinal e o 1º dígito (v2par2_viga_varios, P8 e P9:
+  // parcela 30,00 impressa "3" e momento −20 impresso "-2"); o corrigido não corta
+  it.each([
+    [30, "3", "30"],
+    [-20, "-2", "-20"],
+    [-0.6481, "-.64", "-0.65"],
+    [6.93, "6.93", "6.93"],
+  ])("%d: original %s, corrigido %s (D-21)", (x, original, corrigido) => {
+    expect(textoDoRep(Math.fround(x), "original")).toBe(original);
+    expect(textoDoRep(x, "corrigido")).toBe(corrigido);
+  });
 });
 
 describe("caso b: quadro de reações e E2E.REP", () => {

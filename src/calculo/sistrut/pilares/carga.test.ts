@@ -174,6 +174,14 @@ describe("leitura do .REP (PILGEEDI.BAS:530-720)", () => {
     ).toBe(10);
   });
 
+  it("MEP inteiro −20 (D-21): o original lê o texto cortado, 2 tm; o corrigido lê o valor, 20 tm", () => {
+    const mep = { ...momento("-2"), valor: -20 };
+    const m = (modo: "original" | "corrigido") =>
+      leCargasRep([rep(10, 1, [mep])], [col], modo)[0]!.slots[1]![0]!;
+    expect(m("original").m).toBe(2);
+    expect(m("corrigido")).toMatchObject({ m: 20, vao: 4 });
+  });
+
   it("slot com |M| ≤ 0,01 é sobrescrito: '0.00' e '1.50' dão [1,50] (606-625)", () => {
     const [l] = leCargasRep([rep(10, 1, [momento("0.00"), momento("-1.50")])], [col], "corrigido");
     expect(l!.slots[1]!.map((x) => x.m)).toEqual([1.5, 0, 0, 0]);

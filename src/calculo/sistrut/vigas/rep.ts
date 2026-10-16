@@ -7,6 +7,10 @@
 // em SINGLE das parcelas truncadas (caso b, P5: 6,93 + 10,44 = 17,37). Modo
 // "corrigido" (R5, PLANO.md 4.2): soma as reações sem truncar e arredonda só o total
 // em 2 casas.
+//
+// Texto das parcelas e dos momentos: o original corta STR$(x) em INSTR(".") + 2
+// (VIGA.BAS:2501, 2506), e sem ponto (valor inteiro) sobram o sinal e o 1º dígito: 30
+// vira "3" e −20 vira "-2" (D-21). O corrigido grava o número com 2 casas, sem o corte.
 import { atribuicao, qbInt, qbStr, qbUsing } from "../base/f32";
 import type {
   DadosViga,
@@ -53,13 +57,13 @@ export const somaReacoesPilares: SomaReacoesPilares = (analises, vigas, parametr
       const r = parametros.reacaoNoPilar === "maxima" ? apoio.rMax : apoio.r;
       const valor = modo === "original" ? s(qbInt(r * 100) / 100) : r;
       linha.total = s(linha.total + valor);
-      linha.parcelas.push({ viga: viga.nome, valor, texto: textoParcela(valor, modo) });
+      linha.parcelas.push({ viga: viga.nome, valor, texto: textoDoRep(valor, modo) });
       const [mEsq, mDir] = analise.momentosPilar;
       if (mEsq !== 0 && k === 0) {
-        linha.momentos.push(momento(viga, mEsq, 1, viga.tramos[0]?.vao ?? 0));
+        linha.momentos.push(momento(viga, mEsq, 1, viga.tramos[0]?.vao ?? 0, modo));
       }
       if (mDir !== 0 && k === n) {
-        linha.momentos.push(momento(viga, mDir, n, viga.tramos[n - 1]?.vao ?? 0));
+        linha.momentos.push(momento(viga, mDir, n, viga.tramos[n - 1]?.vao ?? 0, modo));
       }
     }
   }
@@ -68,12 +72,14 @@ export const somaReacoesPilares: SomaReacoesPilares = (analises, vigas, parametr
   return linhas;
 };
 
-function textoParcela(valor: number, modo: ModoSistrut) {
-  return corteDuasCasas(modo === "original" ? valor : Math.round(valor * 100) / 100);
+/** Texto de uma parcela ou de um momento no .REP: o corte do STR$ no original; no
+ *  corrigido, o número com até 2 casas, sem o corte (D-21): 30 → "30", −0,6481 → "-0.65". */
+export function textoDoRep(valor: number, modo: ModoSistrut) {
+  return modo === "original" ? corteDuasCasas(valor) : String(Math.round(valor * 100) / 100);
 }
 
-function momento(viga: DadosViga, valor: number, apoio: number, vao: number) {
-  return { viga: viga.nome, valor, texto: corteDuasCasas(valor), apoio, vao };
+function momento(viga: DadosViga, valor: number, apoio: number, vao: number, modo: ModoSistrut) {
+  return { viga: viga.nome, valor, texto: textoDoRep(valor, modo), apoio, vao };
 }
 
 /** Texto de uma parcela no .REP: "6.93 (V2) + " (VIGA.BAS:2415). */
