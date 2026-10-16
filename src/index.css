@@ -2,6 +2,13 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Celular em retrato ou deitado. As mesmas consultas estão em src/telas/tela.ts
+   (useCompacto), que troca a estrutura das telas; mude as duas juntas. */
+@custom-variant compacto {
+  @media screen and (max-width: 767px), screen and (max-height: 500px) {
+    @slot;
+  }
+}
 
 /* Tema escuro sóbrio (base zinc do shadcn/ui, destaque azul-aço). O app põe a
    classe .dark no <html>; na impressão as variáveis voltam para papel branco. */
@@ -83,8 +90,70 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* o Chrome do Android não aumenta a letra sozinho no celular deitado */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* sem zoom por toque duplo: o toque logo depois de outro (lançar e escolher a próxima
+       ferramenta) vale na hora, sem o navegador esperar um segundo toque. A pinça na
+       página continua; na planta, a pinça é do desenho (touch-none no svg). */
+    touch-action: manipulation;
+  }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Moldura do app (src/routes/__root.tsx, que tem outro dono; por isso o seletor pela
+   estrutura): ocupa a altura visível (dvh: sem a barra do navegador do celular, e
+   encolhe com o teclado virtual) e deixa livres as bordas do aparelho (safe-area:
+   entalhe da câmera e barra de gestos, no app instalado e com viewport-fit=cover). */
+@media screen {
+  #root > div:first-child {
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  #root > div:first-child > footer {
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  }
+}
+/* celular: o aviso de conferência continua à vista, em letra menor */
+@media screen and (max-width: 767px), screen and (max-height: 500px) {
+  #root > div:first-child > footer {
+    padding-top: 0.125rem;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+}
+
+/* Monitores grandes com pouca densidade (4K a 100%): a interface toda é medida em rem,
+   então aumentar a letra-base aumenta tudo junto. Com densidade 2 a largura em CSS
+   fica em 1920 px e nada muda. */
+@media screen and (min-width: 2400px) {
+  html {
+    font-size: 125%;
+  }
+}
+@media screen and (min-width: 3200px) {
+  html {
+    font-size: 150%;
+  }
+}
+
+/* No celular, campos com altura de alvo de toque (44 px) e letra de 16 px, que não
+   faz o navegador ampliar a página ao focar. */
+@layer components {
+  @variant compacto {
+    input:not([type="checkbox"], [type="radio"], [type="file"]),
+    select,
+    [data-slot="select-trigger"] {
+      min-height: 2.75rem;
+      font-size: 1rem;
+    }
+    input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
   }
 }
 
@@ -111,8 +180,14 @@
     font-size: 9pt;
   }
   /* o Table põe overflow-x-auto: no papel isso corta a coluna da direita */
-  [data-slot="table-container"] {
+  [data-slot="table-container"],
+  [data-slot="tabela-rolagem"] {
     overflow: visible;
+  }
+  /* a primeira coluna fixa (tabela.tsx) só faz sentido na tela */
+  [data-slot="table-head"],
+  [data-slot="table-cell"] {
+    position: static !important;
   }
   table {
     break-inside: auto;

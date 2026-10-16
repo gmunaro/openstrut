@@ -24,7 +24,10 @@ export function ListaFalhas({
       </p>
       <ul className="text-destructive grid gap-0.5 text-xs">
         {falhas.map((a, i) => (
-          <li key={i} className="grid grid-cols-[minmax(6rem,auto)_1fr] gap-x-3">
+          <li
+            key={i}
+            className="grid grid-cols-[minmax(6rem,auto)_1fr] gap-x-3 compacto:grid-cols-1"
+          >
             <span className="font-medium">{a.local || "obra"}</span>
             <span>
               {a.texto}
@@ -55,10 +58,14 @@ export function ListaAvisos({
       </p>
       <ul className="grid gap-0.5 text-xs">
         {avisos.map((a, i) => (
-          <li key={i} className="grid grid-cols-[minmax(6rem,auto)_minmax(3rem,auto)_1fr] gap-x-3">
+          // celular: local e elemento numa linha, o texto embaixo com a largura toda
+          <li
+            key={i}
+            className="compacto:grid-cols-[auto_1fr] compacto:border-b compacto:border-aviso/20 compacto:py-1 compacto:last:border-0 grid grid-cols-[minmax(6rem,auto)_minmax(3rem,auto)_1fr] gap-x-3"
+          >
             <span className="text-muted-foreground">{a.local || "obra"}</span>
             <span className="font-medium">{a.elemento}</span>
-            <span>
+            <span className="compacto:col-span-2">
               {a.texto}
               {comOpcoes && a.opcao && <BotaoOpcao opcao={a.opcao} elemento={a.elemento} />}
             </span>

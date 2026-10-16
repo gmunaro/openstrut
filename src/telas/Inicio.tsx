@@ -162,7 +162,7 @@ export function Inicio() {
   };
 
   return (
-    <main className="mx-auto grid w-full max-w-4xl gap-8 p-8">
+    <main className="compacto:gap-6 compacto:p-4 mx-auto grid w-full max-w-4xl gap-8 p-8">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{NOME_APP}</h1>
         <p className="text-muted-foreground mt-1 text-sm">

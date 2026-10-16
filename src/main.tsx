@@ -4,12 +4,16 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 import { ouvirInstalacao } from "./telas/instalar";
+import { manterCampoVisivel } from "./telas/tela";
 
 // tema escuro do shadcn/ui (index.css); a impressão volta para papel branco
 document.documentElement.classList.add("dark");
 
 // o pedido de instalação (Chrome, Edge) pode chegar antes da tela inicial montar
 ouvirInstalacao();
+
+// teclado virtual do celular: o campo em foco não fica embaixo dele
+manterCampoVisivel();
 
 // BASE_URL é o `base` do Vite: "/" no instalador desktop, "/openstrut/" no GitHub Pages
 const router = createRouter({ routeTree, basepath: import.meta.env.BASE_URL });

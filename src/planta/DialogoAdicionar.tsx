@@ -48,7 +48,7 @@ export function DialogoAdicionar({
 }) {
   return (
     <Dialog open={aberto} onOpenChange={aoMudarAberto}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent formaCompacta="telaCheia" className="sm:max-w-md">
         {/* o formulário só existe com o diálogo aberto: cada abertura começa com os padrões */}
         <Formulario pav={pav} aoCancelar={() => aoMudarAberto(false)} aoCriar={aoCriar} />
       </DialogContent>
