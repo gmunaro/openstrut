@@ -358,11 +358,8 @@ describe("predimensionamento por coluna (PILAREDI.BAS:3713-3740, 3976-4187)", ()
     );
     expect(bateComImpresso(valorOraculo(caso, "C.pre.tensaoMaxN"), t.tensaoNormal)).toBe(true);
     expect(bateComImpresso(valorOraculo(caso, "C.pre.tensaoMaxNM"), t.tensaoFlexao)).toBe(true);
-    // a tela mostra 17,73 para Nk = 17,37 + 0,368 = 17,738 (INFERIDO: trunca)
-    const [carga] = cargasPilares([rep(17.37, 1)], [coluna([0, 3], d25)], pip, "original");
-    expect(Math.trunc(carga!.nk * 100) / 100).toBe(
-      Number(valorOraculo(caso, "C.pre.carga").impresso),
-    );
+    // "CARGA": INT((0,368 + 17,37)·100)/100 = 17,73, sem o SINGLE do Nk (PILAREDI.BAS:4248)
+    expect(bateComImpresso(valorOraculo(caso, "C.pre.carga"), t.carga)).toBe(true);
   });
 
   it("seção automática: área 17,37/((3,555 − 0,09)·1,5 % + 0,09) = 122 cm² → 14 cm; com o pp de 14×14 σ2 = 0,1127 > 0,1125 → 20 cm", () => {

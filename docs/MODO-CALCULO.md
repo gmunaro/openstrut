@@ -46,10 +46,15 @@ Uma obra da V2 vira a entrada do original assim (`sistrut/obra.ts`):
 | `viga.pesoProprio` (kN/m, opcional) | o peso digitado no LAJEGEOM, gravado em kg/m inteiro (CINT). Ausente: bw·h·densidade. O mais comum é o predominante, os outros viram exceções. |
 | `viga.cargaLinear` | alvenaria sobre o eixo da viga. |
 | nomes de pilares e vigas | o .VIG grava J = 1 + (número do pilar)/100000 e um bit muda o x impresso. Para bater no último dígito, use os nomes e números do original. |
-| pilares | uma coluna por posição, da fundação (cota 0) até o último pavimento em que o pilar existe; o .REP de cada pavimento (e de cada repetição) vai para o seu nível; vínculo "continuidade" em todos os níveis. |
+| pilares | uma coluna por posição, da fundação (cota 0) até o último pavimento em que o pilar existe; o .REP de cada pavimento (e de cada repetição) vai para o seu nível. O total de cada linha vai ao PILGEEDI como ele o lê do arquivo, VAL do texto gravado com PRINT USING "#####.##" (17,37, não a soma 17,3699989 em SINGLE). Os campos de pilar estão em "Pilares", abaixo. |
+| `pilar.secao`, `pilar.rotacao` (opcionais) | seção circular (com vazado) ou poligonal do PILDADOS, em cm; rotação da retangular, graus. Ausente = retângulo b × h sem giro. |
+| `pilar.vinculos`, `pilar.vinculosTopo` (opcionais) | vínculo do nível (A_130a): na base do lance; o do topo só no último lance da coluna. Ausente = continuidade. |
+| `pilar.excentricidade`, `pilar.vento`, `pilar.cargaTopo` (opcionais) | excentricidade da seção em relação à de baixo (A_1338), vento do lance (A_12dc) e a carga do nível do topo como o PILGEEDI a guarda (A_1280), somada ao .REP. |
+| `pilar.verificacoes` (opcional) | PILAR opção 6 com a seção do lance e as barras dadas; esforços digitados ou os do lance. |
+| `obra.parametrosPilar` (opcional) | PILAR.INI (`ini`), .PIP (`pip`) e o predimensionamento (PILAREDI 3.1). Ausente = os de fábrica, com o máximo de 200 barras, e sem predimensionamento. |
 | `obra.otimizaNegativos` (opcional) | roda a otimização dos negativos (LAJECALC 6). Ausente = roda. No original é um passo que o usuário escolhe: use `false` para casos rodados sem ele (ex.: v2par_laje_r2). |
 
-Exemplos prontos: `sistrut/__e2e__/obraE2E.ts` (casos a, b e c) e `sistrut/__e2e__/obraVBX.ts` (v2par_viga_fluxo). Para uma obra que o original gravou, use o importador abaixo.
+Exemplos prontos: `sistrut/__e2e__/obraE2E.ts` (casos a, b e c) e `sistrut/__e2e__/obraVBX.ts` (v2par_viga_fluxo). Os casos de pilar estão montados em `sistrut/pilaresDaObra.test.ts`. Para uma obra que o original gravou, use os importadores abaixo.
 
 ### Importador de obra do SISTRUT (.LAJ)
 
@@ -67,6 +72,38 @@ O teste `armazenamento/sistrut/laje.test.ts` importa o .LAJ que o original gravo
 ### Flecha do corrigido em laje com polígono
 
 A flecha (R1) é a da placa retangular: com polígono, os vãos são a maior corda horizontal e a maior vertical (9 retas que dividem a faixa em 10, a regra das cordas do LAJECALC 2; `maiorCorda` e `LajeDoPainel.vaosFlecha` em `sistrut/obra.ts`), com os vínculos por bordo da V2. Na laje em L 6 × 5 dá 6 × 5. É aproximação: não há fórmula de flecha para a placa poligonal.
+
+
+### Pilares
+
+`sistrut/pilaresDaObra.ts` liga os campos de pilar ao porte (`sistrut/pilares/`). O pilar de um pavimento é o lance que vai do nível de baixo até o nível do pavimento; o nível k da coluna é a base do lance k, contado de baixo para cima (as repetições de um pavimento-tipo são lances diferentes com o mesmo pilar).
+
+| Campo | No original | Como entra |
+|---|---|---|
+| `secao` | PILDADOS tipo 2 (D, Dint) ou 3 (vértices) | `SecaoPilar` do nível da base do lance. `b` e `h` ficam como a caixa da seção, para a planta, o DESDIM (largura do apoio) e o fluxo da V2. Poligonal anti-horária: área negativa no original (D-6), invertida no corrigido. |
+| `rotacao` (graus) | A_1338(c, s, 3) da retangular | os vértices (0,0) (0,h) (b,h) (b,0) giram em torno da origem ao carregar a seção, x' = cos·x − sin·y, y' = sin·x + cos·y, com o π em SINGLE (PILAREDI.BAS:1630-1631 e 2579-2580; `verticesRetangulo` em `pilares/secao.ts`). Na verificação, as barras dadas no retângulo sem giro giram com ele. |
+| seção por lance | A_1338: níveis seguidos com a mesma geometria são uma seção | a seção de cada pavimento; o topo da coluna fica com a do último lance. Num pavimento-tipo todas as repetições têm a mesma seção: para variar, separe o pavimento. |
+| `vinculos`, `vinculosTopo` | A_130a, código Rx/Ry convertido em índice da matriz do .PIP | `engaste`, `semiEngaste`, `continuidade`, `livre` = índices 0..3 de `coeficienteFlambagem`; le = Δcota × matriz(inferior, superior), descendo e subindo pelos níveis livres (PILAREDI.BAS:4721-4771). |
+| `excentricidade` (cm) | A_1338(s, 4 e 5), CINT(100·cm) | na troca de seção, −(ΣN − Nj − Nj+1)·e vai ao topo do lance de baixo (PILAREDI.BAS:7431-7433). |
+| `vento` (kN, kN·m, graus) | A_12dc: normal e dois momentos com ângulo | normal somada ao Nk do lance; momentos somados ao topo, à base e ao caso "f" (PILAREDI.BAS:7614-7626). |
+| `cargaTopo` (kN, kN·m) | A_1280: "Normal + Momento" ou outro .REP | `NivelColuna.cargaAdicional` do nível do topo do lance: a normal soma com a do .REP do pavimento e os momentos ocupam os slots livres depois dos dele, **slot a slot como o PILGEEDI grava**, sem o ABS da leitura do .REP. O PILAREDI reparte o M com o sinal (PILAREDI.BAS:7505-7506): o digitado negativo (PILGEEDI.BAS:2407) fica negativo; o lido de um .REP é gravado \|M\| com vão·(−SGN(M)) (606-608), e a rigidez só conta com vão > 0 (7502-7503). O digitado com Jvig/Lvig grava vão 1 e a rigidez. É o que permite uma obra só de pilares, sem vigas. |
+| `verificacoes` | PILAR opção 6 | `verificaPilar` com a seção do lance (a que o PILAREDI usou, inclusive a do predimensionamento com "secao") e as barras dadas (cm na origem da seção; na retangular, o canto inferior esquerdo; bitola da tabela do PILAR.INI). Com `esforcos` (kN, kN·m, m): uma verificação; sem eles, uma por lance, com Nk, Mk do caso "e" e le do PILAREDI. Resultado em `resultado.sistrut.verificacoes`. Onde o original fica em laço (D-2), o caso sai com `erro: "nao-converge"` e aviso. |
+| `parametrosPilar.ini` | PILAR.INI (PILAR.BAS:566-588) | por cima de `PARAMETROS_PILAR`, nos dois modos (SINGLE no original). fck e fyk em MPa (no original, MPa/100 = t/cm², a convenção de `materiais.fck`), classe e γ: materiais dos pilares (`resultado.sistrut.materiaisPilar`), no lugar dos da obra. `coeficienteTensao` é o V_0dec, o [12] do .COL ("multiplicador da unidade de fck e fyk para t/cm²", PILAR.BAS:569 e 645): o PILAREDI multiplica fck e fyk por ele em cada uso (PILAREDI.BAS:1594, 2156-2171, 3671-3677, 5461, 6657); no predimensionamento também as admissíveis e o σs a 2 ‰, e a tela divide as tensões por ele (4196-4214). O predimensionamento do porte usava 1 fixo; agora usa o do PILAR.INI. |
+| `parametrosPilar.pip` | .PIP (PILAREDI.BAS:1834-1890) | por cima de `PARAMETROS_PIP`, nos dois modos. Densidade em kN/m³ (÷ 9,80665 para t/m³). Um cobrimento editado vale também no corrigido, no lugar de `materiais.cobrimentoPilar`. |
+| `parametrosPilar.predimensionamento` | PILAREDI 3.1 desde a fundação | `"tensoes"`: com a seção do nível 0 (B e H digitados), só as tensões. `"secao"`: o quadrado que o PILAREDI escolhe (múltiplo de 5, mínimo 14 cm) passa a ser a seção da coluna inteira, com aviso. Resultado em `resultado.sistrut.predimensionamentos`; a "CARGA" da tela é INT((pp − redução + ΣN)·100)/100 sem o SINGLE do Nk (PILAREDI.BAS:4248). |
+
+Na projeção em SI, `ResultadoPilar.verificacoes` (kN, kN·m) e `ResultadoPilar.predimensionamento` (MPa, kN; só no lance de baixo). O fluxo da V2 (NBR 6118) ignora esses campos e avisa no pilar e na obra.
+
+O importador de pilares do original (`armazenamento/sistrut/pilar.ts`) lê o .COL (gravado pelo PIGRAEDI), o .PIP, o .PIL e o .REP e gera uma obra só de pilares ou completa uma obra existente. Os formatos estão no cabeçalho do arquivo, com as linhas do .BAS. Decisões:
+
+- o .REP vai à primeira coluna com o número do pilar que cobre o nível (`ColunaEdificio.nivelInferior`; PILGEEDI.BAS:556), como o PILGEEDI;
+- o [12] da linha de parâmetros vai para `parametrosPilar.ini.coeficienteTensao`; fck e fyk ficam como gravados;
+- a rotação da retangular vai para `Pilar.rotacao`; a armadura do .COL (A_141e/A_13f0) vira `verificacoes[0]` com as barras e o estribo (`VerificacaoPilarObra.estribo`, que a verificação não usa);
+- carga no nível da fundação e vento no nível do topo da coluna são descartados com aviso: o PILAREDI não os usa em nenhum lance.
+
+Nenhum run do oráculo tem .COL com seção ou armadura gravada (todos com `[4] 0 [5] 0`): esses blocos foram conferidos com um .COL montado à mão pelo PRINT # do PIGRAEDI.
+
+**D-19 (defeito novo, .PIL circular no PILAREDI):** digitada, a seção circular copia D para V_0fbc (PILAREDI.BAS:3078-3089); lida de um .PIL, D vai para V_0fb8 (3527-3529) e nada é copiado. O S_2267a monta o círculo com V_0fbc (1662) e o A_1338 grava CINT(|V_0fbc|) (3843): vale o diâmetro que sobrou da seção anterior da sessão. O PILAR (opção 6) lê o mesmo .PIL certo. O valor que sobrou não está em nenhum arquivo, então o modo original não tem como reproduzi-lo a partir do .PIL: o importador usa o D gravado (o certo) e avisa. Quando a seção chega por um .COL, o .COL já traz o diâmetro que o PILAREDI gravou, e a obra reproduz o original.
 
 ### Formato de `resultado.sistrut`
 
@@ -89,6 +126,8 @@ A flecha (R1) é a da placa retangular: com polígono, os vãos são a maior cor
   - `otimizacaoParada` (`OtimizacaoParada`, só no original): onde a otimização dos negativos entra em laço sem fim (R3), a tela parada: laje, lado, relação que o laço tenta gravar, código e os lados com M−, As e Mneg/Mpos. O pavimento leva o aviso "não converge" e os esforços de antes da otimização (v2par_laje_r3).
 - `colunas[]`: as colunas do PILGEEDI (níveis, cotas, seções e vínculos). `lances[]`: um por coluna e nível, com `pavimentoId`, `repeticao`, `pilarId` e `carga` (Nk, Mk do caso "e", da flambagem e da base, peso próprio, le). Cada lance traz o `dimensionamento` do PILAREDI: λ, casos 1e/1f/2e/2f (Mk atuante, MR de 1ª e 2ª ordem, ângulo da LN, 1/r, x/d, deformações, veredito), As, taxa, barras, estribo e recusa.
 - `quadros[]` e `resumoVigas`: quadros das vigas e resumo do DESENHO (item 4).
+- `fundacoes[]`: o resumo de cargas na fundação de cada coluna (PILAREDI.BAS:960-1000): acumulada, peso próprio, carga na fundação e momentos da base.
+- `materiaisPilar`: os materiais dos pilares (os da obra com o PILAR.INI da obra por cima). `verificacoes[]` (`VerificacaoPilarSistrut`): pavimento, pilar, índice em `Pilar.verificacoes`, repetição e nível quando os esforços são do lance, a entrada do PILAR opção 6 e o resultado (área, J, λ, situação e os casos com o ELU). `predimensionamentos[]` (`PredimensionamentoSistrut`): coluna, pilar, modo e o resultado do PILAREDI 3.1 (lado, tensões e admissíveis, tentativas, carga).
 - `avisos` e `falhas[]` (`{ pavimentoId, texto }`): carga que não chega à fundação (pilar que não continua até a fundação, linha do .REP sem coluna). A projeção as põe em `ResultadoPavimento.falhas`, com as lajes sem cálculo, as vigas não processadas e os bordos de laje sem viga.
 
 Na projeção em SI, `PilarResultado.mkX/mkY` é o Mk característico (o "Mx/My" impresso pelo PILAR/PILAREDI) e `mdX/mdY` vale γf × Mk. Com μ > 1, o M+ principal (sem redução) está em y: a projeção põe `my` e a armadura principal do LAJEPROC em y. Bitolas e espaçamentos saem nominais (6,3, não 6,3000002), e `BarrasNaAlma.grupos` traz os dois grupos do arranjo de viga do .DSP.
@@ -161,8 +200,9 @@ Os itens B a H deste documento foram feitos contra a V1 antiga, a reconstrução
 ## O que ficou sem verificação no oráculo
 
 - **Modo corrigido:** não há número de referência para ele. Cada correção tem teste com conta à mão na família, e o corrigido roda a obra E2E sem aviso.
-- **Pilares com momento de viga** (MEP do .REP), pelo motor: o caso c só tem o P5, sem momento. Os casos v2par_pilar_* foram conferidos na família (T5), não pela obra.
-- **Vários pavimentos e pavimento-tipo contra o original:** só a acumulação da família foi conferida (v2par_pilar_niveis, T5). Pelo motor, só os testes genéricos.
+- **Pilares com momento de viga** (MEP do .REP), pelo motor: nenhum caso de pilar do oráculo tem momento. Os casos de pilar (caso_c_pilar, caso_c_pilaredi, retrad_pil_verif2/trava/secoes/poliinv, v2par_pilar_mk/lambda/niveis/trava) batem pelo motor, todos os valores (`sistrut/pilaresDaObra.test.ts`); o v2par_pilar_niveis com o pavimento E2E repetido 3 vezes.
+- **Vínculos, vento, excentricidade, rotação e `cargaTopo` com momento:** nenhum caso do oráculo dimensiona com eles (o retrad_pil_geo só os grava no .COL). A ligação foi conferida pelo motor com contas à mão (`pilaresDaObra.test.ts`). O retrad_pil_dim (com o resumo na fundação) e o caso_c_pilaredi também batem a partir das obras importadas dos .COL e do E2E.REP do oráculo.
+- **Pavimento-tipo com vigas contra o original:** a acumulação, só no v2par_pilar_niveis (uma coluna).
 - **DESDIM/DESINIT das vigas da E2E:** o oráculo não detalhou essas vigas. A regra foi conferida na viga do retrad_des_det e nos v2par_des_*, e o volume e a fôrma da E2E saem de conta à mão (2,79 m³ e 46,34 m², `modoCalculo.test.ts`).
 - **Campos de laje sem caso no oráculo:** polígono que não é retângulo, pré-moldada, laje comum não calculada, pilar-parede, armaduras impostas e ângulo na montagem (todos os runs são retângulos maciços; o ângulo 90° do LAJECALC tem o retrad_laje_calc2). Têm teste com conta à mão (`sistrut/obra.lajes.test.ts` e as variantes do E2E.LAJ em `armazenamento/sistrut/laje.test.ts`): equilíbrio e triângulos de 45° da laje em L, faixa de uma direção da pré-moldada a 0° e a 90°, fatores de direção do tipo 3 a −1°, triângulo de 4 m² no pilar-parede, positiva imposta que basta e negativa imposta que faz a otimização reduzir o i. A divisão por zero do tipo 3 sem μ vem da leitura do LAJECALC.BAS:7239 e do ON ERROR, não de um run.
 - **Detalhamento da tela:** é pelas regras da V2, não pelo DESINIT.
@@ -174,12 +214,17 @@ Estes recursos do original não têm campo na obra da V2, então os casos que de
 
 - lajes: coeficiente i digitado trecho a trecho no LAJECALC 1 (a obra só tem engastado = 22, apoiado e livre; o código menor sai só da otimização); grupo da laje (A_10cc(·,3)) como campo (a V2 deixa 0 em todas; o importador traduz grupos diferentes em lados apoiados); dois trechos engastados sem vizinha num lado comum a duas lajes (viram continuidade); continuidade entre lados que só coincidem em parte; μ informado igual a 1; a parada da opção 5 "todas" nas lajes seguintes a um tipo 3 sem μ;
 - montagem: a escolha "Vx apoia em Vy" do LAJEMONT nos cruzamentos sem pilar (não fica no .LAJ e pediria um campo de viga; vale a regra da V2) e os apoios das vigas nas pontas de um pilar-parede (a V2 põe o pilar no centro do trecho);
-- os parâmetros do .DSP, do VIGA.INI e do .PIP (só os padrões "SISTRUT"; os do .LAP estão em `obra.parametrosLaje`);
+- os parâmetros do .DSP e do VIGA.INI (só os padrões "SISTRUT"; os do .LAP estão em `obra.parametrosLaje`, os do PILAR.INI e do .PIP em `obra.parametrosPilar`);
 - acidental gerada por % (v2par_viga_r6), acidentais "S" (envoltória) e reação máxima;
 - cargas concentradas em viga, momentos externos, engaste nas extremidades e J por tramo;
 - seção T, seções diferentes por tramo e acidentais próprias da viga (v2par_des_especial);
-- pilares não retangulares, vínculos por nível, vento e excentricidade entre seções;
-- predimensionamento de pilar (PILAREDI 3.1) e verificação de seção dada (PILAR opção 6). A verificação existe na família, `verificaPilarSistrut` em `sistrut/pilares/verificacao.ts`, mas não entra no cálculo da obra.
+- pilar que começa acima da fundação (coluna do PILGEEDI com nível inferior > 1, sobre viga de transição): o motor só monta colunas desde a cota 0 e marca a falha;
+- variação de armadura ao longo da coluna (PILAREDI 3.2, "varia armadura de n em n níveis", posição, armadura proposta editada): o motor dimensiona cada lance sozinho, como "varia de 1 em 1 nível" (v2par_pilar_niveis); "N" (uma armadura para a coluna) e a armadura editada não têm campo. A armadura editada pode ser conferida por `Pilar.verificacoes`;
+- leitura de vários .REP no mesmo nível com "máxima" (PILGEEDI.BAS:588) numa obra com vigas: `cargaTopo` sempre soma ao .REP do pavimento (o importador resolve "máxima" e "soma" entre os .REP que lê);
+- o diâmetro da seção anterior da sessão que o PILAREDI usa com um .PIL circular (D-19, acima);
+- .RLP (cargas de laje somadas ao N, PILGEEDI.BAS:1010-1016);
+- carga no nível da fundação e vento no nível do topo da coluna: o PILAREDI não os usa em nenhum lance;
+- quantitativos e detalhamento da tela de pilar circular ou poligonal: a V2 usa o retângulo b × h.
 
 ## Casos de referência
 

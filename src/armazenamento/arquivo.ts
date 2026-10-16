@@ -18,6 +18,12 @@ import {
   type Ponto,
   type Viga,
   type Vinculo,
+  type IniPilar,
+  type ParametrosPilarObra,
+  type PipPilar,
+  type SecaoNaoRetangular,
+  type VinculosPilar,
+  VINCULOS_PILAR,
 } from "../dominio/obra";
 import type {
   Alvenaria,
@@ -257,7 +263,256 @@ class Validador {
       pavimentos: this.lista(d.pavimentos, "obra.pavimentos").map((p, i) =>
         this.pavimento(this.objeto(p, `pavimentos[${i}]`), `pavimentos[${i}]`),
       ),
+      // campo opcional novo: ausente = parâmetros de fábrica dos pilares
+      ...(d.parametrosPilar === undefined
+        ? {}
+        : {
+            parametrosPilar: this.parametrosPilar(
+              this.objeto(d.parametrosPilar, "obra.parametrosPilar"),
+            ),
+          }),
     };
+  }
+
+  // ---- pilares pela NB-1/78 (SISTRUT): campos opcionais, ausentes = padrão
+
+  /** Copia só os campos presentes, cada um validado pelo leitor dado. */
+  private parcial<T>(
+    d: Dados,
+    c: string,
+    leitores: { [K in keyof T]-?: (d: Dados, campo: string, c: string) => T[K] },
+  ): Partial<T> {
+    const r: Partial<T> = {};
+    for (const chave of Object.keys(d)) {
+      const ler = (
+        leitores as Record<string, ((d: Dados, campo: string, c: string) => unknown) | undefined>
+      )[chave];
+      if (!ler) {
+        this.erro(c, `campo desconhecido "${chave}"`, chave);
+        continue;
+      }
+      (r as Record<string, unknown>)[chave] = ler(d, chave, c);
+    }
+    return r;
+  }
+
+  private parametrosPilar(d: Dados): ParametrosPilarObra {
+    const c = "obra.parametrosPilar";
+    const num =
+      (lim: "qualquer" | "positivo" | "naoNegativo" = "qualquer") =>
+      (x: Dados, campo: string, cx: string) =>
+        this.numero(x, campo, cx, lim);
+    const bool = (x: Dados, campo: string, cx: string) => this.booleano(x, campo, cx);
+    const tabela =
+      <T>(n: number, linha: (x: Dados, cx: string) => T) =>
+      (x: Dados, campo: string, cx: string) => {
+        const l = this.lista(x[campo], `${cx}.${campo}`);
+        if (l.length !== n) this.erro(`${cx}.${campo}`, `esperadas ${n} linhas`, l.length);
+        return l.map((y, i) =>
+          linha(this.objeto(y, `${cx}.${campo}[${i}]`), `${cx}.${campo}[${i}]`),
+        );
+      };
+    const ini = (x: Dados, campo: string, cx: string) =>
+      this.parcial<IniPilar>(this.objeto(x[campo], `${cx}.${campo}`), `${cx}.${campo}`, {
+        maximoBarras: (y, k, cy) => {
+          const v = this.numero(y, k, cy, "positivo");
+          if (!Number.isInteger(v)) this.erro(`${cy}.${k}`, "esperado um número inteiro", v);
+          return v;
+        },
+        coeficienteMedida: num("positivo"),
+        coeficienteForca: num("positivo"),
+        coeficienteTensao: num("positivo"),
+        fck: num("positivo"),
+        fyk: num("positivo"),
+        classeAco: (y, k, cy) => this.opcao(y, k, cy, CLASSES_ACO),
+        bitolas: tabela(13, (y, cy) => ({
+          bitola: this.numero(y, "bitola", cy, "positivo"),
+          area: this.numero(y, "area", cy, "naoNegativo"),
+        })),
+        multiplicadorEc: num("positivo"),
+        excentricidadeMinima: num("naoNegativo"),
+        verificaH30: bool,
+        excentricidades: (y, k, cy) => this.opcao(y, k, cy, EXCENTRICIDADES),
+        secoesSimetricas: bool,
+        lambda2aOrdem: num("naoNegativo"),
+        lambdaFluencia: num("naoNegativo"),
+        lambdaProcessoExato: num("naoNegativo"),
+        coeficienteFluencia: num("naoNegativo"),
+        fatorNkFluencia: num("positivo"),
+        fatorCargaFluencia: num("positivo"),
+        gamaF: num("positivo"),
+        gamaC: num("positivo"),
+        gamaS: num("positivo"),
+      });
+    const pip = (x: Dados, campo: string, cx: string) =>
+      this.parcial<PipPilar>(this.objeto(x[campo], `${cx}.${campo}`), `${cx}.${campo}`, {
+        tensaoAdmissivelNormal: num("positivo"),
+        tensaoAdmissivelFlexao: num("positivo"),
+        taxaIdealPredimensionamento: num("naoNegativo"),
+        cobrimento: num("naoNegativo"),
+        reduzAcidentalFundacao: bool,
+        reduzAcidentalDimensionamento: bool,
+        pesoProprio: bool,
+        densidade: num("naoNegativo"),
+        porcentagemAcidental: num("naoNegativo"),
+        multiploMedida: num("positivo"),
+        medidaMinima: num("positivo"),
+        taxaMinimaCalculada: num("naoNegativo"),
+        taxaMinimaReal: num("naoNegativo"),
+        taxaMaxima: num("positivo"),
+        traspasseNaTaxa: bool,
+        misturaBitolas: bool,
+        ordemBitolaMinima: (y, k, cy) => {
+          const v = this.numero(y, k, cy, "naoNegativo");
+          if (!Number.isInteger(v) || v > 12)
+            this.erro(`${cy}.${k}`, "esperado um inteiro de 0 a 12", v);
+          return v;
+        },
+        bitolas: tabela(13, (y, cy) => ({
+          bitola: this.numero(y, "bitola", cy, "positivo"),
+          area: this.numero(y, "area", cy, "naoNegativo"),
+          espacamentoMinimo: this.numero(y, "espacamentoMinimo", cy, "naoNegativo"),
+          coluna4: this.numero(y, "coluna4", cy, "naoNegativo"),
+        })),
+        coeficienteFlambagem: (y, k, cy) => {
+          const l = this.lista(y[k], `${cy}.${k}`);
+          if (l.length !== 4) this.erro(`${cy}.${k}`, "esperada uma matriz 4 × 4", l.length);
+          return l.map((linha, i) => {
+            const v = this.lista(linha, `${cy}.${k}[${i}]`);
+            if (v.length !== 4) this.erro(`${cy}.${k}[${i}]`, "esperada uma linha de 4", v.length);
+            return v.map((n, j) => {
+              if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
+              this.erro(`${cy}.${k}[${i}][${j}]`, "esperado um número maior que zero", n);
+              return 0;
+            });
+          });
+        },
+        estriboPorBitola: tabela(13, (y, cy) => ({
+          bitola: this.numero(y, "bitola", cy, "naoNegativo"),
+          espacamento: this.numero(y, "espacamento", cy, "naoNegativo"),
+        })),
+      });
+    return this.parcial<ParametrosPilarObra>(d, c, {
+      ini,
+      pip,
+      predimensionamento: (y, k, cy) => this.opcao(y, k, cy, PREDIMENSIONAMENTOS),
+    });
+  }
+
+  private vinculosPilar(d: Dados, c: string): VinculosPilar {
+    return { x: this.opcao(d, "x", c, VINCULOS_PILAR), y: this.opcao(d, "y", c, VINCULOS_PILAR) };
+  }
+
+  private secaoPilar(d: Dados, c: string): SecaoNaoRetangular {
+    const tipo = this.opcao(d, "tipo", c, TIPOS_SECAO_PILAR);
+    if (tipo === "circular") {
+      const s = {
+        tipo,
+        d: this.numero(d, "d", c, "positivo"),
+        dInterno: this.numero(d, "dInterno", c, "naoNegativo"),
+      };
+      if (s.dInterno >= s.d)
+        this.erro(`${c}.dInterno`, "o vazado tem de ser menor que o diâmetro", s.dInterno);
+      return s;
+    }
+    const vertices = this.lista(d.vertices, `${c}.vertices`).map((p, i) =>
+      this.ponto(this.objeto(p, `${c}.vertices[${i}]`), `${c}.vertices[${i}]`),
+    );
+    if (vertices.length < 3)
+      this.erro(`${c}.vertices`, "esperados ao menos 3 vértices", vertices.length);
+    return { tipo, vertices };
+  }
+
+  /** Lista de momentos com os campos numéricos dados e no máximo `max` itens. */
+  private momentos<K extends string>(d: Dados, c: string, campos: readonly K[], max: number) {
+    const l = this.lista(d.momentos, `${c}.momentos`);
+    if (l.length > max) this.erro(`${c}.momentos`, `no máximo ${max}`, l.length);
+    return l.map((m, i) => {
+      const cm = `${c}.momentos[${i}]`;
+      const o = this.objeto(m, cm);
+      return Object.fromEntries(campos.map((k) => [k, this.numero(o, k, cm)])) as Record<K, number>;
+    });
+  }
+
+  private camposPilar(d: Dados, c: string): Partial<Pilar> {
+    const r: Partial<Pilar> = {};
+    if (d.secao !== undefined)
+      r.secao = this.secaoPilar(this.objeto(d.secao, `${c}.secao`), `${c}.secao`);
+    if (d.rotacao !== undefined) {
+      r.rotacao = this.numero(d, "rotacao", c, "naoNegativo");
+      if (r.rotacao > 360)
+        this.erro(`${c}.rotacao`, "esperado um ângulo de 0 a 360 graus", r.rotacao);
+      if (d.secao !== undefined)
+        this.erro(`${c}.rotacao`, "a rotação só vale na seção retangular", r.rotacao);
+    }
+    if (d.vinculos !== undefined)
+      r.vinculos = this.vinculosPilar(this.objeto(d.vinculos, `${c}.vinculos`), `${c}.vinculos`);
+    if (d.vinculosTopo !== undefined)
+      r.vinculosTopo = this.vinculosPilar(
+        this.objeto(d.vinculosTopo, `${c}.vinculosTopo`),
+        `${c}.vinculosTopo`,
+      );
+    if (d.excentricidade !== undefined) {
+      const e = this.objeto(d.excentricidade, `${c}.excentricidade`);
+      r.excentricidade = {
+        x: this.numero(e, "x", `${c}.excentricidade`),
+        y: this.numero(e, "y", `${c}.excentricidade`),
+      };
+    }
+    if (d.vento !== undefined) {
+      const cv = `${c}.vento`;
+      const v = this.objeto(d.vento, cv);
+      r.vento = {
+        normal: this.numero(v, "normal", cv),
+        momentos: this.momentos(v, cv, ["m", "angulo"], 2),
+      };
+    }
+    if (d.cargaTopo !== undefined) {
+      const cc = `${c}.cargaTopo`;
+      const v = this.objeto(d.cargaTopo, cc);
+      // vão com sinal: o .REP lido grava vão·(−SGN(M)) (PILGEEDI.BAS:606-608)
+      const momentos = this.momentos(v, cc, ["m", "inclinacao", "vao", "rigidez"], 4);
+      momentos.forEach((m, i) => {
+        if (m.rigidez < 0)
+          this.erro(
+            `${cc}.momentos[${i}].rigidez`,
+            "esperado um número maior ou igual a zero",
+            m.rigidez,
+          );
+      });
+      r.cargaTopo = { normal: this.numero(v, "normal", cc), momentos };
+    }
+    if (d.verificacoes !== undefined)
+      r.verificacoes = this.lista(d.verificacoes, `${c}.verificacoes`).map((x, i) => {
+        const cv = `${c}.verificacoes[${i}]`;
+        const v = this.objeto(x, cv);
+        const barras = this.lista(v.barras, `${cv}.barras`).map((b, j) => {
+          const cb = `${cv}.barras[${j}]`;
+          const o = this.objeto(b, cb);
+          return {
+            x: this.numero(o, "x", cb),
+            y: this.numero(o, "y", cb),
+            bitola: this.numero(o, "bitola", cb, "positivo"),
+          };
+        });
+        const ces = `${cv}.estribo`;
+        const es = v.estribo === undefined ? undefined : this.objeto(v.estribo, ces);
+        const estribo = es && {
+          bitola: this.numero(es, "bitola", ces, "positivo"),
+          espacamento: this.numero(es, "espacamento", ces, "positivo"),
+        };
+        const ce = `${cv}.esforcos`;
+        const e = v.esforcos === undefined ? undefined : this.objeto(v.esforcos, ce);
+        const esforcos = e && {
+          nk: this.numero(e, "nk", ce),
+          mxk: this.numero(e, "mxk", ce),
+          myk: this.numero(e, "myk", ce),
+          lex: this.numero(e, "lex", ce, "positivo"),
+          ley: this.numero(e, "ley", ce, "positivo"),
+        };
+        return { barras, ...(estribo ? { estribo } : {}), ...(esforcos ? { esforcos } : {}) };
+      });
+    return r;
   }
 
   private materiais(d: Dados): Materiais {
@@ -591,6 +846,11 @@ class Validador {
       y: this.numero(d, "y", c),
       b: this.numero(d, "b", c, "positivo"),
       h: this.numero(d, "h", c, "positivo"),
+      ...this.camposPilar(d, c),
     };
   }
 }
+
+const TIPOS_SECAO_PILAR = ["circular", "poligonal"] as const;
+const EXCENTRICIDADES = ["isoladas", "simultaneas"] as const;
+const PREDIMENSIONAMENTOS = ["tensoes", "secao"] as const;

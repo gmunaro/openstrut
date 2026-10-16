@@ -31,6 +31,7 @@ import type {
   PilarEntrada,
   PilarResultado,
 } from "./tipos";
+import type { PredimensionamentoPilarResultado, VerificacaoPilarResultado } from "./tipos";
 import { analisaVigaContinua, type VigaContinuaResultado } from "./vigas/continua";
 import {
   ligacaoVigaPilar,
@@ -119,6 +120,10 @@ export interface ResultadoPilar {
   resultado: PilarResultado;
   /** Falhas deste pavimento e dos de cima: o Nk não inclui toda a carga. */
   falhas: string[];
+  /** NB-1/78 pelo SISTRUT: as `Pilar.verificacoes` deste lance (PILAR opção 6). */
+  verificacoes?: VerificacaoPilarResultado[];
+  /** NB-1/78 pelo SISTRUT: predimensionamento da coluna, no lance de baixo. */
+  predimensionamento?: PredimensionamentoPilarResultado;
 }
 
 export interface ResultadoObra {
@@ -249,6 +254,11 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
           `Barras de φ ${phi} mm (> ${PHI_MAX_ALTURA_UTIL} mm): d' real = c + φt + φ/2 = ${real.toFixed(2)} cm, maior que o adotado (${dLinha.toFixed(2)} cm); confira.`,
         );
       }
+      const soSistrut = camposSoDoSistrut(pilar);
+      if (soSistrut.length > 0)
+        extras.push(
+          `${pilar.nome}: ${soSistrut.join(", ")} só entram no cálculo pela NB-1/78 (caminho do SISTRUT); aqui o pilar é calculado como o retângulo ${pilar.b} × ${pilar.h} cm, com le = pé-direito e a carga das vigas.`,
+        );
       pilares.push({
         pilar,
         pavimentoId: pav.id,
@@ -264,6 +274,10 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
       });
     }
   }
+  if (obra.parametrosPilar)
+    avisos.push(
+      "Os parâmetros de pilar da obra (PILAR.INI, .PIP, predimensionamento) só valem pela NB-1/78 (caminho do SISTRUT); esta norma os ignora.",
+    );
   return { norma, materiais: mat, pavimentos, pilares, avisos };
 }
 
@@ -646,4 +660,18 @@ export function dimensionarViga(
     return { positivo, negativoEsq, negativoDir, cortante, estribo };
   });
   return { viga, analise, d, tramos, avisos: [...new Set(avisos)] };
+}
+
+/** Campos do pilar que só o caminho do SISTRUT (NB-1/78) calcula; o fluxo da V2 os
+ *  ignora e avisa. */
+function camposSoDoSistrut(p: Pilar) {
+  const campos: [unknown, string][] = [
+    [p.secao, `seção ${p.secao?.tipo ?? ""}`],
+    [p.vinculos ?? p.vinculosTopo, "vínculos"],
+    [p.excentricidade, "excentricidade entre seções"],
+    [p.vento, "vento"],
+    [p.cargaTopo, "carga no topo"],
+    [p.verificacoes?.length ? p.verificacoes : undefined, "verificações de seção dada"],
+  ];
+  return campos.filter(([v]) => v !== undefined).map(([, nome]) => nome);
 }

@@ -26,7 +26,8 @@
 //   exceções); carga linear da viga → alvenaria sobre o eixo;
 // - pilares: uma coluna por posição, do nível da fundação (cota 0) ao último
 //   pavimento em que o pilar existe; o .REP de cada pavimento (e de cada repetição)
-//   no seu nível; vínculo "continuidade" em todos os níveis.
+//   no seu nível; seção, vínculos, vento, excentricidade, carga no topo e verificações
+//   do pilar por `pilaresDaObra.ts` (ausentes: retângulo b × h e "continuidade").
 //
 // Materiais: original = fck nominal (MPa/100 → t/cm²: 15 MPa = 0,15 t/cm², o que o
 // usuário do original digitava para 150 kgf/cm²), fyk pela categoria (CA-50 = 5 t/cm²),
@@ -38,7 +39,7 @@ import type { Bordo, Laje, Materiais, Obra, Pavimento, Pilar, Vinculo } from "..
 import type { BarraImposta, ParametrosLajeObra, Ponto, TipoLaje } from "../../dominio/obra";
 import { geometriaDasVigas, type GeometriaViga } from "../montagem";
 import type { Etapa } from "../tipos";
-import { atribuicao, ErroQB, sng } from "./base/f32";
+import { atribuicao, ErroQB, qbUsing, sng } from "./base/f32";
 import { ErroNaoConverge, qbCint } from "./base/f32";
 import {
   emSingle,
@@ -71,6 +72,7 @@ import type {
   LeituraRep,
   LinhaRep,
   MateriaisSistrut,
+  NivelColuna,
   ModoSistrut,
   MontagemPavimento,
   PainelLajes,
@@ -103,12 +105,22 @@ import { lajeproc } from "./lajes/proc";
 import { montaPavimento } from "./montagem/reacoes";
 import { pesoKgPorM } from "./montagem/vigas";
 import { dimensionaPilar } from "./pilares/armadura";
-import { cargasPilares } from "./pilares/carga";
+import { cargasPilares, qbVal, resumoFundacao } from "./pilares/carga";
 import { quadroDaViga, resumoGeralVigas } from "./quant/vigas";
 import { dimensionaViga } from "./vigas/desdim";
 import { detalhaViga } from "./vigas/desinit";
 import { somaReacoesPilares } from "./vigas/rep";
 import { analisaVigas } from "./vigas/vicalc";
+import {
+  cargaDoNivel,
+  materiaisPilar,
+  nivelDoPilar,
+  parametrosPilarDaObra,
+  predimensionaColuna,
+  verificacoesDoPilar,
+  type PredimensionamentoSistrut,
+  type VerificacaoPilarSistrut,
+} from "./pilaresDaObra";
 
 // ---------------------------------------------------------------- materiais e parâmetros
 
@@ -274,6 +286,15 @@ export interface ResultadoSistrut {
    *  fundação (transição sobre viga, que o PILGEEDI não modela) e linha do .REP sem
    *  coluna. A projeção marca o pavimento com falha. */
   falhas: { pavimentoId: string; texto: string }[];
+  /** Materiais dos pilares: os da obra com os do PILAR.INI da obra por cima. */
+  materiaisPilar: MateriaisSistrut;
+  /** PILAR opção 6 de cada `Pilar.verificacoes` (pilaresDaObra.ts). */
+  verificacoes: VerificacaoPilarSistrut[];
+  /** PILAREDI 3.1 por coluna, com `obra.parametrosPilar.predimensionamento`. */
+  predimensionamentos: PredimensionamentoSistrut[];
+  /** Resumo de cargas na fundação por coluna (PILAREDI.BAS:960-1000, `resumoFundacao`):
+   *  acumulada, peso próprio, carga na fundação e momentos da base, t e tm. */
+  fundacoes: ({ coluna: string; pilarId: string } & ReturnType<typeof resumoFundacao>)[];
 }
 
 // ---------------------------------------------------------------- lajes
@@ -982,21 +1003,18 @@ function calcularPilaresSistrut(
     // nome com o número da coluna: o PILGEEDI casa o .REP pelo número no nome
     const nome = `P ${i + 1}`;
     let cota = 0;
-    const nivel = (secao: Pilar) => ({
-      cota: s(cota),
-      secao: { tipo: "retangular" as const, b: s(secao.b), h: s(secao.h), barras: [] },
-      vinculoX: 2 as const,
-      vinculoY: 2 as const,
-      normalVento: 0,
-      mkx: 0,
-      mky: 0,
-    });
-    const nvs = [];
+    // seção, vínculos, excentricidade e vento do lance no nível da base (pilaresDaObra.ts)
+    const nvs: NivelColuna[] = [];
     for (const l of lances) {
-      nvs.push(nivel(l.pilar));
+      nvs.push(nivelDoPilar(l.pilar, cota, modo));
       cota += niveis[l.nivel]!.pav.peDireito;
     }
-    nvs.push(nivel(lances.at(-1)!.pilar));
+    nvs.push(nivelDoPilar(lances.at(-1)!.pilar, cota, modo, true));
+    // Pilar.cargaTopo: carga do nível do topo de cada lance (A_1280)
+    lances.forEach((l, k) => {
+      const carga = cargaDoNivel(l.pilar, modo);
+      if (carga) nvs[k + 1]!.cargaAdicional = carga;
+    });
     colunas.push({ nome, pilarRep: nome, niveis: nvs });
     lancesDasColunas.push(lances);
   });
@@ -1047,13 +1065,44 @@ function calcularPilaresSistrut(
               const horizontal = Math.abs(v.y1 - v.y2) < 1e-9;
               return { ...m, inclinacao: horizontal ? 0 : 90, rigidez: (v.bw * v.h ** 3) / 12 };
             });
-      return [{ ...linha, pilar: c.nome, momentos }];
+      // o PILGEEDI lê o total do texto do .REP, gravado com PRINT USING "#####.##"
+      // (VIGA.BAS:2545; PILGEEDI.BAS:541-544: N = VAL(MID$(L1, 10))): 17,3699989 da soma
+      // em SINGLE vira VAL("17.37") = 17,3700008
+      const total = s(qbVal(qbUsing("#####.##", linha.total)));
+      return [{ ...linha, pilar: c.nome, total, momentos }];
     });
     // o nível k do .REP é o topo do lance k − 1: carga no nível k + 1 da coluna
     reps.push({ linhas, nivelInicial: k + 1, nivelFinal: k + 1, modo: "substitui" });
   }
 
-  const cargas = cargasPilares(reps, colunas, par.pip, modo);
+  // PILAREDI 3.1: predimensionamento; com "secao", o quadrado vira a seção da coluna
+  const predimensionamentos: PredimensionamentoSistrut[] = [];
+  const opcaoPredim = obra.parametrosPilar?.predimensionamento;
+  if (opcaoPredim)
+    colunas.forEach((coluna, i) => {
+      const p = predimensionaColuna(
+        reps,
+        coluna,
+        lancesDasColunas[i]![0]!.pilar.id,
+        mat,
+        par,
+        modo,
+        opcaoPredim,
+      );
+      predimensionamentos.push(p);
+      const secao = p.resultado?.secao;
+      if (opcaoPredim === "secao" && secao) {
+        for (const n of coluna.niveis) n.secao = secao;
+        p.avisos.push(
+          `${lancesDasColunas[i]![0]!.pilar.nome}: seção do predimensionamento (${p.resultado!.b} × ${p.resultado!.h} cm) no lugar da seção da obra.`,
+        );
+      }
+    });
+
+  const cargas = cargasPilares(reps, colunas, par.pip, modo, {
+    medida: par.pilar.coeficienteMedida,
+    forca: par.pilar.coeficienteForca,
+  });
   const lances: LancePilarSistrut[] = [];
   for (const carga of cargas) {
     const ci = colunas.findIndex((c) => c.nome === carga.coluna);
@@ -1070,6 +1119,12 @@ function calcularPilaresSistrut(
       carga,
       avisos: [],
     };
+    // a seção do predimensionamento vale em todos os lances da coluna: o aviso também
+    const predim = predimensionamentos.find((p) => p.coluna === coluna.nome);
+    if (predim?.modo === "secao" && predim.resultado)
+      l.avisos.push(
+        `${lance.pilar.nome}: dimensionado com a seção do predimensionamento, ${predim.resultado.b} × ${predim.resultado.h} cm, no lugar da seção da obra.`,
+      );
     try {
       l.dimensionamento = dimensionaPilar(carga, coluna, mat, par.pilar, par.pip, modo);
     } catch (e) {
@@ -1077,7 +1132,31 @@ function calcularPilaresSistrut(
     }
     lances.push(l);
   }
-  return { colunas, lances };
+
+  // PILAR opção 6: as verificações de seção dada de cada pilar
+  const verificacoes = obra.pavimentos.flatMap((pav) =>
+    pav.pilares.flatMap((p) =>
+      verificacoesDoPilar(
+        p,
+        pav.id,
+        lances
+          .filter((l) => l.pavimentoId === pav.id && l.pilarId === p.id)
+          .map((l) => ({
+            ...l,
+            secao: colunas.find((c) => c.nome === l.coluna)!.niveis[l.nivel]!.secao,
+          })),
+        mat,
+        par.pilar,
+        modo,
+      ),
+    ),
+  );
+  const fundacoes = colunas.map((c, i) => ({
+    coluna: c.nome,
+    pilarId: lancesDasColunas[i]![0]!.pilar.id,
+    ...resumoFundacao(reps, c, par.pip, modo),
+  }));
+  return { colunas, lances, verificacoes, predimensionamentos, fundacoes };
 }
 
 // ---------------------------------------------------------------- obra
@@ -1087,8 +1166,10 @@ function calcularPilaresSistrut(
 export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): ResultadoSistrut {
   const { modo } = opcoes;
   const mat = materiaisSistrut(obra.materiais, modo);
-  const par = parametrosSistrut(obra.materiais, modo);
+  const parBase = parametrosSistrut(obra.materiais, modo);
+  const par = { ...parBase, ...parametrosPilarDaObra(parBase, obra.parametrosPilar, modo) };
   aplicaParametrosLaje(par, obra.parametrosLaje, modo);
+  const matPilar = materiaisPilar(mat, obra.parametrosPilar, modo);
   const avisos: string[] = [];
   if (obra.materiais.aco === "CA-25" && obra.materiais.classeAco === "B")
     avisos.push("Aço CA-25 é sempre classe A; a classe B informada foi ignorada.");
@@ -1097,7 +1178,14 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     calcularPavimentoSistrut(p, mat, par, modo, otimiza),
   );
   const falhas: ResultadoSistrut["falhas"] = [];
-  const { colunas, lances } = calcularPilaresSistrut(obra, pavimentos, mat, par, modo, falhas);
+  const { colunas, lances, verificacoes, predimensionamentos, fundacoes } = calcularPilaresSistrut(
+    obra,
+    pavimentos,
+    matPilar,
+    par,
+    modo,
+    falhas,
+  );
   const quadros = pavimentos.flatMap((p) => p.vigas.flatMap((v) => (v.quadro ? [v.quadro] : [])));
   return {
     modo,
@@ -1110,5 +1198,9 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     falhas,
     resumoVigas: resumoGeralVigas(quadros, par.dsp, modo),
     avisos,
+    materiaisPilar: matPilar,
+    verificacoes,
+    predimensionamentos,
+    fundacoes,
   };
 }

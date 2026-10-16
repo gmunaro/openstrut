@@ -62,6 +62,7 @@ import type {
   PilarResultado,
 } from "./tipos";
 import type { PontoDiagrama, TramoResultado, VigaContinuaResultado } from "./vigas/continua";
+import type { PredimensionamentoPilarResultado, VerificacaoPilarResultado } from "./tipos";
 
 const REF = "SISTRUT 4.0 (sistrut/obra.ts)";
 const ES_MPA = 210_000;
@@ -766,7 +767,8 @@ function barrasDoPilar(
 }
 
 function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavimento[]) {
-  const gf = r.materiais.gamaF;
+  // γf dos pilares: o da obra ou o do PILAR.INI da obra
+  const gf = r.materiaisPilar.gamaF;
   const pilares: ResultadoPilar[] = [];
   // como a V2: do topo para a base (repetição 1 no topo), na ordem dos pilares do pavimento
   const ordemPilar = (l: ResultadoSistrut["lances"][number]) =>
@@ -822,9 +824,72 @@ function resultadosPilares(obra: Obra, r: ResultadoSistrut, pavs: ResultadoPavim
       },
       resultado,
       falhas,
+      ...extrasDoLance(r, l),
     });
   }
   return pilares;
+}
+
+/** Verificações (PILAR opção 6) e predimensionamento de um lance, em SI: as de
+ *  esforços digitados vão para a repetição 1 do pilar; o predimensionamento, para o
+ *  lance de baixo da coluna. */
+function extrasDoLance(
+  r: ResultadoSistrut,
+  l: ResultadoSistrut["lances"][number],
+): Pick<ResultadoPilar, "verificacoes" | "predimensionamento"> {
+  const verificacoes: VerificacaoPilarResultado[] = r.verificacoes
+    .filter(
+      (v) =>
+        v.pavimentoId === l.pavimentoId &&
+        v.pilarId === l.pilarId &&
+        (v.repeticao === undefined ? l.repeticao === 1 : v.repeticao === l.repeticao),
+    )
+    .map((v) => ({
+      indice: v.indice,
+      esforcosDoLance: v.repeticao !== undefined,
+      nk: tParaKn(v.entrada.nk),
+      ...(v.resultado
+        ? {
+            lambdaX: v.resultado.lambdaX,
+            lambdaY: v.resultado.lambdaY,
+            situacao: v.resultado.situacao,
+          }
+        : {}),
+      casos: (v.resultado?.casos ?? []).map((c) => ({
+        rotulo: c.rotulo,
+        mx: tmParaKnm(c.mx),
+        my: tmParaKnm(c.my),
+        mTotal: tmParaKnm(c.mTotal),
+        mrX: tmParaKnm(c.mrxReduzido),
+        mrY: tmParaKnm(c.mryReduzido),
+        mrTotal: tmParaKnm(c.mrTotal),
+        veredito: c.veredito,
+        ...(c.erro ? { erro: c.erro } : {}),
+      })),
+      avisos: v.avisos,
+    }));
+  const p = l.nivel === 0 ? r.predimensionamentos.find((x) => x.coluna === l.coluna) : undefined;
+  const pr = p?.resultado;
+  const predimensionamento: PredimensionamentoPilarResultado | undefined = p && {
+    modo: p.modo,
+    ...(pr && Number.isFinite(pr.b) ? { lado: pr.b } : {}),
+    ...(pr
+      ? {
+          tensoes: {
+            normal: tcm2ParaMpa(pr.tensaoNormal),
+            normalAdmissivel: tcm2ParaMpa(pr.tensaoNormalAdmissivel),
+            flexao: tcm2ParaMpa(pr.tensaoFlexao),
+            flexaoAdmissivel: tcm2ParaMpa(pr.tensaoFlexaoAdmissivel),
+          },
+          carga: tParaKn(pr.carga),
+        }
+      : {}),
+    avisos: p.avisos,
+  };
+  return {
+    ...(verificacoes.length > 0 ? { verificacoes } : {}),
+    ...(predimensionamento ? { predimensionamento } : {}),
+  };
 }
 
 // ---------------------------------------------------------------- obra
