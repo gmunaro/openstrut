@@ -82,3 +82,14 @@ describe("diálogo de materiais: modo de cálculo fora da NB-1/78", () => {
     });
   });
 });
+
+describe("diálogo de materiais: foco ao fechar", () => {
+  it("ao fechar com Esc, o foco volta ao botão Materiais", async () => {
+    const { user } = await abrirDialogo();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: /Materiais/ })),
+    );
+  });
+});

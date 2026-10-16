@@ -93,6 +93,9 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const { salvar, mensagem } = useSalvarArquivo();
   const erroRascunho = useRascunhoAutomatico(obra);
   const [dialogo, setDialogo] = useState<"materiais" | "unidades" | null>(null);
+  // Os diálogos devolvem o foco a estes botões ao fechar.
+  const botaoMateriais = useRef<HTMLButtonElement>(null);
+  const botaoUnidades = useRef<HTMLButtonElement>(null);
   const [aba, setAba] = useState("planta");
 
   const calculo = useMemo(() => calcular(obra), [obra]);
@@ -156,10 +159,20 @@ function ObraAberta({ obra }: { obra: Obra }) {
           >
             <Redo2 /> Refazer
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setDialogo("materiais")}>
+          <Button
+            ref={botaoMateriais}
+            variant="outline"
+            size="sm"
+            onClick={() => setDialogo("materiais")}
+          >
             <SlidersHorizontal /> Materiais
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setDialogo("unidades")}>
+          <Button
+            ref={botaoUnidades}
+            variant="outline"
+            size="sm"
+            onClick={() => setDialogo("unidades")}
+          >
             <Ruler /> Unidades
           </Button>
           <Button variant="outline" size="sm" onClick={abrirOutra}>
@@ -231,10 +244,12 @@ function ObraAberta({ obra }: { obra: Obra }) {
         obra={obra}
         aberto={dialogo === "materiais"}
         aoMudarAberto={(a) => setDialogo(a ? "materiais" : null)}
+        botaoOrigem={botaoMateriais}
       />
       <DialogoUnidades
         aberto={dialogo === "unidades"}
         aoMudarAberto={(a) => setDialogo(a ? "unidades" : null)}
+        botaoOrigem={botaoUnidades}
       />
     </div>
   );

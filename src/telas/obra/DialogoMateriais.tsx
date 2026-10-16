@@ -1,7 +1,7 @@
 // Diálogo "Obra e materiais": nome, norma, modo de cálculo (corrigido ou como o SISTRUT
 // original, com a dica do que muda), fck, aços, classe do aço (só NB-1/78; CA-25 só A),
 // classe de agressividade e cobrimentos. Grava tudo de uma vez (uma entrada no desfazer).
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dica } from "@/components/ui/dica";
 import {
@@ -88,14 +88,17 @@ const paraFormulario = (o: Obra, m: Materiais = o.materiais): Formulario => ({
   },
 });
 
+// botaoOrigem recebe o foco ao fechar: o Radix só o devolve se o diálogo for um DialogTrigger.
 export function DialogoMateriais({
   obra,
   aberto,
   aoMudarAberto,
+  botaoOrigem,
 }: {
   obra: Obra;
   aberto: boolean;
   aoMudarAberto: (a: boolean) => void;
+  botaoOrigem: RefObject<HTMLButtonElement | null>;
 }) {
   const editar = useObra((e) => e.editar);
   const [f, setF] = useState(() => paraFormulario(obra));
@@ -143,7 +146,13 @@ export function DialogoMateriais({
 
   return (
     <Dialog open={aberto} onOpenChange={aoMudarAberto}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          botaoOrigem.current?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Obra e materiais</DialogTitle>
           <DialogDescription>
