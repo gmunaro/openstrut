@@ -45,6 +45,7 @@ import type {
   Viga,
 } from "../../dominio/obra";
 import { lerObra, serializarObra } from "../arquivo";
+import { explicarErros } from "./mensagens";
 
 /** Arquivo escolhido pelo usuário: nome com extensão e conteúdo (binário ou texto). */
 export interface ArquivoSistrut {
@@ -882,7 +883,11 @@ export function importarVigasSistrut(
         viga: { ...nova.parametrosViga?.viga, ...parametrosIni },
       };
     const lida = lerObra(serializarObra(nova));
-    if (!lida.ok) return { ok: false, erros: lida.erros };
+    if (!lida.ok)
+      return {
+        ok: false,
+        erros: explicarErros(lida.erros, nova, () => ({ vig: vigArq.nome })),
+      };
     return { ok: true, obra: lida.obra, avisos };
   } catch (e) {
     if (e instanceof ErroImportacao) return { ok: false, erros: [e.message] };
@@ -1019,7 +1024,9 @@ function completar(
     const tm = trechosDoRegistro(m);
     if (td.length !== tm.length || !!d.balancoEsquerdo !== !!m.balancoEsquerdo) {
       avisos.push(
-        `Viga ${reg.nome}: o .VIG tem ${td.length} trechos e a planta ${tm.length}: o .VIG desta viga não entra.`,
+        td.length !== tm.length
+          ? `Viga ${reg.nome}: o .VIG tem ${td.length} trechos e a planta ${tm.length}: o .VIG desta viga não entra.`
+          : `Viga ${reg.nome}: o .VIG ${d.balancoEsquerdo ? "tem" : "não tem"} balanço esquerdo e a planta ${m.balancoEsquerdo ? "tem" : "não tem"}: o .VIG desta viga não entra.`,
       );
       return;
     }

@@ -214,7 +214,12 @@ export function editaVig(
     const tol = tolDivisao(vao);
     // abscissa a partir do apoio: no balanço esquerdo o apoio é a ponta direita
     const doApoio = (u: number) => s(tipo === "balE" ? vao - u : u);
-    const fora = (u: number) => u < -tol || u > vao + tol;
+    // posições lidas de um .VIG vêm de coordenadas em SINGLE (sng(8,925) − sng(8,48) =
+    // 0,44500065): no corrigido o vão em float64 fica até ~1e-6 m mais curto que a D da
+    // última divisão. Até a tolerância de comprimento (TOL_VAO) além da ponta, a carga
+    // vai para a ponta; dentro de `tol` nada muda
+    const fora = (u: number) => u < -TOL_VAO || u > vao + TOL_VAO;
+    const naPonta = (u: number) => (u < -tol ? 0 : u > vao + tol ? vao : u);
     for (const c of viga.cargas ?? []) {
       if (c.trecho !== i) continue;
       if (c.tipo === "concentrada" || c.tipo === "reacao") {
@@ -224,7 +229,7 @@ export function editaVig(
           );
           continue;
         }
-        let x = doApoio(c.posicao);
+        let x = doApoio(naPonta(c.posicao));
         if (Math.abs(x) <= tol) {
           // em cima do apoio: divisão de comprimento zero no começo (P > 0 da vizinha)
           if (divs[0]!.fim !== 0) divs.unshift(vazia(0, divs[0]!.p));
@@ -259,7 +264,9 @@ export function editaVig(
         );
         continue;
       }
-      const [a, b] = [doApoio(c.inicio), doApoio(c.fim)].sort((x, y) => x - y) as [number, number];
+      const [a, b] = [doApoio(naPonta(c.inicio)), doApoio(naPonta(c.fim))].sort(
+        (x, y) => x - y,
+      ) as [number, number];
       const xa = corta(divs, a, tol);
       const xb = corta(divs, b, tol);
       const total = s(knPorMParaTPorM(c.total));

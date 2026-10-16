@@ -1245,6 +1245,30 @@ function calcularPilaresSistrut(
     }
     if (atual.length > 0) trechos.push(atual);
   }
+  // o mesmo pilar deslocado de um nível para o outro (eixo desenhado em outro ponto da
+  // seção, como no térreo de uma obra importada): o trecho que começa num nível
+  // continua o que termina logo abaixo se o pilar tem o mesmo nome e as seções se
+  // sobrepõem na planta, com um par só de cada lado. O PILGEEDI liga os lances pela
+  // coluna do .COL, não pela posição (PIGRAEDI.BAS:466-583 não grava posição).
+  const sobrepoe = (a: Pilar, b: Pilar) =>
+    Math.abs(a.x - b.x) < (a.b + b.b) / 200 && Math.abs(a.y - b.y) < (a.h + b.h) / 200;
+  const continua = (de: (typeof trechos)[number], t: (typeof trechos)[number]) => {
+    const fim = de.at(-1)!;
+    const ini = t[0]!;
+    return (
+      fim.nivel === ini.nivel - 1 &&
+      fim.pilar.nome === ini.pilar.nome &&
+      sobrepoe(fim.pilar, ini.pilar)
+    );
+  };
+  for (let i = 0; i < trechos.length; i++) {
+    const t = trechos[i]!;
+    const de = trechos.filter((u) => u !== t && continua(u, t));
+    if (de.length !== 1 || trechos.filter((u) => continua(de[0]!, u)).length !== 1) continue;
+    de[0]!.push(...t);
+    trechos.splice(i, 1);
+    i = -1;
+  }
   const colunas: ColunaEdificio[] = [];
   /** Lances de cada coluna (mesmo índice de `colunas`): pilar e nível do edifício. */
   const lancesDasColunas: { pilar: Pilar; nivel: number }[][] = [];

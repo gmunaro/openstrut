@@ -511,3 +511,44 @@ describe("secoesEFormaDaObra: tamanhos e seção 0 de balanço", () => {
     expect(avisos[0]).toContain("as seções dos trechos: 1 itens, e a viga tem 2");
   });
 });
+
+describe("editaVig: carga lida de um .VIG na ponta do balanço", () => {
+  // o .VIG grava D em SINGLE sobre coordenadas em SINGLE: sng(8,925) − sng(8,48) =
+  // 0,44500065 no balanço direito, e o vão da planta em float64 (corrigido) é
+  // 8,925 − 8,48 = 0,4450000000000003, 6,5e-7 m mais curto
+  const vao = 8.925 - 8.48;
+  const dados = (): DadosViga => ({
+    ...base(),
+    tramos: [{ vao: 4, inercia: 1, divisoes: [div(0, 4)] }],
+    balancoDireito: { vao, inercia: 1, divisoes: [div(0, vao)] },
+    pilares: ["P1", "P2"],
+  });
+  const naPonta = (fim: number) => {
+    const avisos: string[] = [];
+    const r = editaVig(
+      dados(),
+      viga({
+        cargas: [
+          { tipo: "distribuida", trecho: 1, inicio: 0, fim, total: 5 },
+          { tipo: "concentrada", trecho: 1, posicao: fim, total: 3 },
+        ],
+      }),
+      par,
+      "corrigido",
+      avisos,
+    );
+    return { divisoes: r.balancoDireito!.divisoes, avisos };
+  };
+
+  it("D da última divisão até 5 mm além do vão (a tolerância de comprimento): a carga vai para a ponta", () => {
+    const { divisoes, avisos } = naPonta(0.44500065);
+    expect(avisos).toEqual([]);
+    expect(divisoes).toEqual([div(5 / g, vao, 3 / g)]);
+  });
+
+  it("mais de 5 mm além do vão: fora do trecho, ignorada com aviso", () => {
+    const { divisoes, avisos } = naPonta(0.46);
+    expect(avisos).toHaveLength(2);
+    expect(divisoes).toEqual([div(0, vao)]);
+  });
+});
