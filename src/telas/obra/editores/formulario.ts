@@ -42,9 +42,11 @@ export class Leitor {
   }
 }
 
-/** Número do modelo → texto do campo ("" para ausente), com vírgula decimal. */
+/** Número do modelo → texto do campo ("" para ausente), com vírgula decimal. Com 15
+ *  algarismos significativos: some o ruído do float64 (1,7999999999999998 → 1,8) e o
+ *  valor não muda nem no Float32 do modo original. */
 export const textoDe = (n: number | null | undefined) =>
-  n === null || n === undefined ? "" : String(n).replace(".", ",");
+  n === null || n === undefined ? "" : String(Number(n.toPrecision(15))).replace(".", ",");
 
 /** O objeto sem as chaves de valor undefined: com exactOptionalPropertyTypes, campo
  *  opcional ausente não pode ser gravado como undefined. */
