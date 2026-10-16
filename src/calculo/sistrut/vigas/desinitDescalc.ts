@@ -165,6 +165,7 @@ export interface LocaisDescalc {
  *  como rascunho, como o original. */
 function momentoPositivo(c: Comum, t: number) {
   const s = c.s;
+  const pot = c.pot;
   c.a1062.p(0, c.v0e38);
   let l22 = 0;
   c.v0e30 = 0;
@@ -207,7 +208,7 @@ function momentoPositivo(c: Comum, t: number) {
       c.v0e38 = 1;
       break;
     }
-    c.v0e2c = s(c.v0e2c - ((d - l22) ** 2 * c.a1062.g(i)) / 2);
+    c.v0e2c = s(c.v0e2c - (pot(d - l22, 2) * c.a1062.g(i)) / 2);
     c.v0e2c = s(c.v0e2c - (d - l22) * c.a1062.g(i) * (c.v0e30 - d));
     c.v0e2c = s(c.v0e2c - (c.v0e30 - d) * c.a10ec.g(i));
     l22 = d;
@@ -216,7 +217,7 @@ function momentoPositivo(c: Comum, t: number) {
     c.v0e2c = 0;
     return;
   }
-  c.v0e2c = s(c.v0e2c - ((c.v0e30 - l22) ** 2 * c.a1062.g(i)) / 2);
+  c.v0e2c = s(c.v0e2c - (pot(c.v0e30 - l22, 2) * c.a1062.g(i)) / 2);
 }
 
 /** Termos de carga do tramo t (reações isostáticas e os termos dos focos L_BP96/L_BPA8)
@@ -233,6 +234,7 @@ function termosDoTramo(
   bp96: M1,
   bpa8: M1,
 ) {
+  const pot = c.pot;
   let l22 = 0;
   const fim = c.a0fd8.g(t);
   for (let i = 1 + (c.a0fd8.g(t) - c.a0faa.g(t)); i <= fim; i++) {
@@ -242,19 +244,21 @@ function termosDoTramo(
     vd(t, ((d - l22) * p.g(i) * (d + l22)) / (l * 2) + vd0(t));
     bp96.p(
       t,
-      ((d ** 2 * (l * 2 - d) ** 2 - l22 ** 2 * (l * 2 - l22) ** 2) * p.g(i)) / (l ** 2 * 4) +
+      ((pot(d, 2) * pot(l * 2 - d, 2) - pot(l22, 2) * pot(l * 2 - l22, 2)) * p.g(i)) /
+        (pot(l, 2) * 4) +
         bp96.g(t),
     );
     bpa8.p(
       t,
-      ((d ** 2 * (l ** 2 * 2 - d ** 2) - l22 ** 2 * (l ** 2 * 2 - l22 ** 2)) * p.g(i)) /
-        (l ** 2 * 4) +
+      ((pot(d, 2) * (pot(l, 2) * 2 - pot(d, 2)) - pot(l22, 2) * (pot(l, 2) * 2 - pot(l22, 2))) *
+        p.g(i)) /
+        (pot(l, 2) * 4) +
         bpa8.g(t),
     );
     ve(t, ((l - d) * f.g(i)) / l + ve0(t));
     vd(t, (d * f.g(i)) / l + vd0(t));
-    bp96.p(t, (f.g(i) * d * (l - d) * (l * 2 - d)) / l ** 2 + bp96.g(t));
-    bpa8.p(t, (f.g(i) * d * (l - d) * (l + d)) / l ** 2 + bpa8.g(t));
+    bp96.p(t, (f.g(i) * d * (l - d) * (l * 2 - d)) / pot(l, 2) + bp96.g(t));
+    bpa8.p(t, (f.g(i) * d * (l - d) * (l + d)) / pot(l, 2) + bpa8.g(t));
     l22 = d;
   }
 }
@@ -270,10 +274,11 @@ function balanco(
   soma: () => number,
   setSoma: (v: number) => void,
 ) {
+  const pot = c.pot;
   let l22 = 0;
   for (const i of divisoes) {
     const d = c.a10be.g(i);
-    setM(m() - ((d - l22) ** 2 * p.g(i)) / 2 - (d - l22) * p.g(i) * l22 - f.g(i) * d);
+    setM(m() - (pot(d - l22, 2) * p.g(i)) / 2 - (d - l22) * p.g(i) * l22 - f.g(i) * d);
     setSoma((d - l22) * p.g(i) + soma() + f.g(i));
     l22 = d;
   }

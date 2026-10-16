@@ -10,6 +10,7 @@
 // posições das barras em cm, bitolas em mm, áreas em cm², esforços em t e t·m.
 import type { ModoSistrut } from "../base/tipos";
 import { ErroQB, qbCint, qbInt, sng } from "../base/f32";
+import { potencia, raiz } from "../base/x87";
 
 /** Arredondamento de atribuição do modo (SINGLE no original). */
 export type Arredonda = (x: number) => number;
@@ -95,9 +96,14 @@ export class Comum {
   /** Atribuição (SINGLE no original) e constante literal (SINGLE no original). */
   readonly s: Arredonda;
   readonly k: Arredonda;
+  /** `^` e `SQR` do modo (B$POW e FSQRT do x87 no original), destino DOUBLE. */
+  readonly pot: (a: number, b: number) => number;
+  readonly raiz: (x: number) => number;
   constructor(readonly modo: ModoSistrut) {
     this.s = modo === "original" ? sng : (x) => x;
     this.k = this.s;
+    this.pot = potencia(modo);
+    this.raiz = raiz(modo);
     const s = this.s;
     this.a0faa = new M1(s, 14);
     this.a0fd8 = new M1(s, 14);

@@ -4,6 +4,7 @@
 // Unidades: cm, t, t/cm²; Asw em cm²/m. Livros: U03-026..039
 // (livros_arm_forma_des.md 4.3); PLANO D3.
 import { ErroQB, atribuicao, qbInt, qbStr } from "../base/f32";
+import { raiz } from "../base/x87";
 import type { EstriboLado, MateriaisSistrut, ModoSistrut, ParametrosDsp } from "../base/tipos";
 import { areaDaPosicao, bitolaDaPosicao } from "./desdim-barras";
 import type { SecaoCalculo } from "./desdim-flexao";
@@ -30,6 +31,7 @@ export function aswCortante(
   modo: ModoSistrut,
 ) {
   const s = atribuicao(modo);
+  const rz = raiz(modo);
   const { bw: b, h, d } = secao;
   const { fck, fyk, gamaF, gamaS } = materiais;
   const mult = parametros.multiplicadorUnidade;
@@ -38,7 +40,7 @@ export function aswCortante(
   const rho = s(0.001) > rhoMenor ? s(0.001) : rhoMenor;
   let asw = s(
     ((((Math.abs(v) * coeficienteForca) / (b * d)) * gamaS * gamaF -
-      ((rho * 15 + s(0.225)) * Math.sqrt(1000 * mult * fck)) / 1000) /
+      ((rho * 15 + s(0.225)) * rz(1000 * mult * fck)) / 1000) /
       (mult * fyk)) *
       b *
       100 *

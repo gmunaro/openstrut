@@ -64,7 +64,7 @@ const minimoPorLargura = (c: Comum, bw: number) => 2 - qb(bw > c.v0f3e) * 2 - qb
 /** τbu: lb = φ·fyk/(40·0,9·γs·(fck/γc)^(2/3)) em cm (sem o multiplicador). */
 function lbBase(c: Comum, phi: number) {
   return (
-    (phi / (((c.v0eba * c.v0ec6 * 1000) / c.v0f5e) ** c.k(2 / 3) * 40 * c.v0f66 * c.k(0.9))) *
+    (phi / (c.pot((c.v0eba * c.v0ec6 * 1000) / c.v0f5e, c.k(2 / 3)) * 40 * c.v0f66 * c.k(0.9))) *
     c.v0ebe *
     c.v0ec6 *
     1000
@@ -1111,7 +1111,7 @@ function novoGrampo(
   );
   if (c.v0e20 === 0) throw new ErroQB(11, "Division by zero (área do grampo 0)");
   l.bp16 = s(
-    (l.bp0e / (((c.v0ec6 * c.v0eba * 1000) / c.v0f5e) ** c.k(2 / 3) * 40 * c.v0f66 * c.k(0.9))) *
+    (l.bp0e / (c.pot((c.v0ec6 * c.v0eba * 1000) / c.v0f5e, c.k(2 / 3)) * 40 * c.v0f66 * c.k(0.9))) *
       c.v0ec6 *
       c.v0ebe *
       1000,

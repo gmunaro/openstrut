@@ -249,7 +249,7 @@ function montaDimensionamento(c: Comum, dim: DimensionamentoParaDetalhe, extras:
       t,
       8,
       (((c.a1374.g(t, 8) / (bw * c.v0f66 * 100)) * c.v0ec6 * c.v0ebe +
-        Math.sqrt(1000 * c.v0ec6 * c.v0eba) * c.k(0.00024)) *
+        c.raiz(1000 * c.v0ec6 * c.v0eba) * c.k(0.00024)) *
         bw *
         d) /
         c.k(1.61),

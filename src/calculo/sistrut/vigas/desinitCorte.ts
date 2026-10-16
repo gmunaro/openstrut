@@ -39,6 +39,7 @@ export function apoiosComNegativo(c: Comum) {
  *  DESDIM.BAS:4410-4456). */
 export function momentoNoTramo(c: Comum) {
   const s = c.s;
+  const pot = c.pot;
   const t = c.v0e14;
   const x = c.v0e30;
   if (!(t > 0)) {
@@ -53,11 +54,11 @@ export function momentoNoTramo(c: Comum) {
       const f = c.a10ec.g(i);
       const lb = c.a1006.g(0);
       if (!(lb - l0 < x)) {
-        c.v1886 = s(((d - (lb - x)) ** 2 * p) / 2 + c.v1886 + (d - (lb - x)) * f);
+        c.v1886 = s((pot(d - (lb - x), 2) * p) / 2 + c.v1886 + (d - (lb - x)) * f);
         return;
       }
       c.v1886 = s(
-        ((d - l0) ** 2 * p) / 2 + c.v1886 + (d - (lb - x)) * f + (d - l0) * p * (l0 - (lb - x)),
+        (pot(d - l0, 2) * p) / 2 + c.v1886 + (d - (lb - x)) * f + (d - l0) * p * (l0 - (lb - x)),
       );
     }
     return;
@@ -70,10 +71,10 @@ export function momentoNoTramo(c: Comum) {
     const d = c.a10be.g(i);
     const p = c.a1062.g(i);
     if (d > x) {
-      c.v1886 = s(((x - l0) ** 2 * p) / 2 + c.v1886);
+      c.v1886 = s((pot(x - l0, 2) * p) / 2 + c.v1886);
       return;
     }
-    c.v1886 = s(((d - l0) ** 2 * p) / 2 + c.v1886 + ((d - l0) * p + c.a10ec.g(i)) * (x - d));
+    c.v1886 = s((pot(d - l0, 2) * p) / 2 + c.v1886 + ((d - l0) * p + c.a10ec.g(i)) * (x - d));
     l0 = d;
   }
 }
@@ -83,6 +84,7 @@ export function momentoNoTramo(c: Comum) {
  *  acidentais se V_0E70 = "S". Grava V_1882 (S_22581, DESDIM.BAS:4324-4409). */
 export function momentoNegativoNoTramo(c: Comum) {
   const s = c.s;
+  const pot = c.pot;
   const t = c.v0e14;
   const x = c.v0e30;
   if (!(t > 0)) {
@@ -97,11 +99,11 @@ export function momentoNegativoNoTramo(c: Comum) {
       const f = c.a10ec.g(i);
       const lb = c.a1006.g(0);
       if (!(lb - l0 < x)) {
-        c.v1882 = s(((d - (lb - x)) ** 2 * p) / 2 + c.v1882 + (d - (lb - x)) * f);
+        c.v1882 = s((pot(d - (lb - x), 2) * p) / 2 + c.v1882 + (d - (lb - x)) * f);
         return;
       }
       c.v1882 = s(
-        ((d - l0) ** 2 * p) / 2 + c.v1882 + (d - (lb - x)) * f + (d - l0) * p * (l0 - (lb - x)),
+        (pot(d - l0, 2) * p) / 2 + c.v1882 + (d - (lb - x)) * f + (d - l0) * p * (l0 - (lb - x)),
       );
     }
     return;
@@ -118,13 +120,13 @@ export function momentoNegativoNoTramo(c: Comum) {
     const p = c.a1062.g(i);
     const pg = p - c.a1090.g(i);
     if (d > x) {
-      c.v1882 = s(((x - l0) ** 2 * p) / 2 + c.v1882);
-      acidental = s((pg * (x - l0) ** 2) / 2 + acidental);
+      c.v1882 = s((pot(x - l0, 2) * p) / 2 + c.v1882);
+      acidental = s((pg * pot(x - l0, 2)) / 2 + acidental);
       break;
     }
-    c.v1882 = s(((d - l0) ** 2 * p) / 2 + c.v1882 + ((d - l0) * p + c.a10ec.g(i)) * (x - d));
+    c.v1882 = s((pot(d - l0, 2) * p) / 2 + c.v1882 + ((d - l0) * p + c.a10ec.g(i)) * (x - d));
     acidental = s(
-      (pg * (d - l0) ** 2) / 2 +
+      (pg * pot(d - l0, 2)) / 2 +
         acidental +
         (pg * (d - l0) + (c.a10ec.g(i) - c.a111a.g(i))) * (x - d),
     );
@@ -137,7 +139,7 @@ export function momentoNegativoNoTramo(c: Comum) {
     if (d <= x) continue;
     const m = maior(l0, x);
     direita = s(
-      ((d - m) ** 2 * c.a1062.g(i)) / 2 +
+      (pot(d - m, 2) * c.a1062.g(i)) / 2 +
         direita +
         (d - m) * c.a1062.g(i) * (m - x) +
         (d - m) * c.a10ec.g(i),
@@ -231,7 +233,8 @@ function ancoragem(c: Comum, mult: number) {
   if (mult < 0) return s(-mult);
   if (mult > 100) return s(((mult - 100) * c.v0ea2) / 1000);
   const lb = s(
-    (c.v0ea2 / (((c.v0eba * c.v0ec6 * 1000) / c.v0f5e) ** c.k(2 / 3) * 40 * c.v0f66 * c.k(0.9))) *
+    (c.v0ea2 /
+      (c.pot((c.v0eba * c.v0ec6 * 1000) / c.v0f5e, c.k(2 / 3)) * 40 * c.v0f66 * c.k(0.9))) *
       c.v0ebe *
       c.v0ec6 *
       1000,

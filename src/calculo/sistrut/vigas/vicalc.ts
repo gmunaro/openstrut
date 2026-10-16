@@ -15,6 +15,7 @@
 // balanço direito (A_0e82/A_0eb0/A_0ede/A_0f68/A_0f96 com o índice acumulado A_0f3a).
 import type { Etapa } from "../../tipos";
 import { atribuicao, qbCint, qbInt, qbStr } from "../base/f32";
+import { potencia } from "../base/x87";
 import type {
   AnalisaViga,
   AnalisaVigas,
@@ -96,6 +97,9 @@ function montaTrabalho(viga: DadosViga): VigaTrabalho {
 /** Booleano do QB4.5: verdadeiro = −1, falso = 0 (as fórmulas do .BAS somam isso). */
 const qb = (c: boolean) => (c ? -1 : 0);
 
+/** `^` do modo (B$POW do x87 no original), montado uma vez por análise. */
+type Pot = (a: number, b: number) => number;
+
 /** Vetor 0..14 zerado (REDIM A_xxxx!(0 TO 14)). */
 const zeros = (tamanho = 15) => Array.from({ length: tamanho }, () => 0);
 
@@ -149,8 +153,9 @@ export function inerciaPorSecoes(
   modo: ModoSistrut,
 ) {
   const s = atribuicao(modo);
-  const r12 = s(qbInt(((h1 ** 3 * b1) / (h2 ** 3 * b2)) * 100) / 100);
-  const r21 = s(qbInt(((h2 ** 3 * b2) / (h1 ** 3 * b1)) * 100) / 100);
+  const pot = potencia(modo);
+  const r12 = s(qbInt(((pot(h1, 3) * b1) / (pot(h2, 3) * b2)) * 100) / 100);
+  const r21 = s(qbInt(((pot(h2, 3) * b2) / (pot(h1, 3) * b1)) * 100) / 100);
   const maior = s(Math.max(r21, r12));
   return modo === "original" ? s(Number(qbStr(maior))) : maior;
 }
@@ -171,6 +176,7 @@ function termosDeCarga(
   t: number,
   acidental: boolean,
   s: (x: number) => number,
+  pot: Pot,
 ): TermosCarga {
   let re = 0;
   let rd = 0;
@@ -186,14 +192,18 @@ function termosDeCarga(
     const b = dv.d;
     re = s(((b - a) * q * (L - (b + a) / 2)) / L + re);
     rd = s(((b - a) * q * (b + a)) / (L * 2) + rd);
-    A = s(A + ((b ** 2 * (L * 2 - b) ** 2 - a ** 2 * (L * 2 - a) ** 2) * q) / (L ** 2 * 4));
+    A = s(
+      A + ((pot(b, 2) * pot(L * 2 - b, 2) - pot(a, 2) * pot(L * 2 - a, 2)) * q) / (pot(L, 2) * 4),
+    );
     B = s(
-      B + ((b ** 2 * (L ** 2 * 2 - b ** 2) - a ** 2 * (L ** 2 * 2 - a ** 2)) * q) / (L ** 2 * 4),
+      B +
+        ((pot(b, 2) * (pot(L, 2) * 2 - pot(b, 2)) - pot(a, 2) * (pot(L, 2) * 2 - pot(a, 2))) * q) /
+          (pot(L, 2) * 4),
     );
     re = s(((L - b) * F) / L + re);
     rd = s((b * F) / L + rd);
-    A = s(A + (F * b * (L - b) * (L * 2 - b)) / L ** 2);
-    B = s(B + (F * b * (L - b) * (L + b)) / L ** 2);
+    A = s(A + (F * b * (L - b) * (L * 2 - b)) / pot(L, 2));
+    B = s(B + (F * b * (L - b) * (L + b)) / pot(L, 2));
     a = b;
   }
   return { re, rd, a: A, b: B };
@@ -208,6 +218,7 @@ function balanco(
   acidental: boolean,
   m0: number,
   s: (x: number) => number,
+  pot: Pot,
 ) {
   const ks: number[] = [];
   if (lado === "esquerdo") for (let k = em(vt.fim, 0); k >= 1; k--) ks.push(k);
@@ -220,7 +231,7 @@ function balanco(
     const q = acidental ? dv.pac : dv.p;
     const F = acidental ? dv.fac : dv.f;
     const b = dv.d;
-    m = s(m - ((b - a) ** 2 * q) / 2 - (b - a) * q * a - F * b);
+    m = s(m - (pot(b - a, 2) * q) / 2 - (b - a) * q * a - F * b);
     carga = s((b - a) * q + carga + F);
     a = b;
   }
@@ -259,6 +270,7 @@ function momentoPositivo(
   V0: number,
   M0: number,
   s: (x: number) => number,
+  pot: Pot,
   avisos: string[],
 ) {
   const ini = em(vt.fim, t) - em(vt.nDiv, t) + 1;
@@ -302,47 +314,66 @@ function momentoPositivo(
       kk = k;
       break;
     }
-    m = s(m - ((dv.d - a) ** 2 * dv.p) / 2);
+    m = s(m - (pot(dv.d - a, 2) * dv.p) / 2);
     m = s(m - (dv.d - a) * dv.p * (x - dv.d));
     m = s(m - (x - dv.d) * dv.f);
     a = dv.d;
   }
   if (kk < 0) return { x, m: 0 };
-  m = s(m - ((x - a) ** 2 * (vt.div[kk] ?? DIVISAO_VAZIA).p) / 2);
+  m = s(m - (pot(x - a, 2) * (vt.div[kk] ?? DIVISAO_VAZIA).p) / 2);
   return { x, m };
 }
 
 /** Passo 9 (L_464ab, VIGA.BAS:7744-7783): soma dos termos de carga da flecha f·EJ no x
  *  do tramo t a partir de S0 (os termos dos momentos de apoio) e devolve MAX(0, −S). */
-function flecha(vt: VigaTrabalho, t: number, x: number, S0: number, s: (x: number) => number) {
+function flecha(
+  vt: VigaTrabalho,
+  t: number,
+  x: number,
+  S0: number,
+  s: (x: number) => number,
+  pot: Pot,
+) {
   const L = em(vt.vao, t);
   let S = S0;
   let a = 0;
   for (let k = em(vt.fim, t - 1) + 1; k <= em(vt.fim, t); k++) {
     const { p: q, d: b, f: F } = vt.div[k] ?? DIVISAO_VAZIA;
     if (b >= x) {
-      S = s(S + ((L - b) * F * x ** 3) / (L * 6));
-      S = s(S + ((b ** 2 * F) / 2 - (b ** 3 * F) / (L * 6) - (F * b * L) / 3) * x);
-      S = s(S + (q * b * (L - b / 2) * x ** 3) / (L * 6));
-      S = s(S - (x ** 4 * q) / 24);
-      S = s(S + ((-q * b ** 4) / (L * 24) - (b ** 2 * q * L) / 6 + (b ** 3 * q) / 6) * x);
+      S = s(S + ((L - b) * F * pot(x, 3)) / (L * 6));
+      S = s(S + ((pot(b, 2) * F) / 2 - (pot(b, 3) * F) / (L * 6) - (F * b * L) / 3) * x);
+      S = s(S + (q * b * (L - b / 2) * pot(x, 3)) / (L * 6));
+      S = s(S - (pot(x, 4) * q) / 24);
+      S = s(S + ((-q * pot(b, 4)) / (L * 24) - (pot(b, 2) * q * L) / 6 + (pot(b, 3) * q) / 6) * x);
     } else {
-      S = s(S - (F * b * x ** 3) / (L * 6) + (F * b * x ** 2) / 2);
-      S = s(S - ((b ** 3 * F) / (L * 6) + (F * b * L) / 3) * x + (b ** 3 * F) / 6);
-      S = s(S - (b ** 2 * q * x ** 3) / (L * 12) + (b ** 2 * q * x ** 2) / 4);
-      S = s(S + ((-q * b ** 4) / (L * 24) - (b ** 2 * q * L) / 6) * x);
-      S = s(S - (b ** 2 * q * L ** 2) / 6 + (b ** 4 * q) / 24 + (b ** 2 * q * L ** 2) / 6);
+      S = s(S - (F * b * pot(x, 3)) / (L * 6) + (F * b * pot(x, 2)) / 2);
+      S = s(S - ((pot(b, 3) * F) / (L * 6) + (F * b * L) / 3) * x + (pot(b, 3) * F) / 6);
+      S = s(S - (pot(b, 2) * q * pot(x, 3)) / (L * 12) + (pot(b, 2) * q * pot(x, 2)) / 4);
+      S = s(S + ((-q * pot(b, 4)) / (L * 24) - (pot(b, 2) * q * L) / 6) * x);
+      S = s(
+        S -
+          (pot(b, 2) * q * pot(L, 2)) / 6 +
+          (pot(b, 4) * q) / 24 +
+          (pot(b, 2) * q * pot(L, 2)) / 6,
+      );
     }
     let c = 0;
     if (a > 0) {
       if (x <= a) {
-        c = s((((L - a / 2) * q * x ** 3) / (L * 6)) * a);
-        c = s(c - (x ** 4 * q) / 24);
-        c = s(((-q * a ** 4) / (L * 24) - (a ** 2 * q * L) / 6 + (a ** 3 * q) / 6) * x + c);
+        c = s((((L - a / 2) * q * pot(x, 3)) / (L * 6)) * a);
+        c = s(c - (pot(x, 4) * q) / 24);
+        c = s(
+          ((-q * pot(a, 4)) / (L * 24) - (pot(a, 2) * q * L) / 6 + (pot(a, 3) * q) / 6) * x + c,
+        );
       } else {
-        c = s((-q * a ** 2 * x ** 3) / (L * 12) + (a ** 2 * q * x ** 2) / 4);
-        c = s(((-q * a ** 4) / (L * 24) - (a ** 2 * q * L) / 6) * x + c);
-        c = s(c - (a ** 2 * q * L ** 2) / 6 + (a ** 4 * q) / 24 + (a ** 2 * q * L ** 2) / 6);
+        c = s((-q * pot(a, 2) * pot(x, 3)) / (L * 12) + (pot(a, 2) * q * pot(x, 2)) / 4);
+        c = s(((-q * pot(a, 4)) / (L * 24) - (pot(a, 2) * q * L) / 6) * x + c);
+        c = s(
+          c -
+            (pot(a, 2) * q * pot(L, 2)) / 6 +
+            (pot(a, 4) * q) / 24 +
+            (pot(a, 2) * q * pot(L, 2)) / 6,
+        );
       }
     }
     S = s(S - c);
@@ -360,6 +391,7 @@ function flecha(vt: VigaTrabalho, t: number, x: number, S0: number, s: (x: numbe
  *  Caso b, V1 (livros_viga_pilar.md 3.1): M(1) −0,97; Ve 0,73; x 1,50; M+ 0,55. */
 export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
   const vt = montaTrabalho(viga);
@@ -385,7 +417,7 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
   const A = zeros();
   const B = zeros();
   for (let t = 1; t <= n; t++) {
-    const tc = termosDeCarga(vt, t, false, s);
+    const tc = termosDeCarga(vt, t, false, s, pot);
     re[t] = tc.re;
     rd[t] = tc.rd;
     A[t] = tc.a;
@@ -397,13 +429,13 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
   let balancoEsquerdo: { mApoio: number; carga: number } | undefined;
   let balancoDireito: { mApoio: number; carga: number } | undefined;
   if (bE) {
-    const bal = balanco(vt, "esquerdo", false, 0, s);
+    const bal = balanco(vt, "esquerdo", false, 0, s, pot);
     M[0] = bal.m;
     rd[0] = bal.carga;
     balancoEsquerdo = { mApoio: bal.m, carga: bal.carga };
   }
   if (bD) {
-    const bal = balanco(vt, "direito", false, em(M, n), s);
+    const bal = balanco(vt, "direito", false, em(M, n), s, pot);
     balancoDireito = { mApoio: s(bal.m - em(M, n)), carga: bal.carga };
     M[n] = bal.m;
     re[n + 1] = bal.carga;
@@ -473,7 +505,7 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
     }
     if (t === 1) mepEsquerdo = s(-((At * 2 - Bt) / 3));
     if (n === t) mepDireito = s(-((Bt * 2 - At) / 3));
-    const perf = momentoPositivo(vt, t, vePerf, mEsq, s, avisos);
+    const perf = momentoPositivo(vt, t, vePerf, mEsq, s, pot, avisos);
     const linhaPerf: LinhaEngastamentoPerfeito = {
       tramo: t,
       ve: vePerf,
@@ -485,7 +517,7 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
     };
     re[t] = s((em(M, t) - em(M, t - 1)) / Lt + em(re, t));
     rd[t] = s((em(M, t - 1) - em(M, t)) / Lt + em(rd, t));
-    const mp = momentoPositivo(vt, t, em(re, t), em(M, t - 1), s, avisos);
+    const mp = momentoPositivo(vt, t, em(re, t), em(M, t - 1), s, pot, avisos);
     xs[t] = mp.x;
     mpos[t] = mp.m;
     if (linhaPerf.mPositivo > mp.m * fator101) engastamentoPerfeito.push(linhaPerf);
@@ -519,14 +551,14 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
     const Lt = em(L, t);
     const mi = em(M, t - 1);
     const mj = em(M, t);
-    let S = s((x ** 2 * mi) / 2 - (x ** 3 * mi) / (Lt * 6) - (mi * Lt * x) / 3);
-    S = s(S + ((x ** 3 * mj) / (Lt * 6) - (mj * Lt * x) / 6));
-    fEJ[t] = flecha(vt, t, x, S, s);
+    let S = s((pot(x, 2) * mi) / 2 - (pot(x, 3) * mi) / (Lt * 6) - (mi * Lt * x) / 3);
+    S = s(S + ((pot(x, 3) * mj) / (Lt * 6) - (mj * Lt * x) / 6));
+    fEJ[t] = flecha(vt, t, x, S, s, pot);
   }
 
   // Passo 10: envoltória de acidentais, só com acidentais "S" (VIGA.BAS:7234-7461).
   if (acidentais) {
-    envoltoria(vt, parametros, fator, s, { mMax, ve5, alt, rMax, rMin });
+    envoltoria(vt, parametros, fator, s, pot, { mMax, ve5, alt, rMax, rMin });
   }
 
   // M+ da envoltória (ou do caso total, sem acidentais) e flecha da envoltória
@@ -536,7 +568,7 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
   const fEJEnv = zeros();
   for (let t = 1; t <= n; t++) {
     const [vAlt = 0, mAlt = 0] = alt[t] ?? [];
-    const mp = momentoPositivo(vt, t, vAlt, mAlt, s, avisos);
+    const mp = momentoPositivo(vt, t, vAlt, mAlt, s, pot, avisos);
     xEnv[t] = mp.x;
     mEnv[t] = mp.m;
   }
@@ -545,16 +577,16 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
       const [vAlt = 0, mAlt = 0] = alt[t] ?? [];
       const x = em(xEnv, t);
       const Lt = em(L, t);
-      let S = s((x ** 2 * mAlt) / 2 - (x ** 3 * mAlt) / (Lt * 6) - (mAlt * Lt * x) / 3);
+      let S = s((pot(x, 2) * mAlt) / 2 - (pot(x, 3) * mAlt) / (Lt * 6) - (mAlt * Lt * x) / 3);
       let mj = s(vAlt * Lt + mAlt);
       let a = 0;
       for (let k = em(vt.fim, t - 1) + 1; k <= em(vt.fim, t); k++) {
         const dv = vt.div[k] ?? DIVISAO_VAZIA;
-        mj = s(mj - ((dv.d - a) ** 2 * dv.p) / 2 - ((dv.d - a) * dv.p + dv.f) * (Lt - dv.d));
+        mj = s(mj - (pot(dv.d - a, 2) * dv.p) / 2 - ((dv.d - a) * dv.p + dv.f) * (Lt - dv.d));
         a = dv.d;
       }
-      S = s(S + ((x ** 3 / (Lt * 6)) * mj - (Lt * x * mj) / 6));
-      fEJEnv[t] = flecha(vt, t, x, S, s);
+      S = s(S + ((pot(x, 3) / (Lt * 6)) * mj - (Lt * x * mj) / 6));
+      fEJEnv[t] = flecha(vt, t, x, S, s, pot);
     }
   }
 
@@ -573,7 +605,7 @@ export const analisaViga: AnalisaViga = (viga, parametros, modo) => {
 
   // Saída nos índices do contrato.
   const coefFlecha = (v: number) =>
-    s(v * parametros.coeficienteMedida ** 3 * parametros.coeficienteForca);
+    s(v * pot(parametros.coeficienteMedida, 3) * parametros.coeficienteForca);
   const tramos: TramoAnalisado[] = [];
   for (let t = 1; t <= n; t++) {
     const e5 = ve5[t] ?? [0, 0, 0, 0, 0];
@@ -658,6 +690,7 @@ function envoltoria(
   parametros: ParametrosVicalc,
   fator: number,
   s: (x: number) => number,
+  pot: Pot,
   est: EstadoEnvoltoria,
 ) {
   const { n, balEsq: bE, balDir: bD, engEsq: eE, engDir: eD, vao: L, mext } = vt;
@@ -672,7 +705,7 @@ function envoltoria(
     if (!casoMext) {
       for (let t = 1; t <= n; t++) {
         if (t !== c || em(vt.nDiv, t) === 0) continue;
-        const tc = termosDeCarga(vt, t, true, s);
+        const tc = termosDeCarga(vt, t, true, s, pot);
         RE[t] = [tc.re, tc.rd];
         Ac[t] = tc.a;
         Bc[t] = tc.b;
@@ -680,12 +713,12 @@ function envoltoria(
     } else if (bD + n + 1 === c) Mc[0] = mext[0];
     else Mc[n] = mext[1];
     if (bE && c === 0 && em(vt.nDiv, 0) !== 0) {
-      const bal = balanco(vt, "esquerdo", true, em(Mc, 0), s);
+      const bal = balanco(vt, "esquerdo", true, em(Mc, 0), s, pot);
       Mc[0] = bal.m;
       RE[0] = [0, bal.carga];
     }
     if (bD && n + 1 === c && em(vt.nDiv, n + 1) !== 0) {
-      const bal = balanco(vt, "direito", true, em(Mc, n), s);
+      const bal = balanco(vt, "direito", true, em(Mc, n), s, pot);
       Mc[n] = bal.m;
       RE[n + 1] = [bal.carga, 0];
     }

@@ -4,6 +4,7 @@
 // estádio II (S_20137, DESDIM.BAS:3909-4330). Unidades: m e t nos esforços, cm e t/cm²
 // na seção. Livros: U03-008, U03-011, U03-041 (livros_arm_forma_des.md 4.3); PLANO D5.
 import { atribuicao, qbInt, qbStr } from "../base/f32";
+import { potencia, raiz } from "../base/x87";
 import type { DivisaoCarga, MateriaisSistrut, ModoSistrut, ParametrosDsp } from "../base/tipos";
 import type { SecaoCalculo } from "./desdim-flexao";
 
@@ -16,10 +17,9 @@ export function moduloEc(
 ) {
   const s = atribuicao(modo);
   const k = parametros.multiplicadorEc;
+  const rz = raiz(modo);
   if (k < 0) return s(-k);
-  return s(
-    (Math.sqrt(1000 * materiais.fck * parametros.multiplicadorUnidade + 35) * k * 21000) / 1000,
-  );
+  return s((rz(1000 * materiais.fck * parametros.multiplicadorUnidade + 35) * k * 21000) / 1000);
 }
 
 /** Dados de um tramo interno para a flecha: vão L (m), abscissa x do M+ (m), cortante
@@ -38,49 +38,59 @@ export interface TramoFlecha {
  *  vigas iguais, q 0,486, L 4: q·x(L³ − 3Lx² + 2x³)/48 = 0,6645 em x = 1,5. */
 export function flechaEJ(tramo: TramoFlecha, modo: ModoSistrut) {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   const { vao: L, x, ve, mEsquerdo: mi, divisoes } = tramo;
-  let e = s((x ** 2 * mi) / 2 - (x ** 3 * mi) / (L * 6) - (mi * L * x) / 3);
+  let e = s((pot(x, 2) * mi) / 2 - (pot(x, 3) * mi) / (L * 6) - (mi * L * x) / 3);
   // Momento no apoio direito pelo equilíbrio do tramo.
   let md = s(ve * L + mi);
   let anterior = 0;
   for (const dv of divisoes) {
     md = s(
-      md - ((dv.d - anterior) ** 2 * dv.p) / 2 - ((dv.d - anterior) * dv.p + dv.f) * (L - dv.d),
+      md - (pot(dv.d - anterior, 2) * dv.p) / 2 - ((dv.d - anterior) * dv.p + dv.f) * (L - dv.d),
     );
     anterior = dv.d;
   }
-  e = s((x ** 3 / (L * 6)) * md - (L * x * md) / 6 + e);
+  e = s((pot(x, 3) / (L * 6)) * md - (L * x * md) / 6 + e);
   anterior = 0;
   for (const dv of divisoes) {
     const { d, p: q, f } = dv;
     if (d >= x) {
-      e = s(((L - d) * f * x ** 3) / (L * 6) + e);
-      e = s(((d ** 2 * f) / 2 - (d ** 3 * f) / (L * 6) - (f * d * L) / 3) * x + e);
-      e = s((q * d * (L - d / 2) * x ** 3) / (L * 6) + e);
-      e = s(e - (x ** 4 * q) / 24);
-      e = s(((-q * d ** 4) / (L * 24) - (d ** 2 * q * L) / 6 + (d ** 3 * q) / 6) * x + e);
+      e = s(((L - d) * f * pot(x, 3)) / (L * 6) + e);
+      e = s(((pot(d, 2) * f) / 2 - (pot(d, 3) * f) / (L * 6) - (f * d * L) / 3) * x + e);
+      e = s((q * d * (L - d / 2) * pot(x, 3)) / (L * 6) + e);
+      e = s(e - (pot(x, 4) * q) / 24);
+      e = s(((-q * pot(d, 4)) / (L * 24) - (pot(d, 2) * q * L) / 6 + (pot(d, 3) * q) / 6) * x + e);
     } else {
-      e = s(e - (f * d * x ** 3) / (L * 6) + (f * d * x ** 2) / 2);
-      e = s(e - ((d ** 3 * f) / (L * 6) + (f * d * L) / 3) * x + (d ** 3 * f) / 6);
-      e = s(e - (d ** 2 * q * x ** 3) / (L * 12) + (d ** 2 * q * x ** 2) / 4);
-      e = s(((-q * d ** 4) / (L * 24) - (d ** 2 * q * L) / 6) * x + e);
-      e = s(e - (d ** 2 * q * L ** 2) / 6 + (d ** 4 * q) / 24 + (d ** 2 * q * L ** 2) / 6);
+      e = s(e - (f * d * pot(x, 3)) / (L * 6) + (f * d * pot(x, 2)) / 2);
+      e = s(e - ((pot(d, 3) * f) / (L * 6) + (f * d * L) / 3) * x + (pot(d, 3) * f) / 6);
+      e = s(e - (pot(d, 2) * q * pot(x, 3)) / (L * 12) + (pot(d, 2) * q * pot(x, 2)) / 4);
+      e = s(((-q * pot(d, 4)) / (L * 24) - (pot(d, 2) * q * L) / 6) * x + e);
+      e = s(
+        e -
+          (pot(d, 2) * q * pot(L, 2)) / 6 +
+          (pot(d, 4) * q) / 24 +
+          (pot(d, 2) * q * pot(L, 2)) / 6,
+      );
     }
     // Desconta a parte da carga distribuída antes do início da divisão.
     let desconto = 0;
     if (anterior > 0) {
       const a = anterior;
       if (x <= a) {
-        desconto = s((((L - a / 2) * q * x ** 3) / (L * 6)) * a);
-        desconto = s(desconto - (x ** 4 * q) / 24);
+        desconto = s((((L - a / 2) * q * pot(x, 3)) / (L * 6)) * a);
+        desconto = s(desconto - (pot(x, 4) * q) / 24);
         desconto = s(
-          ((-q * a ** 4) / (L * 24) - (a ** 2 * q * L) / 6 + (a ** 3 * q) / 6) * x + desconto,
+          ((-q * pot(a, 4)) / (L * 24) - (pot(a, 2) * q * L) / 6 + (pot(a, 3) * q) / 6) * x +
+            desconto,
         );
       } else {
-        desconto = s((-q * a ** 2 * x ** 3) / (L * 12) + (a ** 2 * q * x ** 2) / 4);
-        desconto = s(((-q * a ** 4) / (L * 24) - (a ** 2 * q * L) / 6) * x + desconto);
+        desconto = s((-q * pot(a, 2) * pot(x, 3)) / (L * 12) + (pot(a, 2) * q * pot(x, 2)) / 4);
+        desconto = s(((-q * pot(a, 4)) / (L * 24) - (pot(a, 2) * q * L) / 6) * x + desconto);
         desconto = s(
-          desconto - (a ** 2 * q * L ** 2) / 6 + (a ** 4 * q) / 24 + (a ** 2 * q * L ** 2) / 6,
+          desconto -
+            (pot(a, 2) * q * pot(L, 2)) / 6 +
+            (pot(a, 4) * q) / 24 +
+            (pot(a, 2) * q * pot(L, 2)) / 6,
         );
       }
     }
@@ -94,11 +104,12 @@ export function flechaEJ(tramo: TramoFlecha, modo: ModoSistrut) {
 /** Inércia bruta da seção T (cm⁴) pelo centro de gravidade (DESDIM.BAS:3898-3901). */
 export function inerciaBruta(secao: SecaoCalculo, modo: ModoSistrut) {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   const { bw, h, bf, hf } = secao;
-  let yc = s((hf ** 2 * bf) / 2 + (h - hf) * ((h - hf) / 2 + hf) * bw);
+  let yc = s((pot(hf, 2) * bf) / 2 + (h - hf) * ((h - hf) / 2 + hf) * bw);
   yc = s(yc / (bf * hf + (h - hf) * bw));
-  let i = s((hf ** 3 * bf) / 12 + (yc - hf / 2) ** 2 * bf * hf);
-  i = s(((h - hf) ** 3 * bw) / 12 + i + (h - hf) * (yc - ((h - hf) / 2 + hf)) ** 2 * bw);
+  let i = s((pot(hf, 3) * bf) / 12 + pot(yc - hf / 2, 2) * bf * hf);
+  i = s((pot(h - hf, 3) * bw) / 12 + i + (h - hf) * pot(yc - ((h - hf) / 2 + hf), 2) * bw);
   return i;
 }
 
@@ -113,20 +124,22 @@ export function estadioII(
   modo: ModoSistrut,
 ) {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
+  const rz = raiz(modo);
   const { bw, h, bf, hf, d } = secao;
   let x: number;
-  if ((hf ** 2 * bf) / 2 >= ((d - hf) * as * es) / ec) {
+  if ((pot(hf, 2) * bf) / 2 >= ((d - hf) * as * es) / ec) {
     const a = s(bf / 2);
     const b = s((as * es) / ec);
     const c = s((-as * d * es) / ec);
-    x = s((-b + Math.sqrt(b ** 2 - 4 * a * c)) / (a * 2));
-    if (x > hf || x < 0) x = s((-b - Math.sqrt(b ** 2 - 4 * a * c)) / (a * 2));
+    x = s((-b + rz(pot(b, 2) - 4 * a * c)) / (a * 2));
+    if (x > hf || x < 0) x = s((-b - rz(pot(b, 2) - 4 * a * c)) / (a * 2));
   } else {
     const a = s(bw / 2);
     const b = s((bf - bw) * hf + (as * es) / ec);
-    const c = s((-as * d * es) / ec + ((bw - bf) * hf ** 2) / 2);
-    x = s((-b + Math.sqrt(b ** 2 - 4 * a * c)) / (a * 2));
-    if (x > h || x < hf) x = s((-b - Math.sqrt(b ** 2 - 4 * a * c)) / (a * 2));
+    const c = s((-as * d * es) / ec + ((bw - bf) * pot(hf, 2)) / 2);
+    x = s((-b + rz(pot(b, 2) - 4 * a * c)) / (a * 2));
+    if (x > h || x < hf) x = s((-b - rz(pot(b, 2) - 4 * a * c)) / (a * 2));
   }
   return x;
 }
@@ -134,14 +147,15 @@ export function estadioII(
 /** Rigidez EI fissurada (t·cm²) da flecha no estádio II (DESDIM.BAS:3884-3894). */
 function rigidezFissurada(secao: SecaoCalculo, as: number, ec: number, modo: ModoSistrut) {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   const { bw, bf, hf } = secao;
   const es = 2100;
   const x = estadioII(secao, as, es, ec, modo);
-  let ei = s((secao.d - x) ** 2 * as * es);
+  let ei = s(pot(secao.d - x, 2) * as * es);
   const hm = hf < x ? hf : x;
   const meio = hf / 2 < x / 2 ? hf / 2 : x / 2;
-  ei = s((((bf - bw) * hm ** 3) / 12 + (bf - bw) * (x - meio) ** 2 * hm) * ec + ei);
-  ei = s(((x ** 3 * bw) / 12 + (x / 2) ** 2 * bw * x) * ec + ei);
+  ei = s((((bf - bw) * pot(hm, 3)) / 12 + (bf - bw) * pot(x - meio, 2) * hm) * ec + ei);
+  ei = s(((pot(x, 3) * bw) / 12 + pot(x / 2, 2) * bw * x) * ec + ei);
   return ei;
 }
 
@@ -160,12 +174,18 @@ export function flechaTramo(
   modo: ModoSistrut,
 ) {
   const s = atribuicao(modo);
-  const fator = coeficienteMedida ** 3 * coeficienteForca * 100000000;
+  const pot = potencia(modo);
+  // Ordem das contas do .BAS: ((c³·EJf)·cf)·1e8/EI (3895) e c³·EJf/(Ec·I)·cf·1e8 (3902).
   const valor = fissurada
-    ? s(qbInt((fator * ejf) / rigidezFissurada(secao, asArranjo, ec, modo)) / 100)
+    ? s(
+        qbInt(
+          (pot(coeficienteMedida, 3) * ejf * coeficienteForca * 100000000) /
+            rigidezFissurada(secao, asArranjo, ec, modo),
+        ) / 100,
+      )
     : s(
         qbInt(
-          ((coeficienteMedida ** 3 * ejf) / (ec * inerciaBruta(secao, modo))) *
+          ((pot(coeficienteMedida, 3) * ejf) / (ec * inerciaBruta(secao, modo))) *
             coeficienteForca *
             100000000,
         ) / 100,
@@ -197,6 +217,7 @@ export function fissuracao(
   modo: ModoSistrut,
 ): Fissuracao {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   const eta = s(1.5);
   const es = 2100;
   const ec = moduloEc(materiais, parametros, modo);
@@ -204,11 +225,11 @@ export function fissuracao(
     materiais.fck > s(0.18) ? s(s(0.06) * materiais.fck + s(0.007)) : s(materiais.fck / 10);
   const { bw, h, bf, hf, d } = secao;
   const x = estadioII(secao, asEfetiva, es, ec, modo);
-  let ii = s(((d - x) ** 2 * asEfetiva * es) / ec);
+  let ii = s((pot(d - x, 2) * asEfetiva * es) / ec);
   const hm = hf < x ? hf : x;
   const meio = hf / 2 < x / 2 ? hf / 2 : x / 2;
-  ii = s(((bf - bw) * hm ** 3) / 12 + ii + (bf - bw) * (x - meio) ** 2 * hm);
-  ii = s((x ** 3 * bw) / 12 + ii + (x / 2) ** 2 * bw * x);
+  ii = s(((bf - bw) * pot(hm, 3)) / 12 + ii + (bf - bw) * pot(x - meio, 2) * hm);
+  ii = s((pot(x, 3) * bw) / 12 + ii + pot(x / 2, 2) * bw * x);
   const sigma = s(((d - x) / (ec * ii)) * es * m);
   const w1 = s((((1 * bw * h) / asEfetiva + 45) / ((eta * 2 - s(0.75)) * es)) * bitola * sigma);
   const w2 = s((bitola / ((eta * 2 - s(0.75)) * es * ftk)) * sigma * sigma * 3);

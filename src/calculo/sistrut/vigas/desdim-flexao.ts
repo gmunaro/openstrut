@@ -3,6 +3,7 @@
 // classe A ou B. Unidades do original: cm, t/cm², M em t·cm. Livros: U03-042..045
 // (livros_arm_forma_des.md 4.3); PLANO D1, R8.
 import { atribuicao, qbInt } from "../base/f32";
+import { potencia, raiz as raizModo } from "../base/x87";
 import type { MateriaisSistrut, ModoSistrut } from "../base/tipos";
 
 /** Seção de cálculo: bw, h, mesa bf/hf (0 = sem mesa) e altura útil d, cm. */
@@ -51,6 +52,8 @@ export function tensaoAco(
   modo: ModoSistrut,
 ) {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
+  const rz = raizModo(modo);
   const { fyk, gamaS } = materiais;
   const elastico = () => (modo === "original" ? s((eps * 2100) / gamaS) : s(eps * 2100));
   if (materiais.classeAco === "A") {
@@ -65,10 +68,10 @@ export function tensaoAco(
   // 0,03111111 (≈ 1,4/45) é o literal do .BAS; 1/2100, 4/45 e 1/3000 dão os mesmos SINGLE.
   const c14 = modo === "original" ? s(0.03111111) : 1.4 / 45;
   let u = s(s(1 / 2100) - (c14 / (fyk * multiplicador)) * gamaS);
-  const k = ((s(0.7) ** 2 / 45 - eps) / fyd ** 2) * s(4 / 45);
-  if (k > u ** 2) return -1;
-  u = s(-u + Math.sqrt(u ** 2 - k));
-  return s((fyd ** 2 * u * 45) / 2);
+  const k = ((pot(s(0.7), 2) / 45 - eps) / pot(fyd, 2)) * s(4 / 45);
+  if (k > pot(u, 2)) return -1;
+  u = s(-u + rz(pot(u, 2) - k));
+  return s((pot(fyd, 2) * u * 45) / 2);
 }
 
 /** Armadura de flexão para o momento m (t·cm, já multiplicado pelos coeficientes de
@@ -84,19 +87,21 @@ export function flexaoSecao(
   modo: ModoSistrut,
 ): ResultadoFlexao {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
+  const rz = raizModo(modo);
   const { bw: b, h, bf, hf, d } = secao;
   const { fck, fyk, gamaF, gamaC, gamaS } = materiais;
   const mult = multiplicador;
   const xi = xiLimite(materiais, mult, modo);
   const asLimiteRet = s((gamaS / (mult * fyk * gamaC)) * mult * fck * b * d * xi * s(0.68));
   const mLimiteRet = s(
-    ((d ** 2 * (1 - s(0.4) * xi)) / (gamaC * gamaF)) * b * s(0.85) * mult * fck * s(0.8) * xi,
+    ((pot(d, 2) * (1 - s(0.4) * xi)) / (gamaC * gamaF)) * b * s(0.85) * mult * fck * s(0.8) * xi,
   );
   const asLimiteT = s(
     ((b * s(0.8) * xi * d + (bf - b) * hf) / (gamaC * mult * fyk)) * s(0.85) * mult * fck * gamaS,
   );
   const mLimiteT = s(
-    ((d ** 2 * (1 - s(0.4) * xi) * b * s(0.8) * xi + (bf - b) * (d - hf / 2) * hf) /
+    ((pot(d, 2) * (1 - s(0.4) * xi) * b * s(0.8) * xi + (bf - b) * (d - hf / 2) * hf) /
       (gamaC * gamaF)) *
       s(0.85) *
       mult *
@@ -107,7 +112,7 @@ export function flexaoSecao(
 
   // Raiz menor de a·ξ² + b·ξ + c = 0 (DESDIM.BAS:3697, 3706).
   const raiz = (a: number, bq: number, c: number) =>
-    s((-bq - Math.sqrt(bq ** 2 - 4 * a * c)) / (2 * a));
+    s((-bq - rz(pot(bq, 2) - 4 * a * c)) / (2 * a));
 
   if ((m > mLimiteT && temMesa) || (m > mLimiteRet && !temMesa)) {
     // Armadura dupla (L_189d6, DESDIM.BAS:3711-3732; U03-043).
@@ -132,16 +137,16 @@ export function flexaoSecao(
   }
   if (m <= mMesa && temMesa) {
     // Linha neutra na mesa: retangular de largura bf (L_18886, DESDIM.BAS:3702-3710).
-    const a = s((d ** 2 * bf * s(0.68) * mult * fck * s(0.4)) / gamaC);
-    const bq = s(-((d ** 2 * bf * s(0.68) * mult * fck) / gamaC));
+    const a = s((pot(d, 2) * bf * s(0.68) * mult * fck * s(0.4)) / gamaC);
+    const bq = s(-((pot(d, 2) * bf * s(0.68) * mult * fck) / gamaC));
     const c = s(gamaF * m);
     const x = raiz(a, bq, c);
     const as = s((s(0.85) / (mult * fyk * gamaC)) * mult * fck * bf * s(0.8) * x * d * gamaS);
     return { xd: x, as, asc: 0, acimaDoLimite: false, tensaoInvalida: false, ramo: "mesa" };
   }
   // Linha neutra na alma ou seção retangular (L_186eb, DESDIM.BAS:3693-3701).
-  const a = s((d ** 2 * b * s(0.68) * mult * fck * s(0.4)) / gamaC);
-  const bq = s(-((d ** 2 * b * s(0.68) * mult * fck) / gamaC));
+  const a = s((pot(d, 2) * b * s(0.68) * mult * fck * s(0.4)) / gamaC);
+  const bq = s(-((pot(d, 2) * b * s(0.68) * mult * fck) / gamaC));
   const c = s(-(((bf - b) * (d - hf / 2) * s(0.85) * mult * fck * hf) / gamaC) + gamaF * m);
   const x = raiz(a, bq, c);
   const as = s(
