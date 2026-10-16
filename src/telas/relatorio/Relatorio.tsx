@@ -100,7 +100,7 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
                   <p className="text-aviso mt-2 text-sm font-semibold">{AVISO_CONFERENCIA}</p>
                 </header>
 
-                <div className="mt-2 grid gap-6 md:grid-cols-2 print:grid-cols-2">
+                <div className="mt-2 grid gap-6 md:grid-cols-2 print:grid-cols-2 [&>*]:min-w-0">
                   <section>
                     <TituloBloco>Materiais</TituloBloco>
                     <Tabela>
