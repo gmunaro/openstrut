@@ -49,6 +49,7 @@ import {
   type VigaSistrut,
   vinculosDosCodigos,
 } from "./sistrut/obra";
+import type { Ponto } from "../dominio/obra";
 import { analisaVigas } from "./sistrut/vigas/vicalc";
 import type {
   Barra,
@@ -121,6 +122,15 @@ const momentosValidos = (m: MomentosDeLaje | undefined) =>
     ? m
     : undefined;
 
+/** Comprimento, m, dos lados do polígono que caem no bordo `b` da V2 (`bordos[k]` é o
+ *  bordo do lado k → k+1). */
+function comprimentoNoPoligono(poligono: readonly Ponto[], bordos: readonly Bordo[], b: Bordo) {
+  return poligono.reduce((soma, v, k) => {
+    const w = poligono[(k + 1) % poligono.length]!;
+    return bordos[k] === b ? soma + Math.hypot(w.x - v.x, w.y - v.y) : soma;
+  }, 0);
+}
+
 function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): ResultadoLaje {
   const desc = ps.lajesDoPainel.find((l) => l.id === laje.id);
   const nome = desc?.nome ?? laje.nome;
@@ -140,8 +150,9 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
     lx: laje.lx,
     ly: laje.ly,
     h: laje.h,
-    g: tPorM2ParaKnPorM2(pesoProprio + permanente),
-    q: laje.sobrecarga,
+    // com cargas de ocupação do pavimento: a parte permanente delas vai no g
+    g: tPorM2ParaKnPorM2(pesoProprio + permanente) + (desc?.ocupacao?.permanente ?? 0),
+    q: laje.sobrecarga + (desc?.ocupacao?.acidental ?? 0),
     vinculos,
     mu: sl?.mu ?? laje.mu,
   };
@@ -175,7 +186,9 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
         ref: "LAJECALC.BAS:875-880",
       },
     );
-  } else
+  } else if (laje.tipo === "pre-moldada")
+    avisos.push(`${nome}: pré-moldada; o LAJECALC não calcula momentos, só a montagem a carrega.`);
+  else
     avisos.push(
       `${nome}: momentos não calculados pelo LAJECALC (sem bordo que gire ou fora da faixa de H).`,
     );
@@ -185,7 +198,11 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
     if (!b) continue;
     // carga por metro do lado, ponderada pelo comprimento dele no bordo da V2
     const t = rb.linear + rb.cargaArea + rb.estrutura + rb.peso;
-    const comprimentoBordo = b === "esquerdo" || b === "direito" ? laje.ly : laje.lx;
+    const comprimentoBordo = laje.poligono
+      ? comprimentoNoPoligono(laje.poligono, bordos, b)
+      : b === "esquerdo" || b === "direito"
+        ? laje.ly
+        : laje.lx;
     reacoes[b] += tPorMParaKnPorM((t * rb.comprimento) / comprimentoBordo);
   }
   // flecha: o original não calcula (coluna L/f 0); o corrigido verifica (R1)
@@ -194,10 +211,10 @@ function resultadoLaje(laje: Laje, ps: PavimentoSistrut, r: ResultadoSistrut): R
   if (r.modo === "corrigido" && mom && sl) {
     const f = verificaFlechaLaje(
       {
-        lx: laje.lx,
-        ly: laje.ly,
+        lx: desc?.vaosFlecha?.lx ?? laje.lx,
+        ly: desc?.vaosFlecha?.ly ?? laje.ly,
         vinculos: entrada.vinculos,
-        acidental: laje.sobrecarga / tPorM2ParaKnPorM2(1),
+        acidental: entrada.q / tPorM2ParaKnPorM2(1),
       },
       mom.q,
       laje.h,
@@ -702,8 +719,10 @@ function resultadoPavimento(
     equilibrio: equilibrio(ps, pilares),
     falhas: [],
   };
+  // a pré-moldada não tem momentos no SISTRUT, mas a montagem leva a carga dela às vigas
+  const preMoldadas = new Set(pav.lajes.filter((l) => l.tipo === "pre-moldada").map((l) => l.nome));
   for (const l of lajes)
-    if (!momentosValidos(ps.esforcos.momentos[l.laje.nome]))
+    if (!momentosValidos(ps.esforcos.momentos[l.laje.nome]) && !preMoldadas.has(l.laje.nome))
       rp.falhas.push(
         `Laje ${l.laje.nome} sem cálculo: a carga dela não chegou às vigas nem aos pilares; vigas e pilares deste pavimento e dos de baixo estão incompletos.`,
       );

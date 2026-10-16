@@ -35,9 +35,11 @@
 // SI convertido exato (fck/98,0665, 500 MPa → 5,0986 t/cm², 25 kN/m³ → 2,5493 t/m³),
 // cobrimentos da obra, float64.
 import type { Bordo, Laje, Materiais, Obra, Pavimento, Pilar, Vinculo } from "../../dominio/obra";
+import type { BarraImposta, ParametrosLajeObra, Ponto, TipoLaje } from "../../dominio/obra";
 import { geometriaDasVigas, type GeometriaViga } from "../montagem";
 import type { Etapa } from "../tipos";
 import { atribuicao, ErroQB, sng } from "./base/f32";
+import { ErroNaoConverge, qbCint } from "./base/f32";
 import {
   emSingle,
   PARAMETROS_DSP,
@@ -73,6 +75,7 @@ import type {
   MontagemPavimento,
   PainelLajes,
   PesoProprioVigas,
+  PilarMontagem,
   QuadroViga,
   ResultadoLajeproc,
   ResumoVigas,
@@ -95,6 +98,7 @@ import { esforcosDoPainelCom } from "./lajes/esforcos";
 import { espessuraMinimaLaje } from "./lajes/espessura";
 import { impoeEspessura, momentosComCoeficiente } from "./lajes/momentos";
 import { otimizaNegativos } from "./lajes/otimizacao";
+import type { OtimizacaoParada } from "./lajes/otimizacao";
 import { lajeproc } from "./lajes/proc";
 import { montaPavimento } from "./montagem/reacoes";
 import { pesoKgPorM } from "./montagem/vigas";
@@ -161,6 +165,22 @@ export function parametrosSistrut(m: Materiais, modo: ModoSistrut) {
 }
 export type ParametrosSistrut = ReturnType<typeof parametrosSistrut>;
 
+/** Adaptador do domínio para a tabela do .LAP: os campos de `Obra.parametrosLaje` têm
+ *  os nomes e as unidades de `PARAMETROS_LAJE` (o compilador confere). */
+const tabelaLapDaObra = (lap: ParametrosLajeObra): Partial<typeof PARAMETROS_LAJE> => ({ ...lap });
+
+/** Troca em `par.laje` os valores do .LAP que a obra editou, nos dois modos (em SINGLE no
+ *  original). O resto da tabela fica como `parametrosSistrut` a montou. */
+export function aplicaParametrosLaje(
+  par: ParametrosSistrut,
+  lap: ParametrosLajeObra | undefined,
+  modo: ModoSistrut,
+) {
+  if (!lap) return;
+  const editados = tabelaLapDaObra(lap);
+  par.laje = { ...par.laje, ...(modo === "original" ? emSingle(editados) : editados) };
+}
+
 // ---------------------------------------------------------------- resultado
 
 /** Uma laje da V2 no painel do original. */
@@ -170,6 +190,13 @@ export interface LajeDoPainel {
   nome: string;
   /** Bordo da V2 de cada índice de bordo do original (0..3). */
   bordos: readonly Bordo[];
+  /** Cargas de ocupação do pavimento que contêm o centroide da laje, kN/m² (as da obra,
+   *  sem conversão): a parte permanente (total − acidental) e a acidental, para a tela e
+   *  a flecha. O LAJECALC e o LAJEMONT usam os polígonos exatos. */
+  ocupacao?: { permanente: number; acidental: number };
+  /** Vãos da flecha do corrigido, m: lx e ly da laje retangular; com polígono, a maior
+   *  corda horizontal e a vertical (9 retas, como o LAJECALC 2 mede as cordas). */
+  vaosFlecha?: { lx: number; ly: number };
 }
 
 /** Uma viga detalhada: entrada do DESDIM, dimensionamento, detalhamento e quadro. */
@@ -213,6 +240,9 @@ export interface PavimentoSistrut {
   vigas: VigaSistrut[];
   avisos: string[];
   memoria: Etapa[];
+  /** Onde a otimização dos negativos do original entra em laço sem fim (R3, só no modo
+   *  original): a tela parada. Ausente = convergiu ou não rodou. */
+  otimizacaoParada?: OtimizacaoParada;
 }
 
 /** Um lance de pilar dimensionado pelo PILAREDI. */
@@ -258,6 +288,103 @@ const cantosDaLaje = (l: Laje) => [
   { x: l.x + l.lx, y: l.y },
 ];
 
+/** Polígono horário da laje: o `poligono` dela ou os cantos do retângulo. */
+export const verticesDaLaje = (l: Laje): Ponto[] => l.poligono ?? cantosDaLaje(l);
+
+/** Área com sinal (fórmula dos trapézios): negativa no sentido horário. */
+const areaComSinal = (p: readonly Ponto[]) =>
+  p.reduce((a, v, k) => {
+    const w = p[(k + 1) % p.length]!;
+    return a + (v.x * w.y - w.x * v.y) / 2;
+  }, 0);
+
+/** Ponto dentro do polígono (raio horizontal). */
+export function dentroDoPoligono(q: Ponto, p: readonly Ponto[]) {
+  let dentro = false;
+  for (let k = 0, j = p.length - 1; k < p.length; j = k++) {
+    const a = p[k]!;
+    const b = p[j]!;
+    if (a.y > q.y !== b.y > q.y && q.x < ((b.x - a.x) * (q.y - a.y)) / (b.y - a.y) + a.x)
+      dentro = !dentro;
+  }
+  return dentro;
+}
+
+/** Centroide de área do polígono. */
+function centroide(p: readonly Ponto[]): Ponto {
+  const a = areaComSinal(p);
+  let x = 0;
+  let y = 0;
+  p.forEach((v, k) => {
+    const w = p[(k + 1) % p.length]!;
+    const c = v.x * w.y - w.x * v.y;
+    x += (v.x + w.x) * c;
+    y += (v.y + w.y) * c;
+  });
+  return { x: x / (6 * a), y: y / (6 * a) };
+}
+
+/** Cargas de ocupação do pavimento que contêm o centroide da laje, kN/m²: a parte
+ *  permanente (total − acidental) e a acidental. Serve à flecha do corrigido e à
+ *  entrada mostrada na tela; o LAJECALC e o LAJEMONT usam os polígonos exatos. */
+export function ocupacaoDaLaje(l: Laje, pav: Pavimento) {
+  const c = centroide(verticesDaLaje(l));
+  let permanente = 0;
+  let acidental = 0;
+  for (const a of pav.cargasOcupacao ?? [])
+    if (dentroDoPoligono(c, a.poligono)) {
+      permanente += a.total - a.acidental;
+      acidental += a.acidental;
+    }
+  return { permanente, acidental };
+}
+
+/** Maior corda do polígono na direção x (`vertical` = false) ou y: o maior trecho
+ *  interno em 9 retas paralelas que dividem a faixa em 10 (a regra das cordas do
+ *  LAJECALC 2, LAJECALC.BAS:4801-4971). */
+export function maiorCorda(p: readonly Ponto[], vertical: boolean) {
+  const q = vertical ? p.map((v) => ({ x: v.y, y: v.x })) : p;
+  const ys = q.map((v) => v.y);
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  let maior = 0;
+  for (let r = 1; r <= 9; r++) {
+    const y = y0 + ((y1 - y0) * r) / 10;
+    const xs: number[] = [];
+    q.forEach((a, k) => {
+      const b = q[(k + 1) % q.length]!;
+      if (a.y > y !== b.y > y) xs.push(a.x + ((b.x - a.x) * (y - a.y)) / (b.y - a.y));
+    });
+    xs.sort((m, n) => m - n);
+    for (let k = 0; k + 1 < xs.length; k += 2) maior = Math.max(maior, xs[k + 1]! - xs[k]!);
+  }
+  return maior;
+}
+
+/** Vãos da flecha da laje (ver `LajeDoPainel.vaosFlecha`). */
+const vaosDaFlecha = (l: Laje) =>
+  l.poligono
+    ? { lx: maiorCorda(l.poligono, false), ly: maiorCorda(l.poligono, true) }
+    : { lx: l.lx, ly: l.ly };
+
+/** Bordo da V2 de um lado do polígono horário: o da normal externa (−dy, dx), pelo eixo
+ *  dominante (o lado inclinado vai para o bordo mais próximo). */
+function bordoDoLado(a: Ponto, b: Ponto): Bordo {
+  const nx = -(b.y - a.y);
+  const ny = b.x - a.x;
+  if (Math.abs(nx) >= Math.abs(ny)) return nx < 0 ? "esquerdo" : "direito";
+  return ny < 0 ? "inferior" : "superior";
+}
+
+/** Vínculo forçado do lado k: por lado com polígono, pelo bordo da V2 sem ele. */
+const vinculoDoLado = (l: Laje, bordos: readonly Bordo[], k: number) =>
+  l.poligono ? (l.vinculosLados?.[k] ?? undefined) : l.vinculos[bordos[k]!];
+
+const TIPO_LAJE: Record<TipoLaje, LajeSistrut["tipo"]> = {
+  macica: 0,
+  "pre-moldada": 1,
+  "comum-nao-calculada": 3,
+};
+
 const TOL_VERTICE = 1e-6;
 const dentro = (v: number, a: number, b: number) =>
   v > Math.min(a, b) + TOL_VERTICE && v < Math.max(a, b) - TOL_VERTICE;
@@ -268,6 +395,9 @@ const dentro = (v: number, a: number, b: number) =>
  *  compara os dois vértices do lado (LAJECALC.BAS:3714-3720). `bordos[k]` = bordo da
  *  V2 do lado k → k+1. */
 function poligonoDaLaje(l: Laje, outras: readonly Laje[]) {
+  // polígono da obra: como está (é o que o usuário do LAJEGEOM desenhou)
+  const p = l.poligono;
+  if (p) return { vertices: p, bordos: p.map((a, k) => bordoDoLado(a, p[(k + 1) % p.length]!)) };
   const cantos = cantosDaLaje(l);
   const vertices: { x: number; y: number }[] = [];
   const bordos: Bordo[] = [];
@@ -276,7 +406,7 @@ function poligonoDaLaje(l: Laje, outras: readonly Laje[]) {
     const horizontal = a.y === b.y;
     const sentido = horizontal ? Math.sign(b.x - a.x) : Math.sign(b.y - a.y);
     const meio = outras
-      .flatMap(cantosDaLaje)
+      .flatMap(verticesDaLaje)
       .filter((p) =>
         horizontal
           ? Math.abs(p.y - a.y) < TOL_VERTICE && dentro(p.x, a.x, b.x)
@@ -297,6 +427,42 @@ function poligonoDaLaje(l: Laje, outras: readonly Laje[]) {
 
 const CODIGO_ENGASTE = 22;
 const codigoForcado = (v: Vinculo) => (v === "livre" ? 1 : v === "apoiado" ? 0 : CODIGO_ENGASTE);
+
+/** Código da barra imposta: no LAJECALC, CINT(1000·índice da bitola + espaçamento em
+ *  cm) (LAJECALC.BAS:4166); no LAJEPROC, −(1000·índice da bitola + índice 1-based do
+ *  espaçamento) (LAJEPROC.BAS:451, 892). Bitola ou espaçamento fora das tabelas do .LAP:
+ *  aviso e nada. */
+function codigoDaBarra(
+  b: BarraImposta,
+  origem: "lajecalc" | "lajeproc",
+  par: ParametrosSistrut,
+  avisos: string[],
+) {
+  const perto = (x: number, y: number) => Math.abs(x - y) < 1e-4;
+  const ib = par.laje.bitolas.findIndex((x) => perto(x.bitola, b.bitola));
+  const ie = par.laje.espacamentos.findIndex((x) => perto(x, b.espacamento));
+  if (ib < 0 || (origem === "lajeproc" && ie < 0)) {
+    avisos.push(
+      `Barra imposta φ${b.bitola} c/${b.espacamento} fora das tabelas do .LAP; ignorada.`,
+    );
+    return undefined;
+  }
+  return origem === "lajecalc" ? qbCint(1000 * ib + b.espacamento) : -(1000 * ib + ie + 1);
+}
+
+/** Positivas impostas da laje no formato do LAJEPROC (`LajeSistrut.armaduraImposta`). */
+function armaduraImpostaDaLaje(l: Laje, par: ParametrosSistrut, avisos: string[]) {
+  const a = l.armaduraImposta;
+  if (!a) return {};
+  const principal = a.principal && codigoDaBarra(a.principal, "lajeproc", par, avisos);
+  const secundaria = a.secundaria && codigoDaBarra(a.secundaria, "lajeproc", par, avisos);
+  return {
+    armaduraImposta: {
+      ...(principal ? { principal } : {}),
+      ...(secundaria ? { secundaria } : {}),
+    },
+  };
+}
 
 /** Painel do LAJECALC a partir das lajes do pavimento. */
 function painelDoPavimento(
@@ -323,26 +489,52 @@ function painelDoPavimento(
       l,
       pav.lajes.filter((o) => o.id !== l.id),
     );
+    if (areaComSinal(poligono.vertices) >= 0)
+      avisos.push(
+        `Laje ${l.nome}: polígono fora do sentido horário (o LAJEGEOM só grava o horário); o cálculo dela não reproduz o original.`,
+      );
     const vertices = poligono.vertices.map((p) => ({ x: s(p.x), y: s(p.y) }));
-    lajesDoPainel.push({ id: l.id, nome: l.nome, bordos: poligono.bordos });
+    lajesDoPainel.push({
+      id: l.id,
+      nome: l.nome,
+      bordos: poligono.bordos,
+      ocupacao: ocupacaoDaLaje(l, pav),
+      vaosFlecha: vaosDaFlecha(l),
+    });
     if (l.sobrecarga > 0) {
       const q = s(knPorM2ParaTPorM2(l.sobrecarga));
       cargasPorArea.push({ vertices, total: q, acidental: q });
     }
+    const tipo = TIPO_LAJE[l.tipo ?? "macica"];
     return {
       nome: l.nome,
-      tipo: 0,
+      tipo,
       vertices,
       indicesVertices: vertices.map(indice),
       grupo: 0,
       // código 1 (livre) antes da automática: ela preserva o 1 e zera o resto
-      codigos: poligono.bordos.map((b) => (l.vinculos[b] === "livre" ? 1 : 0)),
-      angulo: 0,
-      mu: l.mu === 1 ? 0 : s(l.mu),
+      codigos: poligono.bordos.map((_, k) =>
+        vinculoDoLado(l, poligono.bordos, k) === "livre" ? 1 : 0,
+      ),
+      // LAJECALC 2 (LAJECALC.BAS:4537-4551) só dá direção e μ à maciça; nas outras o
+      // ângulo vira −1 e o μ fica 0 (REDIM), salvo o que o usuário der por <D> e <R>
+      // (4584-4700). μ = 1 da obra = não informado: pelas cordas na maciça, 0 no tipo 3
+      // (o original para em 1/√μ, LAJECALC.BAS:7239). Na pré-moldada o ângulo é o das
+      // nervuras (A_10cc(·,5)), que a montagem usa.
+      angulo: tipo === 3 && l.anguloArmadura === undefined ? s(-1) : s(l.anguloArmadura ?? 0),
+      mu: tipo === 1 || l.mu === 1 ? 0 : s(l.mu),
+      ...armaduraImpostaDaLaje(l, par, avisos),
       cargaPermanente: s(knPorM2ParaTPorM2(l.revestimento)),
       pesoProprio: 0,
     } satisfies LajeSistrut;
   });
+  // cargas de ocupação com polígono próprio (LAJEGEOM 3), depois das sobrecargas
+  for (const a of pav.cargasOcupacao ?? [])
+    cargasPorArea.push({
+      vertices: a.poligono.map((p) => ({ x: s(p.x), y: s(p.y) })),
+      total: s(knPorM2ParaTPorM2(a.total)),
+      acidental: s(knPorM2ParaTPorM2(a.acidental)),
+    });
 
   // LAJECALC 1: continuidade automática e, por cima, a vinculação forçada da V2
   const auto = continuidadeAutomatica(lajes, par.laje);
@@ -350,9 +542,16 @@ function painelDoPavimento(
   let continuidades: Continuidade[] = auto.continuidades;
   pav.lajes.forEach((l, i) => {
     const sl = lajes[i]!;
-    lajesDoPainel[i]!.bordos.forEach((b, k) => {
-      const v = l.vinculos[b];
+    lajesDoPainel[i]!.bordos.forEach((_, k, bordos) => {
+      const v = vinculoDoLado(l, bordos, k);
       if (v === undefined) return;
+      // o original não liga continuidade a laje não maciça (LAJECALC.BAS:3695, 3912)
+      if (v === "engastado" && sl.tipo !== 0) {
+        avisos.push(
+          `Laje ${l.nome}, lado ${k + 1}: engaste em laje não maciça; o SISTRUT não o aceita e ele foi ignorado.`,
+        );
+        return;
+      }
       const doBordo = (c: Continuidade) =>
         (c.lajeA === sl.nome && c.bordoA === k) || (c.lajeB === sl.nome && c.bordoB === k);
       sl.codigos[k] = codigoForcado(v);
@@ -372,8 +571,19 @@ function painelDoPavimento(
     });
   });
 
-  // LAJECALC 4: H da obra imposto (regrava o peso próprio = H·densidade/100)
+  // negativas impostas na continuidade (A_11e0(c,4)), pelo lado de qualquer das lajes
+  continuidades = continuidades.map((c) => {
+    const lado = (nome: string | null, k: number) =>
+      pav.lajes.find((x) => x.nome === nome)?.negativasImpostas?.[k] ?? null;
+    const n = lado(c.lajeA, c.bordoA) ?? lado(c.lajeB, c.bordoB);
+    const codigo = n && codigoDaBarra(n, "lajecalc", par, avisos);
+    return codigo ? { ...c, armaduraImposta: codigo } : c;
+  });
+
+  // LAJECALC 4: H da obra imposto (regrava o peso próprio = H·densidade/100); a
+  // pré-moldada não tem H no LAJECALC (só os tipos 0 e 3)
   lajes = lajes.map((l, i) => {
+    if (l.tipo === 1) return l;
     const r = impoeEspessura(l, pav.lajes[i]!.h, par.laje, modo);
     avisos.push(...r.avisos.map((a) => `${l.nome}: ${a}`));
     return r.laje;
@@ -425,7 +635,11 @@ function lajeDoLado(g: GeometriaViga, s1: number, s2: number, lado: -1 | 1, pav:
   const { x, y } = g.eixo.horizontal
     ? { x: meio, y: g.eixo.c + fora }
     : { x: g.eixo.c + fora, y: meio };
-  const l = pav.lajes.find((q) => x > q.x && x < q.x + q.lx && y > q.y && y < q.y + q.ly);
+  const l = pav.lajes.find((q) =>
+    q.poligono
+      ? dentroDoPoligono({ x, y }, q.poligono)
+      : x > q.x && x < q.x + q.lx && y > q.y && y < q.y + q.ly,
+  );
   return l?.h ?? 0;
 }
 
@@ -514,6 +728,20 @@ function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
 
 const mensagem = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/** Pilares do LAJEGEOM (A_1156) para a montagem, só quando o pavimento tem
+ *  pilar-parede: o trecho dele e, nos outros, o ponto do centro. Sem pilar-parede, a
+ *  montagem usa os pilares dos eixos, como antes. */
+function geometriaDosPilares(pav: Pavimento, modo: ModoSistrut): PilarMontagem[] | undefined {
+  const trechos = pav.trechosPilares ?? [];
+  if (trechos.length === 0) return undefined;
+  const s = atribuicao(modo);
+  const pt = (p: Ponto) => ({ x: s(p.x), y: s(p.y) });
+  return pav.pilares.map((p) => {
+    const t = trechos.find((x) => x.pilar === p.id);
+    return { nome: p.nome, inicio: pt(t?.inicio ?? p), fim: pt(t?.fim ?? p) };
+  });
+}
+
 // ---------------------------------------------------------------- pavimento
 
 function calcularPavimentoSistrut(
@@ -536,6 +764,21 @@ function calcularPavimentoSistrut(
         fim: { x: s(v.x2), y: s(v.y2) },
         carga: s(knPorMParaTPorM(v.cargaLinear)),
       });
+  // alvenarias em qualquer posição (LAJEGEOM 3): sobre laje, a montagem as distribui
+  for (const a of pav.alvenarias ?? [])
+    painel.alvenarias.push({
+      inicio: { x: s(a.inicio.x), y: s(a.inicio.y) },
+      fim: { x: s(a.fim.x), y: s(a.fim.y) },
+      carga: s(knPorMParaTPorM(a.carga)),
+    });
+  // γ das lajes (matL): os do .LAP (LAJE 7), que a obra pode editar; vigas e pilares
+  // seguem com `mat` (os γ de fábrica de PARAMETROS_LAJE)
+  const matL: MateriaisSistrut = {
+    ...mat,
+    gamaF: par.laje.gamaF,
+    gamaC: par.laje.gamaC,
+    gamaS: par.laje.gamaS,
+  };
 
   // LAJECALC 5 (antes da otimização) e LAJECALC 3 (espessura mínima)
   const esforcosAntesOtimizacao = esforcosDoPainelCom()(painel, par.laje, modo);
@@ -545,14 +788,15 @@ function calcularPavimentoSistrut(
     const coef = esforcosAntesOtimizacao.coeficientes[l.nome];
     if (!prep || !coef) continue;
     const pv = pav.lajes.find((q) => q.nome === l.nome);
+    const vaos = lajesDoPainel.find((d) => d.nome === l.nome)?.vaosFlecha;
     const flecha: DadosFlechaLaje | undefined = pv && {
-      lx: pv.lx,
-      ly: pv.ly,
+      lx: vaos?.lx ?? pv.lx,
+      ly: vaos?.ly ?? pv.ly,
       vinculos: vinculosDosCodigos(
         l.codigos,
         lajesDoPainel.find((d) => d.nome === l.nome)?.bordos ?? BORDOS_ORIGINAL,
       ),
-      acidental: knPorM2ParaTPorM2(pv.sobrecarga),
+      acidental: knPorM2ParaTPorM2(pv.sobrecarga + ocupacaoDaLaje(pv, pav).acidental),
     };
     try {
       espessuras[l.nome] = espessuraMinimaLaje(
@@ -567,7 +811,7 @@ function calcularPavimentoSistrut(
             par.laje,
             modo,
           ),
-        mat,
+        matL,
         par.laje,
         modo,
         flecha,
@@ -580,12 +824,14 @@ function calcularPavimentoSistrut(
   // LAJECALC 6: otimização dos negativos. No original é um passo que o usuário roda;
   // aqui roda por padrão (decisão 4 do dono) e `Obra.otimizaNegativos = false` o pula.
   let esforcos = esforcosAntesOtimizacao;
+  let otimizacaoParada: OtimizacaoParada | undefined;
   if (otimiza) {
     try {
       esforcos = esforcosDoPainelCom((e, recalcula) =>
-        otimizaNegativos(e, recalcula, mat, par.laje, modo),
+        otimizaNegativos(e, recalcula, matL, par.laje, modo),
       )(painel, par.laje, modo);
     } catch (e) {
+      if (e instanceof ErroNaoConverge && ehOtimizacaoParada(e.estado)) otimizacaoParada = e.estado;
       avisos.push(
         `Otimização dos negativos não feita: ${mensagem(e)} Valem os momentos antes da otimização.`,
       );
@@ -593,11 +839,11 @@ function calcularPavimentoSistrut(
   }
   const armadurasDe = (e: EsforcosLajes) =>
     Object.fromEntries(
-      Object.entries(e.momentos).map(([nome, m]) => [nome, armadurasLaje(m, mat, par.laje, modo)]),
+      Object.entries(e.momentos).map(([nome, m]) => [nome, armadurasLaje(m, matL, par.laje, modo)]),
     );
   const armadurasAntesOtimizacao = armadurasDe(esforcosAntesOtimizacao);
   const armaduras = armadurasDe(esforcos);
-  const proc = lajeproc(esforcos, mat, par.laje, modo);
+  const proc = lajeproc(esforcos, matL, par.laje, modo);
 
   // LAJEMONT: reações das lajes e .VIG
   const geo = geometriaDasVigas(pav);
@@ -612,6 +858,7 @@ function calcularPavimentoSistrut(
     pesosDasVigas(pav, modo),
     par.laje,
     modo,
+    geometriaDosPilares(pav, modo),
   );
 
   // VIGA: análise (VICALC) e .REP
@@ -686,8 +933,13 @@ function calcularPavimentoSistrut(
     vigas,
     avisos,
     memoria,
+    ...(otimizacaoParada ? { otimizacaoParada } : {}),
   };
 }
+
+/** O estado do `ErroNaoConverge` da otimização dos negativos (a tela parada do R3). */
+const ehOtimizacaoParada = (x: unknown): x is OtimizacaoParada =>
+  typeof x === "object" && x !== null && "relacaoNova" in x && "lados" in x;
 
 // ---------------------------------------------------------------- pilares
 
@@ -836,6 +1088,7 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
   const { modo } = opcoes;
   const mat = materiaisSistrut(obra.materiais, modo);
   const par = parametrosSistrut(obra.materiais, modo);
+  aplicaParametrosLaje(par, obra.parametrosLaje, modo);
   const avisos: string[] = [];
   if (obra.materiais.aco === "CA-25" && obra.materiais.classeAco === "B")
     avisos.push("Aço CA-25 é sempre classe A; a classe B informada foi ignorada.");
