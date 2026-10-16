@@ -255,7 +255,9 @@ export function importarLaj(
     );
   } else if (lida.buracos > 0)
     avisos.push(
-      `${lida.buracos} painel(éis) marcado(s) como buraco no LAJEGEOM: não entram como laje.`,
+      lida.buracos === 1
+        ? "1 painel marcado como buraco no LAJEGEOM: não entra como laje."
+        : `${lida.buracos} painéis marcados como buraco no LAJEGEOM: não entram como laje.`,
     );
   // "apoia em": o do .VIG do pavimento, com o das opções por cima
   const apoiosEmViga = {

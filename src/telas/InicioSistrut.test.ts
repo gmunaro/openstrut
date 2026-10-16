@@ -5,129 +5,23 @@
 // editado linha a linha para os casos das obras gravadas por usuários (vaga livre de
 // A_1014 com o fechamento da última área, pavimento só com buracos) e um .COL montado
 // aqui no formato do PIGRAEDI.
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { lerCol } from "../armazenamento/sistrut/pilar";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
+import {
+  arquivo,
+  colPredio,
+  COM_VAGA_SUJA,
+  comNome,
+  lajE2E,
+  OBRA_E2E,
+  PREDIO,
+  semIds,
+  SO_BURACOS,
+} from "./__fixtures__/predioSistrut";
 import { calcular } from "./calculo";
 import { detalharObra } from "./detalhamento";
 import { importarObraSistrut, type ArquivoEntrada } from "./InicioSistrut";
-
-const PASTA = fileURLToPath(new URL("./__fixtures__/sistrut/", import.meta.url));
-
-/** Lê um arquivo da pasta de fixtures como o seletor do navegador o entregaria. */
-const arquivo = (nome: string): ArquivoEntrada => ({
-  nome,
-  dados: new Uint8Array(readFileSync(`${PASTA}${nome}`)),
-});
-/** Arquivo com outro nome (o conteúdo de `origem`) ou com o texto dado. */
-const comNome = (nome: string, origem: string | ArquivoEntrada): ArquivoEntrada => ({
-  nome,
-  dados: typeof origem === "string" ? new Uint8Array(Buffer.from(origem, "latin1")) : origem.dados,
-});
-
-const OBRA_E2E: ArquivoEntrada[] = [
-  "E2E.LAJ",
-  "E2E.VIG",
-  "E2E.SEC",
-  "SISTRUT.DSP",
-  "E2E.COL",
-  "SISTRUT.PIP",
-  "E2E.REP",
-  "E2E.RLP",
-].map(arquivo);
-
-/** Serialização sem os ids: importadores de viga e pilar geram ids novos a cada chamada. */
-const semIds = (valor: unknown): string =>
-  JSON.stringify(valor).replace(/"id":"[^"]*"/g, '"id":"_"');
-
-// ---------------------------------------------------------------- prédio sintético
-
-/** O E2E.LAJ com as linhas trocadas (número da linha → valor), em CRLF como o original. */
-function lajE2E(troca: Record<number, string> = {}): string {
-  const linhas = readFileSync(`${PASTA}E2E.LAJ`, "latin1").split(/\r?\n/);
-  for (const [k, v] of Object.entries(troca)) linhas[Number(k) - 1] = ` ${v} `;
-  return linhas.join("\r\n");
-}
-// linhas do E2E.LAJ: 34 = A_1014(0,0), a próxima linha livre; 35 = A_1014(0,1), o número
-// de áreas; 36-49 = as linhas de A_1014 (n, total e acidental, 4 vértices e a livre); 78 =
-// número de lajes; 147, 156, 165 e 174 = tipo de cada painel
-/** Área começando em (8; 0): a linha livre fica com o ponto que fecha o polígono, como o
- *  LAJEGEOM a deixa, e a coluna 2 da linha do nº de vértices com lixo (o COB.LAJ de 1994
- *  que deu "cargasOcupacao[3].poligono: esperados pelo menos 3 pontos"). */
-const COM_VAGA_SUJA = lajE2E({
-  37: ".275",
-  40: "8",
-  41: "0",
-  42: "8",
-  43: "10",
-  44: "0",
-  45: "10",
-  46: "0",
-  47: "0",
-  48: "8",
-  49: "0",
-});
-/** Os 4 painéis como buraco (tipo 2): o térreo sobre o solo, só com vigas baldrame. */
-const SO_BURACOS = lajE2E({ 78: "0", 147: "2", 156: "2", 165: "2", 174: "2" });
-
-/** .COL do PIGRAEDI (PIGRAEDI.BAS:470-582) com os níveis dados, de baixo para cima, e as
- *  colunas P1..Pn do primeiro ao último nível, sem vínculos, cargas nem armaduras; com
- *  `secoes`, a seção quadrada de lado secoes[j] no lance j → j + 1 (1-based) de todas. */
-function colPredio(niveis: [string, number][], colunas: number, secoes: number[] = []): string {
-  const n = niveis.length;
-  const secao = secoes.flatMap((lado, j) => [j + 2, lado, lado, 0, 0, 0, 1].map((x) => ` ${x} `));
-  return [
-    "SISTRUT Software e Tecnologia s/c Ltda",
-    "Obra - PREDIO",
-    "Arquivo com dados de PILARES inicializado em 01-01-1994 00:00:00",
-    ` ${n} =NUMERO DE NIVEIS`,
-    ` ${colunas} =NUMERO DE COLUNAS`,
-    ` ${n} ,`,
-    ...niveis.map(([nome, cota]) => ` ${cota} ,${nome}`),
-    ...Array.from(
-      { length: colunas },
-      (_, i) => `P${i + 1},N ( 1 ) ${niveis[0]![0]},N ( ${n} ) ${niveis[n - 1]![0]}`,
-    ),
-    ...Array.from({ length: colunas }, () => " 0 , 0 , 0 , 0 , 0 , 0 "),
-    " 0 [1] 3 [2] 4 [3] 40 [4] 0 [5] 0 [6] .15 [7] 5 [8]B[9]t/cm2[10] 2 [11]{SISTRUT}[12] 1 ",
-    " 0 ", // sem cargas
-    secoes.length > 0 ? " 1 " : " 0 ", // seções
-    " 0 ", // poligonais
-    ...(secoes.length > 0 ? Array.from({ length: colunas }, () => [...secao, " 0 "]).flat() : []),
-    " 0 ", // sem armaduras
-    "FIM",
-  ].join("\r\n");
-}
-
-/** TETO (laje com a vaga de A_1014 suja, vigas do .VIG) sobre BASE (só buracos), com o
- *  .COL de níveis FUND (0), BASE (0,4 m) e TETO (3,4 m): BASE vem antes de TETO na ordem
- *  alfabética, e a ordem certa só sai das cotas. Mais um .REP e um .RLP do TETO, uma
- *  viga avulsa (ESCADA.VIG, sem .LAJ), uma cópia de segurança e um desenho editado. */
-const PREDIO: ArquivoEntrada[] = [
-  comNome("TETO.LAJ", COM_VAGA_SUJA),
-  comNome("TETO.VIG", arquivo("E2E.VIG")),
-  comNome("TETO.SEC", arquivo("E2E.SEC")),
-  comNome("TETO.FOR", arquivo("E2E.FOR")),
-  comNome("BASE.LAJ", SO_BURACOS),
-  comNome(
-    "PREDIO.COL",
-    colPredio(
-      [
-        ["FUND", 0],
-        ["BASE", 0.4],
-        ["TETO", 3.4],
-      ],
-      9,
-    ),
-  ),
-  comNome("TETO.REP", arquivo("E2E.REP")),
-  comNome("TETO.RLP", arquivo("E2E.RLP")),
-  comNome("ESCADA.VIG", arquivo("E2E.VIG")),
-  comNome("TETO.BAK", COM_VAGA_SUJA),
-  comNome("R5__TETO.EDV", " 1 \r\n"),
-];
 
 const importa = (arquivos: readonly ArquivoEntrada[]) => {
   const r = importarObraSistrut(arquivos);
@@ -161,22 +55,36 @@ describe("importarObraSistrut", () => {
     }
   });
 
-  it("sem .LAJ não monta nada e diz o que selecionar", () => {
-    const r = importarObraSistrut(OBRA_E2E.filter((a) => !a.nome.endsWith(".LAJ")));
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.erros).toEqual([expect.stringContaining("Nenhum .LAJ")]);
+  it("sem .LAJ, a obra sai do .VIG (só vigas); só com o .COL, do .COL (só pilares)", () => {
+    const vigas = importa(OBRA_E2E.filter((a) => !a.nome.endsWith(".LAJ")));
+    expect(vigas.obra.pavimentos.map((p) => p.nome)).toEqual(["E2E"]);
+    expect(vigas.obra.pavimentos[0]!.vigas.length).toBeGreaterThan(0);
+    const pilares = importa([arquivo("E2E.COL")]);
+    expect(pilares.obra.pavimentos.flatMap((p) => p.pilares)).toHaveLength(9);
   });
 
-  it("erro do .LAJ vem com o nome do arquivo na frente", () => {
-    const r = importarObraSistrut([
+  it("sem .LAJ, .VIG nem .COL não há obra, e o erro lista o que veio e por quê", () => {
+    const r = importarObraSistrut([arquivo("E2E.SEC"), arquivo("E2E.FOR"), arquivo("E2E.REP")]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erros[0]).toMatch(/^Nenhuma obra para abrir/);
+    expect(r.erros).toContain("E2E.SEC: sem E2E.VIG nem E2E.LAJ; ignorados.");
+    expect(r.erros).toContainEqual(expect.stringMatching(/^E2E.REP: sem o .COL/));
+    expect(r.resumo.ignorados.map((i) => i.arquivo).sort()).toEqual([
+      "E2E.FOR",
+      "E2E.REP",
+      "E2E.SEC",
+    ]);
+  });
+
+  it(".LAJ ilegível fica de fora com aviso que começa pelo nome dele; o resto entra", () => {
+    const r = importa([
       { nome: "E2E.LAJ", dados: new Uint8Array() },
       ...OBRA_E2E.filter((a) => !a.nome.endsWith(".LAJ")),
     ]);
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.erros.length).toBeGreaterThan(0);
-    for (const e of r.erros) expect(e).toMatch(/^E2E\.LAJ: /);
+    expect(r.avisos).toContainEqual(expect.stringMatching(/^E2E.LAJ: não é um .LAJ do SISTRUT/));
+    expect(r.resumo.ignorados.map((i) => i.arquivo)).toContain("E2E.LAJ");
+    expect(r.obra.pavimentos[0]!.vigas.length).toBeGreaterThan(0);
   });
 
   it("extensão desconhecida e .RLP sem .REP de mesmo nome viram aviso, não erro", () => {
@@ -307,14 +215,21 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
     expect(r.avisos).toContainEqual(expect.stringMatching(/^RUIM\.VIG: .*ficaram de fora\.$/));
   });
 
-  it(".BAK e .EDV ficam de fora com o motivo", () => {
+  it(".BAK e .EDV ficam de fora com o motivo, no aviso e no resumo", () => {
     const r = importa(PREDIO);
     expect(r.avisos).toContain(
-      "TETO.BAK: cópia de segurança do .LAJ anterior, que o LAJEGRAV guarda ao gravar (LAJEGRAV.BAS:484); não usada.",
+      "TETO.BAK: cópia de segurança do .LAJ ou do .COL anterior, que o LAJEGRAV e o PIGRAEDI guardam ao gravar (LAJEGRAV.BAS:484, PIGRAEDI.BAS:467); não usada.",
     );
     expect(r.avisos).toContain(
       "R5__TETO.EDV: desenho de armadura editado de uma viga, do DESEDCAO; não importado.",
     );
+    expect(r.resumo.ignorados.map((i) => i.arquivo)).toEqual(
+      expect.arrayContaining(["TETO.BAK", "R5__TETO.EDV", "TETO.REP", "TETO.RLP"]),
+    );
+    expect(r.resumo.lidos).toEqual(
+      expect.arrayContaining(["TETO.LAJ", "BASE.LAJ", "TETO.VIG", "PREDIO.COL", "ESCADA.VIG"]),
+    );
+    expect(r.resumo.pavimentos.map((p) => p.nome)).toEqual(["ESCADA", "TETO", "BASE"]);
   });
 
   it("a obra importada calcula nos dois modos, com o detalhamento", () => {
@@ -336,11 +251,10 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
     const r = importarObraSistrut([comNome("COB.LAJ", linhas.join("\r\n"))]);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.erros).toEqual([
-      expect.stringMatching(
-        /^COB\.LAJ, carga de ocupação A1 \(polígono\): .*Abra o COB\.LAJ no LAJEGEOM do SISTRUT, corrija e grave de novo, ou importe sem ele\.$/,
-      ),
-    ]);
-    expect(r.erros[0]).not.toMatch(/pavimentos\[|cargasOcupacao|\[\]/);
+    // o .LAJ ficou de fora, e sem ele não há obra: o motivo vem na lista
+    expect(r.erros).toContain(
+      "COB.LAJ: carga de ocupação A1 (polígono): esperados pelo menos 3 pontos; o arquivo deu 2 itens. Abra o COB.LAJ no LAJEGEOM do SISTRUT, corrija e grave de novo, ou importe sem ele. O pavimento COB ficou de fora.",
+    );
+    for (const e of r.erros) expect(e).not.toMatch(/pavimentos\[|cargasOcupacao|\[\]/);
   });
 });
