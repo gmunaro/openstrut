@@ -109,3 +109,53 @@ test("editor da viga: Continuo com o processamento, cargas e seção T", async (
   await page.getByRole("button", { name: "Desfazer", exact: true }).click();
   await expect(resultados.getByText(/parou em "Continuo com o processamento/)).toBeVisible();
 });
+
+test("editores de pilar, laje e pavimento: seção circular, polígono e carga de ocupação", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await abrirFixture(page);
+
+  // Pilar P1 circular de 30 cm: b e h viram a caixa da seção
+  let painel = await selecionar(page, "P1");
+  await painel.getByRole("button", { name: "Dados do SISTRUT do pilar…" }).click();
+  let dialogo = page.getByRole("dialog", { name: /^Pilar P1: / });
+  await dialogo.getByRole("combobox", { name: "Tipo da seção" }).selectOption("circular");
+  await dialogo.getByRole("textbox", { name: "Diâmetro D (cm)" }).fill("30");
+  await foto(page, "05-pilar-secao-circular");
+  await dialogo.getByRole("tab", { name: "Cargas" }).click();
+  await dialogo.getByRole("checkbox", { name: /Dar o vento/ }).check();
+  await dialogo.getByRole("textbox", { name: "Vento, normal (kN)" }).fill("12");
+  await foto(page, "06-pilar-cargas");
+  await dialogo.getByRole("button", { name: "Aplicar" }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(painel.getByRole("textbox", { name: /^b / })).toHaveValue("30");
+
+  // Laje L1: veio do .LAJ com o polígono gravado; a aba mostra vértices e dados por lado
+  painel = await selecionar(page, "L1");
+  await painel.getByRole("button", { name: "Dados do SISTRUT da laje…" }).click();
+  dialogo = page.getByRole("dialog", { name: /^Laje L1: / });
+  await foto(page, "07-laje-tipo");
+  await dialogo.getByRole("tab", { name: "Polígono e lados" }).click();
+  await expect(dialogo.getByRole("button", { name: /Remover o polígono/ })).toBeVisible();
+  await foto(page, "08-laje-poligono");
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toBeHidden();
+
+  // Pavimento: a obra veio do .LAJ com 1 carga de ocupação, que passa ao contorno da L2
+  await page.keyboard.press("Escape");
+  painel = page.getByRole("complementary", { name: "Propriedades" });
+  await expect(painel.getByText(/1 carga de ocupação/)).toBeVisible();
+  await painel.getByRole("button", { name: "Cargas e continuidades do pavimento…" }).click();
+  dialogo = page.getByRole("dialog", { name: /^Pavimento PAV1: / });
+  const grupo = dialogo.getByRole("group", { name: "Carga de ocupação 1" });
+  await grupo
+    .getByRole("combobox", { name: "Carga de ocupação 1, laje para preencher os vértices" })
+    .selectOption({ label: "L2" });
+  await grupo.getByRole("button", { name: "Usar o contorno da laje" }).click();
+  await grupo.getByRole("textbox", { name: /Total/ }).fill("3");
+  await foto(page, "09-pavimento-carga-ocupacao");
+  await dialogo.getByRole("button", { name: "Aplicar" }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(painel.getByText(/1 carga de ocupação/)).toBeVisible();
+});
