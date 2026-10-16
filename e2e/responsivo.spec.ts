@@ -181,6 +181,102 @@ for (const tela of CELULARES) {
   });
 }
 
+/**
+ * Coluna fixa das tabelas de resultados (lajes, vigas, pilares, equilíbrio,
+ * quantitativos). Sem rolagem, a 1ª célula de cada linha termina antes de a 2ª começar.
+ * Rolada, a 1ª célula tem fundo opaco e fica por cima, e a rolagem encaixa no começo de
+ * uma coluna: nenhuma célula fica pela metade atrás da coluna fixa (as de grupo, com
+ * colSpan, abrangem várias colunas e ficam de fora). A unidade do cabeçalho não quebra.
+ */
+async function conferirColunaFixa(page: Page, onde: string) {
+  const sem = await page.evaluate(() => {
+    const out: string[] = [];
+    let tabelas = 0;
+    for (const cont of document.querySelectorAll<HTMLElement>(
+      '[role="tabpanel"]:not([hidden]) [data-slot="tabela-rolagem"]',
+    )) {
+      tabelas++;
+      cont.scrollLeft = 0;
+      for (const tr of cont.querySelectorAll("tr")) {
+        const [a, b] = tr.children;
+        if (!a || !b) continue;
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        if (ra.right > rb.left + 0.5)
+          out.push(`"${a.textContent}" (até ${ra.right}) sobre "${b.textContent}" (de ${rb.left})`);
+      }
+      for (const u of cont.querySelectorAll("th span.block")) {
+        const faixa = document.createRange();
+        faixa.selectNodeContents(u);
+        const linhas = new Set([...faixa.getClientRects()].map((r) => Math.round(r.top)));
+        if (linhas.size > 1) out.push(`unidade quebrada: ${u.textContent}`);
+      }
+    }
+    return { out, tabelas };
+  });
+  expect(sem.tabelas, `tabelas em ${onde}`).toBeGreaterThan(2);
+  expect(sem.out, `sobreposição sem rolagem em ${onde}`).toEqual([]);
+
+  const roladas = await page.evaluate(() => {
+    let n = 0;
+    for (const c of document.querySelectorAll<HTMLElement>(
+      '[role="tabpanel"]:not([hidden]) [data-slot="tabela-rolagem"]',
+    ))
+      if (c.scrollWidth > c.clientWidth + 40) {
+        c.scrollTo({ left: (c.scrollWidth - c.clientWidth) / 3 });
+        n++;
+      }
+    return n;
+  });
+  expect(roladas, `tabelas largas em ${onde}`).toBeGreaterThan(0);
+  await page.waitForTimeout(600); // o encaixe da rolagem termina
+  const com = await page.evaluate(() => {
+    const out: string[] = [];
+    for (const cont of document.querySelectorAll<HTMLElement>(
+      '[role="tabpanel"]:not([hidden]) [data-slot="tabela-rolagem"]',
+    )) {
+      if (cont.scrollLeft === 0) continue;
+      // só linhas de dados: no relatório a tabela inteira fica dentro do tbody da tabela
+      // de layout, e "tbody tr" pegaria também as do thead
+      for (const tr of cont.querySelectorAll("tr")) {
+        if (tr.parentElement?.tagName !== "TBODY") continue;
+        const [a, ...resto] = [...tr.children] as HTMLTableCellElement[];
+        if (!a || resto.length === 0) continue;
+        const ra = a.getBoundingClientRect();
+        if (getComputedStyle(a).position !== "sticky") out.push(`"${a.textContent}" não é fixa`);
+        const fundo = getComputedStyle(a).backgroundColor;
+        if (fundo === "transparent" || /\/ 0\)|, 0\)$/.test(fundo))
+          out.push(`"${a.textContent}" com fundo transparente`);
+        const topo = document.elementFromPoint(ra.left + ra.width / 2, ra.top + ra.height / 2);
+        if (topo && !a.contains(topo)) out.push(`"${a.textContent}" coberta por ${topo.tagName}`);
+        for (const c of resto) {
+          if (c.colSpan > 1) continue;
+          const rc = c.getBoundingClientRect();
+          if (rc.left < ra.right - 0.5 && rc.right > ra.right + 0.5)
+            out.push(`"${c.textContent}" pela metade atrás de "${a.textContent}"`);
+        }
+      }
+    }
+    return out;
+  });
+  expect(com, `coluna fixa rolada em ${onde}`).toEqual([]);
+}
+
+for (const tela of CELULARES.filter((t) => t.largura < 500)) {
+  test.describe(`coluna fixa das tabelas, ${tela.nome}`, () => {
+    usarTela(tela);
+    test("a 1ª coluna não cobre a 2ª, nem parada nem rolada", async ({ page }) => {
+      await abrirObra(page);
+      await page.getByRole("tab", { name: "Resultados", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Pilares", exact: true })).toBeVisible();
+      await conferirColunaFixa(page, "resultados");
+      await page.getByRole("tab", { name: "Relatório", exact: true }).click();
+      await expect(page.locator('[role="tabpanel"]:not([hidden]) [data-slot="tabela-rolagem"]').first()).toBeVisible();
+      await conferirColunaFixa(page, "relatório");
+    });
+  });
+}
+
 test.describe("4K", () => {
   test.describe("densidade 1", () => {
     usarTela({ nome: "4K", largura: 3840, altura: 2160, dpr: 1 });
