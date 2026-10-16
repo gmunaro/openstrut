@@ -173,6 +173,67 @@ for (const vp of VIEWPORTS) {
   });
 }
 
+test("adicionar sem mouse: botão e tecla A abrem o formulário; laje e pilar entram, erro vai ao campo", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  mkdirSync(SAIDA, { recursive: true });
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  const dialogo = page.getByRole("dialog");
+
+  // botão "Adicionar…": laje nova de 2 × 2 m em (10; 0), fora das 4 lajes
+  await page.getByRole("button", { name: "Adicionar…", exact: true }).click();
+  await expect(dialogo).toBeVisible();
+  await dialogo.getByLabel("x (m)", { exact: true }).fill("10");
+  await dialogo.getByLabel("y (m)", { exact: true }).fill("0");
+  await dialogo.getByLabel("lx (m)", { exact: true }).fill("2");
+  await dialogo.getByLabel("ly (m)", { exact: true }).fill("2");
+  await dialogo.getByRole("button", { name: "Adicionar", exact: true }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(svg.locator("title").filter({ hasText: /^L\d+: 2,00 × 2,00 m/ })).toHaveCount(1);
+
+  // tecla A (com a planta em foco): pilar sobre a viga do meio (y = 5), em (2; 5)
+  await svg.focus();
+  await page.keyboard.press("a");
+  await expect(dialogo).toBeVisible();
+  await dialogo.getByLabel("Tipo", { exact: true }).click();
+  await page.getByRole("option", { name: "Pilar", exact: true }).click();
+  await expect(dialogo.getByLabel("lx (m)", { exact: true })).toHaveCount(0);
+  await dialogo.getByLabel("x (m)", { exact: true }).fill("2");
+  await dialogo.getByLabel("y (m)", { exact: true }).fill("5");
+  await dialogo.getByRole("button", { name: "Adicionar", exact: true }).click();
+  await expect(dialogo).toBeHidden();
+  // o criado fica selecionado: o painel mostra o centro dele
+  await expect(page.getByText("Centro (2,00; 5,00) m", { exact: true })).toBeVisible();
+
+  // recusa do domínio: laje sobre a L1; o texto vai ao campo, ligado por aria-describedby
+  await svg.focus();
+  await page.keyboard.press("a");
+  await dialogo.getByLabel("x (m)", { exact: true }).fill("1");
+  await dialogo.getByLabel("y (m)", { exact: true }).fill("1");
+  await dialogo.getByLabel("lx (m)", { exact: true }).fill("2");
+  await dialogo.getByLabel("ly (m)", { exact: true }).fill("2");
+  await dialogo.getByRole("button", { name: "Adicionar", exact: true }).click();
+  await expect(dialogo).toBeVisible();
+  await expect(dialogo.getByLabel("x (m)", { exact: true })).toHaveAccessibleDescription(
+    "A laje se sobrepõe à L1.",
+  );
+
+  // campo vazio: não chega ao domínio, vira "Valor numérico inválido."
+  await dialogo.getByLabel("y (m)", { exact: true }).fill("");
+  await dialogo.getByRole("button", { name: "Adicionar", exact: true }).click();
+  await expect(dialogo.getByLabel("y (m)", { exact: true })).toHaveAccessibleDescription(
+    "Valor numérico inválido.",
+  );
+
+  // Cancelar fecha sem gravar: a laje 2 × 2 em (1; 1) não entra na planta
+  await dialogo.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(svg.locator("title").filter({ hasText: /^L\d+: 2,00 × 2,00 m/ })).toHaveCount(1);
+});
+
 test("setas selecionam a planta pelo teclado e Delete apaga a laje", async ({ page }) => {
   test.setTimeout(180_000);
   mkdirSync(SAIDA, { recursive: true });
@@ -427,6 +488,62 @@ test("erros de geometria: sobreposição e pilar fora de viga aparecem na mensag
   ]);
 });
 
+test("Shift+setas movem a laje e o pilar selecionados em um passo de grade; erro aparece em status", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const erros: string[] = [];
+  page.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+  const painel = page.locator("aside");
+  const mensagem = page.getByRole("status").first();
+
+  // pilar: o central, em (4, 5) m, sobre o eixo de uma viga. Vem primeiro: mover laje cria
+  // pilares nos cantos novos, e isso mudaria a numeração e o ponto de destino.
+  const centro = painel.getByText(/^Centro \(/);
+  await clicar(page, svg, { x: 4, y: 5 });
+  await expect(centro).toHaveText("Centro (4,00; 5,00) m");
+  await svg.focus();
+  await page.keyboard.press("Shift+ArrowLeft");
+  await expect(centro).toHaveText("Centro (3,50; 5,00) m");
+
+  // para cima sai do eixo da viga: recusado, com a mensagem de geometria em status
+  await page.keyboard.press("Shift+ArrowUp");
+  await expect(mensagem).toContainText("O pilar precisa ficar sobre o eixo de uma viga.");
+  await expect(centro).toHaveText("Centro (3,50; 5,00) m");
+
+  // a seta sem Shift só navega: troca a seleção e não move o pilar
+  await page.keyboard.press("ArrowUp");
+  await expect(centro).not.toHaveText("Centro (3,50; 5,00) m");
+  await clicar(page, svg, { x: 3.5, y: 5 });
+  await expect(centro).toHaveText("Centro (3,50; 5,00) m");
+  await svg.focus();
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(centro).toHaveText("Centro (4,00; 5,00) m");
+
+  // laje: L1 (0–4 m × 0–5 m). Passo padrão da grade é 0,5 m.
+  await clicar(page, svg, { x: 2, y: 2.5 });
+  const x = painel.getByLabel(/^x/);
+  await expect(x).toHaveValue(/^0([,.]0+)?$/);
+  await svg.focus();
+  await page.keyboard.press("Shift+ArrowLeft");
+  await expect(x).toHaveValue(/^-0([,.]5)0*$/);
+  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+
+  // empurrar L1 de volta para x = 0 não sobrepõe nada
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(x).toHaveValue(/^0([,.]0+)?$/);
+
+  // para x = 0,5 m, L1 invade L2 (x de 4 a 8 m): recusado, posição fica e a mensagem aparece em status
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(mensagem).toContainText("A laje se sobrepõe à L2.");
+  await expect(x).toHaveValue(/^0([,.]0+)?$/);
+
+  expect(erros).toEqual([]);
+});
+
 test("cálculo nos dois modos: a aba Resultados mostra o total nos modos Corrigido e original", async ({
   page,
 }) => {
@@ -470,6 +587,43 @@ test("cálculo nos dois modos: a aba Resultados mostra o total nos modos Corrigi
   expect(erros).toEqual([]);
 });
 
+test("pavimentos: pé-direito e repetições inválidos mostram a mensagem no campo", async ({
+  page,
+}) => {
+  const erros: string[] = [];
+  page.on("pageerror", (e) => erros.push(`pageerror: ${e.message}`));
+  await abrirPlanta(page);
+
+  // repetições 1,5: recusa com mensagem ligada ao campo; o nome acessível fica "Repetições"
+  const repeticoes = page.getByLabel("Repetições", { exact: true });
+  await repeticoes.fill("1,5");
+  await repeticoes.press("Enter");
+  await expect(repeticoes).toHaveAttribute("aria-invalid", "true");
+  await expect(repeticoes).toHaveAccessibleDescription("Use um número inteiro de 1 ou mais.");
+  await repeticoes.press("Escape");
+  await expect(repeticoes).toHaveAttribute("aria-invalid", "false");
+  await expect(repeticoes).not.toHaveAccessibleDescription(/inteiro/);
+
+  // pé-direito 0: mesma coisa, com a mensagem do pé-direito
+  const peDireito = page.getByLabel("Pé-direito", { exact: true });
+  await peDireito.fill("0");
+  await peDireito.press("Enter");
+  await expect(peDireito).toHaveAttribute("aria-invalid", "true");
+  await expect(peDireito).toHaveAccessibleDescription("O pé-direito precisa ser maior que zero.");
+
+  // texto que não é número: mensagem própria
+  await peDireito.fill("abc");
+  await peDireito.press("Enter");
+  await expect(peDireito).toHaveAccessibleDescription("Valor numérico inválido.");
+
+  // valor aceito: a mensagem some e o valor fica
+  await peDireito.fill("2,85");
+  await peDireito.press("Enter");
+  await expect(peDireito).toHaveAttribute("aria-invalid", "false");
+  await expect(peDireito).toHaveValue("2,85");
+  expect(erros).toEqual([]);
+});
+
 test("sondagem: Backspace apaga a laje selecionada?", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -486,4 +640,51 @@ test("sondagem: Backspace apaga a laje selecionada?", async ({ page }) => {
     `Após Backspace com laje selecionada: ${restantes} rótulos 4,00 × 5,00 (4 antes).`,
     restantes === 4 ? "Backspace não apaga; só Delete." : "Backspace apagou a laje.",
   ]);
+});
+
+/** Confere se a laje `nome` (pelo título dela) cabe inteira na área visível da planta. */
+async function lajeCabe(page: Page, nome: string) {
+  const svg = page.getByRole("application", { name: "Planta do pavimento" });
+  // o título fica dentro do <g> da laje: o retângulo do <g> é o que tem de caber
+  const lajeG = svg.locator("title", { hasText: new RegExp(`^${nome}:`) }).locator("xpath=..");
+  const [a, s] = [await lajeG.boundingBox(), await svg.boundingBox()];
+  if (!a || !s) throw new Error(`laje ${nome} ou planta sem caixa na tela`);
+  return (
+    a.x >= s.x && a.y >= s.y && a.x + a.width <= s.x + s.width && a.y + a.height <= s.y + s.height
+  );
+}
+
+test("reenquadrar: laje que termina fora da área visível volta para a tela; a obra reaberta mostra tudo", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const svg = await abrirPlanta(page);
+  await desenharObra(page, svg);
+
+  // L5 começa à direita das 4 lajes e termina além da borda da planta: o arrasto segue
+  // dentro da janela (o ponteiro é capturado pela planta), mas o retângulo sai da área visível
+  await page.getByRole("button", { name: "Laje", exact: true }).click();
+  const inicio = await irPara(page, svg, { x: 9, y: 0 });
+  const borda = await svg.boundingBox();
+  if (!borda) throw new Error("planta sem caixa na tela");
+  await page.mouse.down();
+  await page.mouse.move(borda.x + borda.width + 120, inicio.y - 100, { steps: 5 });
+  await page.mouse.up();
+  await expect(svg.locator("title").filter({ hasText: /^L5:/ })).toHaveCount(1);
+  await expect.poll(() => lajeCabe(page, "L5")).toBe(true);
+
+  // a obra é salva no rascunho com debounce de 800 ms; espera antes de sair da página
+  await page.waitForTimeout(1200);
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Obra planta UI/ }).click();
+  await expect(page).toHaveURL(/\/obra$/);
+  await page.getByRole("tab", { name: "Planta", exact: true }).click();
+  await expect(page.getByRole("application", { name: "Planta do pavimento" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("application", { name: "Planta do pavimento" })
+      .locator("title", { hasText: /^L5:/ }),
+  ).toHaveCount(1);
+  await expect.poll(() => lajeCabe(page, "L5")).toBe(true);
 });

@@ -205,3 +205,22 @@ export function passoVisivel(grade: number, escala: number, minPx = 8) {
   while (passo * escala < minPx) passo *= 2;
   return passo;
 }
+
+/** Caixa do mundo (m) de uma laje ou pilar do pavimento; undefined se o id não existe nele. */
+export function caixaDoAlvo(p: Pavimento, alvo: Alvo): Caixa | undefined {
+  if (alvo.tipo === "laje") {
+    const l = p.lajes.find((x) => x.id === alvo.id);
+    return l && { xmin: l.x, ymin: l.y, xmax: l.x + l.lx, ymax: l.y + l.ly };
+  }
+  if (alvo.tipo === "pilar") {
+    const q = p.pilares.find((x) => x.id === alvo.id);
+    return q && { xmin: q.x, ymin: q.y, xmax: q.x, ymax: q.y };
+  }
+  return undefined;
+}
+
+/** Se a caixa do mundo inteira cabe dentro da área de `largura` × `altura` px da tela. */
+export function cabeNaTela(v: Vista, c: Caixa, largura: number, altura: number): boolean {
+  const r = retanguloTela(v, c);
+  return r.x >= 0 && r.y >= 0 && r.x + r.width <= largura && r.y + r.height <= altura;
+}

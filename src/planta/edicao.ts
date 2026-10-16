@@ -217,6 +217,14 @@ export function apagarPilar(
   };
 }
 
+/** Ponto (m) sobre o eixo de alguma viga. Pilar fora dele seria removido por gerarEstrutura. */
+function sobreEixoDeViga(pav: Pavimento, p: Ponto) {
+  return pav.vigas.some((v) => {
+    const e = eixoDaViga(v);
+    return e !== undefined && posicaoNoEixo(e, p.x, p.y) !== undefined;
+  });
+}
+
 /** Acrescenta um pilar 20 × 20 cm no ponto (m), com o próximo nome "P<n>" livre.
  *  Só aceita ponto sobre o eixo de uma viga: fora dele gerarEstrutura o removeria.
  *  Num ponto de pilaresRemovidos, tira o ponto da lista (o pilar volta a ser gerado). */
@@ -226,11 +234,8 @@ export function acrescentarPilar(
 ): { ok: true; pavimento: Pavimento; id: string } | { ok: false; erro: string } {
   const existente = pav.pilares.find((q) => mesmoPonto(q, p));
   if (existente) return { ok: false, erro: `Já existe o pilar ${existente.nome} neste ponto.` };
-  const sobreViga = pav.vigas.some((v) => {
-    const e = eixoDaViga(v);
-    return e !== undefined && posicaoNoEixo(e, p.x, p.y) !== undefined;
-  });
-  if (!sobreViga) return { ok: false, erro: "O pilar precisa ficar sobre o eixo de uma viga." };
+  if (!sobreEixoDeViga(pav, p))
+    return { ok: false, erro: "O pilar precisa ficar sobre o eixo de uma viga." };
   const pilar: Pilar = {
     id: novoId(),
     nome: nomeLivre(
@@ -251,4 +256,23 @@ export function acrescentarPilar(
     },
     id: pilar.id,
   };
+}
+
+/** Move o pilar para o ponto (m) sem regenerar a estrutura. As regras são as de
+ *  acrescentarPilar: destino sem outro pilar e sobre o eixo de uma viga. Se a origem era
+ *  um pilar gerado, a posição antiga vai para pilaresRemovidos, para ele não voltar. */
+export function moverPilar(pav: Pavimento, id: string, p: Ponto): Edicao {
+  const atual = pav.pilares.find((q) => q.id === id);
+  if (!atual) return falha("Pilar não encontrado.");
+  if (mesmoPonto(atual, p)) return sucesso(pav);
+  const outro = pav.pilares.find((q) => mesmoPonto(q, p));
+  if (outro) return falha(`Já existe o pilar ${outro.nome} neste ponto.`);
+  if (!sobreEixoDeViga(pav, p)) return falha("O pilar precisa ficar sobre o eixo de uma viga.");
+  const semDestino = pav.pilaresRemovidos.filter((r) => !mesmoPonto(r, p));
+  const registra = pilarGerado(pav, atual) && !semDestino.some((r) => mesmoPonto(r, atual));
+  return sucesso({
+    ...pav,
+    pilares: pav.pilares.map((q) => (q.id === id ? { ...q, x: p.x, y: p.y } : q)),
+    pilaresRemovidos: registra ? [...semDestino, { x: atual.x, y: atual.y }] : semDestino,
+  });
 }
