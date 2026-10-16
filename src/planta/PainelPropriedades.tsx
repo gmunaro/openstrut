@@ -13,6 +13,7 @@ import {
   type Vinculo,
 } from "../dominio/obra";
 import { useObra, type Selecao } from "../estado/obra";
+import { EditorViga, resumoViga } from "../telas/obra/editores/DialogoViga";
 import { COR_SITUACAO, ROTULO_SITUACAO } from "./Desenho";
 import { alterarLaje, alterarPilar, alterarViga, type Edicao } from "./edicao";
 import { fmt, fmtCampo, numeroDoTexto } from "./formato";
@@ -234,6 +235,8 @@ function PropriedadesViga({
   aplicar: Props["aplicar"];
 }) {
   const muda = (m: Partial<Omit<Viga, "id">>) => aplicar(alterarViga(pav, v.id, m));
+  // a entrada do VIGA/DESENHO só vale no cálculo pelo SISTRUT (NB-1/78)
+  const nb178 = useObra((s) => s.obra?.norma === "nb1-78");
   const num = (campo: "bw" | "h" | "cargaLinear", rotulo: string, unidade: string) => (
     <CampoNumero
       key={`${v.id}:${campo}:${v[campo]}`}
@@ -260,6 +263,12 @@ function PropriedadesViga({
         {num("h", "h", "cm")}
       </div>
       {num("cargaLinear", "Carga linear (parede)", "kN/m")}
+      {nb178 && (
+        <div className="space-y-1 border-t border-slate-700 pt-2">
+          <EditorViga pav={pav} viga={v} />
+          <p className="text-xs text-slate-400">{resumoViga(v)}</p>
+        </div>
+      )}
     </div>
   );
 }

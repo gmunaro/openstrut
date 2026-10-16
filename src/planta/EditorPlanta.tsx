@@ -438,7 +438,10 @@ function Editor({
           </svg>
           {diag && <Legenda />}
         </div>
-        <aside className="w-72 shrink-0 overflow-y-auto border-l border-slate-800">
+        <aside
+          aria-label="Propriedades"
+          className="w-72 shrink-0 overflow-y-auto border-l border-slate-800"
+        >
           <PainelPropriedades
             pav={pav}
             selecao={selecao}
