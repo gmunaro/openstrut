@@ -8,9 +8,11 @@
 // Livro: livros_viga_pilar.md 2.2, 2.7 (U48-014, U49-018, U51-073).
 //
 // Modo original: cada atribuição a variável `!` passa por `sng` (as expressões
-// rodam em float64 no lugar da pilha x87); as constantes literais são SINGLE.
+// rodam em float64 no lugar da pilha x87); as constantes literais são SINGLE; `^`
+// e `SQR` são o B$POW e o FSQRT do x87 (`ctx.pot`, `ctx.raiz`, base/x87.ts).
 import { atribuicao, sng } from "../base/f32";
 import type { ModoSistrut, Ponto, SecaoPilar } from "../base/tipos";
+import { potencia, raiz } from "../base/x87";
 
 /** Arredondamento de atribuição do modo (sng no original). */
 export type Arredonda = (x: number) => number;
@@ -81,18 +83,36 @@ export type SecaoCalculo =
   | { tipo: 1 | 3; vertices: Ponto[]; barras: BarraCalculo[] }
   | { tipo: 2; diametro: number; diametroInterno: number; barras: BarraCalculo[] };
 
-/** Contexto numérico de uma verificação: modo, arredondamento e materiais. */
+/** Contexto numérico de uma verificação: modo, arredondamento, `^`/`SQR` e materiais. */
 export interface Contexto {
   modo: ModoSistrut;
   s: Arredonda;
+  /** `^` e `SQR` dentro de uma expressão (RT_POT##, RT_SQR##); `raizS`: o SQR é a
+   *  expressão inteira gravada numa variável `!`. */
+  pot: (a: number, b: number) => number;
+  raiz: (x: number) => number;
+  raizS: (x: number) => number;
   k: Constantes;
   mat: MateriaisPilar;
   /** Conta as integrações; o original não tem teto (D-2, U49-009). */
   integracoes: number;
+  /** Potências da curva do aço B que só dependem de `mat` e `k`, calculadas na
+   *  primeira barra que cai na curva: o original refaz a cada barra com o mesmo
+   *  valor (o B$POW é determinístico), e refazer custa caro no laço do ELU. */
+  potenciasAcoB?: { a2: number; csa2: number; c07q: number; fyd2: number };
 }
 
 export function criaContexto(modo: ModoSistrut, mat: MateriaisPilar): Contexto {
-  return { modo, s: atribuicao(modo), k: constantes(modo), mat, integracoes: 0 };
+  return {
+    modo,
+    s: atribuicao(modo),
+    pot: potencia(modo),
+    raiz: raiz(modo),
+    raizS: raiz(modo, "single"),
+    k: constantes(modo),
+    mat,
+    integracoes: 0,
+  };
 }
 
 /** Seção posicionada num ângulo e o estado de deformação em avaliação. Os nomes
@@ -161,7 +181,7 @@ export function novoEstado(secao: SecaoCalculo): Estado {
  *  PILAREDI.BAS:1674-1830, S_2267a com barras). Área pelos vértices não girados,
  *  com sinal: positiva no sentido horário (D-6 no anti-horário). */
 export function posiciona(ctx: Contexto, est: Estado, theta: number) {
-  const { s, k } = ctx;
+  const { s, pot, k } = ctx;
   const sec = est.secao;
   est.theta = theta;
   const ang = (k.pi * theta) / 180;
@@ -180,7 +200,7 @@ export function posiciona(ctx: Contexto, est: Estado, theta: number) {
     });
     est.altura = D;
     est.d = s(D - minY);
-    est.area = s(((D ** 2 - sec.diametroInterno ** 2) * k.pi) / 4);
+    est.area = s(((pot(D, 2) - pot(sec.diametroInterno, 2)) * k.pi) / 4);
     est.yc = s(D / 2);
     est.xc = s(D / 2);
     est.rusch = k.c08;
@@ -241,11 +261,11 @@ export function posiciona(ctx: Contexto, est: Estado, theta: number) {
  *  distância do centróide à fibra do topo (PILAREDI.BAS:1795-1808, S_2267a com
  *  V_11ae% = 1; PILAR.BAS:5604-5622). Circular: π(D⁴ − Di⁴)/64. */
 export function inerciaGirada(ctx: Contexto, est: Estado, theta: number) {
-  const { s, k } = ctx;
+  const { s, pot, k } = ctx;
   const sec = est.secao;
   posiciona(ctx, est, theta);
   if (sec.tipo === 2) {
-    const j = s(((sec.diametro ** 4 - sec.diametroInterno ** 4) * k.pi) / 64);
+    const j = s(((pot(sec.diametro, 4) - pot(sec.diametroInterno, 4)) * k.pi) / 64);
     return { j, topo: s(sec.diametro / 2) };
   }
   const v = est.vertices;
@@ -253,12 +273,13 @@ export function inerciaGirada(ctx: Contexto, est: Estado, theta: number) {
   for (let i = 0; i < v.length - 1; i++) {
     const p = v[i]!;
     const q = v[i + 1]!;
-    j = s((p.x - q.x) * (p.y ** 3 / 3 + (q.y - p.y) ** 3 / 12) + j);
+    j = s((p.x - q.x) * (pot(p.y, 3) / 3 + pot(q.y - p.y, 3) / 12) + j);
     j = s(
-      ((p.x - q.x) * (q.y - p.y) * (((q.y - p.y) / 3 + p.y) ** 2 - ((q.y - p.y) / 3) ** 2)) / 2 + j,
+      ((p.x - q.x) * (q.y - p.y) * (pot((q.y - p.y) / 3 + p.y, 2) - pot((q.y - p.y) / 3, 2))) / 2 +
+        j,
     );
   }
-  return { j: s(Math.abs(j) - est.yc ** 2 * est.area), topo: s(est.altura - est.yc) };
+  return { j: s(Math.abs(j) - pot(est.yc, 2) * est.area), topo: s(est.altura - est.yc) };
 }
 
 /** Momentos de inércia em torno dos eixos x e y do centróide, cm⁴ (PILAR.BAS:5601-5629,
@@ -276,7 +297,7 @@ export function inercias(ctx: Contexto, est: Estado) {
  *  uniforme igual à da parábola na fibra do topo, ÷ Csc e ÷ Csf
  *  (PILAR.BAS:3360-3484, S_206fb; livros_viga_pilar.md 2.7). */
 export function integraConcreto(ctx: Contexto, est: Estado) {
-  const { s, k, mat } = ctx;
+  const { s, pot, k, mat } = ctx;
   const xi = est.xi;
   est.epsC = xi > 10 ? k.c002 : s(est.d * xi * est.kappa);
   const corte = est.altura - k.c08 * xi * est.d;
@@ -306,7 +327,7 @@ export function integraConcreto(ctx: Contexto, est: Estado) {
   const sigma =
     est.epsC >= k.c002
       ? s((mat.coefTensao * mat.fck) / mat.csc)
-      : s(((1 - (1 - est.epsC / k.c002) ** 2) * mat.coefTensao * mat.fck) / mat.csc);
+      : s(((1 - pot(1 - est.epsC / k.c002, 2)) * mat.coefTensao * mat.fck) / mat.csc);
   est.nc = s((area * est.rusch * sigma) / mat.csf);
   est.mcx = s((ay - est.yc) * est.nc);
   est.mcy = s((ax - est.xc) * est.nc);
@@ -349,19 +370,19 @@ function recortaPoligono(s: Arredonda, v: readonly Ponto[], corte: number) {
  *  (PILAR.BAS:3441-3473). As faixas comparam z gravado em SINGLE (L_BP22); as
  *  fórmulas usam z da pilha. */
 function segmentoCircular(ctx: Contexto, D: number, Di: number, z: number) {
-  const { s, k } = ctx;
+  const { s, pot, raizS, k } = ctx;
   const zs = s(z);
   const meia = (D - Di) / 2;
   const angulo = (dd: number, h: number) => {
-    const b = s(Math.sqrt(dd * h - h ** 2));
+    const b = s(raizS(dd * h - pot(h, 2)));
     return s(Math.atan(b / (dd / 2 - h)) + (dd / 2 - h < 0 ? k.pi : 0));
   };
-  const parte = (dd: number, a: number) => dd ** 2 * (a - Math.sin(a) * Math.cos(a));
+  const parte = (dd: number, a: number) => pot(dd, 2) * (a - Math.sin(a) * Math.cos(a));
   if (meia >= zs) {
     const a = angulo(D, z);
     return {
       area: s(parte(D, a) / 4),
-      yc: s(D / 2 + (Math.sin(a) ** 3 * D) / ((a - Math.sin(a) * Math.cos(a)) * 3)),
+      yc: s(D / 2 + (pot(Math.sin(a), 3) * D) / ((a - Math.sin(a) * Math.cos(a)) * 3)),
     };
   }
   let a: number;
@@ -374,11 +395,11 @@ function segmentoCircular(ctx: Contexto, D: number, Di: number, z: number) {
   } else if (meia + Di <= zs && D >= zs) {
     a = angulo(D, z);
     b = k.pi;
-    area = s(parte(D, a) / 4 - (Di ** 2 * k.pi) / 4);
+    area = s(parte(D, a) / 4 - (pot(Di, 2) * k.pi) / 4);
   } else {
-    return { area: s(((D ** 2 - Di ** 2) * k.pi) / 4), yc: s(D / 2) };
+    return { area: s(((pot(D, 2) - pot(Di, 2)) * k.pi) / 4), yc: s(D / 2) };
   }
-  let yc = s(D ** 3 * Math.sin(a) ** 3 - Di ** 3 * Math.sin(b) ** 3);
+  let yc = s(pot(D, 3) * pot(Math.sin(a), 3) - pot(Di, 3) * pot(Math.sin(b), 3));
   yc = s(yc / ((parte(D, a) - parte(Di, b)) * 3));
   return { area, yc: s(D / 2 + yc) };
 }
@@ -388,7 +409,7 @@ function segmentoCircular(ctx: Contexto, D: number, Di: number, z: number) {
  *  ε = σ/Es + (σ/fyd − 0,7)²/45 até fyd/Es + 0,2 %. Abaixo da LN a tensão sai
  *  negativa (tração); acima, a deformação sai negativa (PILAR.BAS:4389-4430, S_27521). */
 export function leiAco(ctx: Contexto, est: Estado, prof: number) {
-  const { s, k, mat } = ctx;
+  const { s, pot, raiz, k, mat } = ctx;
   const xi = est.xi;
   const xd = xi * est.d;
   let eps: number;
@@ -405,11 +426,16 @@ export function leiAco(ctx: Contexto, est: Estado, prof: number) {
   } else if ((ct / (mat.csa * 2100)) * mat.fyk + k.c002 <= eps) {
     sigma = s((ct * mat.fyk) / mat.csa);
   } else {
-    const a = k.inv2100 - (k.c14 / (mat.fyk * ct * 45)) * mat.csa;
-    sigma = s(a ** 2 - ((mat.csa ** 2 * (k.c07 ** 2 / 45 - eps)) / ((ct * mat.fyk) ** 2 * 45)) * 4);
+    const p = (ctx.potenciasAcoB ??= {
+      a2: pot(k.inv2100 - (k.c14 / (mat.fyk * ct * 45)) * mat.csa, 2),
+      csa2: pot(mat.csa, 2),
+      c07q: pot(k.c07, 2),
+      fyd2: pot(ct * mat.fyk, 2),
+    });
+    sigma = s(p.a2 - ((p.csa2 * (p.c07q / 45 - eps)) / (p.fyd2 * 45)) * 4);
     sigma = s(
-      ((((k.c14 / (mat.fyk * ct * 45)) * mat.csa - k.inv2100 + raiz(sigma)) * (ct * mat.fyk) ** 2) /
-        (mat.csa ** 2 * 2)) *
+      ((((k.c14 / (mat.fyk * ct * 45)) * mat.csa - k.inv2100 + raiz(sigma)) * p.fyd2) /
+        (p.csa2 * 2)) *
         45,
     );
   }
@@ -417,9 +443,6 @@ export function leiAco(ctx: Contexto, est: Estado, prof: number) {
   else eps = -eps;
   return { sigma, eps };
 }
-
-/** SQR de negativo dá NaN sem erro, como o x87 com exceções mascaradas (RT_SQR##). */
-export const raiz = (x: number) => (x < 0 ? Number.NaN : Math.sqrt(x));
 
 /** Soma das barras: normal, momentos e maior deformação (PILAR.BAS:3337-3355, S_2012d). */
 export function integraAco(ctx: Contexto, est: Estado) {

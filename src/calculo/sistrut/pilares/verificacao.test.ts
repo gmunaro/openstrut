@@ -53,6 +53,10 @@ function confere(caso: CasoOraculo, id: string, calculado: number) {
   if (v.impresso.trim().startsWith("-")) expect(calculado, id).toBeLessThan(0);
 }
 
+/** Os casos que travam o original rodam até LIMITE_INTEGRACOES com o B$POW em
+ *  software (base/x87.ts): ~2-5 s cada, acima dos 5 s padrão com a máquina carregada. */
+const TRAVA_MS = 30_000;
+
 const textoVeredito = (v: string) => (v === "INSTABILIDADE" ? "SITUACAO DE INSTABILIDADE" : v);
 
 describe("caso_c_pilar: PILAR opção 6, 20×20, 4 φ12,5, Nk 17,37, le 3", () => {
@@ -204,25 +208,29 @@ describe("retrad_pil_trava: flexão oblíqua com laço sem fim no caso 2/2 (D-2)
     parametros: par,
   };
 
-  it("original: 1/2 em instabilidade como impresso; 2/2 sai com erro explícito em vez de travar", () => {
-    const r = verificaPilar(entrada, "original");
-    expect(r.situacao).toBe("Flexao Obliqua");
-    const [c1, c2] = r.casos;
-    confere(caso, "c1.Mx", c1!.mx);
-    confere(caso, "c1.My", c1!.my);
-    confere(caso, "c1.Mtotal", c1!.mTotal);
-    confere(caso, "c1.incl", c1!.anguloAtuante);
-    confere(caso, "c1.M1a", c1!.instabilidade!.m1);
-    confere(caso, "c1.M2a", c1!.instabilidade!.m2);
-    confere(caso, "c1.Matuante", c1!.instabilidade!.atuante);
-    confere(caso, "c2.Mx", c2!.mx);
-    confere(caso, "c2.My", c2!.my);
-    confere(caso, "c2.Mya", c2!.mya);
-    confere(caso, "c2.Mtotal", c2!.mTotal);
-    confere(caso, "c2.incl", c2!.anguloAtuante);
-    expect(c2!.erro).toBe("nao-converge");
-    expect(r.avisos.some((a) => a.includes("2/2") && a.includes("D-2"))).toBe(true);
-  });
+  it(
+    "original: 1/2 em instabilidade como impresso; 2/2 sai com erro explícito em vez de travar",
+    () => {
+      const r = verificaPilar(entrada, "original");
+      expect(r.situacao).toBe("Flexao Obliqua");
+      const [c1, c2] = r.casos;
+      confere(caso, "c1.Mx", c1!.mx);
+      confere(caso, "c1.My", c1!.my);
+      confere(caso, "c1.Mtotal", c1!.mTotal);
+      confere(caso, "c1.incl", c1!.anguloAtuante);
+      confere(caso, "c1.M1a", c1!.instabilidade!.m1);
+      confere(caso, "c1.M2a", c1!.instabilidade!.m2);
+      confere(caso, "c1.Matuante", c1!.instabilidade!.atuante);
+      confere(caso, "c2.Mx", c2!.mx);
+      confere(caso, "c2.My", c2!.my);
+      confere(caso, "c2.Mya", c2!.mya);
+      confere(caso, "c2.Mtotal", c2!.mTotal);
+      confere(caso, "c2.incl", c2!.anguloAtuante);
+      expect(c2!.erro).toBe("nao-converge");
+      expect(r.avisos.some((a) => a.includes("2/2") && a.includes("D-2"))).toBe(true);
+    },
+    TRAVA_MS,
+  );
 
   it("corrigido também termina", () => {
     const r = verificaPilar({ ...entrada, parametros: PARAMETROS_PILAR }, "corrigido");
@@ -340,18 +348,22 @@ describe("v2par_pilar_mk / lambda / trava (rodada 2)", () => {
     for (const cj of conjuntos(caso)) confereCarregamento(caso, `e${cj.k}`, verifica(secao, cj));
   });
 
-  it("v2par_pilar_trava: caso 1 bate; caso 2 (27°) sai com erro em vez de travar", () => {
-    const caso = CASOS_PILAR.v2par_pilar_trava!;
-    const r = verifica(retangular(20, 30, 3, 2, 2, 16), conjuntos(caso)[0]!);
-    expect(r.casos[1]!.erro).toBe("nao-converge");
-    const sem = {
-      ...caso,
-      valores: caso.valores.filter(
-        (v) => !v.id.startsWith("e1.c2.") || /\.(Mx|My|Mtotal|incl|situacao)$/.test(v.id),
-      ),
-    };
-    confereCarregamento(sem, "e1", r);
-  });
+  it(
+    "v2par_pilar_trava: caso 1 bate; caso 2 (27°) sai com erro em vez de travar",
+    () => {
+      const caso = CASOS_PILAR.v2par_pilar_trava!;
+      const r = verifica(retangular(20, 30, 3, 2, 2, 16), conjuntos(caso)[0]!);
+      expect(r.casos[1]!.erro).toBe("nao-converge");
+      const sem = {
+        ...caso,
+        valores: caso.valores.filter(
+          (v) => !v.id.startsWith("e1.c2.") || /\.(Mx|My|Mtotal|incl|situacao)$/.test(v.id),
+        ),
+      };
+      confereCarregamento(sem, "e1", r);
+    },
+    TRAVA_MS,
+  );
 });
 
 describe("D-17: laço sem fim no ajuste do ângulo da LN (v2par_pilar_trava)", () => {
@@ -380,6 +392,7 @@ describe("D-17: laço sem fim no ajuste do ângulo da LN (v2par_pilar_trava)", (
       const r = verificaPilar(entrada(nk, mxk, myk), "original");
       expect(r.casos[i]!.erro).toBe("nao-converge");
     },
+    TRAVA_MS,
   );
 
   it.each(conjuntos)("corrigido: Nk %s, Mxk %s, Myk %s converge pela bissecção", (nk, mxk, myk) => {

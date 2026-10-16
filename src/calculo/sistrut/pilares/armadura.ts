@@ -160,7 +160,7 @@ function arranjoPoligonal(
   cobrimento: number,
   maximoBarras: number,
 ): Arranjo {
-  const { s } = ctx;
+  const { s, pot, raizS } = ctx;
   const v = g.vertices;
   const n = v.length - 1;
   const a1 = tab[i1]!.area;
@@ -184,7 +184,7 @@ function arranjoPoligonal(
     const smin = tab[i2]!.espacamentoMinimo;
     const lado = (i: number) => {
       const q = barras[i === n - 1 ? 0 : i + 1]!;
-      return { q, l: s(Math.sqrt((q.y - barras[i]!.y) ** 2 + (q.x - barras[i]!.x) ** 2)) };
+      return { q, l: raizS(pot(q.y - barras[i]!.y, 2) + pot(q.x - barras[i]!.x, 2)) };
     };
     let total = 0;
     let lados = 0;
@@ -314,16 +314,14 @@ function verificaArranjo(
   par: ParametrosPilar,
   ctl: ControleDimensionamento,
 ) {
-  const { s } = ctx;
+  const { s, raiz } = ctx;
   const est = novoEstado(sec);
   const { jx, jy, area } = inercias(ctx, est);
   const lex = flambagem ? dados.lex : 0;
   const ley = flambagem ? dados.ley : 0;
-  const lambdaX = esbeltez(lex, jy, area);
-  const lambdaY = esbeltez(ley, jx, area);
-  const ec = s(
-    Math.sqrt(par.coeficienteTensao * ctx.mat.fck * 1000 + 35) * par.multiplicadorEc * 21,
-  );
+  const lambdaX = esbeltez(ctx.modo, lex, jy, area);
+  const lambdaY = esbeltez(ctx.modo, ley, jx, area);
+  const ec = s(raiz(par.coeficienteTensao * ctx.mat.fck * 1000 + 35) * par.multiplicadorEc * 21);
   const casos: CasoPilar[] = [];
   const saida = {
     lambdaX,

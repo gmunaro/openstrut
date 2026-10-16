@@ -30,7 +30,7 @@ export const verificaPilar: VerificaPilar = (entrada, modo) => {
     csa: m.gamaS,
     coefTensao: par.coeficienteTensao,
   });
-  const { s, k } = ctx;
+  const { s, pot, raiz, raizS, k } = ctx;
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
   const secao = secaoCalculo(entrada.secao, par.bitolas, modo);
@@ -40,11 +40,11 @@ export const verificaPilar: VerificaPilar = (entrada, modo) => {
   const mxk = s(entrada.mxk * par.coeficienteForca * par.coeficienteMedida);
   const myk = s(entrada.myk * par.coeficienteForca * par.coeficienteMedida);
   const { jx, jy, area } = inercias(ctx, est);
-  const lambdaX = esbeltez(entrada.lxe, jy, area);
-  const lambdaY = esbeltez(entrada.lye, jx, area);
-  const ec = s(Math.sqrt(par.coeficienteTensao * m.fck * 1000 + 35) * par.multiplicadorEc * 21);
-  const lambdaEuler = s(
-    Math.sqrt((k.pi ** 2 / (par.coeficienteTensao * m.fck * k.c085)) * ec * m.gamaC),
+  const lambdaX = esbeltez(modo, entrada.lxe, jy, area);
+  const lambdaY = esbeltez(modo, entrada.lye, jx, area);
+  const ec = s(raiz(par.coeficienteTensao * m.fck * 1000 + 35) * par.multiplicadorEc * 21);
+  const lambdaEuler = raizS(
+    (pot(k.pi, 2) / (par.coeficienteTensao * m.fck * k.c085)) * ec * m.gamaC,
   );
   memoria.push(
     { descricao: "Área da seção", valor: area, unidade: "cm²", ref: "PILAR.BAS:4192" },

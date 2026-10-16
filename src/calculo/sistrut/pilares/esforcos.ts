@@ -5,15 +5,16 @@
 // Fonte: PILAR.BAS:4678-4979 (casos e L_32225) e 5601-5672 (λ, L_37269);
 // PILAREDI.BAS:4854-5051 (L_477c8). Livro: livros_viga_pilar.md 2.3-2.6.
 import { qbCint, qbClng } from "../base/f32";
-import type { SituacaoPilar } from "../base/tipos";
-import { type Contexto, type Estado, posiciona, raiz } from "./secao";
+import type { ModoSistrut, SituacaoPilar } from "../base/tipos";
+import { raiz } from "../base/x87";
+import { type Contexto, type Estado, posiciona } from "./secao";
 
 /** λ = CINT(L/√(J/A)·100), L em m e raio de giração em cm; inteiro arredondado ao
  *  par, que entra em todos os testes (PILAR.BAS:5631-5632; PILAREDI.BAS:5458-5459;
  *  P2, U49-005). Caso c: 3/√(13333,33/400)·100 = 51,96 → 52. Área negativa
- *  (poligonal anti-horária) dá NaN → −32768, como o FISTP (D-6). */
-export function esbeltez(l: number, j: number, area: number) {
-  return qbCint((l / raiz(j / area)) * 100);
+ *  (poligonal anti-horária) dá NaN → −32768, como o FISTP (D-6). SQR do modo. */
+export function esbeltez(modo: ModoSistrut, l: number, j: number, area: number) {
+  return qbCint((l / raiz(modo)(j / area)) * 100);
 }
 
 /** Sinal da excentricidade acidental de um caso, por direção (S(k,1), S(k,2)). */
@@ -93,7 +94,7 @@ export function momentoDirecao(
   dir: DirecaoAtuante,
   par: ParametrosAtuante,
 ) {
-  const { s, k } = ctx;
+  const { s, pot, k } = ctx;
   posiciona(ctx, est, theta);
   const eMin = s(par.excentricidadeMinima / 100);
   const eH = s(par.verificaH30 ? est.altura / 3000 : 0);
@@ -102,14 +103,14 @@ export function momentoDirecao(
   if (dir.mk !== 0) ma = s(Math.sign(dir.mk) * ma);
   let mc = 0;
   if (par.coeficienteFluencia > 0 && ma !== 0 && dir.lambda > par.lambdaFluencia) {
-    const ne = s((k.pi ** 2 / (dir.le * 100) ** 2) * par.ec * dir.j);
+    const ne = s((pot(k.pi, 2) / pot(dir.le * 100, 2)) * par.ec * dir.j);
     const x =
       (Math.abs(nk) / (ne - Math.abs(nk) * par.fatorCargaFluencia * par.fatorNkFluencia)) *
       par.coeficienteFluencia *
       par.fatorNkFluencia *
       par.fatorCargaFluencia;
     mc =
-      ctx.modo === "original" ? s((dir.mk + ma) * k.e ** (x - 1)) : (dir.mk + ma) * Math.expm1(x);
+      ctx.modo === "original" ? s((dir.mk + ma) * pot(k.e, x - 1)) : (dir.mk + ma) * Math.expm1(x);
     mc = s(qbClng(mc * 100) / 100);
   }
   return { ma, mc, total: s(dir.mk + ma + mc) };
@@ -118,8 +119,8 @@ export function momentoDirecao(
 /** Momento total CLNG(100·√(Mx² + My²))/100 e o ângulo do vetor (graus, por
  *  quadrante; 90 com Mx = 0) (PILAR.BAS:4978-4999; PILAREDI.BAS:5024-5051). */
 export function momentoTotal(ctx: Contexto, mx: number, my: number) {
-  const { s, k } = ctx;
-  let mtot = s(Math.sqrt(mx ** 2 + my ** 2));
+  const { s, pot, raizS, k } = ctx;
+  let mtot = raizS(pot(mx, 2) + pot(my, 2));
   mtot = s(qbClng(100 * mtot) / 100);
   const graus = (r: number) => (r * 180) / k.pi;
   let angulo: number;

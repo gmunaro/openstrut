@@ -274,13 +274,17 @@ describe("PILAR opção 6 pelo motor: laço sem fim do original vira erro explí
   it.each([
     ["retrad_pil_trava", 2],
     ["v2par_pilar_trava", 5],
-  ] as const)("%s: caso 2/2 com erro e aviso", (nome, i) => {
-    const r = calcularObraSistrut(CASOS_PILAR6[i]![2](), { modo: "original" });
-    const v = r.verificacoes[0]!;
-    expect(CASOS_PILAR6[i]![1].caso).toBe(nome);
-    expect(v.resultado!.casos[1]!.erro).toBe("nao-converge");
-    expect(v.avisos.some((a) => a.includes("2/2") && a.includes("D-2"))).toBe(true);
-  });
+  ] as const)(
+    "%s: caso 2/2 com erro e aviso",
+    (nome, i) => {
+      const r = calcularObraSistrut(CASOS_PILAR6[i]![2](), { modo: "original" });
+      const v = r.verificacoes[0]!;
+      expect(CASOS_PILAR6[i]![1].caso).toBe(nome);
+      expect(v.resultado!.casos[1]!.erro).toBe("nao-converge");
+      expect(v.avisos.some((a) => a.includes("2/2") && a.includes("D-2"))).toBe(true);
+    },
+    30_000,
+  ); // até LIMITE_INTEGRACOES com o B$POW em software: ~2-5 s
 });
 
 // ---------------------------------------------------------------- PILAREDI

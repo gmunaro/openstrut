@@ -131,15 +131,15 @@ function momentosResistentes(ctx: Contexto, est: Estado) {
 /** Momentos de 2ª ordem pela curvatura: M2 = |(100·le)²·cos/sin(θ − 270°)/π²·Nk·κ|,
  *  só com λ ≥ 40 na direção, t·cm (PILAR.BAS:5206-5214; P5, U49-007). */
 function segundaOrdem(ctx: Contexto, est: Estado, a: AtuanteCaso) {
-  const { s, k } = ctx;
+  const { s, pot, k } = ctx;
   let m2x = 0;
   let m2y = 0;
   if (a.lambdaY >= a.lambda2a || a.lambdaX >= a.lambda2a) {
     const ang = s(((est.theta - 270) * k.pi) / 180);
     if (a.lambdaX >= a.lambda2a)
-      m2x = s(Math.abs((((100 * a.lex) ** 2 * Math.cos(ang)) / k.pi ** 2) * a.nk * est.kappa));
+      m2x = s(Math.abs(((pot(100 * a.lex, 2) * Math.cos(ang)) / pot(k.pi, 2)) * a.nk * est.kappa));
     if (a.lambdaY >= a.lambda2a)
-      m2y = s(Math.abs((((100 * a.ley) ** 2 * Math.sin(ang)) / k.pi ** 2) * a.nk * est.kappa));
+      m2y = s(Math.abs(((pot(100 * a.ley, 2) * Math.sin(ang)) / pot(k.pi, 2)) * a.nk * est.kappa));
   }
   return { m2x, m2y };
 }
@@ -280,7 +280,7 @@ function situacaoFinal(ctx: Contexto, est: Estado) {
  *  κ enquanto o MR reduzido não cobre o atuante; instabilidade (fator 1,03 e 1 t·cm)
  *  e "ok" com as três comparações ESTRITAS (D-7: ≥ no corrigido). */
 export function eluPilar(ctx: Contexto, est: Estado, a: AtuanteCaso): ResistenteCaso {
-  const { s } = ctx;
+  const { s, pot, raiz, raizS } = ctx;
   const vazio = (veredito: VereditoPilar): ResistenteCaso => ({
     ...situacaoFinal(ctx, est),
     mrx: 0,
@@ -336,12 +336,12 @@ export function eluPilar(ctx: Contexto, est: Estado, a: AtuanteCaso): Resistente
         curvatura = true;
         // L_34740
         let { mrx, mry } = momentosResistentes(ctx, est);
-        if (Math.sqrt(mrx ** 2 + mry ** 2) > melhor) {
+        if (raiz(pot(mrx, 2) + pot(mry, 2)) > melhor) {
           melhorXi = est.xi;
           melhorK = est.kappa;
           melhorX = mrx;
           melhorY = mry;
-          melhor = s(Math.sqrt(mrx ** 2 + mry ** 2));
+          melhor = raizS(pot(mrx, 2) + pot(mry, 2));
           marcou = true;
         }
         if (
@@ -365,10 +365,10 @@ export function eluPilar(ctx: Contexto, est: Estado, a: AtuanteCaso): Resistente
           break;
         }
         est.theta = normalizaAngulo(ctx, est.theta);
-        const mrAbs = Math.sqrt(mrx ** 2 + mry ** 2);
+        const mrAbs = raiz(pot(mrx, 2) + pot(mry, 2));
         const cobreX = (Math.abs(mrx) - m2x) / 100 < Math.abs(a.mx);
         const cobreY = (Math.abs(mry) - m2y) / 100 < Math.abs(a.my);
-        const rTot = Math.sqrt((Math.abs(mrx) - m2x) ** 2 + (Math.abs(mry) - m2y) ** 2);
+        const rTot = raiz(pot(Math.abs(mrx) - m2x, 2) + pot(Math.abs(mry) - m2y, 2));
         if (marcou && mrAbs / 100 < a.mtot) {
           if (est.kappa < kU) {
             est.kappa = s(est.kappa + dK);
@@ -448,7 +448,7 @@ function veredito(
   a: AtuanteCaso,
   m: { mrx: number; mry: number; m2x: number; m2y: number; rx: number; ry: number },
 ): ResistenteCaso {
-  const { s, k } = ctx;
+  const { s, pot, raiz, raizS, k } = ctx;
   const tm = (x: number) => s(x / 100);
   const base = {
     ...situacaoFinal(ctx, est),
@@ -458,11 +458,11 @@ function veredito(
     m2y: tm(m.m2y),
     mrxReduzido: tm(m.rx),
     mryReduzido: tm(m.ry),
-    mrTotal: tm(Math.sqrt(m.ry ** 2 + m.rx ** 2)),
+    mrTotal: tm(raiz(pot(m.ry, 2) + pot(m.rx, 2))),
   };
-  const rTot = Math.sqrt((Math.abs(m.mrx) - m.m2x) ** 2 + (Math.abs(m.mry) - m.m2y) ** 2);
-  const quad2 = (m.m2x ** 2 + m.m2y ** 2) * k.c103;
-  const quad1 = m.mrx ** 2 + m.mry ** 2;
+  const rTot = raiz(pot(Math.abs(m.mrx) - m.m2x, 2) + pot(Math.abs(m.mry) - m.m2y, 2));
+  const quad2 = (pot(m.m2x, 2) + pot(m.m2y, 2)) * k.c103;
+  const quad1 = pot(m.mrx, 2) + pot(m.mry, 2);
   let componente: "total" | "x" | "y" | null = null;
   if ((a.lambdaY >= a.lambda2a || a.lambdaX >= a.lambda2a) && (rTot * k.c103) / 100 < a.mtot)
     componente = "total";
@@ -475,7 +475,7 @@ function veredito(
   if (componente !== null) {
     const [v1, v2, atuante] =
       componente === "total"
-        ? [s(Math.sqrt(quad1)), s(Math.sqrt(m.m2x ** 2 + m.m2y ** 2)), a.mtot]
+        ? [raizS(quad1), raizS(pot(m.m2x, 2) + pot(m.m2y, 2)), a.mtot]
         : componente === "x"
           ? [m.mrx, m.m2x, a.mx]
           : [m.mry, m.m2y, a.my];
@@ -494,7 +494,7 @@ function veredito(
   const ok =
     maior((Math.abs(m.mry) - m.m2y) / 100, Math.abs(a.my)) &&
     maior((Math.abs(m.mrx) - m.m2x) / 100, Math.abs(a.mx)) &&
-    maior(Math.sqrt(m.ry ** 2 + m.rx ** 2) / 100, a.mtot);
+    maior(raiz(pot(m.ry, 2) + pot(m.rx, 2)) / 100, a.mtot);
   return { ...base, veredito: ok ? "ok" : "NAO" };
 }
 
@@ -521,7 +521,7 @@ export function eluPilaredi(
   circular: boolean,
   ctl: ControleDimensionamento,
 ): ResistenteCaso | null {
-  const { s, k } = ctx;
+  const { s, pot, raiz, raizS, k } = ctx;
   const nao = (fator: number) => {
     ctl.sinal = "NAO";
     ctl.fator = fator;
@@ -594,13 +594,13 @@ export function eluPilaredi(
       }
       est.theta = normalizaAngulo(ctx, est.theta);
       ctl.anguloInicial = est.theta;
-      const mr = Math.sqrt(mrx ** 2 + mry ** 2);
+      const mr = raiz(pot(mrx, 2) + pot(mry, 2));
       if (mr / 100 < a.mtot) {
-        if (est.kappa === kU) return nao(s(Math.sqrt((a.mtot / mr) * 100)));
+        if (est.kappa === kU) return nao(raizS((a.mtot / mr) * 100));
         avanca();
         continue;
       }
-      const reduzidoTotal = Math.sqrt(red.rx ** 2 + red.ry ** 2);
+      const reduzidoTotal = raiz(pot(red.rx, 2) + pot(red.ry, 2));
       if (
         Math.abs(mry) - Math.abs(m2y) < 0 ||
         Math.abs(mrx) - Math.abs(m2x) < 0 ||
@@ -610,7 +610,7 @@ export function eluPilaredi(
           avanca();
           continue;
         }
-        return nao(s(Math.sqrt((a.mtot / Math.abs(mr - Math.sqrt(m2x ** 2 + m2y ** 2))) * 100)));
+        return nao(raizS((a.mtot / Math.abs(mr - raiz(pot(m2x, 2) + pot(m2y, 2)))) * 100));
       }
       const tm = (x: number) => s(x / 100);
       const r: ResistenteCaso = {
@@ -626,11 +626,11 @@ export function eluPilaredi(
         m2y: tm(m2y),
         mrxReduzido: tm(red.rx),
         mryReduzido: tm(red.ry),
-        mrTotal: tm(Math.sqrt(red.ry ** 2 + red.rx ** 2)),
+        mrTotal: tm(raiz(pot(red.ry, 2) + pot(red.rx, 2))),
         veredito: "ok",
       };
       if (!(reduzidoTotal / 100 >= a.mtot)) {
-        nao(s(Math.sqrt((a.mtot / reduzidoTotal) * 100)));
+        nao(raizS((a.mtot / reduzidoTotal) * 100));
         return null;
       }
       if (reduzidoTotal / 100 >= a.mtot * k.c105) {
@@ -638,7 +638,7 @@ export function eluPilaredi(
           ctl.sinal = "DIMINUI";
           ctl.fator = -1;
         } else if (ctl.sinal !== "DIMINUI") ctl.sinal = "";
-        const f = s(Math.sqrt((a.mtot / reduzidoTotal) * 100));
+        const f = raizS((a.mtot / reduzidoTotal) * 100);
         ctl.fator = ctl.fator > f ? ctl.fator : f;
         r.veredito = "DIMINUI";
       } else ctl.sinal = "";

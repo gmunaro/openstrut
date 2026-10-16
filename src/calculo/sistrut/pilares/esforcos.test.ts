@@ -17,14 +17,14 @@ const ret20 = secaoCalculo({ tipo: "retangular", b: 20, h: 20, barras: [] }, [],
 
 describe("λ inteiro (PILAR.BAS:5631-5632)", () => {
   it("caso c: 3/√(13333,33/400)·100 = 51,96 → 52", () => {
-    expect(esbeltez(3, 13333.33, 400)).toBe(52);
+    expect(esbeltez("original", 3, 13333.33, 400)).toBe(52);
   });
   it("arredonda ao par: 52,5 → 52", () => {
     // L/i·100 = 52,5 com i = 2 cm (J/A = 4) e L = 1,05 m
-    expect(esbeltez(1.05, 4, 1)).toBe(52);
+    expect(esbeltez("original", 1.05, 4, 1)).toBe(52);
   });
   it("área negativa (poligonal anti-horária) → −32768, como o FISTP de NaN (D-6)", () => {
-    expect(esbeltez(3, 13333, -400)).toBe(-32768);
+    expect(esbeltez("original", 3, 13333, -400)).toBe(-32768);
   });
 });
 

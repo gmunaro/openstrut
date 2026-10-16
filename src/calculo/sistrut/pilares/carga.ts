@@ -268,7 +268,7 @@ function cargaAcumulada(
   pip: ParametrosPip,
   op: OpcoesAcumulada,
 ) {
-  const { s, k } = ctx;
+  const { s, pot, k } = ctx;
   const { L, coefM, coefF } = op;
   const nv = coluna.niveis;
   const topo = nv.length - 1;
@@ -361,7 +361,8 @@ function cargaAcumulada(
     if (j >= L && pip.pesoProprio) {
       const sobe = Math.min(ux, uy);
       pp = s(
-        ((cota(sobe) - cota(j)) / (100 ** 2 * coefF)) * coefM * carregada.area * pip.densidade + pp,
+        ((cota(sobe) - cota(j)) / (pot(100, 2) * coefF)) * coefM * carregada.area * pip.densidade +
+          pp,
       );
     }
   }
@@ -430,14 +431,14 @@ function cargaAcumulada(
   // caso "e": o maior extremo
   let eX = cimaX;
   let eY = cimaY;
-  if (eX ** 2 + eY ** 2 < baseX ** 2 + baseY ** 2) {
+  if (pot(eX, 2) + pot(eY, 2) < pot(baseX, 2) + pot(baseY, 2)) {
     eX = baseX;
     eY = baseY;
   }
   // caso "f": 0,6·M1 + 0,4·M2, nunca abaixo de 0,4·M1
   let gX: number;
   let gY: number;
-  if (fX ** 2 + fY ** 2 > baseX ** 2 + baseY ** 2) {
+  if (pot(fX, 2) + pot(fY, 2) > pot(baseX, 2) + pot(baseY, 2)) {
     gX = s(fX * k.c06 + k.c04 * baseX);
     if (Math.abs(gX) < Math.abs(fX * k.c04)) gX = s(fX * k.c04);
     gY = s(fY * k.c06 + k.c04 * baseY);
@@ -598,9 +599,9 @@ function tensoesNivel(
   pip: ParametrosPip,
   par: ParametrosPredimensionamento,
 ) {
-  const { s, k } = ctx;
+  const { s, pot, raiz, k } = ctx;
   const { mkx: x, mky: y } = momentos;
-  const m0 = s(Math.sqrt(x ** 2 + y ** 2) * par.coeficienteMedida * par.coeficienteForca);
+  const m0 = s(raiz(pot(x, 2) + pot(y, 2)) * par.coeficienteMedida * par.coeficienteForca);
   const graus = (r: number) => (r * 180) / k.pi;
   let ang = 0;
   if (y >= 0 && x > 0) ang = s(graus(Math.atan(y / x)));
@@ -659,11 +660,11 @@ export const predimensionaPilar: PredimensionaPilar = (
     (somaAcima / ((sigmaS - admN) * (pip.taxaIdealPredimensionamento / 100) + admN)) *
       par.coeficienteForca,
   );
-  const raiz = s(Math.sqrt(areaIdeal));
+  const lado0 = ctx.raizS(areaIdeal);
   let lado =
-    pip.medidaMinima > raiz
+    pip.medidaMinima > lado0
       ? pip.medidaMinima
-      : qbCint(raiz / pip.multiploMedida) * pip.multiploMedida;
+      : qbCint(lado0 / pip.multiploMedida) * pip.multiploMedida;
   const tentativas: { lado: number; tensaoNormal: number; tensaoFlexao: number; nivel: number }[] =
     [];
   for (let volta = 0; volta < 200; volta++) {
