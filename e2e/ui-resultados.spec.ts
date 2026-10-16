@@ -107,10 +107,10 @@ for (const caso of CASOS) {
 
 // Revisão por seção: o painel rola por dentro, então a tela cheia não mostra o resto.
 // Uma captura por título (lajes, vigas, pilares, memória, equilíbrio, detalhamento).
-test("resultados secoes paradas-original-1366", async ({ page }) => {
-  test.setTimeout(180_000);
+// Em 900 px o sufixo entra no nome do arquivo para não sobrescrever as de 1366.
+async function revisarSecoes(page: Page, largura: number, altura: number, sufixo: string) {
   await semFileSystemAccess(page);
-  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.setViewportSize({ width: largura, height: altura });
   await page.goto("/");
   await abrirObra(page, "obra-paradas-original.openstrut.json");
   await page.getByRole("tab", { name: "Resultados" }).focus();
@@ -126,9 +126,21 @@ test("resultados secoes paradas-original-1366", async ({ page }) => {
     const texto = (await titulo.innerText()).replace(/\s+/g, " ").trim();
     lista.push(`${i}: ${texto}`);
     await titulo.evaluate((el) => el.scrollIntoView({ block: "start" }));
-    await page.screenshot({ path: path.join(PASTA, `secao-${String(i).padStart(2, "0")}.png`) });
+    await page.screenshot({
+      path: path.join(PASTA, `secao-${sufixo}${String(i).padStart(2, "0")}.png`),
+    });
   }
-  fs.writeFileSync(path.join(PASTA, "secoes-1366.txt"), lista.join("\n"));
+  fs.writeFileSync(path.join(PASTA, `secoes-${largura}.txt`), lista.join("\n"));
+}
+
+test("resultados secoes paradas-original-1366", async ({ page }) => {
+  test.setTimeout(180_000);
+  await revisarSecoes(page, 1366, 768, "");
+});
+
+test("resultados secoes paradas-original-900", async ({ page }) => {
+  test.setTimeout(180_000);
+  await revisarSecoes(page, 900, 800, "900-");
 });
 
 // Memória de cálculo: cada detalhamento traz um "Memória do detalhamento" fechado por
