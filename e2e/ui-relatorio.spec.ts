@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -82,6 +83,40 @@ async function totalNoRelatorio(relatorio: Locator) {
     .locator("xpath=..");
   const celulas = await secao.getByRole("row").last().getByRole("cell").allInnerTexts();
   return celulas.slice(1);
+}
+
+/**
+ * Texto de cada página do PDF (pdftotext -layout), com espaços normalizados. O pdftotext
+ * separa as páginas por form feed (\f).
+ */
+function paginasDoPdf(arquivo: string): string[] {
+  const bruto = execFileSync("pdftotext", ["-layout", "-enc", "UTF-8", arquivo, "-"], {
+    encoding: "utf8",
+  });
+  return bruto
+    .split("\f")
+    .filter((p) => p.trim() !== "")
+    .map((p) => p.replace(/\s+/g, " ").trim());
+}
+
+/**
+ * Confere o PDF página a página: o cabeçalho (obra, modo e data) em todas, e as seções
+ * "Resumo de aço e concreto" e "Tabela de aço" começando logo abaixo do cabeçalho, ou
+ * seja, no topo de uma página nova.
+ */
+function conferirPaginasDoPdf(arquivo: string) {
+  const paginas = paginasDoPdf(arquivo);
+  expect(paginas.length).toBeGreaterThanOrEqual(2);
+  const cabecalho = `${NOME_OBRA} · Modo: Corrigido · emitido em`;
+  paginas.forEach((p, i) => {
+    expect.soft(p.startsWith(cabecalho), `página ${i + 1} sem cabeçalho`).toBe(true);
+  });
+  for (const titulo of ["Resumo de aço e concreto", "Tabela de aço"]) {
+    const i = paginas.findIndex((p) => p.includes(titulo));
+    expect(i, `seção "${titulo}" no PDF`).toBeGreaterThanOrEqual(0);
+    const depoisDoCabecalho = (paginas[i] ?? "").replace(/^.*?emitido em .*?\d{2}:\d{2} /, "");
+    expect.soft(depoisDoCabecalho.startsWith(titulo), titulo).toBe(true);
+  }
 }
 
 /** Tab até o alvo, do jeito que um usuário só de teclado faria. */
@@ -187,7 +222,10 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
   await expect(relatorio.getByText(/unidades (SI|técnicas)/)).toBeVisible();
 
   // Pavimentos: 4 lajes, 9 pilares e vigas no contorno e no meio.
-  const pavimento = relatorio.getByRole("row").filter({ hasText: /^Pavimento 1/ }).first();
+  const pavimento = relatorio
+    .getByRole("row")
+    .filter({ hasText: /^Pavimento 1/ })
+    .first();
   const celPav = await pavimento.getByRole("cell").allInnerTexts();
   expect(celPav[3]).toBe("4");
   expect(celPav[5]).toBe("9");
@@ -259,6 +297,7 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
     preferCSSPageSize: true,
   });
   expect(fs.statSync(path.join(PASTA, "relatorio.pdf")).size).toBeGreaterThan(1000);
+  conferirPaginasDoPdf(path.join(PASTA, "relatorio.pdf"));
 
   // 8. Viewports: 1920×1080 e janela estreita -----------------------------------
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -286,4 +325,64 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
 
   // 10. Console limpo -----------------------------------------------------------
   expect(erros).toEqual([]);
+});
+
+// Obra R3 original (e2e/fixtures): a otimização dos negativos não converge na laje L1 e a
+// viga V4 sai sem detalhamento com a resposta N. Gerada pelo mesmo caminho do arquivo salvo
+// (importarLaj com relacaoNegPosMin 0,35, serializarObra, modo original).
+const FIXTURE_R3_ORIGINAL = path.resolve(
+  process.cwd(),
+  "e2e/fixtures/laje-r3-original.openstrut.json",
+);
+
+/** Sem a API de arquivo do Chrome: o OpenStrut cai no <input type=file>, que o Playwright controla. */
+async function semFileSystemAccess(page: Page) {
+  await page.addInitScript(() => {
+    const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
+    delete w.showOpenFilePicker;
+    delete w.showSaveFilePicker;
+  });
+}
+
+test("relatório de obra no modo original: os avisos e a marca 'não existe no SISTRUT' vão ao papel", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await semFileSystemAccess(page);
+  await page.goto("/");
+  const [escolha] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: /Abrir arquivo \.openstrut\.json/ }).click(),
+  ]);
+  await escolha.setFiles(FIXTURE_R3_ORIGINAL);
+  await expect(page.getByRole("heading", { name: "Laje R3 original" })).toBeVisible();
+
+  // na tela: o aviso da otimização aparece nos resultados
+  await page.getByRole("tab", { name: "Resultados", exact: true }).click();
+  const resultados = page.getByRole("tabpanel", { name: "Resultados" });
+  await expect(resultados.getByText(/não converge/).first()).toBeVisible();
+
+  // no papel: o relatório traz o modo, os avisos e a marca, em todas as páginas
+  await page.getByRole("tab", { name: "Relatório", exact: true }).click();
+  const relatorio = page.getByRole("tabpanel", { name: "Relatório" });
+  await expect(relatorio.getByText("Modo de cálculo: Como o SISTRUT original")).toBeVisible();
+  await foto(page, "relatorio-original-aviso");
+
+  const pdf = path.join(PASTA, "relatorio-original.pdf");
+  await page.pdf({ path: pdf, format: "A4", printBackground: true, preferCSSPageSize: true });
+  const paginas = paginasDoPdf(pdf);
+  expect(paginas.length).toBeGreaterThanOrEqual(2);
+  const cabecalho = "Laje R3 original · Modo: Como o SISTRUT original · emitido em";
+  paginas.forEach((p, i) => {
+    expect
+      .soft(p.startsWith(cabecalho), `página ${i + 1} sem cabeçalho do modo original`)
+      .toBe(true);
+  });
+
+  const texto = paginas.join(" ");
+  expect(texto).toContain("Avisos");
+  expect(texto).toMatch(/Otimização dos negativos não converge: L1/);
+  expect(texto).toMatch(/V4: o DESDIM para a viga com a resposta padrão N/);
+  expect(texto).toContain("sem detalhamento nem quadro");
+  expect(texto).toContain(NAO_EXISTE);
 });
