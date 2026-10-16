@@ -1,0 +1,253 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*               SISTRUT    Software e Tecnologia s/c ltda
+*                       Marcelo de Paula Picarelli
+*
+*                  DETALHAMENTO E ARMACAO DE PILARES
+*                          DESENHO DE PILARES
+*               VERSAO 4.0                  ABRIL 1992
+*                     **PARAMETRIZACAO INICIAL**
+*
+*
+*  Este arquivo, possui as parametrizacoes basicas para o modulo PILAREDI
+*  sendo que cada usuario, podera recopia-lo com outro nome (novo nome.PIP) e
+*  alterar as parametrizacoes da  maneira  mais  conveniente  atraves  de  um
+*  editor de textos .
+*
+*  Na implantacao inicial, este arquivo se encontra no disco original do
+*  programa PILAREDI ou se implantado em Winchester, dentro do subdiretorio
+*  \SISTRUT\EXEC40
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*  REGRAS PARA ALTERACAO DO ARQUIVO TEXTO:
+*
+*  1) Mantenha o simbolo "*" afrente das linhas de comentarios
+*  2) Nunca alterar a ordem das entradas de dados
+*  3) Seguir instrucoes de preenchimento para cada Parametro
+*  4) Todos os comentarios poderao ser eliminados (NAO ACONSELHAVEL)
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*  PARAMETRIZACAO : SISTRUT
+*  CRIADA POR     : MARCELO P. PICARELLI
+*  DATA           : 30 ABRIL 1992
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+PARAMETROS GLOBAIS
+2                 COBRIMENTO DA ARMADURA PARA DETALHAMENTO (CM)
+* * * * *
+*   PARA A PARAMETRIZACAO DAS BITOLAS E AREAS:
+*   1) Forneca area NULA para a nao consideracao da Bitola
+*   2) Lembre-se de que caso seja anulada uma determinada Bitola,
+*      nao utiliza-la nas Combinacoes que veremos afrente
+*   3) A ordem sequencial deve permanecer inalterada
+*   4) Teremos sempre 13 Bitolas - (ORDEM 0 a 12)
+* * * * *
+*   BITOLAS UTILIZADAS E AREAS
+ORDEM        BITOLA (MM)           AREA (CM2)        PESO (KG/M)
+  0  -         3.2 -                 0.00  -            0.063
+  1  -         4   -                 0.00  -            0.10
+  2  -         5   -                 0.20  -            0.16
+  3  -         6.3 -                 0.315 -            0.25
+  4  -         8   -                 0.5   -            0.40
+  5  -        10   -                 0.8   -            0.63
+  6  -        12.5 -                 1.25  -            1.0
+  7  -        16   -                 2.0   -            1.6
+  8  -        20   -                 3.15  -            2.5
+  9  -        22.2 -                 3.88  -            3.05
+ 10  -        25   -                 5.0   -            4.0
+ 11  -        32   -                 8.0   -            6.3
+ 12  -        40   -                12.50  -           10.0
+* * * * *
+*   PARAMETRIZACAO DAS OPCOES PARA PREDIMENSIONAMENTO DA SECAO
+*
+*   ATENCAO !
+*   Para os valores de tensao admissivel no concreto para efeito do
+*   predimensionamento da secao, entre com o valor do multiplicador
+*   da resistencia caracteristica do concreto (Fck),     ou o valor
+*   negativo  -TENSAO  onde tensao e o valor da tensao admissivel .
+*   Lembre-se que teremos dois valores de tensao:
+*   O primeiro para o predimensionamento da secao exclusivamente a
+*   carga normal - Nk/Area  (Default 0.6)
+*   O segundo para o predimensionamento da secao sob a atuacao de carga
+*   normal e momento - Nk/Area + Mk/w  (Default 0.75)
+* * * * *
+PARAMETROS
+0.6               MULTIPLICADOR DE Fck PARA TENSAO ADMISSIVEL (Nk/Area)
+0.75              MULTIPLICADOR DE Fck PARA TENSAO ADMISSIVEL (Nk/Area+Mk/W)
+1.50              TAXA IDEAL DE ARMADURA NA SECAO PARA PREDIMENSIONAMENTO (%)
+14                MINIMA MEDIDA DA COLUNA PARA PREDIMENSIONAMENTO
+5                 MULTIPLO DA MEDIDA DA SECAO DA COLUNA PARA PREDIMENSIONAMENTO
+S                 ACRESCENTO O PESO PROPRIO DA COLUNA
+2.50              DENSIDADE DO CONCRETO PARA O CALCULO DO PESO PROPRIO (t/m3)
+10                PORCENTAGEM DA CARGA TOTAL DA COLUNA CONSIDERADA ACIDENTAL
+N                 REDUZO PARA FUNDACAO PARCELA ACIDENTAL DE CARGA (S/N)
+N                 REDUZO PARA DIMENSIONAMENTO PARCELA ACIDENTAL DE CARGA (S/N)
+* * * * *
+*   PARAMETRIZACAO DOS COEFICIENTES MULTIPLICADORES
+*   PARA CALCULO DOS COMPRIMENTOS DE FLAMBAGEM
+*
+*   ATENCAO !
+*   Ao definirmos as cotas dos niveis por onde as colunas estao passando,
+*   iremos tambem definir o tipo de travamento que acontece nestes niveis.
+*   Para se chegar aos comprimentos de flambagem destas colunas, definiremos
+*   abaixo um multiplicador para o vao entre niveis em que a coluna esta
+*   definida.   Este multiplicador e funcao dos tipos de vinculos definidos
+*   entre as extremidades da coluna nivel a nivel.
+*
+*   Quatro tipos de vinculo serao aceitos:
+*   Engaste   ,    Semi-Engaste ,   Continuidade  ,   Livre
+*
+*   Veja que foi introduzida uma condicao denominada Semi-Engaste para dar
+*   liberdade ao usuario de criar o seu proprio tipo de vinculo.
+*
+* * * * *
+PARAMETROS
+                    ENGASTE    SEMI-ENGASTE   CONTINUIDADE     LIVRE
+   ENGASTE       ,    0.50  ,      0.70     ,    0.70      ,   2.00
+   SEMI-ENGASTE  ,    0.70  ,      0.90     ,    0.85      ,   2.00
+   CONTINUIDADE  ,    0.70  ,      0.85     ,    1.00      ,   2.00
+   LIVRE         ,    2.00  ,      2.00     ,    2.00      ,   NAO
+* * * * *
+*   PARAMETRIZACAO DAS OPCOES DE ESCOLHA DE ARMADURA E DISPOSICAO
+* * * * *
+PARAMETROS
+0.8               MINIMA PORCENTAGEM DE ARMADURA EM RELACAO A SECAO CALCULADA
+0.5               MINIMA PORCENTAGEM DE ARMADURA EM RELACAO A SECAO REAL
+6.0               MAXIMA PORCENTAGEM DE ARMADURA EM RELACAO A AREA DA SECAO
+S                 CONSIDERO TRANSPASSE DA ARMADURA PARA CALCULO DA TAXA
+S                 MISTURO BITOLAS NA SECAO NO DIMENSIONAMENTO DA ARMADURA
+5                 NUMERO DE ORDEM DA MINIMA BITOLA LONGITUDINAL A SER UTILIZADA
+* * * * *
+*   PARAMETRIZACAO DOS ESPACAMENTOS ENTRE BARRAS LONGITUDINAIS
+*
+*       ORDEM      BITOLA       ESPACAMENTO MINIMO     ESPACAMENTO MAXIMO
+*                                      (CM)                 (CM)
+* * * * *
+PARAMETROS
+         0    ,     3.2        ,        4.0        ,        25.0
+         1    ,     4.0        ,        4.0        ,        30.0
+         2    ,     5.0        ,        4.0        ,        35.0
+         3    ,     6.3        ,        4.0        ,        35.0
+         4    ,     8.0        ,        5.0        ,        40.0
+         5    ,    10.0        ,        5.0        ,        40.0
+         6    ,    12.5        ,        6.0        ,        40.0
+         7    ,    16.0        ,        6.0        ,        40.0
+         8    ,    20.0        ,        6.0        ,        40.0
+         9    ,    22.2        ,        8.0        ,        40.0
+        10    ,    25.0        ,        8.0        ,        40.0
+        11    ,    32.0        ,        8.0        ,        40.0
+        12    ,    40.00       ,       10.0        ,        40.0
+* * * * *
+*   PARAMETRIZACAO DAS OPCOES DE ESTRIBOS E ESPACAMENTOS
+*
+*   ATENCAO !
+*   Para a escolha da armadura que sera utilizada na ferragem transversal do
+*   pilar, serao configuradas as bitolas em funcao da ferragem transversal e
+*   tambem sera configurado o maximo espacamento desejado.
+*   Este maximo espacamento somente sera modificado (diminuido) se o mesmo nao
+*   atender a menor dimensao externa da secao da peca.   Parte-se do principio
+*   que os espacamentos configurados ja atendam as requisitos 6.3.2.4 a) c) d)
+*   da Norma Brasleira NB1 .
+* * * * *
+*   No quadro abaixo, altere caso necessario a sua configuracao somente a
+*   coluna da Bitola Transversal e a coluna do Espacamento.
+*   Lembre-se de utilizar para a bitola transversal, somente bitolas
+*   configuradas acima .
+*
+*  ORDEM  ,  BITOLA LONGITUDINAL  ,  BITOLA TRANSVERSAL  ,  ESPACAMENTO MAXIMO
+*                                                                  (CM)
+* * * * *
+PARAMETROS
+      0   ,         3.2           ,        NAO           ,         NAO
+      1   ,         4.0           ,        NAO           ,         NAO
+      2   ,         5.0           ,        NAO           ,         NAO
+      3   ,         6.3           ,        NAO           ,         NAO
+      4   ,         8.0           ,        NAO           ,         NAO
+      5   ,        10.0           ,        6.3           ,        12.0
+      6   ,        12.5           ,        6.3           ,        15.0
+      7   ,        16.0           ,        6.3           ,        15.0
+      8   ,        20.0           ,        6.3           ,        20.0
+      9   ,        22.2           ,        8.0           ,        25.0
+     10   ,        25.0           ,        8.0           ,        25.0
+     11   ,        32.0           ,        8.0           ,        30.0
+     12   ,        40.0           ,        8.0           ,        30.0
+* * * * *
+*   PARAMETRIZACAO DOS DADOS DE DESENHO DE PILARES
+*
+*   Os valores abaixo sao destinados a parametrizacao do desenho final da peca
+*
+*   A seguir, definiremos para cada uma das bitolas configuradas:
+*
+*   COMPRIMENTO DE TRASPASSE
+*     Valor em centimetros do traspasse para cada bitola
+*   MAXIMA DISTANCIA NAO TRAVADA A PARTIR DE UMA BARRA TRAVADA
+*     Valor em centimetros da distancia que as barras da secao nao travadas
+*     serao consideradas travadas devido a proximidade a uma barra travada.
+*     A distancia entre duas barras travadas sera o dobro da desta distancia.
+*     Veja na configuracao abaixo o NUMERO MAXIMO DE BARRAS ADJACENTES
+*   SOMA DOS COMPRIMENTOS DOS GANCHOS DO ESTRIBO
+*     Valor em centimetros da soma dos comprimentos dos ganchos dos estribos
+*   PATA DE FUNDACAO
+*     Valor em centimetros do tamanho da pata perpendicular a armadura a ser
+*     colocada na parte inferior da ferragem.
+*     Sera questionado o desenho desta pata somente nos trechos plotados
+*     junto ao nivel mais baixo de cada coluna.
+*
+*     ORDEM     TRASPASSE      MAXIMA DISTANCIA    ESTRIBO      PATA
+*     -----    -----------    ------------------  ---------   --------
+* * * * *
+PARAMETROS
+3.2     0   ,    20        ,         10         ,      8    ,    10
+4       1   ,    24        ,         10         ,      8    ,    10
+5       2   ,    30        ,         10         ,     10    ,    10
+6.3     3   ,    40        ,         15         ,     10    ,    10
+8       4   ,    50        ,         16         ,     12    ,    10
+10      5   ,    60        ,         20         ,     15    ,    12
+12.5    6   ,    75        ,         25         ,     15    ,    15
+16      7   ,   100        ,         32         ,     20    ,    20
+20      8   ,   120        ,         40         ,     20    ,    25
+22.2    9   ,   135        ,         45         ,     20    ,    30
+25     10   ,   150        ,         50         ,     20    ,    30
+32     11   ,   200        ,         64         ,     20    ,    35
+40     12   ,   240        ,         80         ,     20    ,    35
+* * * * *                                                 
+*   Para o traspasse da armadura longitudinal na colunas temos:
+*
+*   Colocacao de Arranque por traspasse - secao constante - armadura IGUAL
+*     Quando a armadura inferior e igual a armadura superior
+*     S  sera colocada armadura extra
+*     N  nao coloca arranque - armadura existente sera suspensa ou rebaixada
+*   Colocacao de Arranque por traspasse - secao constante - armadura DIFERENTE
+*     Quando a armadura inferior e diferente da armadura superior
+*     S  sera colocada armadura extra igual a superior
+*     N  nao coloca arranque - armadura existente sera suspensa ou rebaixada
+*   Suspende a armadura - secao constante
+*     Quando nao optada pela armadura extra, podemos suspender a armadura
+*     inferior ou rebaixar a armadura superior
+*     S  suspende a armadura inferior
+*     N  nao suspende a armadura inferior ou seja, rebaixa a armadura superior
+*
+*   Suspende armadura inferior - secao e diferente
+*     Quando optado por suspender a armadura inferior, serao verificadas as
+*     armaduras da secao inferior que coincidem o posicionamento com as  da
+*     secao superior.  Esta armadura inferior sera dividida em dois grupo.
+*     O primeiro grupo sera suspenso para dentro da secao superior e servira
+*     de espera para a armadura superior.  Ja o segundo grupo onde nao existe
+*     continuidade da secao e da armadura terminara junto com a secao sendo
+*     colocada armadura de arranque para as outras barras.
+*     Para averiguacao da posicao das armaduras, sera levado em consideracao
+*     as excentricidades das secoes introduzidas no calculo.
+*     (Edificio de Multiplos Andares - Predimensionamento de Secao)
+*     S  suspende a armadura inferior
+*     N  nao suspende colocando armadura extra de arranque igual a superior
+* * * * *
+PARAMETROS
+N                 LETRA PARA DAR NOME AOS FERROS (EXEMPLO - 3 N15 ..)
+S                 VERIFICO TRAVAMENTO FLAMBAGEM BARRAS LONGITUDINAIS-(S OU N)
+2                 NUMERO MAXIMO DE BARRAS ADJACENTES CONSIDERADAS TRAVADAS
+N                 COLOCA ARRANQUE TRASPASSE , SEC CONST , As IGUAL-(S OU N)
+N                 COLOCA ARRANQUE TRASPASSE , SEC CONST , As DIFERENTE-(S OU N)
+S                 SUSPENDE ARMADURA INFERIOR-(S OU N)
+S                 SUSPENDE ARMADURA COINCIDENTE , SEC DIFERENTE
+2                 NUMERO DE ORDEM DA BITOLA (MENOR E IGUAL) CONSIDERADA CA60
+1050              COMPRIMENTO MAXIMO DA FERRAGEM-CM
+
+FINAL DA PARAMETRIZACAO
+* * * * * * * * * * * *
+
