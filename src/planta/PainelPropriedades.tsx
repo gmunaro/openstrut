@@ -13,6 +13,7 @@ import {
   type Vinculo,
 } from "../dominio/obra";
 import { useObra, type Selecao } from "../estado/obra";
+import { EditorPavimento, resumoPavimento } from "../telas/obra/editores/DialogoPavimento";
 import { EditorViga, resumoViga } from "../telas/obra/editores/DialogoViga";
 import { COR_SITUACAO, ROTULO_SITUACAO } from "./Desenho";
 import { alterarLaje, alterarPilar, alterarViga, type Edicao } from "./edicao";
@@ -71,6 +72,8 @@ export function PainelPropriedades({ pav, selecao, diagnostico, aplicar, apagar 
 }
 
 function SemSelecao({ pav }: { pav: Pavimento }) {
+  // cargas de ocupação, alvenarias, pilares-parede e continuidades: só o SISTRUT (NB-1/78)
+  const nb178 = useObra((s) => s.obra?.norma === "nb1-78");
   return (
     <div className="space-y-3 p-3 text-sm text-slate-400">
       <p>
@@ -90,6 +93,12 @@ function SemSelecao({ pav }: { pav: Pavimento }) {
         </li>
         <li>Roda: zoom · botão do meio ou espaço + arrastar: mover</li>
       </ul>
+      {nb178 && (
+        <div className="space-y-1 border-t border-slate-700 pt-2 text-slate-300">
+          <EditorPavimento pav={pav} />
+          <p className="text-xs text-slate-400">{resumoPavimento(pav)}</p>
+        </div>
+      )}
     </div>
   );
 }
