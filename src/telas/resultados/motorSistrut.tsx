@@ -5,11 +5,15 @@ import type { ResultadoObra } from "../../calculo/fluxo";
 import type { Aviso } from "../calculo";
 import { ListaAvisos } from "./avisos";
 
-/** Texto de cada `CasoPilar.erro` (ou o próprio código, se novo). */
 const TEXTO_ERRO: Record<string, string> = {
   "nao-converge": "não converge; o original trava em laço sem fim (defeito D-2). Sem resultado.",
   "nk-nulo": "Nk nulo; o original divide por zero (defeito D-3). Sem resultado.",
 };
+
+/** Texto de um `CasoPilar.erro` (o próprio código, se não for conhecido). */
+export function textoErro(erro: string): string {
+  return TEXTO_ERRO[erro] ?? erro;
+}
 
 /** Marcas do motor como avisos por elemento. Vazio se o resultado não tem nenhuma. */
 export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
@@ -48,7 +52,7 @@ export function coletarMarcasMotor(r: ResultadoObra): Aviso[] {
           marcas.push({
             local: p.pavimento,
             elemento: p.pilar.nome,
-            texto: `caso ${caso.rotulo}: ${TEXTO_ERRO[caso.erro] ?? caso.erro}`,
+            texto: `caso ${caso.rotulo}: ${textoErro(caso.erro)}`,
           });
       }
       for (const texto of v.avisos)

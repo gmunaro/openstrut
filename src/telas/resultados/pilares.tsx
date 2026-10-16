@@ -14,6 +14,7 @@ import {
 } from "../formato";
 import { useUnidades } from "../sessao";
 import { LinhaElemento } from "./memoria";
+import { textoErro } from "./motorSistrut";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "./tabela";
 import { AvisosDetalhamento, MemoriaDetalhamento, TabelaPosicoes } from "./vigas";
 
@@ -139,7 +140,191 @@ export function TabelaPilares({
           ))}
         </Corpo>
       </Tabela>
+      <VerificacoesPilares resultado={resultado} />
+      <PredimensionamentosPilares resultado={resultado} />
       <DetalhamentosPilares comMemoria={comMemoria} />
+    </>
+  );
+}
+
+/** Verificações de seção (PILAR opção 6) de cada lance: um caso por linha, com o
+ *  atuante (com ea) e o resistente da 2ª ordem. Some sem verificações na obra. */
+export function VerificacoesPilares({ resultado }: { resultado: ResultadoObra }) {
+  const s = useUnidades();
+  const verificacoes = resultado.pilares.flatMap((p) =>
+    (p.verificacoes ?? []).map((v) => ({ p, v })),
+  );
+  if (verificacoes.length === 0) return null;
+  const uF = unidade("forca", s);
+  const uM = unidade("momento", s);
+  return (
+    <>
+      <TituloBloco
+        extra={
+          <span className="text-muted-foreground text-xs">
+            PILAR opção 6: barras e esforços dados na obra; M = atuante, MR = resistente
+          </span>
+        }
+      >
+        Verificações de seção
+      </TituloBloco>
+      <Tabela>
+        <Cabecalho>
+          <Linha>
+            <Th>Pilar</Th>
+            <Th>Esforços</Th>
+            <Th>Verif.</Th>
+            <Th num unidade={uF}>
+              Nk
+            </Th>
+            <Th num>λx</Th>
+            <Th num>λy</Th>
+            <Th>Caso</Th>
+            <Th num unidade={uM}>
+              Mx
+            </Th>
+            <Th num unidade={uM}>
+              My
+            </Th>
+            <Th num unidade={uM}>
+              M total
+            </Th>
+            <Th num unidade={uM}>
+              MRx
+            </Th>
+            <Th num unidade={uM}>
+              MRy
+            </Th>
+            <Th num unidade={uM}>
+              MR total
+            </Th>
+            <Th>Veredito</Th>
+          </Linha>
+        </Cabecalho>
+        <Corpo>
+          {verificacoes.map(({ p, v }) => {
+            const chave = `${p.pilar.id}-${p.pavimentoId}-${v.indice}`;
+            const esforcos = v.esforcosDoLance ? "do lance" : "digitados";
+            if (v.casos.length === 0)
+              return (
+                <Linha key={chave}>
+                  <Td>{`${p.pilar.nome} · ${p.pavimento}`}</Td>
+                  <Td>{esforcos}</Td>
+                  <Td>{v.indice + 1}</Td>
+                  <Td num>{formatarGrandeza(v.nk, "forca", s)}</Td>
+                  <Td colSpan={COLUNAS - 4}>{v.situacao ?? "Sem casos calculados."}</Td>
+                </Linha>
+              );
+            return v.casos.map((c) => (
+              <Linha key={`${chave}-${c.rotulo}`}>
+                <Td>{`${p.pilar.nome} · ${p.pavimento}`}</Td>
+                <Td>{esforcos}</Td>
+                <Td>{v.indice + 1}</Td>
+                <Td num>{formatarGrandeza(v.nk, "forca", s)}</Td>
+                <Td num>{formatarNumero(v.lambdaX, 1)}</Td>
+                <Td num>{formatarNumero(v.lambdaY, 1)}</Td>
+                <Td>{c.rotulo}</Td>
+                <Td num>{formatarGrandeza(c.mx, "momento", s)}</Td>
+                <Td num>{formatarGrandeza(c.my, "momento", s)}</Td>
+                <Td num>{formatarGrandeza(c.mTotal, "momento", s)}</Td>
+                <Td num>{formatarGrandeza(c.mrX, "momento", s)}</Td>
+                <Td num>{formatarGrandeza(c.mrY, "momento", s)}</Td>
+                <Td num>{formatarGrandeza(c.mrTotal, "momento", s)}</Td>
+                <Td>{c.erro ? textoErro(c.erro) : c.veredito}</Td>
+              </Linha>
+            ));
+          })}
+        </Corpo>
+      </Tabela>
+      {verificacoes.map(({ p, v }) =>
+        v.avisos.length > 0 ? (
+          <ul
+            key={`avisos-${p.pilar.id}-${p.pavimentoId}-${v.indice}`}
+            className="text-muted-foreground mb-2 list-disc pl-5 text-xs"
+          >
+            {v.avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        ) : null,
+      )}
+    </>
+  );
+}
+
+/** Predimensionamento da coluna (PILAREDI 3.1), no lance de baixo de cada coluna.
+ *  Some quando a obra não liga `parametrosPilar.predimensionamento`. */
+export function PredimensionamentosPilares({ resultado }: { resultado: ResultadoObra }) {
+  const s = useUnidades();
+  const predimensionados = resultado.pilares.flatMap((p) =>
+    p.predimensionamento ? [{ p, pd: p.predimensionamento }] : [],
+  );
+  if (predimensionados.length === 0) return null;
+  const uTensao = unidade("tensao", s);
+  const uF = unidade("forca", s);
+  return (
+    <>
+      <TituloBloco
+        extra={
+          <span className="text-muted-foreground text-xs">
+            Tensões normal e de flexão da coluna contra as admissíveis; carga = "CARGA" do PILAREDI
+          </span>
+        }
+      >
+        Predimensionamento
+      </TituloBloco>
+      <Tabela>
+        <Cabecalho>
+          <Linha>
+            <Th>Pilar</Th>
+            <Th>Opção</Th>
+            <Th num unidade="cm">
+              Lado
+            </Th>
+            <Th num unidade={uTensao}>
+              σ normal
+            </Th>
+            <Th num unidade={uTensao}>
+              σ normal adm.
+            </Th>
+            <Th num unidade={uTensao}>
+              σ flexão
+            </Th>
+            <Th num unidade={uTensao}>
+              σ flexão adm.
+            </Th>
+            <Th num unidade={uF}>
+              Carga
+            </Th>
+          </Linha>
+        </Cabecalho>
+        <Corpo>
+          {predimensionados.map(({ p, pd }) => (
+            <Linha key={`${p.pilar.id}-${p.pavimentoId}`}>
+              <Td>{`${p.pilar.nome} · ${p.pavimento}`}</Td>
+              <Td>{pd.modo === "tensoes" ? "tensões" : "seção"}</Td>
+              <Td num>{formatarNumero(pd.lado, 0)}</Td>
+              <Td num>{formatarGrandeza(pd.tensoes?.normal, "tensao", s)}</Td>
+              <Td num>{formatarGrandeza(pd.tensoes?.normalAdmissivel, "tensao", s)}</Td>
+              <Td num>{formatarGrandeza(pd.tensoes?.flexao, "tensao", s)}</Td>
+              <Td num>{formatarGrandeza(pd.tensoes?.flexaoAdmissivel, "tensao", s)}</Td>
+              <Td num>{formatarGrandeza(pd.carga, "forca", s)}</Td>
+            </Linha>
+          ))}
+        </Corpo>
+      </Tabela>
+      {predimensionados.map(({ p, pd }) =>
+        pd.avisos.length > 0 ? (
+          <ul
+            key={`avisos-${p.pilar.id}-${p.pavimentoId}`}
+            className="text-muted-foreground mb-2 list-disc pl-5 text-xs"
+          >
+            {pd.avisos.map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+        ) : null,
+      )}
     </>
   );
 }
