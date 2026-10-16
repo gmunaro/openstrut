@@ -48,15 +48,6 @@ export interface ColunasBares {
   alfa: readonly number[];
 }
 
-/** Células fora da tendência das vizinhas, que quem interpola sobre elas avisa
- *  (lajes.ts). Vazia: a tabela é calculada, sem erros de transcrição. */
-export const CELULAS_SUSPEITAS: ReadonlyArray<{
-  tipo: TipoBares;
-  coluna: keyof ColunasBares;
-  lambda: number;
-  valor: number;
-}> = [];
-
 export const BARES: Record<TipoBares, ColunasBares> = {
   "1": {
     mx: [

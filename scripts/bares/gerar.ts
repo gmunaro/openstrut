@@ -71,23 +71,14 @@ export interface ColunasBares {
   alfa: readonly number[];
 }
 
-/** Células fora da tendência das vizinhas, que quem interpola sobre elas avisa
- *  (lajes.ts). Vazia: a tabela é calculada, sem erros de transcrição. */
-export const CELULAS_SUSPEITAS: ReadonlyArray<{
-  tipo: TipoBares;
-  coluna: keyof ColunasBares;
-  lambda: number;
-  valor: number;
-}> = [];
-
 export const BARES: Record<TipoBares, ColunasBares> = {
 ${corpo}
 };
 `;
 
 writeFileSync(destino, arquivo);
-execFileSync(path.join(raiz, "node_modules/.bin/oxfmt"), [destino], {
+// Sem shell (o caminho do repositório pode ter espaço): o próprio Bun roda a CLI do oxfmt.
+execFileSync(process.execPath, [path.join(raiz, "node_modules/oxfmt/dist/cli.js"), destino], {
   stdio: "inherit",
-  shell: process.platform === "win32",
 });
 console.log(`gravado ${path.relative(raiz, destino)}`);

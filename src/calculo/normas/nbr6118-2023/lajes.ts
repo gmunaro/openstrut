@@ -5,7 +5,8 @@
 //   vão principal é a faixa como viga (pl²/8, 9pl²/128 e −pl²/8, pl²/24 e
 //   −pl²/12);
 // - balanço (três bordos livres e o quarto engastado): faixa engastada, pl²/2;
-// - outras vinculações com bordo livre não têm tabela de reações transcrita:
+// - outras vinculações com bordo livre não têm tabela (o gerador só resolve
+//   bordos apoiados e engastados):
 //   esforços nulos e aviso (o fluxo trata como laje sem cálculo);
 // - flecha imediata pelo α de tabelasBares com a rigidez de Branson quando
 //   Ma > Mr, diferida por αf, limite l/250;
@@ -29,7 +30,7 @@ import type {
   MateriaisCalc,
 } from "../../tipos";
 import { fctkInf, fctm, GAMA_C, GAMA_G, GAMA_Q } from "./materiais";
-import { BARES, CELULAS_SUSPEITAS, type ColunasBares, type TipoBares } from "./tabelasBares";
+import { BARES, type ColunasBares, type TipoBares } from "./tabelasBares";
 import { lambda6118, rhoMin6118, xdLimite6118 } from "./vigas";
 
 const LAJES = "Bastos, Lajes";
@@ -135,7 +136,7 @@ export type ClasseLaje =
  * Classifica a laje para as tabelas de Bares. Sem bordo livre: tipo 1 a 6
  * com lx = menor vão; se o menor vão é o y da planta, a tabela é transposta
  * (x-bordos da tabela = inferior/superior). Três livres e um engastado:
- * balanço. O resto (algum bordo livre) não tem tabela de reações transcrita.
+ * balanço. O resto (algum bordo livre) não tem tabela.
  */
 export function classificaLaje6118(lx: number, ly: number, v: Record<Bordo, Vinculo>): ClasseLaje {
   const livres = BORDOS.filter((b) => v[b] === "livre");
@@ -148,7 +149,7 @@ export function classificaLaje6118(lx: number, ly: number, v: Record<Bordo, Vinc
   if (livres.length > 0) {
     return {
       metodo: "sem-tabela",
-      motivo: `bordo livre (${livres.join(", ")}): as tabelas de reações transcritas (A-5 a A-7) só têm bordos apoiados e engastados`,
+      motivo: `bordo livre (${livres.join(", ")}): as tabelas de lajes só têm bordos apoiados e engastados`,
     };
   }
   const transposta = lx > ly;
@@ -183,22 +184,6 @@ export function coeficienteBares(coluna: readonly number[], lambda: number): num
   const i = Math.min(Math.floor(pos + EPS), LINHA_ACIMA_DE_2 - 2);
   const t = pos - i;
   return coluna[i]! + t * (coluna[i + 1]! - coluna[i]!);
-}
-
-/** Células marcadas suspeitas (CELULAS_SUSPEITAS) que entram, com peso não nulo,
- *  na interpolação de `coeficienteBares` para esse tipo, coluna e λ. */
-export function celulasSuspeitasUsadas(tipo: TipoBares, nome: keyof ColunasBares, lambda: number) {
-  if (lambda > 2 + EPS) return [];
-  const pos = (Math.max(lambda, 1) - 1) / PASSO_LAMBDA;
-  const i = Math.min(Math.floor(pos + EPS), LINHA_ACIMA_DE_2 - 2);
-  const t = pos - i;
-  const usadas = [...(1 - t > EPS ? [i] : []), ...(t > EPS ? [i + 1] : [])];
-  return CELULAS_SUSPEITAS.filter(
-    (s) =>
-      s.tipo === tipo &&
-      s.coluna === nome &&
-      usadas.some((k) => Math.abs(1 + k * PASSO_LAMBDA - s.lambda) < EPS),
-  );
 }
 
 function colunaBares(tipo: TipoBares, nome: keyof ColunasBares): readonly number[] {
@@ -347,12 +332,8 @@ function calculaEsforcos(e: LajeEntrada, mat: MateriaisCalc, d: number): LajeEsf
     taxaMinima = rhoMin6118(mat.fck);
     gamaN = gamaNBalanco(e.h);
   } else {
-    const suspeitas = new Set<string>();
-    const coef = (nome: keyof ColunasBares) => {
-      for (const s of celulasSuspeitasUsadas(c.tipo, nome, c.lambda))
-        suspeitas.add(`tipo ${s.tipo}, ${nome}, λ = ${fmt(s.lambda)}: ${fmt(s.valor)}`);
-      return coeficienteBares(colunaBares(c.tipo, nome), c.lambda);
-    };
+    const coef = (nome: keyof ColunasBares) =>
+      coeficienteBares(colunaBares(c.tipo, nome), c.lambda);
     const mBase = (p * c.lx * c.lx) / 100;
     const vBase = (p * c.lx) / 10;
     memoria.push(
@@ -416,7 +397,8 @@ function calculaEsforcos(e: LajeEntrada, mat: MateriaisCalc, d: number): LajeEsf
         ref: REF_REACOES,
       });
     }
-    // Rodapé de A-5 a A-7: alívios pela metade, a soma passa da carga.
+    // Metade do alívio no bordo apoiado oposto a um engastado (scripts/bares/reacoes.ts):
+    // a soma passa da carga.
     const soma = BORDOS.reduce((s, b) => s + reacoes[b] * (ehHorizontal(b) ? e.lx : e.ly), 0);
     memoria.push({
       descricao: "Σ reações × comprimento / carga total (alívios pela metade nas tabelas)",
@@ -426,15 +408,6 @@ function calculaEsforcos(e: LajeEntrada, mat: MateriaisCalc, d: number): LajeEsf
     });
     ma = Math.max(mxT, myT);
     alfa = coef("alfa");
-    for (const s of suspeitas) {
-      avisos.push(
-        `${e.nome}: coeficiente de Bares interpolado sobre célula suspeita da tabela (${s}); confira na fonte.`,
-      );
-      memoria.push({
-        descricao: `Célula suspeita usada na interpolação [VERIFICAR]: ${s}`,
-        ref: `${TAB} (valor fora da tendência das vizinhas)`,
-      });
-    }
     vaoFlecha = c.lx;
     vaoLimite = c.lx;
     taxaMinima = (c.umaDirecao ? 1 : 0.67) * rhoMin6118(mat.fck);

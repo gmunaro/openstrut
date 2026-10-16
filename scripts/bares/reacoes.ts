@@ -40,7 +40,7 @@ const area = (poli: Ponto[]) =>
 
 /**
  * Área de influência de cada bordo da laje a × b (bordos E: x = 0, D: x = a,
- * I: y = 0, S: y = b), em unidades de a·b.
+ * I: y = 0, S: y = b), em área absoluta (unidades de a e b ao quadrado).
  */
 export function areasInfluencia(a: number, b: number, engastados: readonly BordoPlaca[]) {
   const k = (e: BordoPlaca) => (engastados.includes(e) ? 1 : Math.sqrt(3));

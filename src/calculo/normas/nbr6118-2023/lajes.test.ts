@@ -11,7 +11,6 @@ import type { Bordo, Vinculo } from "../../../dominio/obra";
 import type { LajeEntrada, LajeEsforcos } from "../../tipos";
 import {
   alturasUteisPositivas,
-  celulasSuspeitasUsadas,
   classificaLaje6118,
   coeficienteBares,
   compatibilizaNegativo6118,
@@ -246,7 +245,7 @@ describe("casos com conta à mão (coeficientes de tabelasBares)", () => {
       perto(r.reacoes[b], (2.5 * 6 * 4) / 10, 1e-9);
       expect(r.negativos[b]).toBe(0);
     }
-    // Ma = 4,06 < Mr = 1,5 · 2,565 · 10²/6 = 6,41 kN·m/m: estádio I
+    // Ma = 4,07 < Mr = 1,5 · 2,565 · 10²/6 = 6,41 kN·m/m: estádio I
     const ai = flechaImediata(4.77, 4 + 0.3 * 2, 4, eiBruta(10));
     perto(ai, ((4.77 / 1200) * 4.6 * 256 * 100) / eiBruta(10), 1e-12);
     perto(r.flecha, ai * 2.32, 1e-9);
@@ -364,17 +363,11 @@ describe("reações: Σ V · comprimento contra p · lx · ly", () => {
   }
 });
 
-describe("células suspeitas (CELULAS_SUSPEITAS)", () => {
-  // A tabela impressa tinha células fora da tendência (ex.: 2A μx 7,53; 7,56; 8,10
-  // em λ = 1,75 a 1,85), que o motor avisava. A tabela gerada não tem nenhuma; o
-  // mecanismo de aviso fica para tabelas futuras.
-  it("a tabela gerada não marca célula nenhuma", () => {
-    expect(celulasSuspeitasUsadas("2A", "mx", 1.8)).toEqual([]);
-    expect(celulasSuspeitasUsadas("5A", "mxNeg", 1.27)).toEqual([]);
-  });
+describe("célula que a tabela impressa tinha fora da tendência", () => {
+  // A impressa dava 2A μx 7,53; 7,56; 8,10 em λ = 1,75 a 1,85, e o motor avisava ao
+  // interpolar sobre elas. A tabela gerada segue a teoria de placas e não tem aviso.
   it("laje 2A 4 × 7,2 (λ = 1,80): μx = 8,19 da teoria de placas (a impressa dava 7,56), sem aviso", () => {
     const r = lajeEsforcos6118(laje(4, 7.2, 10, 4, 2, vinc(["inferior"])), mat());
     perto(r.mx, (8.19 * 6 * 16) / 100, 1e-9);
-    expect(r.avisos.some((a) => a.includes("célula suspeita"))).toBe(false);
   });
 });
