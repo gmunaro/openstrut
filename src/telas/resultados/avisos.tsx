@@ -26,13 +26,15 @@ export function ListaFalhas({ falhas }: { falhas: Aviso[] }) {
   );
 }
 
-export function ListaAvisos({ avisos }: { avisos: Aviso[] }) {
-  if (avisos.length === 0)
-    return (
-      <p className="text-ok text-sm">
-        Nenhum aviso: todos os elementos dentro dos limites verificados.
-      </p>
-    );
+/** Lista de avisos; sem avisos, mostra `vazio` (padrão: tudo dentro dos limites). */
+export function ListaAvisos({
+  avisos,
+  vazio = "Nenhum aviso: todos os elementos dentro dos limites verificados.",
+}: {
+  avisos: Aviso[];
+  vazio?: string | undefined;
+}) {
+  if (avisos.length === 0) return <p className="text-ok text-sm">{vazio}</p>;
   return (
     <div className="border-aviso/50 bg-aviso/5 rounded-md border p-3">
       <p className="text-aviso mb-2 flex items-center gap-2 text-sm font-semibold">

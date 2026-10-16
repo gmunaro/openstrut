@@ -20,6 +20,7 @@ import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
 import { TabelasLajes } from "./lajes";
+import { BlocoMotorSistrut, coletarMarcasMotor } from "./motorSistrut";
 import { TabelaPilares } from "./pilares";
 import { ResumoQuantitativos } from "./quantitativos";
 import { TabelaVigas } from "./vigas";
@@ -107,7 +108,15 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
         )}
       </p>
       <ListaFalhas falhas={coletarFalhas(r)} />
-      <ListaAvisos avisos={coletarAvisos(r, detalhamento)} />
+      <ListaAvisos
+        avisos={coletarAvisos(r, detalhamento)}
+        vazio={
+          coletarMarcasMotor(r).length > 0
+            ? "Nenhum aviso geral; as marcas do motor SISTRUT estão abaixo."
+            : undefined
+        }
+      />
+      <BlocoMotorSistrut resultado={r} />
       <TabelasObra resultado={r} comMemoria />
       {obra && <BlocoQuantitativos obra={obra} resultado={r} />}
     </div>
