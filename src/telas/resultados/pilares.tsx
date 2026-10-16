@@ -3,6 +3,7 @@
 // (posições por lance, traspasse e grampos), do DetalhamentoContexto.
 import { Fragment, useContext } from "react";
 import type { ResultadoObra, ResultadoPilar } from "../../calculo/fluxo";
+import type { PilarResultado } from "../../calculo/tipos";
 import { rotuloNivel } from "../calculo";
 import { DetalhamentoContexto, type DetalhamentoPilarObra } from "../detalhamento";
 import {
@@ -30,6 +31,17 @@ function porNivel(r: ResultadoObra) {
     else grupos.set(nivel, [p]);
   }
   return [...grupos.entries()];
+}
+
+/**
+ * Motivo de o pilar não ter sido dimensionado (sem barras, `n = 0`), ou `null` se foi.
+ * O motivo é o aviso de recusa do motor, sem o prefixo com o nome do pilar.
+ */
+export function motivoNaoDimensionado(r: PilarResultado): string | null {
+  if (r.barras.n !== 0) return null;
+  const recusa = r.avisos.find((a) => a.includes("recusa o pilar"));
+  if (!recusa) return "sem resultado do motor";
+  return recusa.slice(recusa.indexOf(": ") + 2).replace(/\.$/, "");
 }
 
 export function TabelaPilares({
@@ -109,6 +121,9 @@ export function TabelaPilares({
                 const r = p.resultado;
                 const pe = resultado.pavimentos.find((rp) => rp.pavimento.nome === p.pavimento)
                   ?.pavimento.peDireito;
+                const motivo = motivoNaoDimensionado(r);
+                // Sem armadura o motor não calcula λ, momentos nem taxa: mostra "—", não zero.
+                const dim = motivo === null;
                 return (
                   <LinhaElemento
                     key={`${nivel}-${p.pilar.id}`}
@@ -123,15 +138,15 @@ export function TabelaPilares({
                     >{`${formatarNumero(p.pilar.b, 0)} × ${formatarNumero(p.pilar.h, 0)}`}</Td>
                     <Td num>{formatarGrandeza(p.nk, "forca", s)}</Td>
                     <Td num>{formatarGrandeza(r.nd, "forca", s)}</Td>
-                    <Td num>{formatarNumero(r.lambdaX, 1)}</Td>
-                    <Td num>{formatarNumero(r.lambdaY, 1)}</Td>
-                    <Td num>{formatarGrandeza(r.mdX, "momento", s)}</Td>
-                    <Td num>{formatarGrandeza(r.mdY, "momento", s)}</Td>
-                    <Td num>{formatarNumero(r.asNecessaria)}</Td>
-                    <Td num>{formatarNumero(r.barras.area)}</Td>
-                    <Td>{formatarBarras(r.barras)}</Td>
-                    <Td num>{formatarNumero(r.taxa)}</Td>
-                    <Td>{formatarBarraEspacada(r.estribo)}</Td>
+                    <Td num>{dim ? formatarNumero(r.lambdaX, 1) : "—"}</Td>
+                    <Td num>{dim ? formatarNumero(r.lambdaY, 1) : "—"}</Td>
+                    <Td num>{dim ? formatarGrandeza(r.mdX, "momento", s) : "—"}</Td>
+                    <Td num>{dim ? formatarGrandeza(r.mdY, "momento", s) : "—"}</Td>
+                    <Td num>{dim ? formatarNumero(r.asNecessaria) : "—"}</Td>
+                    <Td num>{dim ? formatarNumero(r.barras.area) : "—"}</Td>
+                    <Td>{dim ? formatarBarras(r.barras) : `não dimensionado: ${motivo}`}</Td>
+                    <Td num>{dim ? formatarNumero(r.taxa) : "—"}</Td>
+                    <Td>{dim ? formatarBarraEspacada(r.estribo) : "—"}</Td>
                     <Td num>{formatarNumero(pe)}</Td>
                   </LinhaElemento>
                 );
