@@ -23,46 +23,85 @@ export function abrirNaSessao(
   useSessao.getState().iniciar(rascunhoId, arquivo ? { ...arquivo, salva: obra } : undefined);
 }
 
-const mensagemErro = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** Erros de acesso ao arquivo pelo navegador (permissão, leitura, gravação bloqueada). */
+const ERROS_DE_ACESSO = new Set(["NotReadableError", "NotAllowedError", "SecurityError"]);
 
-/** Abrir arquivo ou rascunho e ir para a tela da obra; os erros ficam em `erros`. */
+/**
+ * Traduz a exceção de abrir ou salvar em motivo para o usuário. `verbo` completa
+ * "o navegador não conseguiu <verbo> o arquivo". Erro desconhecido devolve a mensagem
+ * crua em `detalhe`, para a tela mostrar recolhida.
+ */
+export function descreverFalha(
+  e: unknown,
+  verbo: "ler" | "gravar",
+): { motivo: string; detalhe: string | null } {
+  if (e instanceof SyntaxError) {
+    return { motivo: "o arquivo não é uma obra da OpenStrut ou está corrompido.", detalhe: null };
+  }
+  if (e instanceof DOMException && ERROS_DE_ACESSO.has(e.name)) {
+    return { motivo: `o navegador não conseguiu ${verbo} o arquivo.`, detalhe: null };
+  }
+  return {
+    motivo: "ocorreu um erro inesperado.",
+    detalhe: e instanceof Error ? e.message : String(e),
+  };
+}
+
+/** Estado de erro da abertura: `erros` vai para a caixa de erros, `detalhe` para o recolhido. */
+const SEM_FALHA: { erros: string[]; detalhe: string | null } = { erros: [], detalhe: null };
+
+const falhaDe = (e: unknown, titulo: string, verbo: "ler" | "gravar") => {
+  const { motivo, detalhe } = descreverFalha(e, verbo);
+  return { erros: [`${titulo}: ${motivo}`], detalhe };
+};
+
+/**
+ * Abrir arquivo ou rascunho e ir para a tela da obra; os erros ficam em `erros`, e o
+ * detalhe técnico de erro desconhecido em `detalhe`.
+ */
 export function useAbrirObra() {
   const navigate = useNavigate();
-  const [erros, setErros] = useState<string[]>([]);
+  const [falha, setFalha] = useState(SEM_FALHA);
 
   const abrirArquivo = async () => {
-    setErros([]);
+    setFalha(SEM_FALHA);
     try {
       const a = await escolherArquivo();
       if (!a) return;
       const lida = lerObra(a.texto);
       if (!lida.ok) {
-        setErros([`Não foi possível abrir ${a.nome}:`, ...lida.erros]);
+        setFalha({ erros: [`Não foi possível abrir ${a.nome}:`, ...lida.erros], detalhe: null });
         return;
       }
       abrirNaSessao(lida.obra, novoIdRascunho(), { handle: a.handle, nome: a.nome });
       await navigate({ to: "/obra" });
     } catch (e) {
-      setErros([`Erro ao abrir o arquivo: ${mensagemErro(e)}`]);
+      setFalha(falhaDe(e, "Não foi possível abrir o arquivo", "ler"));
     }
   };
 
   const abrirDoRascunho = async (id: string) => {
-    setErros([]);
+    setFalha(SEM_FALHA);
     try {
       const lida = await abrirRascunho(id);
       if (!lida.ok) {
-        setErros(["Não foi possível abrir o rascunho:", ...lida.erros]);
+        setFalha({ erros: ["Não foi possível abrir o rascunho:", ...lida.erros], detalhe: null });
         return;
       }
       abrirNaSessao(lida.obra, id);
       await navigate({ to: "/obra" });
     } catch (e) {
-      setErros([`Erro ao ler o rascunho: ${mensagemErro(e)}`]);
+      setFalha(falhaDe(e, "Não foi possível abrir o rascunho", "ler"));
     }
   };
 
-  return { abrirArquivo, abrirDoRascunho, erros, limparErros: () => setErros([]) };
+  return {
+    abrirArquivo,
+    abrirDoRascunho,
+    erros: falha.erros,
+    detalhe: falha.detalhe,
+    limparErros: () => setFalha(SEM_FALHA),
+  };
 }
 
 /** Salvar a obra aberta em arquivo. `comoNovo` pergunta o lugar mesmo se já houver arquivo. */
@@ -88,7 +127,8 @@ export function useSalvarArquivo() {
           r.tipo === "gravado" ? `Salvo em ${r.nome} às ${hora}.` : `${r.nome} baixado às ${hora}.`,
       });
     } catch (e) {
-      setMensagem({ tipo: "erro", texto: `Erro ao salvar: ${mensagemErro(e)}` });
+      const { motivo } = descreverFalha(e, "gravar");
+      setMensagem({ tipo: "erro", texto: `Não foi possível salvar o arquivo: ${motivo}` });
     }
   };
 

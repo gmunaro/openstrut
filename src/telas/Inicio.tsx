@@ -64,7 +64,7 @@ const avisos = (n: number) => `${n} ${n === 1 ? "aviso" : "avisos"}`;
 
 export function Inicio() {
   const navigate = useNavigate();
-  const { abrirArquivo, abrirDoRascunho, erros, limparErros } = useAbrirObra();
+  const { abrirArquivo, abrirDoRascunho, erros, detalhe, limparErros } = useAbrirObra();
   const [nome, setNome] = useState("");
   const [norma, setNorma] = useState<NormaId>("nb1-78");
   const [recentes, setRecentes] = useState<ResumoRascunho[] | null>(null);
@@ -167,6 +167,12 @@ export function Inicio() {
       </header>
 
       <Erros erros={erros} aoFechar={limparErros} />
+      {detalhe && (
+        <details className="text-muted-foreground -mt-6 text-xs">
+          <summary className="cursor-pointer">Detalhe técnico</summary>
+          <p className="mt-1 font-mono break-all">{detalhe}</p>
+        </details>
+      )}
       <Erros erros={errosImportacao} aoFechar={() => setErrosImportacao([])} />
       {importada && (
         <section
