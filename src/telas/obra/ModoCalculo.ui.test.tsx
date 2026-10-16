@@ -185,13 +185,18 @@ describe("modo de cálculo: resultados e relatório", () => {
       expect(linhaTotalRelatorio(painel).slice(1, 3)).toEqual([concretoTela, formaTela]);
       const notaRel = within(painel).getByRole("note");
       for (const nota of [notaTela, notaRel]) {
-        expect(nota.textContent).toContain("DESINIT");
-        expect(nota.textContent).toContain("aço de vigas");
-        expect(nota.textContent).toContain("não existe no SISTRUT");
-        // concreto de vigas: do DESINIT só no original
-        expect(nota.textContent?.split("Regra da V2")[0]).toContain(
-          trocar ? "concreto de vigas" : "aço de vigas",
+        expect(nota.textContent).toContain(
+          "Lajes e pilares: regra da OpenStrut (o SISTRUT não calcula).",
         );
+        // concreto e fôrma de vigas: do DESINIT só no original
+        if (trocar)
+          expect(nota.textContent).toContain("Vigas: como no SISTRUT (detalhamento do DESINIT).");
+        else {
+          expect(nota.textContent).toContain(
+            "Aço das vigas: como no SISTRUT (detalhamento do DESINIT).",
+          );
+          expect(nota.textContent).toContain("Concreto e fôrma das vigas: regra da OpenStrut.");
+        }
       }
     }
   });

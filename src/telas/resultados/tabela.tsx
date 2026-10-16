@@ -78,7 +78,7 @@ export function Td({
 export function TituloBloco({ children, extra }: { children: ReactNode; extra?: ReactNode }) {
   return (
     <div className="mt-4 mb-1 flex flex-wrap items-baseline gap-x-3">
-      <h3 className="text-sm font-semibold">{children}</h3>
+      <h3 className="text-sm font-semibold whitespace-nowrap">{children}</h3>
       {extra ? <div className="min-w-0">{extra}</div> : null}
     </div>
   );

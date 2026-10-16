@@ -9,7 +9,6 @@
 import { Fragment, useContext } from "react";
 import type { LinhaTabelaAco, TabelaAco } from "../../calculo/detalhamento/tabelaAco";
 import {
-  NAO_EXISTE_NO_SISTRUT,
   taxaAco,
   type FonteQuantidade,
   type Quantidades,
@@ -28,7 +27,7 @@ const TIPOS = [
 ] as const;
 
 export const NOTA_ESTIMATIVA =
-  "O peso de aço é estimativa pelas barras adotadas com comprimentos convencionais (ancoragens e emendas aproximadas). As tabelas de aço por bitola saem do detalhamento das barras.";
+  "Aço do resumo: estimativa pelas barras adotadas, com comprimentos convencionais (ancoragens e emendas aproximadas). A tabela de aço é outra conta, a soma das barras detalhadas, e pode dar outro total.";
 
 function CabecalhoQuant({ primeira }: { primeira: string }) {
   return (
@@ -65,25 +64,63 @@ function Celulas({ q }: { q: Quantidades }) {
 
 const ROTULO_TIPO = { lajes: "Lajes", vigas: "Vigas", pilares: "Pilares" } as const;
 const GRANDEZA = { concreto: "concreto", forma: "fôrma", aco: "aço" } as const;
+type Tipo = keyof typeof ROTULO_TIPO;
+type Grandeza = keyof typeof GRANDEZA;
 
-/** Nota das fontes no NB-1/78: o que sai do SISTRUT (quadro do DESINIT) e o que é regra
- *  da V2, que não existe no SISTRUT. Nada na NBR 6118 (tudo é da V2). */
+/** De onde vem cada número, no texto da nota. Lajes e pilares: o SISTRUT não os calcula. */
+const ORIGEM: Record<FonteQuantidade, string> = {
+  sistrut: "como no SISTRUT (detalhamento do DESINIT)",
+  misto:
+    "como no SISTRUT (detalhamento do DESINIT), menos as vigas que o DESINIT não detalha, que seguem a regra da OpenStrut",
+  v2: "regra da OpenStrut",
+};
+
+/** "concreto e fôrma", "aço" (na ordem de GRANDEZA). */
+const listaGrandezas = (gs: Grandeza[]) =>
+  gs
+    .map((g) => GRANDEZA[g])
+    .join(", ")
+    .replace(/, ([^,]*)$/, " e $1");
+
+/**
+ * Nota das fontes no NB-1/78, uma frase por origem: "Vigas: como no SISTRUT (detalhamento
+ * do DESINIT). Lajes e pilares: regra da OpenStrut (o SISTRUT não calcula)." Um tipo com
+ * grandezas de origens diferentes (vigas no corrigido) sai grandeza a grandeza. Nada na
+ * NBR 6118 (tudo é da OpenStrut).
+ */
 export function NotaFontes({ quant }: { quant: Quantitativos }) {
-  const listas = { sistrut: [] as string[], v2: [] as string[], misto: [] as string[] };
-  for (const [tipo, fontes] of Object.entries(quant.fonte) as [
-    keyof typeof ROTULO_TIPO,
-    Quantitativos["fonte"]["lajes"],
-  ][])
-    for (const [g, f] of Object.entries(fontes) as [keyof typeof GRANDEZA, FonteQuantidade][])
-      listas[f].push(`${GRANDEZA[g]} de ${ROTULO_TIPO[tipo].toLowerCase()}`);
-  if (listas.sistrut.length === 0 && listas.misto.length === 0) return null;
+  const fontes = Object.entries(quant.fonte) as [Tipo, Record<Grandeza, FonteQuantidade>][];
+  if (fontes.every(([, f]) => Object.values(f).every((x) => x === "v2"))) return null;
+  const maiuscula = (t: string) => `${t.charAt(0).toUpperCase()}${t.slice(1)}`;
+  // tipos inteiros com a mesma origem se juntam ("Lajes e pilares"); os outros, por grandeza
+  const inteiros = new Map<FonteQuantidade, Tipo[]>();
+  const partes: { origem: FonteQuantidade; texto: string }[] = [];
+  for (const [tipo, f] of fontes) {
+    const origens = [...new Set(Object.values(f))];
+    if (origens.length === 1 && origens[0]) {
+      inteiros.set(origens[0], [...(inteiros.get(origens[0]) ?? []), tipo]);
+      continue;
+    }
+    for (const origem of origens) {
+      const gs = (Object.keys(f) as Grandeza[]).filter((g) => f[g] === origem);
+      const sujeito = `${listaGrandezas(gs)} das ${ROTULO_TIPO[tipo].toLowerCase()}`;
+      partes.push({ origem, texto: `${maiuscula(sujeito)}: ${ORIGEM[origem]}.` });
+    }
+  }
+  for (const [origem, tipos] of inteiros) {
+    const nomes = tipos.map((t) => ROTULO_TIPO[t].toLowerCase()).join(" e ");
+    const naoCalcula = origem === "v2" && !tipos.includes("vigas");
+    partes.push({
+      origem,
+      texto: `${maiuscula(nomes)}: ${ORIGEM[origem]}${naoCalcula ? " (o SISTRUT não calcula)" : ""}.`,
+    });
+  }
+  // o que vem do SISTRUT primeiro, a regra da OpenStrut por último
+  const ordem: Record<FonteQuantidade, number> = { sistrut: 0, misto: 1, v2: 2 };
+  partes.sort((a, b) => ordem[a.origem] - ordem[b.origem]);
   return (
     <p role="note" className="text-muted-foreground mt-2 max-w-3xl text-xs">
-      {listas.sistrut.length > 0 &&
-        `Do SISTRUT (quadro da viga do DESINIT): ${listas.sistrut.join(", ")}. `}
-      {listas.misto.length > 0 &&
-        `Do DESINIT, menos as vigas sem quadro, que seguem a regra da V2: ${listas.misto.join(", ")}. `}
-      Regra da V2 ({NAO_EXISTE_NO_SISTRUT}): {listas.v2.join(", ")}.
+      {partes.map((p) => p.texto).join(" ")}
     </p>
   );
 }
@@ -146,7 +183,7 @@ export function TabelasAco({ det }: { det: DetalhamentoObra }) {
     <>
       <BlocoTabelaAco
         titulo="Tabela de aço (obra)"
-        nota={`vigas, lajes e pilares detalhados, ${NOTA_TABELA}`}
+        nota={`soma das barras detalhadas de vigas, lajes e pilares, ${NOTA_TABELA}`}
         tabela={det.tabelaObra}
       />
       <BlocoTabelaAco
