@@ -2,11 +2,11 @@
 // - caso_b.json: entrada do caso b (E2E.VIG decodificado) e as linhas do E2E.REP; os
 //   valores impressos estão em `__oraculo__/caso_b_viga.json`;
 // - p3.json, c1.json, x1.json, a1.json: casos `dist/tests/retraducao/viga/` (CHECKLIST.md) com
-//   a entrada do roteiro (C:/tmp/oraculo/casos/retrad_viga_*.txt) ou do .VIG gravado
+//   a entrada do roteiro (oraculo/casos/retrad_viga_*.txt) ou do .VIG gravado
 //   no run, e os valores impressos com `fonte` = arquivo:linha dentro de `run`;
 // - v2par_*.json (rodada 2, casos T10): entrada do .VIG do run ou da partida (pilares
 //   pela marca no J) ou do roteiro, e os valores de viga/.REP copiados de
-//   C:/tmp/v2-paridade/oraculo-novos/<caso>.json (índice: V2PAR.md da V1). Nos casos
+//   v2-paridade/oraculo-novos/<caso>.json (índice: V2PAR.md da V1). Nos casos
 //   do DESENHO, só a análise (DESCALC com os parâmetros do .DSP).
 // Os números da entrada são os que o original leu (VAL do texto digitado ou o SINGLE
 // do .VIG); `dadosViga` aplica `sng` no modo original.

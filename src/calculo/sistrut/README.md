@@ -3,9 +3,11 @@
 Reimplementação, em TypeScript puro, do caminho de cálculo NB-1/78 do SISTRUT 4.0 original (lajes, montagem lajes → vigas, vigas, pilares e quantitativos de viga). Serve aos dois modos da obra:
 
 - **original** ("Como o SISTRUT original"): reproduz número a número o que o original imprime;
-- **corrigido**: roda o mesmo algoritmo e troca só os defeitos reais do original (R1-R12 e item H de `C:/tmp/v2-paridade/PLANO.md`, seção 4).
+- **corrigido**: roda o mesmo algoritmo e troca só os defeitos reais do original (R1-R12 e item H de `v2-paridade/PLANO.md`, seção 4).
 
-A referência é a V1 nova, a retradução fiel do original em QB64 (`_Arquivo/Sistrust/dist/src-original/<família>/<EXE>.BAS`), conferida byte a byte contra o original rodando no DOSBox-X (o oráculo, `C:/tmp/oraculo/`). A especificação de cada família está nos livros de apoio (`C:/tmp/v2-paridade/apoio/livros_*.md`).
+A referência é a V1 nova, a retradução fiel do original em QB64 (`_Arquivo/Sistrust/dist/src-original/<família>/<EXE>.BAS`), conferida byte a byte contra o original rodando no DOSBox-X (o oráculo, `oraculo/`). A especificação de cada família está nos livros de apoio (`v2-paridade/apoio/livros_*.md`).
+
+Os caminhos `oraculo/...`, `v2-paridade/...` e `v1-par2/...` citados nos comentários e nos JSONs são das pastas de trabalho do porte, fora do repositório. A parte que os testes leem está versionada com a mesma estrutura em `__oraculo__/arquivos/` e é lida por `arquivoOraculo` (`__oraculo__/arquivosOraculo.ts`); a origem de cada arquivo e as trocas feitas estão no `README.md` de lá.
 
 ## Convenções
 

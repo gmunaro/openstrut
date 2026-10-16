@@ -1,6 +1,6 @@
 // VICALC: análise da viga contínua do VIGA.EXE (S_40243) pelo método dos focos.
 // Porta passo a passo `viga/VIGA.BAS:6984-7785` da V1 nova; a especificação está em
-// C:/tmp/v2-paridade/apoio/livros_viga_pilar.md 1.1-1.4 (contas à mão em 3.1) e nos
+// v2-paridade/apoio/livros_viga_pilar.md 1.1-1.4 (contas à mão em 3.1) e nos
 // livros U61-U64 (U64-001..016). Unidades do original: t, m, tm.
 //
 // Modo "original": toda atribuição passa por `sng` (SINGLE do QB4.5), na ordem em

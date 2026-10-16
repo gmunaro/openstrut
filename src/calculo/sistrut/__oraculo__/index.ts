@@ -1,5 +1,5 @@
 // Valores de referência do SISTRUT 4.0 original, um JSON por caso do oráculo
-// (C:/tmp/oraculo/runs/<run>/). Os testes de `src/calculo/sistrut/` comparam
+// (oraculo/runs/<run>/). Os testes de `src/calculo/sistrut/` comparam
 // contra estes números, nunca contra a saída da própria função (CLAUDE.md).
 //
 // Formato (igual ao comparador T9, `paridade/lib/caso.ts` do repositório da V1):

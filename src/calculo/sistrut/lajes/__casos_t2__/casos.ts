@@ -1,10 +1,10 @@
 // Fixtures da rodada 2 da T2: os casos v2par de laje do oráculo (T10).
 //
 // - `v2par_*.json`: valores impressos pelo original, cópia de
-//   C:/tmp/v2-paridade/oraculo-novos/ (mesmo formato de `__oraculo__/`).
+//   v2-paridade/oraculo-novos/ (mesmo formato de `__oraculo__/`).
 // - `v2par_*.laj.json`: estado final da obra que o original gravou
-//   (C:/tmp/oraculo/runs/v2par_<caso>-*/obra/*.LAJ, ordem do LAJEGRAV.BAS:483-620),
-//   extraído por C:/tmp/t2r2/extrai.py. H e M+ por laje (A_12fc(i,0..1)), com 7
+//   (oraculo/runs/v2par_<caso>-*/obra/*.LAJ, ordem do LAJEGRAV.BAS:483-620),
+//   extraído por t2r2/extrai.py (fora do repositório). H e M+ por laje (A_12fc(i,0..1)), com 7
 //   algarismos (o SINGLE); μ e ângulo pelo POLÍGONO da laje (A_1210(V_177c,·),
 //   LAJECALC.BAS:1907; o lajinfo.py da T10 os associa pelo número da laje, o que troca
 //   o μ do balanço e das lajes L2/L3 do assim). Bordo = lado − 1.

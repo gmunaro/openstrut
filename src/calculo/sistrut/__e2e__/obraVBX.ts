@@ -1,5 +1,5 @@
 // Obra VBX do caso v2par_viga_fluxo do oráculo como obra da V2
-// (C:/tmp/oraculo/casos/v2par_viga_fluxo.txt; JSON em lajes/__casos_t2__/): eixos x
+// (oraculo/casos/v2par_viga_fluxo.txt; JSON em lajes/__casos_t2__/): eixos x
 // 0/4/8 e y 0/5, lajes L1 (x 0..4) e L2 (x 4..8) 4×5 h 10, permanente 0,10 t/m² e
 // ocupação 0,15 t/m² toda acidental; vigas V1 (y = 5), V2 (y = 0), V3 (x = 0), V4
 // (x = 4), V5 (x = 8), peso próprio digitado 0,15 t/m em todas; pilares só em x = 0 e

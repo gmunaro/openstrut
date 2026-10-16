@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------- decisão: modelo fixo
 // O modelo é FIXO, em software, determinístico e independente da CPU; NÃO é o
 // hardware. A V1 (QB64, em C) e a V2 usam o mesmo modelo, conferido pelos vetores
-// em C:/tmp/v2-paridade/x87-vetores/ (decisão do dono, 2026-10-16):
+// em v2-paridade/x87-vetores/ (decisão do dono, 2026-10-16):
 //   - FYL2X: o do AMD Zen 2 (Ryzen 5 3600, a máquina do oráculo), reproduzido;
 //   - F2XM1: o valor exato de 2^x − 1 arredondado ao par em 64 bits;
 //   - FSQRT, FRNDINT, FSCALE, somas, produtos e divisões: IEEE ao par, exatos.

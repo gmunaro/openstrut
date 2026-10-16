@@ -143,7 +143,7 @@ export const PARAMETROS_DSP = {
    *  lê (DESENHO.BAS:754-756; antes da leitura valem 1, 680-681) e o DESDIM os usa nos
    *  momentos, cortantes, flecha e corte das barras (DESDIM.BAS:2840, 2955, 2984,
    *  3184, 3895, 5045-5135). O DESENHO.INI de fábrica traz 1 e 1
-   *  (C:/tmp/oraculo/orig/DESENHO.INI, linhas 8-9); o .DSP não os tem. */
+   *  (__oraculo__/arquivos/oraculo/orig/DESENHO.INI, linhas 8-9); o .DSP não os tem. */
   coeficienteMedida: 1,
   coeficienteForca: 1,
   /** Coeficiente multiplicador dos momentos negativos (DESENHO.BAS:4773). */
@@ -379,12 +379,12 @@ export const PARAMETROS_PILAR = {
    *  compara em PILAREDI.BAS:6715 e 6832). 60 é o valor antes da leitura do INI
    *  (PILAR.BAS:559); o original o relê do PILAR.INI (PILAR.BAS:616), e o PILAR.INI de
    *  fábrica traz 200 ("NUMERO MAXIMO DE BARRAS INTERNAS A UMA SECAO",
-   *  C:/tmp/oraculo/orig/PILAR.INI, linha 6). */
+   *  __oraculo__/arquivos/oraculo/orig/PILAR.INI, linha 6). */
   maximoBarras: 200,
   /** Número máximo de variações de armadura numa coluna: V_0e3c% = valor − 1
    *  (PILAR.BAS:632); 10 antes da leitura do INI (PILAR.BAS:563), 15 no PILAR.INI de
    *  fábrica ("NUMERO MAXIMO DE VARIACOES DE ARMADURA EM UMA COLUNA",
-   *  C:/tmp/oraculo/orig/PILAR.INI, linha 10). */
+   *  __oraculo__/arquivos/oraculo/orig/PILAR.INI, linha 10). */
   maximoVariacoes: 15,
   /** Coeficientes de medida, força e de fck/fyk (PILAR.BAS:566, 567, 569). */
   coeficienteMedida: 1,

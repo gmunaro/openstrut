@@ -1,9 +1,9 @@
 // Valores do oráculo para o DESDIM que não estão em __oraculo__/ (sondas p3, p5 e p6
 // de dist/tests/retraducao/desenho/CHECKLIST.md), no mesmo formato. Cada valor leva o
-// arquivo e a linha do run (C:/tmp/oraculo/runs/<run>/). p2 e p10 não mostram nenhum
+// arquivo e a linha do run (oraculo/runs/<run>/). p2 e p10 não mostram nenhum
 // número do DESDIM (menus do DESENHO), por isso não têm JSON. Os v2par_des_* são os
-// casos da rodada 2 (C:/tmp/v2-paridade/oraculo-novos/, índice em
-// C:/wt/v1-v2par/tests/retraducao/V2PAR.md), copiados com uma correção: a
+// casos da rodada 2 (v2-paridade/oraculo-novos/, índice em
+// tests/retraducao/V2PAR.md da V1), copiados com uma correção: a
 // fonte de <viga>.cobrimento apontava uma linha abaixo da impressa (41 → 40, 46 → 45,
 // 58 → 57 no impressora.prn de cada run).
 import type { CasoOraculo } from "../../__oraculo__";

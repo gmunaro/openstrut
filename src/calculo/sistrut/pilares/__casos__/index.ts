@@ -1,7 +1,7 @@
 // Valores impressos pelo original nos casos `retrad_pil_*` que o `__oraculo__/`
 // ainda não tem (T5): os retrad_pil_* extraídos aqui e os v2par_pilar_* da rodada 2
-// (copiados de C:/tmp/v2-paridade/oraculo-novos/). Mesmo formato dos JSONs do oráculo: texto impresso e
-// "arquivo:linha" do run em C:/tmp/oraculo/runs/<run>/. Gerados a partir das
+// (copiados de v2-paridade/oraculo-novos/). Mesmo formato dos JSONs do oráculo: texto impresso e
+// "arquivo:linha" do run em oraculo/runs/<run>/. Gerados a partir das
 // impressões conferidas linha a linha (impressora.prn e telas/*.txt).
 import type { CasoOraculo } from "../../__oraculo__";
 import retrad_pil_poliinv from "./retrad_pil_poliinv.json";

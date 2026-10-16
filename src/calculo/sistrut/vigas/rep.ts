@@ -1,7 +1,7 @@
 // Opção 7 do VIGA: soma das reações das vigas por pilar e o arquivo .REP que o
 // PILAR-Edifícios (PILGEEDI) lê. Porta `viga/VIGA.BAS:2094-2566` (F_17d76, F_19377,
 // L_195e8 e a gravação em 2545-2557); especificação em
-// C:/tmp/v2-paridade/apoio/livros_viga_pilar.md 1.4 e 3.1 (U61-022..025).
+// v2-paridade/apoio/livros_viga_pilar.md 1.4 e 3.1 (U61-022..025).
 //
 // Modo "original": cada parcela é INT(R·100)/100 (VIGA.BAS:2413), e o total, a soma
 // em SINGLE das parcelas truncadas (caso b, P5: 6,93 + 10,44 = 17,37). Modo

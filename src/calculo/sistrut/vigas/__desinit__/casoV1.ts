@@ -6,7 +6,7 @@
 // de `ESFORCOS_V1` são a conta à mão da viga contínua de dois vãos iguais com carga
 // uniforme (M1 = −qL²/8; Ve = qL/2 − |M1|/L; M+ = Ve²/2q, x = Ve/q), em SINGLE, e o
 // teste confere que arredondam para o que o original imprime (M− −0.97, Ve 0.73, Vd
-// 1.22, x 1.50, M+ 0.55; C:/tmp/oraculo/runs/retrad_des_det-20261015-082506,
+// 1.22, x 1.50, M+ 0.55; oraculo/runs/retrad_des_det-20261015-082506,
 // impressora.prn:16-26). O dimensionamento é o que o original
 // imprime (2#10 nos tramos e no apoio 1, As 1,50, estribo #5/12, Aee 2,80, Vk com alívio
 // 0,61/1,09 = Ve − q·h/2).

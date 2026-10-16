@@ -1,5 +1,5 @@
 // Entradas dos casos v2par_des_3tramos, v2par_des_2tramos e v2par_des_especial
-// (C:/wt/v1-v2par/tests/retraducao/V2PAR.md) para os testes do detalhamento.
+// (tests/retraducao/V2PAR.md da V1) para os testes do detalhamento.
 //
 // - Viga, seção e forma: `v2par_des_entradas.json`, decodificado dos registros binários
 //   que o original leu e gravou (.VIG da obra de entrada; .SEC e .FOR do run), sem
@@ -7,7 +7,7 @@
 // - Dimensionamento: o que o DESDIM imprime em cada caso (`v2par_des_*.json` e
 //   impressora.txt do run: barras, Ast, Asc, Aee/Aed, estribos e a armadura comprimida).
 // - Parâmetros: SISTRUT embutido; no especial, o V2P.DSP lido do disco
-//   (C:/tmp/oraculo/casos/v2par_des_especial.dados/V2P.DSP): aço A, acidentais S e a
+//   (oraculo/casos/v2par_des_especial.dados/V2P.DSP): aço A, acidentais S e a
 //   tabela de bitola das barras de extremidade com 120 cm (DESENHO.BAS:5398-5410; o
 //   embutido tem 100).
 import { sng } from "../../base/f32";

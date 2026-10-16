@@ -1,6 +1,6 @@
 // CONTRATOS do módulo `src/calculo/sistrut/`: os tipos de entrada e saída e as
 // assinaturas das funções públicas de cada família (lajes, montagem, vigas, pilares,
-// quantitativos; C:/tmp/v2-paridade/PLANO.md 5.3). É o contrato FINAL que o código
+// quantitativos; v2-paridade/PLANO.md 5.3). É o contrato FINAL que o código
 // cumpre: a integração (obra.ts) e a projeção (../fluxoSistrut.ts) usam só estes
 // tipos e as funções que os implementam.
 // Cada assinatura é um TIPO de função; a implementação a anota para o compilador
@@ -33,7 +33,7 @@
 //   retrad_laje_param).
 // - Referências: `<EXE>.BAS:<linha>` = V1 nova em
 //   `_Arquivo/Sistrust/dist/src-original/<família>/`; "livros_x.md N.M" =
-//   C:/tmp/v2-paridade/apoio/livros_x.md, seção N.M.
+//   v2-paridade/apoio/livros_x.md, seção N.M.
 // - Resultados de família levam `ComMemoria` (avisos visíveis e memória de
 //   cálculo, como o resto da V2). Aviso não esconde resultado.
 import type { ComMemoria } from "../../tipos";
