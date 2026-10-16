@@ -15,6 +15,7 @@
 //   = 5 = código atual).
 // - corrigido: grava o código 2 + 10·coef sem arredondar (coef com 2 casas, que
 //   sempre cai), então a redução converge.
+import { numAte } from "../../texto";
 import type { Etapa } from "../../tipos";
 import { ErroNaoConverge, atribuicao, qbCint, qbInt } from "../base/f32";
 import type {
@@ -54,9 +55,9 @@ export interface OtimizacaoParada {
 
 const naoConverge = (estado: OtimizacaoParada) =>
   new ErroNaoConverge(
-    `Otimização dos negativos não converge: ${estado.laje}, lado ${estado.lado + 1}, relação ` +
-      `Mneg/Mpos alterada para ${estado.relacaoNova}, mas o código gravado continua ${estado.codigo} ` +
-      "(CINT(coef·10 + 2)); o SISTRUT original repete este bordo sem fim (defeito R3).",
+    `${estado.laje}, lado ${estado.lado + 1}: a relação Mneg/Mpos passa a ` +
+      `${numAte(estado.relacaoNova, 2)}, mas o código do lado continua ${estado.codigo}, ` +
+      "porque o original grava o código com uma casa (CINT(i·10 + 2)); ele repete este lado sem fim.",
     estado,
   );
 /** Teto de passos por bordo: só protege contra laço; o algoritmo converge antes. */
