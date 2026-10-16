@@ -3,7 +3,7 @@
 // exige ao ler a obra; `problemasNoArquivo` passa a obra editada pelo próprio leitor do
 // arquivo, para que um editor nunca grave uma obra que não abriria de novo.
 import { lerObra, serializarObra } from "../../../armazenamento/arquivo";
-import type { Obra } from "../../../dominio/obra";
+import type { Obra, Ponto } from "../../../dominio/obra";
 import { lerNumero } from "../../formato";
 
 /** Faixa aceita por um campo, como no leitor do arquivo. */
@@ -78,3 +78,38 @@ export type TriEstado = "padrao" | "sim" | "nao";
 export const triDe = (b: boolean | undefined): TriEstado =>
   b === undefined ? "padrao" : b ? "sim" : "nao";
 export const boolDe = (t: TriEstado) => (t === "padrao" ? undefined : t === "sim");
+
+/** Pontos de uma tabela x, y (m). `rotulo` nomeia a tabela nas mensagens. */
+export function lerPontos(l: Leitor, linhas: readonly LinhaForm<"x" | "y">[], rotulo: string) {
+  return linhas.map((p, i): Ponto => ({
+    x: l.numero(p.x, `${rotulo}, ponto ${i + 1}, x`),
+    y: l.numero(p.y, `${rotulo}, ponto ${i + 1}, y`),
+  }));
+}
+
+/** Ponto → linha x, y do formulário. */
+export const linhaDoPonto = (p: Ponto): LinhaForm<"x" | "y"> => ({
+  x: textoDe(p.x),
+  y: textoDe(p.y),
+});
+
+/** Duas vezes a área com sinal (Σ x_k·y_k+1 − x_k+1·y_k), a conta do leitor do arquivo:
+ *  negativa = sentido horário, positiva = anti-horário, zero = sem área. */
+export function areaDupla(p: readonly Ponto[]) {
+  return p.reduce((a, v, k) => {
+    const w = p[(k + 1) % p.length] ?? v;
+    return a + v.x * w.y - w.x * v.y;
+  }, 0);
+}
+
+/**
+ * Confere um polígono como o leitor do arquivo: ao menos 3 vértices e área; o da laje
+ * (`horario`) em sentido horário, como o LAJEGEOM grava. Anota o problema em `l`.
+ */
+export function conferirPoligono(l: Leitor, p: readonly Ponto[], rotulo: string, horario: boolean) {
+  if (p.length < 3) return l.erro(`${rotulo}: informe pelo menos 3 vértices.`);
+  const a = areaDupla(p);
+  if (a === 0) l.erro(`${rotulo}: o polígono não tem área.`);
+  else if (horario && a > 0)
+    l.erro(`${rotulo}: os vértices estão em sentido anti-horário; o LAJEGEOM só aceita o horário.`);
+}
