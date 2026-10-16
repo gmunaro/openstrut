@@ -20,9 +20,12 @@ import {
   copiarPlanta,
   moverPavimento,
   problemaNomePavimento,
+  problemaPeDireito,
+  problemaRepeticoes,
   renomearPavimento,
 } from "../pavimentos";
-import { CampoNumero, CampoTexto } from "./campos";
+import { CampoTexto } from "./campos";
+import { CampoPavimentoNumero } from "./BarraPavimentosNumero";
 
 export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string | null }) {
   const editar = useObra((e) => e.editar);
@@ -106,26 +109,22 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
               }}
             />
           </label>
-          <label className="flex items-center gap-1">
-            Pé-direito
-            <CampoNumero
-              className="w-16"
-              valor={ativo.peDireito}
-              valido={(n) => n > 0}
-              confirmar={(n) => editar((o) => alterarPeDireito(o, ativo.id, n))}
-            />
-            <span className="text-muted-foreground">m</span>
-          </label>
-          <label className="flex items-center gap-1">
-            Repetições
-            <CampoNumero
-              className="w-12"
-              casas={0}
-              valor={ativo.repeticoes}
-              valido={(n) => Number.isInteger(n) && n >= 1}
-              confirmar={(n) => editar((o) => alterarRepeticoes(o, ativo.id, n))}
-            />
-          </label>
+          <CampoPavimentoNumero
+            rotulo="Pé-direito"
+            unidade="m"
+            className="w-16"
+            valor={ativo.peDireito}
+            problema={problemaPeDireito}
+            confirmar={(n) => editar((o) => alterarPeDireito(o, ativo.id, n))}
+          />
+          <CampoPavimentoNumero
+            rotulo="Repetições"
+            className="w-12"
+            casas={0}
+            valor={ativo.repeticoes}
+            problema={problemaRepeticoes}
+            confirmar={(n) => editar((o) => alterarRepeticoes(o, ativo.id, n))}
+          />
           <Button
             variant="ghost"
             size="icon-xs"

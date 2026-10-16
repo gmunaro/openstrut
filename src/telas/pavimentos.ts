@@ -43,15 +43,25 @@ export const renomearPavimento = (obra: Obra, id: string, nome: string) =>
     ? obra
     : trocarPavimento(obra, id, (p) => (p.nome === nome.trim() ? p : { ...p, nome: nome.trim() }));
 
-/** Pé-direito em m (> 0). Valor inválido não muda nada. */
+/** Problema com o pé-direito (m, > 0), ou null se serve. */
+export function problemaPeDireito(n: number) {
+  return !(n > 0) || !Number.isFinite(n) ? "O pé-direito precisa ser maior que zero." : null;
+}
+
+/** Problema com as repetições (inteiro ≥ 1), ou null se servem. */
+export function problemaRepeticoes(n: number) {
+  return !Number.isInteger(n) || n < 1 ? "Use um número inteiro de 1 ou mais." : null;
+}
+
+/** Pé-direito em m. Valor com `problemaPeDireito` não muda nada. */
 export const alterarPeDireito = (obra: Obra, id: string, peDireito: number) =>
-  !(peDireito > 0) || !Number.isFinite(peDireito)
+  problemaPeDireito(peDireito) !== null
     ? obra
     : trocarPavimento(obra, id, (p) => (p.peDireito === peDireito ? p : { ...p, peDireito }));
 
-/** Repetições: inteiro ≥ 1. Valor inválido não muda nada. */
+/** Repetições. Valor com `problemaRepeticoes` não muda nada. */
 export const alterarRepeticoes = (obra: Obra, id: string, repeticoes: number) =>
-  !Number.isInteger(repeticoes) || repeticoes < 1
+  problemaRepeticoes(repeticoes) !== null
     ? obra
     : trocarPavimento(obra, id, (p) => (p.repeticoes === repeticoes ? p : { ...p, repeticoes }));
 
