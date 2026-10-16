@@ -48,7 +48,7 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
       <article className="mx-auto max-w-[1200px] pb-10 print:max-w-none print:p-0">
         <div className="mb-4 flex justify-end print:hidden">
           <Button onClick={() => window.print()}>
-            <Printer /> Imprimir / PDF
+            <Printer /> Imprimir
           </Button>
         </div>
 
