@@ -84,6 +84,86 @@ export interface Pilar {
   /** Seção, cm: b na direção x, h na direção y. */
   b: number;
   h: number;
+  // Campos só da NB-1/78 pelo SISTRUT (PILGEEDI/PILAREDI/PILAR); ausentes = o padrão
+  // do original. O pilar de um pavimento é o lance que vai do nível de baixo até o
+  // nível do pavimento. Ver docs/MODO-CALCULO.md, "Pilares".
+  /** Seção circular ou poligonal (PILDADOS). Ausente = retângulo b × h. b e h ficam
+   *  como a caixa da seção, para a planta e para o fluxo da V2. */
+  secao?: SecaoNaoRetangular;
+  /** Vínculo na base do lance (A_130a do PILGEEDI). Ausente = continuidade. */
+  vinculos?: VinculosPilar;
+  /** Vínculo no topo; só vale no último lance da coluna (nos outros, o topo de um
+   *  lance é a base do de cima). Ausente = continuidade. */
+  vinculosTopo?: VinculosPilar;
+  /** Excentricidade desta seção em relação à do lance de baixo, cm (A_1338(s, 4|5)).
+   *  Só entra onde a seção muda. */
+  excentricidade?: { x: number; y: number };
+  /** Vento do lance (A_12dc): normal, kN, e até dois momentos, kN·m, com o ângulo em
+   *  graus (0 = direção x). */
+  vento?: VentoPilar;
+  /** Carga no topo do lance além da que vem das vigas do pavimento: a "Normal +
+   *  Momento" do PILGEEDI (A_1280), ou a de um .REP de outra obra. Soma com o .REP. */
+  cargaTopo?: CargaTopoPilar;
+  /** PILAR opção 6: verificações da seção do lance com a armadura dada. */
+  verificacoes?: VerificacaoPilarObra[];
+}
+
+/** Ponto de uma seção de pilar, cm. */
+export interface PontoSecao {
+  x: number;
+  y: number;
+}
+
+/** Seção de pilar não retangular, cm: circular (com vazado, dInterno = 0 sem
+ *  vazado) ou poligonal (vértices sem repetir o primeiro, sentido horário). */
+export type SecaoNaoRetangular =
+  | { tipo: "circular"; d: number; dInterno: number }
+  | { tipo: "poligonal"; vertices: PontoSecao[] };
+
+/** Vínculo de pilar num nível, a linha/coluna da matriz de flambagem do .PIP
+ *  (PILAREDI.BAS:1877). */
+export type VinculoPilar = "engaste" | "semiEngaste" | "continuidade" | "livre";
+export const VINCULOS_PILAR: readonly [VinculoPilar, ...VinculoPilar[]] = [
+  "engaste",
+  "semiEngaste",
+  "continuidade",
+  "livre",
+];
+export interface VinculosPilar {
+  x: VinculoPilar;
+  y: VinculoPilar;
+}
+
+export interface VentoPilar {
+  /** kN, soma na normal do lance. */
+  normal: number;
+  /** kN·m e graus; no máximo dois. */
+  momentos: { m: number; angulo: number }[];
+}
+
+export interface CargaTopoPilar {
+  /** kN. */
+  normal: number;
+  /** Até quatro momentos de viga: M (kN·m, sinal como no .REP), inclinação da viga
+   *  (graus), vão adjacente (m) e numerador da rigidez da viga (cm⁴, 0 = o pilar leva
+   *  todo o momento). */
+  momentos: { m: number; inclinacao: number; vao: number; rigidez: number }[];
+}
+
+/** Barra longitudinal na seção: posição, cm (mesma origem dos vértices; na
+ *  retangular, o canto inferior esquerdo), e bitola, mm. */
+export interface BarraPilarObra {
+  x: number;
+  y: number;
+  bitola: number;
+}
+
+/** Verificação da seção do lance com armadura dada (PILAR opção 6). */
+export interface VerificacaoPilarObra {
+  barras: BarraPilarObra[];
+  /** Esforços característicos e comprimentos de flambagem digitados: kN, kN·m, m.
+   *  Ausentes = os do lance calculado (Nk, Mk do caso "e" e le do PILAREDI). */
+  esforcos?: { nk: number; mxk: number; myk: number; lex: number; ley: number };
 }
 
 export interface Pavimento {
@@ -118,4 +198,75 @@ export interface Obra {
   materiais: Materiais;
   /** Do topo (cobertura) para a base. */
   pavimentos: Pavimento[];
+  /** NB-1/78: PILAR.INI, .PIP e predimensionamento dos pilares. Ausente = os de
+   *  fábrica ("SISTRUT") e sem predimensionamento. */
+  parametrosPilar?: ParametrosPilarObra;
+}
+
+/** Parâmetros dos pilares que o usuário do SISTRUT edita. Cada campo ausente vale o
+ *  de fábrica (`sistrut/base/parametros.ts`); um campo presente vale nos dois modos. */
+export interface ParametrosPilarObra {
+  ini?: Partial<IniPilar>;
+  pip?: Partial<PipPilar>;
+  /** Predimensionamento (PILAREDI 3.1) de cada coluna desde a fundação: "tensoes" =
+   *  só as tensões com a seção da obra (B e H digitados); "secao" = o quadrado que o
+   *  PILAREDI escolhe passa a ser a seção da coluna. Ausente = não roda. */
+  predimensionamento?: "tensoes" | "secao";
+}
+
+/** PILAR.INI (PILAR.BAS:566-588). fck e fyk em MPa (no original vão como MPa/100 =
+ *  t/cm², a convenção de `materiais.fck`); ausentes = os de `obra.materiais`. */
+export interface IniPilar {
+  maximoBarras: number;
+  coeficienteMedida: number;
+  coeficienteForca: number;
+  coeficienteTensao: number;
+  fck: number;
+  fyk: number;
+  classeAco: ClasseAco;
+  /** 13 bitolas, mm, e áreas, cm². */
+  bitolas: { bitola: number; area: number }[];
+  multiplicadorEc: number;
+  /** cm. */
+  excentricidadeMinima: number;
+  verificaH30: boolean;
+  excentricidades: "isoladas" | "simultaneas";
+  secoesSimetricas: boolean;
+  lambda2aOrdem: number;
+  lambdaFluencia: number;
+  lambdaProcessoExato: number;
+  coeficienteFluencia: number;
+  fatorNkFluencia: number;
+  fatorCargaFluencia: number;
+  gamaF: number;
+  gamaC: number;
+  gamaS: number;
+}
+
+/** .PIP do PILAREDI (PILAREDI.BAS:1834-1890). Densidade em kN/m³; o resto como no
+ *  arquivo (cm, mm, cm², %, multiplicadores de fck). */
+export interface PipPilar {
+  tensaoAdmissivelNormal: number;
+  tensaoAdmissivelFlexao: number;
+  taxaIdealPredimensionamento: number;
+  cobrimento: number;
+  reduzAcidentalFundacao: boolean;
+  reduzAcidentalDimensionamento: boolean;
+  pesoProprio: boolean;
+  densidade: number;
+  porcentagemAcidental: number;
+  multiploMedida: number;
+  medidaMinima: number;
+  taxaMinimaCalculada: number;
+  taxaMinimaReal: number;
+  taxaMaxima: number;
+  traspasseNaTaxa: boolean;
+  misturaBitolas: boolean;
+  ordemBitolaMinima: number;
+  /** 13 linhas: bitola mm, área cm², espaçamento mínimo e 4ª coluna, cm. */
+  bitolas: { bitola: number; area: number; espacamentoMinimo: number; coluna4: number }[];
+  /** 4 × 4, índices na ordem de VINCULOS_PILAR (inferior × superior). */
+  coeficienteFlambagem: number[][];
+  /** 13 linhas, uma por bitola longitudinal: estribo mm e espaçamento cm (0 = sem). */
+  estriboPorBitola: { bitola: number; espacamento: number }[];
 }

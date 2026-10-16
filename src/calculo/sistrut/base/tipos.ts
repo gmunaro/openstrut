@@ -1463,6 +1463,10 @@ export interface PredimensionamentoPilar {
   tensaoFlexaoAdmissivel: number;
   /** Cada lado testado em cada nível, do topo para baixo, até o primeiro que reprova. */
   tentativas: { lado: number; nivel: number; tensaoNormal: number; tensaoFlexao: number }[];
+  /** "CARGA" da tela, t: INT((pp − redução + ΣN acima)·100)/100 do nível base com a
+   *  seção aceita, sem vento, somado em precisão estendida (PILAREDI.BAS:4248).
+   *  retrad_pil_secoes D 25: 17,37 + 0,368 → 17,73; poliinv: 17,37 − 0,30 → 17,07. */
+  carga: number;
 }
 /** Predimensionamento de uma coluna a partir do nível `nivelBase` (PILAREDI.BAS:
  *  3713-3740, 3976-4187): o S_60164 roda em modo PREDIMENSIONAMENTO (peso próprio e

@@ -26,7 +26,9 @@ const casoVigaFluxo: CasoOraculo = vigaFluxo;
 /** Ids do oráculo que o motor não calcula, e por quê. */
 const NAO_PRODUZIDOS: [RegExp, string][] = [
   [/^L\d\.H\.(mom|arm)(\.preOtim)?$/, "eco do H impresso no cabeçalho da opção 5"],
-  [/^P5\.pre\./, "predimensionamento (PILAREDI 3.1) não roda no motor"],
+  // a obra E2E não liga `parametrosPilar.predimensionamento`; com ele, os P5.pre.* são
+  // conferidos em pilaresDaObra.test.ts
+  [/^P5\.pre\./, "predimensionamento (PILAREDI 3.1) desligado na obra E2E"],
 ];
 
 type Valor = number | string | undefined;

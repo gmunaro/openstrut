@@ -216,3 +216,47 @@ export interface Norma {
    *  usa cobrimento nominal + estribo + φ/2). */
   pilar(e: PilarEntrada, mat: MateriaisCalc, dLinha: number): PilarResultado;
 }
+
+// ---- pilares pela NB-1/78 (SISTRUT): verificação e predimensionamento em SI ----
+
+/** PILAR opção 6 de uma `Pilar.verificacoes` (fluxoSistrut.ts), em SI: kN e kN·m.
+ *  O completo, nas unidades do original, está em `ResultadoSistrut.verificacoes`. */
+export interface VerificacaoPilarResultado {
+  /** Índice em `Pilar.verificacoes`. */
+  indice: number;
+  /** true = esforços do lance calculado; false = os digitados. */
+  esforcosDoLance: boolean;
+  nk: number;
+  lambdaX: number;
+  lambdaY: number;
+  situacao: string;
+  /** Um por caso de excentricidade acidental: atuante (com ea) e resistente reduzido
+   *  da 2ª ordem; veredito como o PILAR imprime; `erro` onde o original trava (D-2)
+   *  ou divide por zero (D-3). */
+  casos: {
+    rotulo: string;
+    mx: number;
+    my: number;
+    mTotal: number;
+    mrX: number;
+    mrY: number;
+    mrTotal: number;
+    veredito: string;
+    erro?: string;
+  }[];
+  avisos: string[];
+}
+
+/** Predimensionamento da coluna (PILAREDI 3.1), em SI: cm, MPa e kN. */
+export interface PredimensionamentoPilarResultado {
+  modo: "tensoes" | "secao";
+  /** Lado do quadrado escolhido, cm; ausente com a seção da obra. */
+  lado?: number;
+  tensaoNormal: number;
+  tensaoNormalAdmissivel: number;
+  tensaoFlexao: number;
+  tensaoFlexaoAdmissivel: number;
+  /** "CARGA" da tela, kN. */
+  carga: number;
+  avisos: string[];
+}

@@ -615,6 +615,7 @@ export const predimensionaPilar: PredimensionaPilar = (
     const secao = opcoes.secao ?? quadrado(lado);
     let maxN = 0;
     let maxM = 0;
+    let carga = 0;
     let reprovado = false;
     for (let L = topo; L >= nivelBase; L--) {
       const c = cargaAcumulada(ctx, coluna, lidas!, pip, {
@@ -626,6 +627,8 @@ export const predimensionaPilar: PredimensionaPilar = (
       const acima = s(c.normal - lidas!.normal[L]!);
       const red = reducao(ctx, pip.reduzAcidentalDimensionamento, topo - L, acima, c.pp, pip);
       const n = s(c.pp - red + acima);
+      // PILAREDI.BAS:4248: PRINT INT((V_10b6 − V_10ba + V_0f88)·100)/100, sem SINGLE no meio
+      if (L === nivelBase) carga = s(Math.floor((c.pp - red + acima) * 100) / 100);
       const t = tensoesNivel(ctx, secao, n, c.e, sigmaS, pip, par);
       tentativas.push({ lado, nivel: L, ...t });
       if (!opcoes.secao && (t.tensaoFlexao > admM || t.tensaoNormal > admN)) {
@@ -647,6 +650,7 @@ export const predimensionaPilar: PredimensionaPilar = (
         tensaoFlexao: maxM,
         tensaoFlexaoAdmissivel: admM,
         tentativas,
+        carga,
       };
     lado = s(lado + pip.multiploMedida);
     if (lado / pip.multiploMedida !== Math.trunc(lado / pip.multiploMedida))
