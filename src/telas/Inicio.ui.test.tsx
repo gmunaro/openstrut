@@ -76,6 +76,9 @@ describe("tela inicial", () => {
     );
 
     await user.click(screen.getByRole("link", { name: "Início" }));
+    // a obra nunca foi salva em arquivo: o aviso de saída aparece e o rascunho fica no navegador
+    const aviso = await screen.findByRole("dialog", { name: "Sair com alterações não salvas?" });
+    await user.click(within(aviso).getByRole("button", { name: "Sair sem salvar" }));
     const lista = await screen.findByRole("list");
     const item = within(lista).getByRole("button", { name: /^Casa do rascunho/ });
     expect(within(lista).getByText("NB-1/78")).toBeTruthy();
@@ -177,11 +180,25 @@ describe("tela inicial", () => {
     await user.type(await screen.findByLabelText("Nome"), "Para apagar{Enter}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
     await user.click(await screen.findByRole("link", { name: "Início" }));
+    const aviso = await screen.findByRole("dialog", { name: "Sair com alterações não salvas?" });
+    await user.click(within(aviso).getByRole("button", { name: "Sair sem salvar" }));
     const lista = await screen.findByRole("list");
 
     vi.spyOn(window, "confirm").mockReturnValue(true);
     await user.click(within(lista).getByRole("button", { name: "Apagar rascunho Para apagar" }));
     expect(await screen.findByText("Nenhum rascunho.")).toBeTruthy();
     expect(await listarRascunhos()).toEqual([]);
+  });
+
+  it("aviso de saída: Continuar editando mantém a obra aberta na tela", async () => {
+    const { router, user } = renderizarApp("/");
+    await user.type(await screen.findByLabelText("Nome"), "Sem salvar{Enter}");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
+    await user.click(screen.getByRole("link", { name: "Início" }));
+    const aviso = await screen.findByRole("dialog", { name: "Sair com alterações não salvas?" });
+    await user.click(within(aviso).getByRole("button", { name: "Continuar editando" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(router.state.location.pathname).toBe("/obra");
+    expect(useObra.getState().obra?.nome).toBe("Sem salvar");
   });
 });
