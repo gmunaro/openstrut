@@ -927,5 +927,5 @@
       "fonte": "impressora.prn:230"
     }
   ],
-  "comparacao_v1": "igual nos números (30 de 31): impressora 58.827 bytes e ASS.FOR/.SEC/.TAB iguais; a tela d09 difere só no cabeçalho 'SISTRUT/Eng. Andre...' cortado pela janela, que a tabela de marca do compara_retrad.py não troca (artefato da marca)"
+  "comparacao_v1": "igual nos números (30 de 31): impressora 58.827 bytes e ASS.FOR/.SEC/.TAB iguais; a tela d09 difere só no cabeçalho de identificação do original, cortado pela janela, que a tabela de marca do compara_retrad.py não troca (artefato da marca)"
 }

@@ -314,7 +314,7 @@ CASOS["v2par_viga_fluxo"]["comparacao_v1"] = (
     "VBX.LAJ/.VIG/.RLP/.REP iguais byte a byte")
 CASOS["v2par_des_3tramos"]["comparacao_v1"] = (
     "igual nos números (30 de 31): impressora 58.827 bytes e ASS.FOR/.SEC/.TAB iguais; a tela d09 difere só no cabeçalho "
-    "'SISTRUT/Eng. Andre...' cortado pela janela, que a tabela de marca do compara_retrad.py não troca (artefato da marca)")
+    "de identificação do original, cortado pela janela, que a tabela de marca do compara_retrad.py não troca (artefato da marca)")
 CASOS["v2par_des_2tramos"]["comparacao_v1"] = (
     "igual nos números (28 de 29): impressora 49.578 bytes e ASS.FOR/.SEC/.TAB iguais; a tela d09 difere só no cabeçalho cortado "
     "pela janela (artefato da troca de marca)")
