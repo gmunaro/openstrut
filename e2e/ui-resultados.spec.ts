@@ -104,3 +104,29 @@ for (const caso of CASOS) {
     });
   }
 }
+
+// Revisão por seção: o painel rola por dentro, então a tela cheia não mostra o resto.
+// Uma captura por título (lajes, vigas, pilares, memória, equilíbrio, detalhamento).
+test("resultados secoes paradas-original-1366", async ({ page }) => {
+  test.setTimeout(180_000);
+  await semFileSystemAccess(page);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/");
+  await abrirObra(page, "obra-paradas-original.openstrut.json");
+  await page.getByRole("tab", { name: "Resultados" }).focus();
+  await page.keyboard.press("Enter");
+  const painel = page.getByRole("tabpanel", { name: "Resultados" });
+  await expect(painel).toBeVisible();
+
+  const titulos = painel.getByRole("heading");
+  const total = await titulos.count();
+  const lista: string[] = [];
+  for (let i = 0; i < total; i++) {
+    const titulo = titulos.nth(i);
+    const texto = (await titulo.innerText()).replace(/\s+/g, " ").trim();
+    lista.push(`${i}: ${texto}`);
+    await titulo.evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: path.join(PASTA, `secao-${String(i).padStart(2, "0")}.png`) });
+  }
+  fs.writeFileSync(path.join(PASTA, "secoes-1366.txt"), lista.join("\n"));
+});
