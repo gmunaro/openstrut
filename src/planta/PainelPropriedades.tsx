@@ -48,16 +48,28 @@ interface Props {
   /** Aplica a edição; devolve a mensagem de erro, se houver. */
   aplicar: (e: Edicao) => string | undefined;
   apagar: () => void;
+  /** Celular: textos para o dedo, sem os atalhos de teclado. */
+  toque?: boolean;
 }
 
-export function PainelPropriedades({ pav, selecao, diagnostico, aplicar, apagar }: Props) {
+/** No celular, todo botão do painel (inclusive os que abrem os editores) tem 44 px de altura. */
+const ALVO_TOQUE = "compacto:[&_button]:min-h-11";
+
+export function PainelPropriedades({
+  pav,
+  selecao,
+  diagnostico,
+  aplicar,
+  apagar,
+  toque = false,
+}: Props) {
   const laje = selecao?.tipo === "laje" ? pav.lajes.find((l) => l.id === selecao.id) : undefined;
   const viga = selecao?.tipo === "viga" ? pav.vigas.find((v) => v.id === selecao.id) : undefined;
   const pilar =
     selecao?.tipo === "pilar" ? pav.pilares.find((p) => p.id === selecao.id) : undefined;
-  if (!laje && !viga && !pilar) return <SemSelecao pav={pav} />;
+  if (!laje && !viga && !pilar) return <SemSelecao pav={pav} toque={toque} />;
   return (
-    <div className="space-y-3 p-3 text-sm">
+    <div className={`space-y-3 p-3 text-sm ${ALVO_TOQUE}`}>
       {laje && <PropriedadesLaje key={laje.id} pav={pav} l={laje} aplicar={aplicar} />}
       {viga && <PropriedadesViga pav={pav} v={viga} aplicar={aplicar} />}
       {pilar && <PropriedadesPilar pav={pav} p={pilar} aplicar={aplicar} />}
@@ -67,23 +79,23 @@ export function PainelPropriedades({ pav, selecao, diagnostico, aplicar, apagar 
         onClick={apagar}
         className="w-full rounded border border-red-800 px-2 py-1 text-red-300 hover:bg-red-950"
       >
-        Apagar (Delete)
+        {toque ? "Apagar" : "Apagar (Delete)"}
       </button>
     </div>
   );
 }
 
-function SemSelecao({ pav }: { pav: Pavimento }) {
+function SemSelecao({ pav, toque }: { pav: Pavimento; toque: boolean }) {
   // cargas de ocupação, alvenarias, pilares-parede e continuidades: só o SISTRUT (NB-1/78)
   const nb178 = useObra((s) => s.obra?.norma === "nb1-78");
   return (
-    <div className="space-y-3 p-3 text-sm text-slate-400">
+    <div className={`space-y-3 p-3 text-sm text-slate-400 ${ALVO_TOQUE}`}>
       <p>
         {pav.nome}: {pav.lajes.length} lajes, {pav.vigas.length} vigas, {pav.pilares.length}{" "}
         pilares.
       </p>
-      <p>Clique num elemento para ver e editar as propriedades.</p>
-      <ul className="space-y-0.5 text-xs">
+      <p>{toque ? "Toque" : "Clique"} num elemento para ver e editar as propriedades.</p>
+      <ul className={toque ? "hidden" : "space-y-0.5 text-xs"}>
         <li>
           <Tecla>V</Tecla> selecionar · <Tecla>L</Tecla> laje · <Tecla>P</Tecla> pilar
         </li>
@@ -345,11 +357,14 @@ function Campo({
   unidade,
   inicial,
   confirmar,
+  numerico = false,
 }: {
   rotulo: string;
   unidade?: string;
   inicial: string;
   confirmar: (texto: string) => string | undefined;
+  /** Teclado numérico no celular (com vírgula). */
+  numerico?: boolean;
 }) {
   const [texto, setTexto] = useState(inicial);
   const [erro, setErro] = useState<string>();
@@ -364,6 +379,7 @@ function Campo({
         </span>
         <input
           value={texto}
+          inputMode={numerico ? "decimal" : undefined}
           onChange={(e) => setTexto(e.target.value)}
           onBlur={enviar}
           onKeyDown={(e) => {
@@ -400,6 +416,7 @@ function CampoNumero(props: {
       rotulo={props.rotulo}
       unidade={props.unidade}
       inicial={fmtCampo(props.valor)}
+      numerico
       confirmar={(t) => {
         const v = numeroDoTexto(t);
         return Number.isFinite(v) ? props.confirmar(v) : "Número inválido.";
