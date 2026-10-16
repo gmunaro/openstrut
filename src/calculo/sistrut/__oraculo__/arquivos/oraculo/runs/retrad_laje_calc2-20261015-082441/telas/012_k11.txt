@@ -1,0 +1,25 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+___________________  D I R E C A O   D A   A R M A D U R A  ____________________
+
+ Laje que deseja Alterar a Direcao Principal da Armadura *RETORNO* 1
+ Nova Direcao Principal *0*

@@ -1,0 +1,25 @@
+████████████████████████████████████████████████████████████████████████████████
+   DETALHAMENTO E DESENHO DE VIGAS CONTINUAS                                    
+   OpenStrut                                                                    
+   Abril 1991   (omitido)                                                       
+   Versao 4.0   (omitido)                                                       
+████████████████████████████████████████████████████████████████████████████████
+                                                                                
+ Atualizacao de Parametros                                                      
+                                                                                
+         P - ......... Parametrizacao Utilizada -  SISTRUT                      
+         1 - ...... Reducao dos Negativos a (%) -  100                          
+         2 - ......................... Concreto -  .15 t/cm2                    
+         3 - .............................. Aco -  5 t/cm2                      
+         4 - ................ Tipo de Aco (A/B) -  B                            
+         5 - ...... Cobrimento da Armadura (cm) -  2                            
+         6 - Alivio Esforcos Cortantes no Apoio -  S                            
+         7 - ................ Cargas Acidentais -  N                            
+         8 - ................ Momentos Externos -  N                            
+         9 - ... Desenho Definitivo da Armadura -  S                            
+                                                                                
+         item , VALOR  *NAO*                                                    
+                                                                                
+                                                                                
+                                                                                
+                                                                                

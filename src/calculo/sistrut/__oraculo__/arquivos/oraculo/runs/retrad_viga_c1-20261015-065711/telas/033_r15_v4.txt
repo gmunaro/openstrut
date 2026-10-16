@@ -1,0 +1,25 @@
+                     OBRA - E2E             VIGA - V4                           
+                         0             0.00        1.16    P 1                  
+                            max        0.00        1.20     0.87                
+                         1            -1.57        3.57    P 6                  
+                            max       -1.57        3.57     2.77                
+                         2             0.00        1.16    P 7                  
+                            max        0.00        1.20     0.87                
+                                                                                
+                     soma das reacoes estaticas      5.89 t                     
+                     negativos reduzidos a  85 %                                
+                                                                                
+            TRAMO     Ve(t)      x(m)     M+(tm)     Vd(t)    f*EJ              
+         ............................................................           
+            Momento Engastamento Perfeito apoio(0) -1.23 tm                     
+               1      1.16      1.97       1.14      1.79     2.37              
+              max     1.20      2.03       1.21      1.79     2.63              
+               2      1.79      3.03       1.14      1.16     2.37              
+              max     1.79      2.97       1.21      1.20     2.63              
+            Momento Engastamento Perfeito apoio(2) -1.23 tm                     
+                                                                                
+         ............................................................           
+           10-14-2026       12:00                                               
+           (omitido)                                                            
+                                                                                
+ Qualquer Tecla para Continuar                                                  

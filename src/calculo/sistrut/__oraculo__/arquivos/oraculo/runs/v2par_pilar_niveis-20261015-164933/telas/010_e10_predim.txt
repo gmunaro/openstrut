@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Predimensionamento de Secao e Dimensionamento da Armadura                      
+ Numero maximo de Colunas - 30        Posicionadas 1 Colunas                    
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+ Posicao 1         P   5               Nivel FUND         52.11 t               
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                            CARGA : 54.36 t                                     
+                                                                                
+ Compressao :            tensao maxima admissivel     0.090 t/cm2               
+        maxima de    0.001  t/cm2  encontrada no NIVEL FUND                     
+ Compressao + Momento :  tensao maxima admissivel     0.113 t/cm2               
+        maxima de    0.027  t/cm2  encontrada no NIVEL FUND                     
+                                                                                
+ SECAO PROPOSTA : B = 25 cm   H = 40 cm                                         
+                                                                                
+                                                                                
+   <A>ceita a Secao proposta e passa a predimensionar a proxima Coluna          
+   <R>etorna a escolha do tipo de secao e redefine                              
+   <C>ancela o predimensionamento e passa para proxima Coluna                   
+   <I>nicia novamente o predimensionamento desta Coluna                         
+   <V>aria a secao da Coluna entre os niveis (maximo 4 secoes)                  

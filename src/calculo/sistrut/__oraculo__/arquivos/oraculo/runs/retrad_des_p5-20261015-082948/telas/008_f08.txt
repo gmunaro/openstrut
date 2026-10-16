@@ -1,0 +1,25 @@
+████████████████████████████████████████████████████████████████████████████████
+   DETALHAMENTO E DESENHO DE VIGAS CONTINUAS                                    
+   OpenStrut                                                                    
+   Abril 1991   (omitido)                                                       
+   Versao 4.0   (omitido)                                                       
+██████┌──────────────────────────────────────────────────────────────────┐██████
+      │ Tramo  Vao Livre  Alinhamento  Eixo   pe    Hle   pd    Hld      │█     
+ Verif│    1     380        0           10    0      0    0      0       │█     
+ Aguar│    2     380        0           10    0      0    0      0       │█     
+      │                                                                  │█     
+ Dados│  Dados Corretos N/*S*                                            │█     
+      └──────────────────────────────────────────────────────────────────┘█     
+ Forneco███████████████████████████████████████████████████████████████████     
+ Adoto Flange considerada no Dimensionamento como secao T   S/*N*               
+                                Pe   ┌────┐                                    
+                                  ────┘    │   Pd                              
+                              Hle         └────                                
+                                  ────┐        Hld                             
+                                      │    ┌────                                
+                                                                                
+ Posicao das Lajes em Relacao ao Topo da Viga (cm)                              
+ Posicionamento Predominante   pe(+) , Hle , pd(+) , Hld                      
+                                                                                
+ Numero do Tramo com Posicionamento Diferente  *NENHUM*                         
+                                                                                

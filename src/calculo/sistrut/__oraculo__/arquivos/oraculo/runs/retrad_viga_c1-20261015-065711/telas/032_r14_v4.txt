@@ -1,0 +1,25 @@
+                     OBRA - E2E             VIGA - V4                           
+               TRAMO   L(m)    J(m4/m4)    P(t/m)    D(m)    F(t)               
+              ....................................................              
+                  1    5.000     1.00                                           
+                                           0.589    5.00    0.00                
+                                       ac  0.132            0.00                
+                  2    5.000     1.00                                           
+                                           0.589    5.00    0.00                
+                                       ac  0.132            0.00                
+                  Mext( apoio 0 )= 0 tm    Mext( apoio 2 )= 0 tm                
+   Aguarde ...    envoltoria de carga acidental ...                             
+                                                                                
+                                                                                
+                       APOIO          M-(tm)        R(t)                        
+              ....................................................              
+                         0             0.00        1.16    P 1                  
+                            max        0.00        1.20     0.87                
+                         1            -1.57        3.57    P 6                  
+                            max       -1.57        3.57     2.77                
+                         2             0.00        1.16    P 7                  
+                            max        0.00        1.20     0.87                
+                                                                                
+                     soma das reacoes estaticas      5.89 t                     
+                     negativos reduzidos a  85 %                                
+ Continua ...                                                                   

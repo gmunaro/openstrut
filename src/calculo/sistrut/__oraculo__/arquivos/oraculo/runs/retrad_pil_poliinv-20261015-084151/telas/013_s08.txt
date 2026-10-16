@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Predimensionamento de Secao e Dimensionamento da Armadura                      
+ Numero maximo de Colunas - 30        Posicionadas 1 Colunas                    
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+ Posicao 1         P   5                                                        
+                                                                                
+  Nivel FUND           17.37 t                                                  
+     Poligonal com 4 vertices                                                   
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ ATENCAO !!!                                                                    
+ ESTA SECAO NAO SUPORTA OS ESFORCOS ATUANTES COM A MAXIMA TAXA DE ARMADURA      
+ PERMITIDA NA CONFIGURACAO.                                                     
+ ASSIM, ALTERE A SECAO DA COLUNA E RETORNE AO DIMENSIONAMENTO DA ARMADURA.      
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

@@ -1,0 +1,47 @@
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 20 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  12.5 mm
+                   Jx = 13333.33 cm4
+                   Jy = 13333.34 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 17.37 t
+                   Mxk inicial = 0 tm            Myk inicial = 0 tm
+                   Lxe = 3 m                     Lye = 3 m
+                   Lambda x = 52                 Lambda y = 52 
+
+                   Situacao - Compressao Centrada          caso 1/2
+                     Mx = 0.35(a)= 0.35 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= .35 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.60(1a)- 0.09(2a)= 0.51 tm
+                     My=  0.00(1a)= 0.00 tm
+                     Mtotal=  0.51tm
+                     ln= 270 graus   Xln= 17.96 cm   1/r= 0.05550 x 10-3
+                     Def con  0.9966 /oo     Def aco -0.0531 /oo
+                     ok
+                   Situacao - Compressao Centrada          caso 2/2
+                     Mx = 0.00(a)= 0.00 (tm)
+                     My = 0.35(a)= 0.35 (tm)
+                     Mtotal= .35 tm   incl 90 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.00(1a)- 0.00(2a)= 0.00 tm
+                     My=  0.60(1a)- 0.09(2a)= 0.51 tm
+                     Mtotal=  0.51tm
+                     ln= 0 graus   Xln= 17.96 cm   1/r= 0.05550 x 10-3
+                     Def con  0.9966 /oo     Def aco -0.0531 /oo
+                     ok
+0O

@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Correcao de Parametros                                                         
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+ Parametrizacao Utilizada (.LAP)                                                
+ (P)  Parametrizacao = SISTRUT                                                  
+                                                                                
+ Coeficientes de Seguranca                                                      
+ (1)  Forcas = 1.5                                                              
+ (2)  Concreto = 1.4                                                            
+ (3)  Aco = 1.15                                                                
+                                                                                
+ Unidades de trabalho dos esforcos solicitantes                                 
+ (4)  Unidade de Forca = t                                                      
+ (5)  Coef. multiplicador para transformar em toneladas = 25                    
+ (6)  Unidade de Medida = m                                                     
+ (7)  Coef. multiplicador para transformar em metros = 1                        
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ item , Novo Valor  *NAO*                                                       
+                                                                                

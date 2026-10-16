@@ -1,0 +1,25 @@
+████████████████████████████████████████████████████████████████████████████████
+   DETALHAMENTO E DESENHO DE VIGAS CONTINUAS                                    
+   OpenStrut                                                                    
+   Abril 1991   (omitido)                                                       
+   Versao 4.0   (omitido)                                                       
+████████████████████████████████████████████████████████████████████████████████
+                                                                                
+ Verificacao das Secoes Geometricas das Vigas Escolhidas                        
+ Aguarde ...  ( Registro 1 )                                                    
+                                                                                
+ Dados de Tramos    VIGA-V1   2 Tramos                                          
+                                                                                
+ Vao Livre entre as faces internas dos Apoios para os tramos internos           
+ e da extremidade do tramo para a face do apoio nos balancos.                   
+ Entre < > mostrado o vao de Calculo.                                           
+ Vao Livre do Tramo 2 (cm)  <400>                                               
+                                                                                
+                                    P2                          P3              
+                                  A  B  C                     d  e  f           
+ Caso necessario use              │  .  │                     │  .  │           
+ codigos auxiliares:              │  .  │ vao livre         │  .  │           
+ Ad Ae Af Bd Be Bf Cd Ce Cf       │  .  └─────────────────────┘  .  │           
+ exemplo AD490                    │  .                           .  │           
+                                  │  .  ┌─────────────────────┐  .  │           
+                                  │  .  │                     │  .  │           

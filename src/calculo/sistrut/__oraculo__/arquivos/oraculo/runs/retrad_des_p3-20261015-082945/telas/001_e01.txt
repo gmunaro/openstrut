@@ -1,0 +1,25 @@
+████████████████████████████████████████████████████████████████████████████████
+   DETALHAMENTO E DESENHO DE VIGAS CONTINUAS                                    
+   OpenStrut                                                                    
+   Abril 1991   (omitido)                                                       
+   Versao 4.0   (omitido)                                                       
+████████████████████████████████████████████████████████████████████████████████
+                                                                                
+ Verificacao das Secoes Geometricas das Vigas Escolhidas                        
+ Aguarde ...  ( Registro 1 )                                                    
+                                                                                
+ Dados de Secao     VIGA-V1   2 Tramos                                          
+                                                                                
+ Secao Predominante dos Tramos  Bw , Hw , Bf , Hf 20,50,0,0                     
+ Numero de Tramos com Secoes Diferentes *0*                                     
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Correcao de Parametros                                                         
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+                   1  -  Eficiencia da Armadura Negativa 100 %                  
+                                                                                
+                   2  -  Cobrimento da Armadura 1.5 cm                          
+                                                                                
+                   3  -  Limita Linha Neutra (dominio 3/4) 100 %                
+                                                                                
+                   4  -  Densidade do Concreto 2.5 t/m2                         
+                                                                                
+                 Coeficientes para Relacao dos Momentos Negativos               
+                                                                                
+                   5  -  Maxima Relacao      Mneg/Mpos 2.00                     
+                                                                                
+                   6  -  Minima Relacao      Mneg/Mpos 0.30                     
+                                                                                
+                   7  -  Cantos Reentrantes  Mneg/Mpos 1.00                     
+                                                                                
+                   8  -  *Retorno ao Menu Principal*                            
+                                                                                
+   Eficiencia da Armadura *100* %                                               
+                                                                                
+                                                                                

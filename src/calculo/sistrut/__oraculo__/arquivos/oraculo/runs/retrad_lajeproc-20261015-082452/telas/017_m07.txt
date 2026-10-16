@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Modificacao das Armaduras para as Lajes                                        
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+ Arquivadas 4 Lajes  ( L1 a L4 )                                                
+                                                                                
+ Numero da Laje que sera Alterada/Imposta Armadura *FIM* 1                      
+                                                                                
+ Laje L1        H = 10 cm                                                       
+                                                                                
+ Momento Positivo PINCIPAL                                                      
+ M =     0.25        As =   1.50 cm2        # 6.3 c/ 20                         
+                                                                                
+ Momento Positivo SECUNDARIO                                                    
+ M =     0.20        As =   1.50 cm2        # 6.3 c/ 20                         
+                                                                                
+ Momento Negativo   .. Continuidade com a Laje L3                               
+ M =     0.40        As =   1.68 cm2        # 6.3 c/ 17.5                       
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+ Armadura Negativa                                                              
+ Bitola  *6.3*                                                                  
+                                                                                

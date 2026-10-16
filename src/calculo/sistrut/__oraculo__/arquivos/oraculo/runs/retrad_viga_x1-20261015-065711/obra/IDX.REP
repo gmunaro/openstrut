@@ -1,0 +1,21 @@
+SISTRUT Software e Tecnologia s/c Ltda
+Versao 4.0    Abril 1990
+
+ SOMATORIA DE REACOES EM PILARES
+ OBRA IDX
+ GERADO EM 10-14-2026   12:00
+ REGISTROS 1 A 2
+ Cargas Totais e Acidentais  Reacoes Estaticas
+
+P   1         2.00
+*2 (V20) + 
+>-1.33@1 [4]  (V20) > 
+P   2         2.00
+*2 (V20) + 
+>-1.33@1 [4]  (V20) > 
+P   3         0.31
+*.31 (V21) + 
+>-.75@1 [3]  (V21) > 
+P   4         2.78
+*2.78 (V21) + 
+>-3.33@2 [5]  (V21) > 

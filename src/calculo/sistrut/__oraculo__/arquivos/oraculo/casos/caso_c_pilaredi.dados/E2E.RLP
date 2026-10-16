@@ -1,0 +1,26 @@
+SISTRUT Software e Tecnologia s/c Ltda
+Versao 4.0    Abril 1991
+
+ SOMATORIA DE REACOES EM PILARES E INCLINACOES GERADAS PELAS LAJES
+ OBRA E2E
+ GERADO EM 10-14-2026   21:14
+
+P1                   0.000
+V3[0] >V4[90] >
+P2                   0.000
+V5[90] >
+P3                   0.000
+V3[180] >V6[90] >
+P4                   0.000
+V2[180] >
+P5                   0.000
+
+P6                   0.000
+V2[0] >
+P7                   0.000
+V1[0] >V4[270] >
+P8                   0.000
+V5[270] >
+P9                   0.000
+V1[180] >V6[270] >
+FIM

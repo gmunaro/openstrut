@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Predimensionamento de Secao e Dimensionamento da Armadura                      
+ Numero maximo de Colunas - 30        Posicionadas 1 Colunas                    
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+ Posicao 1         P   5               Nivel FUND         17.37 t               
+                                                                                
+                                                                                
+     1  -  Retangular                                                           
+     2  -  Circular                                                             
+     3  -  Poligonal fechada                                                    
+                                                                                
+     4  -  Leitura  de Secao arquivada                                          
+     5  -  Alterar Drive e Diretorio  C:\                                       
+                                                                                
+     Escolha o tipo de secao  *FIM*                                             
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

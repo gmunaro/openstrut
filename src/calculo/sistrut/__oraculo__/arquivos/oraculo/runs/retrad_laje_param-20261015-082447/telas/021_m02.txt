@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Definicao dos Materiais e unidades de trabalho                                 
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+                                                                                
+ Concreto Fck *.15* t/cm2 0.2                                                   
+ Aco      Fyk *5* t/cm2                                                         
+                                                                                
+  Unidade de grandeza para os valores caracteristicos do Concreto e Aco         
+  *t/cm2* 5                                                                     
+                                                                                
+  Multiplicador de (t/cm2) para transformar em Tonelada/Centimetro2             
+  *1*                                                                           
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

@@ -1,0 +1,40 @@
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 30 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  16 mm
+                   Jx = 45000 cm4
+                   Jy = 20000 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 20 t
+                   Mxk inicial = .8 tm           Myk inicial = 0 tm
+                   Lxe = 3 m                     Lye = 3 m
+                   Lambda x = 52                 Lambda y = 35 
+
+                   Situacao - Flexo Compressao             caso 1/2
+                     Mx = 0.80(i)+ 0.40(a)= 1.20 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= 1.2 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  1.41(1a)- 0.18(2a)= 1.23 tm
+                     My=  0.00(1a)= 0.00 tm
+                     Mtotal=  1.23tm
+                     ln= 270 graus   Xln= 12.70 cm   1/r= 0.09733 x 10-3
+                     Def con  1.2358 /oo     Def aco  0.4188 /oo
+                     ok
+                   Situacao - Flexo Compressao             caso 2/2
+                     Mx = 0.80(i)+ 0.00(a)= 0.80 (tm)
+                     My = 0.40(a)= 0.40 (tm)
+                     Mtotal= .89 tm   incl 27 graus
+                   Esforcos resistentes do Pilar

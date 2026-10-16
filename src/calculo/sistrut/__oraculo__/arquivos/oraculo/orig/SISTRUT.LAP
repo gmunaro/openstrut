@@ -1,0 +1,203 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*               OpenStrut                                
+*                       (omitido)                 
+*
+*           CALCULO E DETALHAMENTO DE LAJES EM REGIME DE RUPTURA
+*                           DESENHO DE LAJES
+*               VERSAO 4.0                   ABRIL 1991
+*                     **PARAMETRIZACAO INICIAL**
+*
+*
+*  Este arquivo, possui as parametrizacoes basicas para o modulo LAJE
+*  sendo que cada usuario, podera recopia-lo com outro nome (novo nome.LAP) e
+*  alterar as parametrizacoes da  maneira  mais  conveniente  atraves  de  um
+*  editor de textos .
+* 
+*  Na implantacao inicial, este arquivo se encontra no disco original do 
+*  programa LAJE  ou se implantado em Winchester, dentro do subdiretorio
+*  \SISTRUT\EXEC40
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*  REGRAS PARA ALTERACAO DO ARQUIVO TEXTO:
+*
+*  1) Mantenha o simbolo "*" afrente das linhas de comentarios
+*  2) Nunca alterar a ordem das entradas de dados
+*  3) Seguir instrucoes de preenchimento para cada Parametro
+*  4) Todos os comentarios poderao ser eliminados (NAO ACONSELHAVEL)
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*  PARAMETRIZACAO : SISTRUT
+*  CRIADA POR     : (omitido)           
+*  DATA           : 2 ABRIL 1991
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+PARAMETROS GLOBAIS
+1.5               COBRIMENTO DA ARMADURA - CM
+0.5               ACRESCIMO AO COBRIMENTO PARA O INICIO DA ALTURA UTIL - CM
+* * * * *
+*   PARA A PARAMETRIZACAO DAS BITOLAS E AREAS:
+*   1) Forneca area NULA para a nao consideracao da Bitola
+*   2) Lembre-se de que caso seja anulada uma determinada Bitola,
+*      nao utiliza-la nas Combinacoes que veremos afrente
+*   3) A ordem sequencial deve permanecer inalterada
+*   4) Teremos sempre 10 Bitolas - (ORDEM 0 a 9)
+* * * * *
+*   BITOLAS UTILIZADAS E AREAS
+ORDEM        BITOLA (MM)           AREA (CM2)        PESO (KG/M)
+  0  -         4   -                 0.00  -            0.10
+  1  -         5   -                 0.20  -            0.16
+  2  -         6.3 -                 0.315 -            0.25
+  3  -         8   -                 0.5   -            0.40
+  4  -        10   -                 0.8   -            0.63
+  5  -        12.5 -                 1.25  -            1.0
+  6  -        16   -                 2.0   -            1.6
+  7  -        20   -                 3.15  -            2.5
+  8  -        22.2 -                 3.88  -            3.05
+  9  -        25   -                 5.0   -            4.0
+* * * * *
+*   PARAMETRIZACAO DAS OPCOES PARA PREDIMENSIONAMENTO DA ALTURA DA LAJE
+*
+*   ATENCAO !
+*   Nas rotinas referentes ao Calculos das Alturas Minimas que as  Lajes
+*   necessitam ter, varias verificacoes serao realizadas.
+*   Inicialmente sera adotada uma Altura total para a Laje,  dentro  dos 
+*   Limites de Hmaximo e Hminimo configurados abaixo.
+*   Uma segunda limitacao para a Altura da Laje, sera o fato de  que  os
+*   Esforcos atuantes na Laje deverao ser absorvidos pela mesma  somente
+*   com a utilizacao de Armadura simples fazendo assim, com que a maxima
+*   profundidade da Linha Neutra da Secao mais critica fique dentro  dos
+*   DOMINIOS 1, 2 ou 3 estipulados pela Norma Brasileira.
+*   Caso seja de interesse do usuario  uma  limitacao  maior,  poderemos
+*   alterar a PORCENTAGEM UTILIZADA DA LINHA NEUTRA, fazendo com  que  a
+*   maxima Linha Neutra que venha a ocorrer,  seja  uma  porcentagem  da
+*   Maxima Linha Neutra possivel para armadura  simples  que  ocorre  no
+*   limite do Dominio 3 para o Dominio 4 .
+*   Por ultimo, sera verificada a deformacao da Laje e, esta  deformacao
+*   sera comparada com os maximos limites  configurados  em  relacao  ao
+*   menor vao nas direcoes principais  (Lmenor/Flexa) .
+* * * * *
+PARAMETROS
+6                 MINIMA ALTURA TOTAL DA LAJE - CM 
+40                MAXIMA ALTURA TOTAL DA LAJE - CM
+100               PORCENTAGEM UTILIZADA DA LINHA NEUTRA - %  
+300               MINIMA RELACAO PARA FLEXA COM CARGA TOTAL - Lmenor/Flexa
+500               MINIMA RELACAO PARA FLEXA COM CARGA ACIDENTAL - Lmenor/Flexa
+S                 CALCULO DA FLEXA COM DEFORMACAO LENTA (NB1 4.2.3.1.B)
+0.9               MULT. DE Ec(NB1 8.2.5)CALCULO DEFORMACAO OU E250 FIXO EM t/c2
+2.50              DENSIDADE DO CONCRETO PARA O CALCULO DO PESO PROPRIO (t/m3)
+* * * * *
+*     PARAMETRIZACAO ENTRE A RELACAO DOS ESFORCOS POSITIVOS
+*
+*     Em funcao das dimensoes da Laje, e possivel predeterminar uma relacao
+*     ideal entre os Esforcos Atuantes em direcoes Ortogonais.
+*     Estes valores iniciais poderao ser alterados durante o calculo.
+*     Seguem abaixo as relacoes ideais dos Esforcos em funcao das relacoes
+*     entre vaos maiores para a direcao principal da Armadura .
+*     (MAXIMO DE 20 RELACOES)
+*
+*         RELACO ENTRE VAO MAIOR            RELACAO ENTRE ESFORCOS
+* * * * *
+PARAMETROS
+                 0.25              ,                  0.40
+                 0.30              ,                  0.50
+                 0.33              ,                  0.55
+                 0.40              ,                  0.60
+                 0.50              ,                  0.70
+                 0.67              ,                  0.80
+                 0.83              ,                  0.90
+                 1.00              ,                  1.00
+                 1.20              ,                  1.10
+                 1.50              ,                  1.20 
+                 2.00              ,                  1.40
+                 2.50              ,                  1.60
+                 3.00              ,                  1.80
+                 3.50              ,                  2.00
+                 4.00              ,                  2.50
+FIM
+* * * * *
+*   PARAMETRIZACAO DAS RELACOES ENTRE MOMENTOS NEGATIVOS E POSITIVOS
+*
+*   O calculo de Lajes atraves do Processo de Ruptura, permite que os momentos
+*   Negativos atuantes na Laje, sejam relacionados com os  momentos  positivos
+*   atraves de um coeficiente adimencional (Mneg/Mpos) .
+*   A correta utilizacao destes coeficientes faz com que as  lajes  adjacentes
+*   consideradas continuas com relacao aos esforcos negativos, tenham o  valor 
+*   dos momentos atuantes neste ponto iguais e equilibrados.
+*   Nas consideracoes de continuidade dadas pelo programa, serao  inicialmente
+*   considerados os lados  adjacentes  engastados  com  o  MAXIMO  coeficiente
+*   configurado abaixo.
+*
+*   Para as Lajes com cantos reentrantes,  aparecera  neste  canto  reentrante
+*   momento negativo oriundo desta geometria, sem que haja  a  necessidade  da
+*   Laje estar considerada engastada em algum dos lados deste canto.
+*   Da  mesma  forma  que  anteriormente  dito,  este  momento  negativo  sera
+*   relacionado com o momento positivo atraves de um coeficiente adimencional.
+*   Para este coeficiente fixo, nao se adotara valores maiores que 1.
+* * * * *
+PARAMETROS
+2.00              MAXIMA RELACAO PERMITIDA PARA Mneg/Mpos QUANDO ENGASTADO
+0.30              MINIMA RELACAO PERMITIDA PARA Mneg/Mpos QUANDO ENGASTADO
+1.00              RELACAO FIXA ENTRE Mneg/Mpos PARA CANTOS REENTRANTES (<=1)
+* * * * *
+*   PARAMETRIZACAO DAS ARMADURAS MINIMAS
+*
+*   Serao configuradas duas Taxas minimas de Armadura.
+*   Uma para a Armadura positiva e outra para Armadura negativa .
+*   As Armaduras minimas serao calculadas por metro de Secao.
+*
+*   Para a escolha das armaduras negativas na Laje,  poderemos  configurar
+*   uma EFICIENCIA para o As calculado.   Desta forma a Armadura calculada
+*   sera majorada de maneira a parte EFICIENTE da  nova  Armadura  obtida, 
+*   seja igual a armadura calculada.
+* * * * *
+0.15              MINIMA PORCENTAGEM DE ARMADURA PARA OS ESFORCOS POSITIVOS
+0.10              MINIMA PORCENTAGEM DE ARMADURA PARA OS ESFORCOS NEGATIVOS
+100               EM PORCENTAGEM  A EFICIENCIA DA ARMADURA NEGATIVA
+* * * * *
+*   PARAMETRIZACAO DOS ESPACAMENTOS ENTRE BARRAS LONGITUDINAIS
+*
+*   Sera configurado um unico espacamento maximo para todas as Bitolas.
+* * * * *
+20                ESPACAMENTO MAXIMO ENTRE BARRAS LONGITUDINAIS
+S                 COMPARA O ESPACAMENTO MAXIMO COM  2*Htotal - S/N
+* * * * *
+*   Sera configurado um espacamento minimo em funcao da altura total da Laje.
+*
+*   Na Coluna ESPACAMENTO MINIMO, complete com os quatro primeiros espacamentos
+*   a serem utilizados (vide proxima parametrizacao).
+*   Altere somente a Coluna do Htotal da Laje. 
+*
+*       Htotal da Laje ATE      ESPACAMENTO MINIMO 
+* * * * *
+PARAMETROS
+            10.0          ,           7.5            
+            22.0          ,          10.0            
+            30.0          ,          12.5            
+            40.0          ,          15.0            
+* * * * *
+*     PARAMETRIZACAO DOS ESPACAMENTOS A SEREM UTILIZADOS
+*
+*     O maior espacamento de sempre coincidir com o ESPACAMENTO MAXIMO
+*     configurado acima.
+* * * * *
+7.5/ 10/ 12.5/ 15/ 17.5/ 20/
+* * * * *
+*     No dimensionamento das Armaduras, apos o calculo da Area de  ferro
+*     necessaria, sera adotado  BITOLA  preferencial em funcao da altura
+*     total da Laje.
+*     No caso de existir espacamento para esta  BITOLA   que  atenda  as
+*     parametrizacoes acima e a armadura necessaria, esta sera a  bitola
+*     escolhida. Em caso contrario serao pesquisadas Bitolas de diametro
+*     maior que a preferencial  (TEREMOS SEMPRE DA ORDEM 0 A ORDEM 5) .
+*
+*       Htotal da Laje ATE           BITOLA preferencial      ORDEM 
+*
+* * * * *
+PARAMETROS
+               5.0           ,             4.0            ,     0
+               5.5           ,             5.0            ,     1
+              14.0           ,             6.3            ,     2
+              25.0           ,             8.0            ,     3
+              32.0           ,            10.0            ,     4
+              40.0           ,            12.5            ,     5
+* * * * *
+
+FINAL DA PARAMETRIZACAO
+* * * * * * * * * * * *

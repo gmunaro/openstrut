@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Correcao de Parametros                                                         
+════════════════════════════════════════════════════════════════════════════════
+                                                                                
+                                                                                
+ Limite da posicao da Linha Neutra                                              
+ (1) x/d(lim)= .45                                                              
+ Taxa de Armadura Longitudinal                                                  
+ (2) @1= .02                                                                    
+                                                                                
+ Coeficientes de Seguranca                                                      
+ (3) Forcas = 1.5                                                               
+ (4) Concreto = 1.6                                                             
+ (5) Aco = 1.2                                                                  
+                                                                                
+ Unidades de trabalho dos esforcos solicitantes                                 
+ (6) Unidade de Forca = kN                                                      
+ (7) Coef. multiplicador para transformar em toneladas = .1                     
+ (8) Unidade de Medida = cm                                                     
+ (9) Coef. multiplicador para transformar em metros = .01                       
+                                                                                
+ item , Novo Valor  *NAO*                                                       
+                                                                                
+                                                                                
+                                                                                

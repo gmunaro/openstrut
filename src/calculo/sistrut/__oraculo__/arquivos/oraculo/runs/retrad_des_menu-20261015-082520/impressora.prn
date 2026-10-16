@@ -1,0 +1,26 @@
+0N
+         Obra - E2E    Viga - V1        REGISTRO  1 
+
+         TRAMO   Bw   Hw   Bf   Hf     APOIO   Bw   Hw
+           1     20   50    0    0       1     20   50
+           2     20   50    0    0
+
+        Apoio  Tipo  Titulo    LPi  LPs  Dis - LVi  DFs  Hv - LOi  LOs
+           0    P    P1        20    20   0                             
+           1    P    P2        20    20   0                             
+           2    P    P3        20    20   0                             
+        Tramo  Vao Livre  Alinhamento  Eixo   pe    Hle   pd    Hld
+           1     380        0           10    0      0    0      0 
+           2     380        0           10    0      0    0      0 
+0N
+   OBRA - E2E                          10-14-2026          12:00:00
+   Viga      rept 4    5   6.3   8   10   12.5  16   20   25   32   Vconc  Afor
+                   (bitolas em Milimetros - Comprimentos em Metros)  m3     m2
+  ____________________________________________________________________________
+
+  1)V1         1  0    84   12   0    26   0    0    0    0    0    .8    9.1 
+  ____________________________________________________________________________
+
+   TOTAIS         0    84   12   0    26   0    0    0    0    0    .8   9.1
+
+   PESOS TOTAIS   0    14   3    0    16   0    0    0    0    0

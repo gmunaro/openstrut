@@ -1,0 +1,88 @@
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 40 cm    c'= 3 cm
+                   Barras na borda superior= 3 
+                   Barras na borda inferior= 3 
+                   Barras nas bordas laterais = 1 
+                   Posicao da primeira barra = 20 cm
+                   Posicao da  ultima  barra = 20 cm
+                   Bitola  16 mm
+                   Jx = 106666.7 cm4
+                   Jy = 26666.66 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 40 t
+                   Mxk inicial = 2 tm            Myk inicial = 0 tm
+                   Lxe = 4 m                     Lye = 6 m
+                   Lambda x = 69                 Lambda y = 52 
+
+                   Situacao - Flexo Compressao             caso 1/2
+                     Mx = 2.00(i)+ 0.80(a)= 2.80 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= 2.8 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                        SITUACAO DE INSTABILIDADE
+                        M(1a) 3.11 - M(2a) 1.72 < M(Atuante) 2.79
+                   Situacao - Flexo Compressao             caso 2/2
+                     Mx = 2.00(i)+ 0.00(a)= 2.00 (tm)
+                     My = 0.80(a)= 0.80 (tm)
+                     Mtotal= 2.15 tm   incl 22 graus
+                   Esforcos resistentes do Pilar
+                        SITUACAO DE INSTABILIDADE
+                        M(1a) 2.95 - M(2a) 1.63 < M(Atuante) 2.15
+0O
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 40 cm    c'= 3 cm
+                   Barras na borda superior= 3 
+                   Barras na borda inferior= 3 
+                   Barras nas bordas laterais = 1 
+                   Posicao da primeira barra = 20 cm
+                   Posicao da  ultima  barra = 20 cm
+                   Bitola  16 mm
+                   Jx = 106666.7 cm4
+                   Jy = 26666.66 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 25 t
+                   Mxk inicial = 0 tm            Myk inicial = 0 tm
+                   Lxe = 8 m                     Lye = 8 m
+                   Lambda x = 139                Lambda y = 69 
+
+                   Situacao - Compressao Centrada          caso 1/2
+                     Mx = 0.50(a)= 0.50 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= .5 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                        SITUACAO DE INSTABILIDADE
+                        M(1a) 3.49 - M(2a) 5.27 < M(Atuante) .5
+                   Situacao - Compressao Centrada          caso 2/2
+                     Mx = 0.00(a)= 0.00 (tm)
+                     My = 0.50(a)= 0.50 (tm)
+                     Mtotal= .5 tm   incl 90 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.00(1a)- 0.00(2a)= 0.00 tm
+                     My=  3.62(1a)- 0.56(2a)= 3.07 tm
+                     Mtotal=  3.07tm
+                     ln= 0 graus   Xln= 26.62 cm   1/r= 0.03446 x 10-3
+                     Def con  0.9173 /oo     Def aco  0.3578 /oo
+                     ok
+0O

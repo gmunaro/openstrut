@@ -1,0 +1,137 @@
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 20 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  12.5 mm
+                   Jx = 13333.33 cm4
+                   Jy = 13333.34 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 17.37 t
+                   Mxk inicial = 0 tm            Myk inicial = 0 tm
+                   Lxe = 5 m                     Lye = 5 m
+                   Lambda x = 87                 Lambda y = 87 
+
+                   Situacao - Compressao Centrada          caso 1/2
+                     Mx = 0.35(a)= 0.35 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= .35 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.60(1a)- 0.24(2a)= 0.35 tm
+                     My=  0.00(1a)= 0.00 tm
+                     Mtotal=  0.35tm
+                     ln= 270 graus   Xln= 17.96 cm   1/r= 0.05550 x 10-3
+                     Def con  0.9966 /oo     Def aco -0.0531 /oo
+                     ok
+                   Situacao - Compressao Centrada          caso 2/2
+                     Mx = 0.00(a)= 0.00 (tm)
+                     My = 0.35(a)= 0.35 (tm)
+                     Mtotal= .35 tm   incl 90 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.00(1a)- 0.00(2a)= 0.00 tm
+                     My=  0.60(1a)- 0.24(2a)= 0.35 tm
+                     Mtotal=  0.35tm
+                     ln= 0 graus   Xln= 17.96 cm   1/r= 0.05550 x 10-3
+                     Def con  0.9966 /oo     Def aco -0.0531 /oo
+                     ok
+0O
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 20 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  12.5 mm
+                   Jx = 13333.33 cm4
+                   Jy = 13333.34 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 17.37 t
+                   Mxk inicial = 0 tm            Myk inicial = 0 tm
+                   Lxe = 6 m                     Lye = 3 m
+                   Lambda x = 104                Lambda y = 52 
+
+                   Situacao - Compressao Centrada          caso 1/2
+                     Mx = 0.35(a)= 0.35 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= .35 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                        SITUACAO DE INSTABILIDADE
+                        M(1a) 1.38 - M(2a) 1.65 < M(Atuante) .34
+                   Situacao - Compressao Centrada          caso 2/2
+                     Mx = 0.00(a)= 0.00 (tm)
+                     My = 0.35(a)= 0.35 (tm)
+                     Mtotal= .35 tm   incl 90 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.00(1a)- 0.00(2a)= 0.00 tm
+                     My=  1.30(1a)- 0.32(2a)= 0.98 tm
+                     Mtotal=  0.98tm
+                     ln= 0 graus   Xln= 13.23 cm   1/r= 0.20241 x 10-3
+                     Def con  2.6769 /oo     Def aco  0.7641 /oo
+                     ok
+0O
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 20 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  12.5 mm
+                   Jx = 13333.33 cm4
+                   Jy = 13333.34 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 12 t
+                   Mxk inicial = .2 tm           Myk inicial = 0 tm
+                   Lxe = 4.8 m                   Lye = 4.8 m
+                   Lambda x = 83                 Lambda y = 83 
+
+                   Situacao - Flexo Compressao             caso 1/2
+                     Mx = 0.20(i)+ 0.24(a)= 0.44 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= .44 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.71(1a)- 0.19(2a)= 0.52 tm
+                     My=  0.00(1a)= 0.00 tm
+                     Mtotal=  0.52tm
+                     ln= 270 graus   Xln= 13.65 cm   1/r= 0.06796 x 10-3
+                     Def con  0.9273 /oo     Def aco  0.2280 /oo
+                     ok
+                   Situacao - Flexo Compressao             caso 2/2
+                     Mx = 0.20(i)+ 0.00(a)= 0.20 (tm)
+                     My = 0.24(a)= 0.24 (tm)
+                     Mtotal= .31 tm   incl 50 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  0.35(1a)- 0.08(2a)= 0.27 tm
+                     My=  0.45(1a)- 0.10(2a)= 0.34 tm
+                     Mtotal=  0.44tm
+                     ln= 319.9 graus   Xln= 19.36 cm   1/r= 0.04677 x 10-3
+                     Def con  0.9052 /oo     Def aco  0.2150 /oo
+                     ok
+0O

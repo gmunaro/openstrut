@@ -1,0 +1,25 @@
+           OBRA - E2E             VIGA - V1                     REGISTRO 1      
+            Concreto Fck  .15  t/cm2  Aco B Fyk  5  t/cm2                       
+            Cobrimento  2  cm                                                   
+                                                                                
+            APOIO  Bw   Hw    x/d    Mk      Ast     Asc                        
+                  (cm) (cm)         (tm)    (cm2)   (cm2)                       
+           ...............................................                      
+              1    20   50  0.045    0.97     1.50    0.00                      
+                                              2#10    -                         
+                                                                                
+                                                                                
+ TRAMO Bw  Hw  Bf  Hf   x/d     Mk    Ast    Asc     Vke   Aee     Vkd   Aed    
+            (cm)    flecha(cm) (tm)  (cm2)  (cm2)    (t) (cm2/m)   (t) (cm2/m)  
+ ............................................................................   
+   1   20  50   0  0  0.025    0.55   1.50   0.00   0.61   2.80   1.09   2.80   
+                        .01           2#10   -            #5/12         #5/12   
+   2   20  50   0  0  0.025    0.55   1.50   0.00   1.09   2.80   0.61   2.80   
+                        .01           2#10   -            #5/12         #5/12   
+ Altero a Armacao N/*S*                                                         
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

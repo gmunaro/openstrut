@@ -1,0 +1,25 @@
+████████████████████████████████████████████████████████████████████████████████
+   DETALHAMENTO E DESENHO DE VIGAS CONTINUAS                                    
+   OpenStrut                                                                    
+   Abril 1991   (omitido)                                                       
+   Versao 4.0   (omitido)                                                       
+████████████████████████████████████████████████████████████████████████████████
+   OBRA - E2E                                                                   
+   Viga      rept 4    5   6.3   8   10   12.5  16   20   25   32   Vconc  Afor 
+                   (bitolas em Milimetros - Comprimentos em Metros)  m3     m2  
+                                                                                
+  1)V1         1  0    84   12   0    26   0    0    0    0    0    .8    9.1   
+  ____________________________________________________________________________  
+   TOTAIS         0    84   12   0    26   0    0    0    0    0    .8   9.1    
+   PESOS TOTAIS   0    14   3    0    16   0    0    0    0    0                
+                                                                                
+ Qualquer Tecla para Continuar                                                  
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                

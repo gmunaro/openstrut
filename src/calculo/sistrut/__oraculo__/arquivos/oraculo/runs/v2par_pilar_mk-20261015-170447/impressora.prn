@@ -1,0 +1,133 @@
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 30 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  16 mm
+                   Jx = 45000 cm4
+                   Jy = 20000 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 30 t
+                   Mxk inicial = 1.5 tm          Myk inicial = 0 tm
+                   Lxe = 3 m                     Lye = 3 m
+                   Lambda x = 52                 Lambda y = 35 
+
+                   Situacao - Flexo Compressao             caso 1/2
+                     Mx = 1.50(i)+ 0.60(a)= 2.10 (tm)
+                     My = 0.00(a)= 0.00 (tm)
+                     Mtotal= 2.1 tm   incl 0 graus
+                   Esforcos resistentes do Pilar
+                        SITUACAO DE INSTABILIDADE
+                        M(1a) 2 - M(2a) .66 < M(Atuante) 2.09
+                   Situacao - Flexo Compressao             caso 2/2
+                     Mx = 1.50(i)+ 0.00(a)= 1.50 (tm)
+                     My = 0.60(a)= 0.60 (tm)
+                     Mtotal= 1.62 tm   incl 22 graus
+                   Esforcos resistentes do Pilar
+                        SITUACAO DE INSTABILIDADE
+                        M(1a) 1.86 - M(2a) .59 < M(Atuante) 1.62
+0O
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 30 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  16 mm
+                   Jx = 45000 cm4
+                   Jy = 20000 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 30 t
+                   Mxk inicial = .5 tm           Myk inicial = .3 tm
+                   Lxe = 3 m                     Lye = 3 m
+                   Lambda x = 52                 Lambda y = 35 
+
+                   Situacao - Flexao Obliqua               caso 1/2
+                     Mx = 0.50(i)+ 0.60(a)= 1.10 (tm)
+                     My = 0.30(i)+ 0.00(a)= 0.30 (tm)
+                     Mtotal= 1.14 tm   incl 15 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  1.85(1a)- 0.61(2a)= 1.25 tm
+                     My=  0.20(1a)= 0.20 tm
+                     Mtotal=  1.26tm
+                     ln= 273.1 graus   Xln= 15.73 cm   1/r= 0.22254 x 10-3
+                     Def con  3.5000 /oo     Def aco  0.6073 /oo
+                     NAO
+                   Situacao - Flexao Obliqua               caso 2/2
+                     Mx = 0.50(i)+ 0.00(a)= 0.50 (tm)
+                     My = 0.30(i)+ 0.60(a)= 0.90 (tm)
+                     Mtotal= 1.03 tm   incl 61 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  1.15(1a)- 0.20(2a)= 0.95 tm
+                     My=  0.93(1a)= 0.93 tm
+                     Mtotal=  1.33tm
+                     ln= 289.7 graus   Xln= 21.66 cm   1/r= 0.07673 x 10-3
+                     Def con  1.6617 /oo     Def aco  0.2643 /oo
+                     ok
+0O
+
+0
+N
+              ------------------------------------------------------------
+               Verificacao de Pilares segundo a Norma Brasileira - NB1/78
+              ------------------------------------------------------------
+                   (omitido)               
+                   Concreto Fck  .15 t/cm2
+                   Aco      Fyk  5 t/cm2 do Tipo B
+
+                   Secao Retangular
+                   B= 20 cm    H= 30 cm    c'= 3 cm
+                   Barras na borda superior= 2 
+                   Barras na borda inferior= 2 
+                   Bitola  16 mm
+                   Jx = 45000 cm4
+                   Jy = 20000 cm4
+                   Fluencia = 0 
+2N
+                   Nk= 20 t
+                   Mxk inicial = .6 tm           Myk inicial = .4 tm
+                   Lxe = 3 m                     Lye = 3 m
+                   Lambda x = 52                 Lambda y = 35 
+
+                   Situacao - Flexao Obliqua               caso 1/2
+                     Mx = 0.60(i)+ 0.40(a)= 1.00 (tm)
+                     My = 0.40(i)+ 0.00(a)= 0.40 (tm)
+                     Mtotal= 1.08 tm   incl 22 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  1.72(1a)- 0.26(2a)= 1.47 tm
+                     My=  0.45(1a)= 0.45 tm
+                     Mtotal=  1.54tm
+                     ln= 276.8 graus   Xln= 13.61 cm   1/r= 0.14082 x 10-3
+                     Def con  1.9160 /oo     Def aco  0.9117 /oo
+                     ok
+                   Situacao - Flexao Obliqua               caso 2/2
+                     Mx = 0.60(i)+ 0.00(a)= 0.60 (tm)
+                     My = 0.40(i)+ 0.40(a)= 0.80 (tm)
+                     Mtotal= 1 tm   incl 53 graus
+                   Esforcos resistentes do Pilar
+                     Mx=  1.04(1a)- 0.11(2a)= 0.93 tm
+                     My=  0.94(1a)= 0.94 tm
+                     Mtotal=  1.32tm
+                     ln= 292.9 graus   Xln= 19.36 cm   1/r= 0.06498 x 10-3
+                     Def con  1.2578 /oo     Def aco  0.4425 /oo
+                     ok
+0O

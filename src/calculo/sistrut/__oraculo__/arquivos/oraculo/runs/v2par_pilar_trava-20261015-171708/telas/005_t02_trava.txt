@@ -1,0 +1,25 @@
+════════════════════════════════════════════════════════════════════════════════
+ Verificacao de Pilares segundo a Norma Brasileira - NB1/78                     
+════════════════════════════════════════════════════════════════════════════════
+ ┌───────────────────────────────────────────────────────────────────────┐      
+ │ Forca Normal Nk(t) *FIM* 20                                           │█     
+ │ Momento inicial Mxk(tm) *0* 0.8     Momento inicial Myk(tm) *0* 0     │█     
+ │ Compr. flambagem Lxe(m) 3           Compr. flambagem Lye(m) 3         │█     
+ │         Lambda x = 52                      Lambda y = 35              │█     
+ │                                                                       │█     
+ │ Situacao - Flexo Compressao         caso 2/2                          │█     
+ │  Mx= 0.80(i)+ 0.00(a)=  0.80 tm                         1) ok         │█     
+ │  My= 0.40(a)=  0.40 tm                                                │█     
+ │  Mtotal= .89 tm   incl 27 graus                                       │█     
+ │                                                                       │█     
+ │ Esforcos resistentes do Pilar                                         │█     
+ │ Aguarde ...                                                           │█     
+ │                                                                       │█     
+ │                                                                       │█     
+ │                                                                       │█     
+ │                                                          segue ..     │█     
+ │                                                                       │█     
+ │ Csf= 1.4   Csc= 1.4   Csa= 1.15               Fluencia= 0             │█     
+ └───────────────────────────────────────────────────────────────────────┘█     
+   ████████████████████████████████████████████████████████████████████████     
+                                                                                

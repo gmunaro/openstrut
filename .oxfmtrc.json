@@ -1,1 +1,3 @@
-{ "ignorePatterns": ["src/routeTree.gen.ts"] }
+{
+  "ignorePatterns": ["src/routeTree.gen.ts", "src/calculo/sistrut/__oraculo__/arquivos/**"]
+}

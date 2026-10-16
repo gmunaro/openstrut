@@ -1,0 +1,21 @@
+SISTRUT Software e Tecnologia s/c Ltda
+Versao 4.0    Abril 1990
+
+ SOMATORIA DE REACOES EM PILARES
+ OBRA VBX
+ GERADO EM 10-14-2026   12:00
+ REGISTROS 1 A 5
+ Cargas Totais  Reacoes Estaticas
+
+P   4        -0.01
+*-1.67 (V1) + 1.66 (V3) + 
+>-.68@1 [4]  (V1) > -1.39@1 [5]  (V3) > 
+P   3        12.31
+*7.46 (V1) + 4.85 (V4) + 
+>-4.04@1 [5]  (V4) > 
+P   1        -0.01
+*-1.67 (V2) + 1.66 (V3) + 
+>-.68@1 [4]  (V2) > -1.39@1 [5]  (V3) > 
+P   2        12.31
+*7.46 (V2) + 4.85 (V4) + 
+>-4.04@1 [5]  (V4) > 
