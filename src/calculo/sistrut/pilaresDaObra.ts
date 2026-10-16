@@ -45,8 +45,8 @@ const mensagem = (e: unknown) => (e instanceof Error ? e.message : String(e));
 // ---------------------------------------------------------------- parâmetros
 
 /** PILAR.INI e .PIP com os campos editados na obra. A densidade da obra vem em
- *  kN/m³; os materiais do PILAR.INI (fck, fyk, classe, γ) vão para
- *  `materiaisPilar`, não para a tabela. */
+ *  kN/m³; fck e fyk do PILAR.INI, em MPa, vão à tabela em t/cm², como em
+ *  `materiaisPilar` (quem os usa no cálculo são os materiais, não a tabela). */
 export function parametrosPilarDaObra(
   base: { pilar: ParametrosPilar; pip: ParametrosPip },
   obra: ParametrosPilarObra | undefined,
@@ -59,9 +59,20 @@ export function parametrosPilarDaObra(
         ...(obra.pip.densidade === undefined ? {} : { densidade: obra.pip.densidade / KN_POR_TF }),
       })
     : {};
-  const ini = obra?.ini ? conv(obra.ini) : {};
+  const ini = obra?.ini
+    ? conv({
+        ...obra.ini,
+        ...(obra.ini.fck === undefined ? {} : { fck: tcm2(obra.ini.fck, modo) }),
+        ...(obra.ini.fyk === undefined ? {} : { fyk: tcm2(obra.ini.fyk, modo) }),
+      })
+    : {};
   return { pilar: { ...base.pilar, ...ini }, pip: { ...base.pip, ...pip } };
 }
+
+/** MPa → t/cm²: MPa/100 no original (a convenção de `materiais.fck`), exato no
+ *  corrigido. */
+const tcm2 = (mpa: number, modo: ModoSistrut) =>
+  modo === "original" ? sng(mpa / 100) : mpaParaTcm2(mpa);
 
 /** Materiais dos pilares: os da obra, com fck, fyk, classe e γ do PILAR.INI por cima
  *  (no original o PILAREDI tem os seus, item 1 do menu; fck e fyk em MPa/100). */
@@ -73,10 +84,9 @@ export function materiaisPilar(
   const ini = obra?.ini;
   if (!ini) return mat;
   const s = atribuicao(modo);
-  const tcm2 = (mpa: number) => (modo === "original" ? sng(mpa / 100) : mpaParaTcm2(mpa));
   return {
-    fck: ini.fck === undefined ? mat.fck : tcm2(ini.fck),
-    fyk: ini.fyk === undefined ? mat.fyk : tcm2(ini.fyk),
+    fck: ini.fck === undefined ? mat.fck : tcm2(ini.fck, modo),
+    fyk: ini.fyk === undefined ? mat.fyk : tcm2(ini.fyk, modo),
     classeAco: ini.classeAco ?? mat.classeAco,
     gamaF: ini.gamaF === undefined ? mat.gamaF : s(ini.gamaF),
     gamaC: ini.gamaC === undefined ? mat.gamaC : s(ini.gamaC),

@@ -592,6 +592,7 @@ describe("obra.parametrosPilar: PILAR.INI e .PIP da obra por cima dos de fábric
     const r = calcularObraSistrut(o, { modo: "original" });
     expect(r.parametros.pilar.maximoBarras).toBe(60);
     expect(r.materiaisPilar.fck).toBe(Math.fround(0.2));
+    expect(r.parametros.pilar.fck).toBe(Math.fround(0.2));
     expect(r.materiaisPilar.classeAco).toBe("A");
     expect(r.materiais.fck).toBe(Math.fround(0.15));
   });
