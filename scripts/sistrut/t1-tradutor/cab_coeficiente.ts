@@ -16,8 +16,8 @@ import type {
   ParametrosLaje,
   PreparaLaje,
 } from "../base/tipos";
-import { qbCint, qbClng, qbFix, qbInt } from "../base/f32";
-import { EstadoLajecalc, S_2018c, carregaPadrao, pot } from "./charneiras";
+import { ErroQB, qbCint, qbClng, qbFix, qbInt } from "../base/f32";
+import { EstadoLajecalc, S_2018c, carregaPadrao } from "./charneiras";
 
 /** Área da laje como o LAJEGEOM a grava em A_10cc(i, 2): Σ (x_k + x_k+1)(y_k − y_k+1)/2
  *  acumulada em SINGLE (LAJEGEOM.BAS:3107-3115). Positiva no sentido horário. */

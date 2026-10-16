@@ -9,7 +9,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ErroQB } from "./f32";
 import {
+  comparaX,
+  divX,
   estendido,
+  mulX,
+  potencia,
+  raiz,
   f2xm1,
   fyl2x,
   type Num,
@@ -223,5 +228,32 @@ describe("conversões", () => {
     expect(Object.is(paraNumero(estendido(-0), "single"), -0)).toBe(true);
     expect(paraNumero(estendido(1e300), "single")).toBe(Infinity); // CSNG(1E300) = 1.#INF
     expect(paraNumero(estendido(2 ** -150), "single")).toBe(0); // empate abaixo do menor subnormal
+  });
+});
+
+describe("helpers dos portes", () => {
+  it("potencia e raiz: x87 no original (DOUBLE ou SINGLE), float64 no corrigido", () => {
+    const x = Math.fround(4.7137);
+    expect(potencia("original")(x, 2)).toBe(potenciaQB(x, 2, "double"));
+    expect(potencia("original", "single")(x, 2)).toBe(potenciaQB(x, 2, "single"));
+    expect(potencia("corrigido")(x, 2)).toBe(x ** 2);
+    expect(raiz("original")(2)).toBe(Math.SQRT2);
+    expect(raiz("original", "single")(2)).toBe(Math.fround(Math.SQRT2));
+    expect(Number.isNaN(raiz("original")(-1))).toBe(true);
+    expect(raiz("corrigido")).toBe(Math.sqrt);
+    // B$POW de 100^2 por logaritmo (pilares/carga.ts): o DOUBLE ainda é 10000
+    expect(potencia("original")(100, 2)).toBe(10000);
+  });
+
+  it("mulX, divX e comparaX seguem o x87 (64 bits, ao par; 1/0 = infinito)", () => {
+    const e = estendido;
+    // 1/3 em estendido vezes 3 arredonda de volta a 1 (ao par, 64 bits)
+    const terco = divX(e(1), e(3));
+    expect(paraNumero(mulX(terco, e(3)), "double")).toBe(1);
+    expect(comparaX(mulX(terco, e(3)), e(1))).toBe(0);
+    expect(comparaX(terco, e(1 / 3))).toBe(1); // o estendido tem mais bits que o double
+    expect(paraNumero(divX(e(1), e(0)), "double")).toBe(Infinity);
+    expect(Number.isNaN(paraNumero(divX(e(0), e(0)), "double"))).toBe(true);
+    expect(Number.isNaN(comparaX({ tipo: "nan" }, e(1)))).toBe(true);
   });
 });

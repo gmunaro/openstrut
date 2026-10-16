@@ -12,7 +12,8 @@ import type {
   ParametrosLaje,
 } from "../base/tipos";
 import { ErroQB, atribuicao, qbCint, qbInt } from "../base/f32";
-import { EstadoLajecalc, S_23341, carregaPadrao, padraoDeCharneiras, pot } from "./charneiras";
+import { potencia, raiz } from "../base/x87";
+import { EstadoLajecalc, S_23341, carregaPadrao, padraoDeCharneiras } from "./charneiras";
 import { S_578ad, coeficienteDoEstado } from "./coeficiente";
 
 /** Direção e μ (GOSUB L_3744e, LAJECALC.BAS:4801-4971; livros_laje.md 1.4): maior
@@ -58,6 +59,7 @@ export const direcaoMu: DirecaoMu = (vertices, angulo, parametros, modo) => {
  *  ângulo 0 e μ < 1: bordo vertical 1, horizontal μ. */
 export function fatorDeDirecao(laje: LajeSistrut, k: number, modo: ModoSistrut) {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   const mu = s(laje.mu);
   if (mu === 1) return 1;
   const t = (s(laje.angulo) * Math.PI) / 180;
@@ -70,7 +72,7 @@ export function fatorDeDirecao(laje: LajeSistrut, k: number, modo: ModoSistrut) 
   });
   const a0 = gira(p0);
   const a1 = gira(p1);
-  const l = Math.sqrt(pot(a1.y - a0.y, 2) + pot(a1.x - a0.x, 2));
+  const l = raiz(modo)(pot(a1.y - a0.y, 2) + pot(a1.x - a0.x, 2));
   // V_16a8 = |dx|/L e V_16b0 = |dy|/L, trocados pelo SWAP (1a159)
   const a = Math.abs(a1.y - a0.y) / l;
   const b = Math.abs(a1.x - a0.x) / l;
@@ -135,6 +137,7 @@ export function momentosComCoeficiente(
   modo: ModoSistrut,
 ): MomentosDeLaje {
   const s = atribuicao(modo);
+  const pot = potencia(modo);
   // de8 = dec = 1 (fatores de unidade do padrão, LAJE.BAS:111-118)
   const dec = 1;
   const de8 = 1;
@@ -190,7 +193,7 @@ export const impoeEspessura: ImpoeEspessura = (laje, h, parametros, modo) => {
   if (laje.tipo !== 0 && laje.tipo !== 3) {
     return { laje, avisos: [`${laje.nome}: imposição de H só vale para lajes dos tipos 0 e 3`] };
   }
-  const pesoProprio = s((pot(1, 2) / (100 * 1)) * hS * s(parametros.densidade));
+  const pesoProprio = s((potencia(modo)(1, 2) / (100 * 1)) * hS * s(parametros.densidade));
   return { laje: { ...laje, h: hS, pesoProprio }, avisos: [] };
 };
 
@@ -502,7 +505,7 @@ export function L_3744e(g: EstadoLajecalc): void {
         // L_3813b
         L_BP34 = g.s(L_BP34 + 1.0); // 4902
         L_BP46.set(
-          g.s(Math.sqrt(pot(g.V_0ef4 - g.V_17e0, 2.0) + pot(g.V_0efc - g.V_17f0, 2.0))),
+          g.raizS(g.pot(g.V_0ef4 - g.V_17e0, 2.0) + g.pot(g.V_0efc - g.V_17f0, 2.0)),
           qbCint(L_BP34),
         ); // 4903
         pc = 13;

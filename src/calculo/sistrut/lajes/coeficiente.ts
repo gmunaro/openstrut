@@ -17,7 +17,7 @@ import type {
   PreparaLaje,
 } from "../base/tipos";
 import { ErroQB, qbCint, qbClng, qbFix, qbInt } from "../base/f32";
-import { EstadoLajecalc, S_2018c, carregaPadrao, pot } from "./charneiras";
+import { EstadoLajecalc, S_2018c, carregaPadrao } from "./charneiras";
 
 /** Área da laje como o LAJEGEOM a grava em A_10cc(i, 2): Σ (x_k + x_k+1)(y_k − y_k+1)/2
  *  acumulada em SINGLE (LAJEGEOM.BAS:3107-3115). Positiva no sentido horário. */
@@ -643,7 +643,7 @@ export function S_50187(g: EstadoLajecalc): void {
         // com "Division by zero" e o ON ERROR volta ao menu (LAJECALC.BAS:169-174)
         if (g.A_1210.get(qbCint(g.V_177c), 1) === 0)
           throw new ErroQB(11, "Division by zero: 1/SQR(μ) com μ 0 (LAJECALC.BAS:7239)");
-        L_BP52 = 1.0 / Math.sqrt(g.A_1210.get(qbCint(g.V_177c), 1)); // 7239
+        L_BP52 = 1.0 / g.raiz(g.A_1210.get(qbCint(g.V_177c), 1)); // 7239
         L_BPf4 = g.s(g.A_15b0.get(0)); // 7240
         g.V_0f10 = g.s(1.0); // 7241
         lim6 = g.s(L_BPf4);
@@ -702,7 +702,7 @@ export function S_50187(g: EstadoLajecalc): void {
         pc = 174;
         continue;
       case 174:
-        L_BP52 = 1.0 / Math.sqrt(1.0 / g.A_1210.get(qbCint(g.V_177c), 1)); // 7253
+        L_BP52 = 1.0 / g.raiz(1.0 / g.A_1210.get(qbCint(g.V_177c), 1)); // 7253
         L_BPfc = g.s(g.A_15b0.get(0)); // 7254
         g.V_0f10 = g.s(1.0); // 7255
         lim8 = g.s(L_BPfc);
@@ -1161,9 +1161,9 @@ export function S_50187(g: EstadoLajecalc): void {
       case 32:
         // L_51f55
         L_BP56 = g.s(
-          Math.sqrt(
-            pot(L_BPc6.get(qbCint(g.V_0f14)) - L_BPc6.get(qbCint(g.V_0f14 + 1.0)), 2.0) +
-              pot(L_BPd8.get(qbCint(g.V_0f14)) - L_BPd8.get(qbCint(g.V_0f14 + 1.0)), 2.0),
+          g.raiz(
+            g.pot(L_BPc6.get(qbCint(g.V_0f14)) - L_BPc6.get(qbCint(g.V_0f14 + 1.0)), 2.0) +
+              g.pot(L_BPd8.get(qbCint(g.V_0f14)) - L_BPd8.get(qbCint(g.V_0f14 + 1.0)), 2.0),
           ) *
             g.A_0fe6.get(qbCint(g.V_0f04), 4) *
             L_BP178 +
@@ -3676,7 +3676,7 @@ export function S_578ad(g: EstadoLajecalc): void {
           pc = 28;
           continue;
         } // 8378
-        g.L_BP1e = g.s((pot(L_BP46, 2.0) * L_BP36) / 2.0 + g.L_BP1e); // 8379
+        g.L_BP1e = g.s((g.pot(L_BP46, 2.0) * L_BP36) / 2.0 + g.L_BP1e); // 8379
         pc = 28;
         continue;
       case 28:
@@ -3685,7 +3685,7 @@ export function S_578ad(g: EstadoLajecalc): void {
           pc = 29;
           continue;
         } // 8381
-        g.L_BP1e = g.s((pot(L_BP4a, 2.0) * L_BP3a) / 2.0 + g.L_BP1e); // 8382
+        g.L_BP1e = g.s((g.pot(L_BP4a, 2.0) * L_BP3a) / 2.0 + g.L_BP1e); // 8382
         pc = 29;
         continue;
       case 29:
@@ -3738,7 +3738,9 @@ export function S_578ad(g: EstadoLajecalc): void {
         } // 8398
         g.L_BP26 = g.s(
           g.L_BP26 +
-            ((g.L_BP88.get(2) - g.L_BP88.get(1)) * pot(L_BP46, 2.0) * (1.0 - Math.sin(g.V_16a0))) /
+            ((g.L_BP88.get(2) - g.L_BP88.get(1)) *
+              g.pot(L_BP46, 2.0) *
+              (1.0 - Math.sin(g.V_16a0))) /
               (Math.sin(g.V_16a0) * 5.0 + 1.13999998569488525390625),
         ); // 8399
         pc = 34;
@@ -3747,9 +3749,9 @@ export function S_578ad(g: EstadoLajecalc): void {
         // L_59226
         g.L_BP32 = g.s(
           g.L_BP32 +
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(g.V_0f10)) - g.A_15b0.get(qbCint(g.V_1788)), 2.0) +
-                pot(g.A_15de.get(qbCint(g.V_0f10)) - g.A_15de.get(qbCint(g.V_1788)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(g.V_0f10)) - g.A_15b0.get(qbCint(g.V_1788)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(g.V_0f10)) - g.A_15de.get(qbCint(g.V_1788)), 2.0),
             ) *
               g.V_0ef4,
         ); // 8401
@@ -4564,9 +4566,9 @@ export function S_578ad(g: EstadoLajecalc): void {
         L_BP42 = g.s(
           L_BP42 +
             (g.V_0ef4 - g.L_BP88.get(1)) *
-              (pot(g.L_BP9a.get(1) - g.V_17f0, 2.0) +
+              (g.pot(g.L_BP9a.get(1) - g.V_17f0, 2.0) +
                 (g.L_BP9a.get(1) - g.V_0efc) * (g.L_BP9a.get(1) - g.V_17f0) +
-                pot(g.L_BP9a.get(1) - g.V_0efc, 2.0)),
+                g.pot(g.L_BP9a.get(1) - g.V_0efc, 2.0)),
         ); // 8655
         pc = 101;
         continue;
@@ -4649,7 +4651,7 @@ export function S_578ad(g: EstadoLajecalc): void {
         // L_5bf5a
         L_BP52 = g.s(
           L_BP52 +
-            ((pot(g.L_BP9a.get(1) - g.L_BP9a.get(qbCint(g.V_1778)), 3.0) / 6.0) *
+            ((g.pot(g.L_BP9a.get(1) - g.L_BP9a.get(qbCint(g.V_1778)), 3.0) / 6.0) *
               (1.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16a8)) *
               (2.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16a8))) /
               Math.tan(g.V_16a8),
@@ -4661,7 +4663,7 @@ export function S_578ad(g: EstadoLajecalc): void {
         g.V_16b0 = Math.atan((g.L_BP9a.get(1) - g.V_0efc) / (g.L_BP88.get(1) - g.V_0ef4)); // 8685
         L_BP52 = g.s(
           L_BP52 -
-            (pot(g.L_BP9a.get(1) - g.V_0efc, 3.0) *
+            (g.pot(g.L_BP9a.get(1) - g.V_0efc, 3.0) *
               (1.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16b0)) *
               (2.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16b0))) /
               (Math.tan(g.V_16b0) * 6.0),
@@ -4724,9 +4726,9 @@ export function S_578ad(g: EstadoLajecalc): void {
         L_BP42 = g.s(
           L_BP42 +
             (g.V_0ef4 - g.L_BP88.get(qbCint(g.V_0f04))) *
-              (pot(g.L_BP9a.get(1) - g.L_BP9a.get(qbCint(g.V_0f04)), 2.0) +
+              (g.pot(g.L_BP9a.get(1) - g.L_BP9a.get(qbCint(g.V_0f04)), 2.0) +
                 (g.L_BP9a.get(1) - g.L_BP9a.get(qbCint(g.V_0f04))) * (g.L_BP9a.get(1) - g.V_0efc) +
-                pot(g.L_BP9a.get(1) - g.V_0efc, 2.0)),
+                g.pot(g.L_BP9a.get(1) - g.V_0efc, 2.0)),
         ); // 8704
         g.V_0f04 = g.s(g.V_0f04 + 1.0); // 8705
         pc = 112;
@@ -4811,7 +4813,7 @@ export function S_578ad(g: EstadoLajecalc): void {
         // L_5c966
         L_BP52 = g.s(
           L_BP52 +
-            ((pot(g.L_BP9a.get(qbCint(g.V_0ef0)) - g.L_BP9a.get(qbCint(g.V_1778)), 3.0) / 6.0) *
+            ((g.pot(g.L_BP9a.get(qbCint(g.V_0ef0)) - g.L_BP9a.get(qbCint(g.V_1778)), 3.0) / 6.0) *
               (1.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16a8)) *
               (2.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16a8))) /
               Math.tan(g.V_16a8),
@@ -4825,7 +4827,7 @@ export function S_578ad(g: EstadoLajecalc): void {
         ); // 8736
         L_BP52 = g.s(
           L_BP52 -
-            (pot(g.L_BP9a.get(qbCint(g.V_0ef0)) - g.V_0efc, 3.0) *
+            (g.pot(g.L_BP9a.get(qbCint(g.V_0ef0)) - g.V_0efc, 3.0) *
               (1.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16b0)) *
               (2.0 - Math.tan(g.V_16a0) / Math.tan(g.V_16b0))) /
               (Math.tan(g.V_16b0) * 6.0),
@@ -4869,13 +4871,13 @@ export function S_578ad(g: EstadoLajecalc): void {
         } // 8750
         g.V_0ef4 =
           ((g.A_10fa.get(qbCint(g.V_177c), qbCint(g.V_1778)) - 2) *
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(g.V_1778)) - g.A_15b0.get(qbCint(g.V_0f04)), 2.0) +
-                pot(g.A_15de.get(qbCint(g.V_1778)) - g.A_15de.get(qbCint(g.V_0f04)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(g.V_1778)) - g.A_15b0.get(qbCint(g.V_0f04)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(g.V_1778)) - g.A_15de.get(qbCint(g.V_0f04)), 2.0),
             )) /
-            (Math.sqrt(
-              pot(g.A_15b0.get(qbCint(g.V_0f10)) - g.A_15b0.get(qbCint(g.V_1788)), 2.0) +
-                pot(g.A_15de.get(qbCint(g.V_0f10)) - g.A_15de.get(qbCint(g.V_1788)), 2.0),
+            (g.raiz(
+              g.pot(g.A_15b0.get(qbCint(g.V_0f10)) - g.A_15b0.get(qbCint(g.V_1788)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(g.V_0f10)) - g.A_15de.get(qbCint(g.V_1788)), 2.0),
             ) *
               10.0) +
           g.V_0ef4; // 8751

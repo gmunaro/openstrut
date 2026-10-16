@@ -31,6 +31,7 @@ import type {
   RegiaoCharneira,
 } from "../base/tipos";
 import { ErroQB, atribuicao, qbCint, qbClng, qbFix, qbInt } from "../base/f32";
+import { potencia, raiz } from "../base/x87";
 
 // ------------------------------------------------------------------ máquina
 
@@ -83,6 +84,13 @@ export class Matriz {
  *  - V_133a, V_133e: tolerâncias de comprimento e de ângulo; V_0e68_pi = π. */
 export class EstadoLajecalc {
   readonly s: (x: number) => number;
+  /** `^` e `SQR` do modo (base/x87.ts): no original, o B$POW e o FSQRT do x87, com o
+   *  resultado em DOUBLE para seguir a expressão; `potS`/`raizS` quando a potência ou
+   *  a raiz é a expressão inteira gravada numa variável `!` (FSTP direto a SINGLE). */
+  readonly pot: (a: number, b: number) => number;
+  readonly potS: (a: number, b: number) => number;
+  readonly raiz: (x: number) => number;
+  readonly raizS: (x: number) => number;
   V_0e50 = 1;
   V_0e68_pi = 4 * Math.atan(1);
   V_0ee8 = 0;
@@ -190,6 +198,10 @@ export class EstadoLajecalc {
 
   constructor(parametros: ParametrosLaje, modo: ModoSistrut) {
     this.s = atribuicao(modo);
+    this.pot = potencia(modo);
+    this.potS = potencia(modo, "single");
+    this.raiz = raiz(modo);
+    this.raizS = raiz(modo, "single");
     this.V_133a = this.s(parametros.toleranciaComprimento);
     this.V_133e = this.s(parametros.toleranciaAngulo);
     this.V_0f82 = this.s(parametros.relacaoCantosReentrantes);
@@ -272,11 +284,6 @@ export class EstadoLajecalc {
   }
 }
 
-/** `a ^ b` do QB (RT_POT##); o quadrado sai exato como no x87. */
-export function pot(a: number, b: number) {
-  return b === 2 ? a * a : a ** b;
-}
-
 // ------------------------------------------------------------------ contratos
 
 /** Marca com −100 em A_163a(v, 0) os vértices entre bordos colineares, como o
@@ -312,8 +319,8 @@ export const iDoBordo: IDoBordo = (vertices, codigos, parametros, modo) => {
   const prox = (k: number) => (k === n ? 1 : k + 1);
   const ant = (k: number) => (k === 1 ? n : k - 1);
   const comp = (a: number, b: number) =>
-    Math.sqrt(
-      pot(g.A_15b0.get(a) - g.A_15b0.get(b), 2) + pot(g.A_15de.get(a) - g.A_15de.get(b), 2),
+    g.raiz(
+      g.pot(g.A_15b0.get(a) - g.A_15b0.get(b), 2) + g.pot(g.A_15de.get(a) - g.A_15de.get(b), 2),
     );
   const parcela = (k: number) => {
     const c = g.A_10fa.get(1, k);
@@ -1161,10 +1168,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 5293
         if (
           !(
-            pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1760, 2.0) +
-              pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_1764, 2.0) >=
-            pot(g.A_163a.get(qbCint(g.V_1784), 0) - g.V_1760, 2.0) +
-              pot(g.A_163a.get(qbCint(g.V_1784), 1) - g.V_1764, 2.0)
+            g.pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1760, 2.0) +
+              g.pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_1764, 2.0) >=
+            g.pot(g.A_163a.get(qbCint(g.V_1784), 0) - g.V_1760, 2.0) +
+              g.pot(g.A_163a.get(qbCint(g.V_1784), 1) - g.V_1764, 2.0)
           )
         ) {
           pc = 36;
@@ -1185,10 +1192,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 5298
         if (
           !(
-            pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1758, 2.0) +
-              pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_175c, 2.0) >=
-            pot(g.A_163a.get(qbCint(g.V_1788), 0) - g.V_1758, 2.0) +
-              pot(g.A_163a.get(qbCint(g.V_1788), 1) - g.V_175c, 2.0)
+            g.pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1758, 2.0) +
+              g.pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_175c, 2.0) >=
+            g.pot(g.A_163a.get(qbCint(g.V_1788), 0) - g.V_1758, 2.0) +
+              g.pot(g.A_163a.get(qbCint(g.V_1788), 1) - g.V_175c, 2.0)
           )
         ) {
           pc = 38;
@@ -1476,10 +1483,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         if (
           !(
             (qbCint(
-              pot(g.V_0ef4 - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
-                pot(g.V_0efc - g.A_15de.get(qbCint(g.V_1790)), 2.0) <
-                pot(g.A_163a.get(qbCint(g.V_1790), 0) - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
-                  pot(g.A_163a.get(qbCint(g.V_1790), 1) - g.A_15de.get(qbCint(g.V_1790)), 2.0)
+              g.pot(g.V_0ef4 - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
+                g.pot(g.V_0efc - g.A_15de.get(qbCint(g.V_1790)), 2.0) <
+                g.pot(g.A_163a.get(qbCint(g.V_1790), 0) - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
+                  g.pot(g.A_163a.get(qbCint(g.V_1790), 1) - g.A_15de.get(qbCint(g.V_1790)), 2.0)
                 ? -1
                 : 0,
             ) &
@@ -1545,10 +1552,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         if (
           !(
             (qbCint(
-              pot(g.V_0ef4 - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
-                pot(g.V_0efc - g.A_15de.get(qbCint(g.V_1790)), 2.0) <
-                pot(g.A_163a.get(qbCint(g.V_1790), 0) - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
-                  pot(g.A_163a.get(qbCint(g.V_1790), 1) - g.A_15de.get(qbCint(g.V_1790)), 2.0)
+              g.pot(g.V_0ef4 - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
+                g.pot(g.V_0efc - g.A_15de.get(qbCint(g.V_1790)), 2.0) <
+                g.pot(g.A_163a.get(qbCint(g.V_1790), 0) - g.A_15b0.get(qbCint(g.V_1790)), 2.0) +
+                  g.pot(g.A_163a.get(qbCint(g.V_1790), 1) - g.A_15de.get(qbCint(g.V_1790)), 2.0)
                 ? -1
                 : 0,
             ) &
@@ -1679,10 +1686,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 5485
         if (
           !(
-            pot(g.A_15b0.get(qbCint(g.V_1790)) - g.V_0ef4, 2.0) +
-              pot(g.A_15de.get(qbCint(g.V_1790)) - g.V_0efc, 2.0) <
-            pot(g.A_15b0.get(qbCint(g.V_1794)) - g.V_0ef4, 2.0) +
-              pot(g.A_15de.get(qbCint(g.V_1794)) - g.V_0efc, 2.0)
+            g.pot(g.A_15b0.get(qbCint(g.V_1790)) - g.V_0ef4, 2.0) +
+              g.pot(g.A_15de.get(qbCint(g.V_1790)) - g.V_0efc, 2.0) <
+            g.pot(g.A_15b0.get(qbCint(g.V_1794)) - g.V_0ef4, 2.0) +
+              g.pot(g.A_15de.get(qbCint(g.V_1794)) - g.V_0efc, 2.0)
           )
         ) {
           pc = 78;
@@ -1694,10 +1701,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         // L_4302a
         if (
           !(
-            pot(g.A_15b0.get(qbCint(g.V_179c)) - g.V_0ef4, 2.0) +
-              pot(g.A_15de.get(qbCint(g.V_179c)) - g.V_0efc, 2.0) <
-            pot(g.A_15b0.get(qbCint(g.V_1798)) - g.V_0ef4, 2.0) +
-              pot(g.A_15de.get(qbCint(g.V_1798)) - g.V_0efc, 2.0)
+            g.pot(g.A_15b0.get(qbCint(g.V_179c)) - g.V_0ef4, 2.0) +
+              g.pot(g.A_15de.get(qbCint(g.V_179c)) - g.V_0efc, 2.0) <
+            g.pot(g.A_15b0.get(qbCint(g.V_1798)) - g.V_0ef4, 2.0) +
+              g.pot(g.A_15de.get(qbCint(g.V_1798)) - g.V_0efc, 2.0)
           )
         ) {
           pc = 79;
@@ -2244,8 +2251,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         S_23341(g); // 5736
         if (
           !(
-            pot(g.V_0ef4 - g.V_1758, 2.0) + pot(g.V_0efc - g.V_175c, 2.0) + g.V_133a <
-            pot(g.V_1710 - g.V_1758, 2.0) + pot(g.V_1718 - g.V_175c, 2.0)
+            g.pot(g.V_0ef4 - g.V_1758, 2.0) + g.pot(g.V_0efc - g.V_175c, 2.0) + g.V_133a <
+            g.pot(g.V_1710 - g.V_1758, 2.0) + g.pot(g.V_1718 - g.V_175c, 2.0)
           )
         ) {
           pc = 143;
@@ -2253,8 +2260,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 5738
         if (
           !(
-            pot(g.V_0ef4 - g.V_1710, 2.0) + pot(g.V_0efc - g.V_1718, 2.0) <
-            pot(g.V_1758 - g.V_1710, 2.0) + pot(g.V_175c - g.V_1718, 2.0)
+            g.pot(g.V_0ef4 - g.V_1710, 2.0) + g.pot(g.V_0efc - g.V_1718, 2.0) <
+            g.pot(g.V_1758 - g.V_1710, 2.0) + g.pot(g.V_175c - g.V_1718, 2.0)
           )
         ) {
           pc = 142;
@@ -2369,8 +2376,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         S_23341(g); // 5787
         if (
           !(
-            pot(g.V_0ef4 - g.V_17e0, 2.0) + pot(g.V_0efc - g.V_17f0, 2.0) + g.V_133a >=
-            pot(g.V_16d0 - g.V_17e0, 2.0) + pot(g.V_16d8 - g.V_17f0, 2.0)
+            g.pot(g.V_0ef4 - g.V_17e0, 2.0) + g.pot(g.V_0efc - g.V_17f0, 2.0) + g.V_133a >=
+            g.pot(g.V_16d0 - g.V_17e0, 2.0) + g.pot(g.V_16d8 - g.V_17f0, 2.0)
           )
         ) {
           pc = 139;
@@ -2383,8 +2390,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         // L_45240
         if (
           !(
-            pot(g.V_0ef4 - g.V_16d0, 2.0) + pot(g.V_0efc - g.V_16d8, 2.0) >
-            pot(g.V_17e0 - g.V_16d0, 2.0) + pot(g.V_17f0 - g.V_16d8, 2.0)
+            g.pot(g.V_0ef4 - g.V_16d0, 2.0) + g.pot(g.V_0efc - g.V_16d8, 2.0) >
+            g.pot(g.V_17e0 - g.V_16d0, 2.0) + g.pot(g.V_17f0 - g.V_16d8, 2.0)
           )
         ) {
           pc = 140;
@@ -2580,8 +2587,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         S_23341(g); // 5879
         if (
           !(
-            pot(g.V_0ef4 - g.V_1750, 2.0) + pot(g.V_0efc - g.V_1754, 2.0) + g.V_133a <
-            pot(g.V_1720 - g.V_1750, 2.0) + pot(g.V_1728 - g.V_1754, 2.0)
+            g.pot(g.V_0ef4 - g.V_1750, 2.0) + g.pot(g.V_0efc - g.V_1754, 2.0) + g.V_133a <
+            g.pot(g.V_1720 - g.V_1750, 2.0) + g.pot(g.V_1728 - g.V_1754, 2.0)
           )
         ) {
           pc = 177;
@@ -2589,8 +2596,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 5881
         if (
           !(
-            pot(g.V_0ef4 - g.V_1720, 2.0) + pot(g.V_0efc - g.V_1728, 2.0) <
-            pot(g.V_1750 - g.V_1720, 2.0) + pot(g.V_1754 - g.V_1728, 2.0)
+            g.pot(g.V_0ef4 - g.V_1720, 2.0) + g.pot(g.V_0efc - g.V_1728, 2.0) <
+            g.pot(g.V_1750 - g.V_1720, 2.0) + g.pot(g.V_1754 - g.V_1728, 2.0)
           )
         ) {
           pc = 176;
@@ -2705,8 +2712,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         S_23341(g); // 5930
         if (
           !(
-            pot(g.V_0ef4 - g.V_17e8, 2.0) + pot(g.V_0efc - g.V_17f8, 2.0) + g.V_133a >=
-            pot(g.V_16d0 - g.V_17e8, 2.0) + pot(g.V_16d8 - g.V_17f8, 2.0)
+            g.pot(g.V_0ef4 - g.V_17e8, 2.0) + g.pot(g.V_0efc - g.V_17f8, 2.0) + g.V_133a >=
+            g.pot(g.V_16d0 - g.V_17e8, 2.0) + g.pot(g.V_16d8 - g.V_17f8, 2.0)
           )
         ) {
           pc = 173;
@@ -2719,8 +2726,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         // L_45f4d
         if (
           !(
-            pot(g.V_0ef4 - g.V_16d0, 2.0) + pot(g.V_0efc - g.V_16d8, 2.0) >
-            pot(g.V_17e8 - g.V_16d0, 2.0) + pot(g.V_17f8 - g.V_16d8, 2.0)
+            g.pot(g.V_0ef4 - g.V_16d0, 2.0) + g.pot(g.V_0efc - g.V_16d8, 2.0) >
+            g.pot(g.V_17e8 - g.V_16d0, 2.0) + g.pot(g.V_17f8 - g.V_16d8, 2.0)
           )
         ) {
           pc = 174;
@@ -2774,9 +2781,9 @@ export function S_4019b(g: EstadoLajecalc): void {
           continue;
         } // 5951
         L_BP144 = qbCint(
-          pot(g.V_1710 - g.V_1760, 2.0) + pot(g.V_1718 - g.V_1764, 2.0) + g.V_133a >=
-            pot(g.A_160c.get(qbCint(g.V_1778), 2) - g.V_1760, 2.0) +
-              pot(g.A_160c.get(qbCint(g.V_1778), 3) - g.V_1764, 2.0)
+          g.pot(g.V_1710 - g.V_1760, 2.0) + g.pot(g.V_1718 - g.V_1764, 2.0) + g.V_133a >=
+            g.pot(g.A_160c.get(qbCint(g.V_1778), 2) - g.V_1760, 2.0) +
+              g.pot(g.A_160c.get(qbCint(g.V_1778), 3) - g.V_1764, 2.0)
             ? -1
             : 0,
         ); // 5952
@@ -2785,9 +2792,9 @@ export function S_4019b(g: EstadoLajecalc): void {
           continue;
         } // 5953
         L_BP146 = qbCint(
-          pot(g.V_1720 - g.V_1760, 2.0) + pot(g.V_1728 - g.V_1764, 2.0) + g.V_133a >=
-            pot(g.A_160c.get(qbCint(g.V_1778), 2) - g.V_1760, 2.0) +
-              pot(g.A_160c.get(qbCint(g.V_1778), 3) - g.V_1764, 2.0)
+          g.pot(g.V_1720 - g.V_1760, 2.0) + g.pot(g.V_1728 - g.V_1764, 2.0) + g.V_133a >=
+            g.pot(g.A_160c.get(qbCint(g.V_1778), 2) - g.V_1760, 2.0) +
+              g.pot(g.A_160c.get(qbCint(g.V_1778), 3) - g.V_1764, 2.0)
             ? -1
             : 0,
         ); // 5954
@@ -2974,8 +2981,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         // L_46af7
         L_BP14c = qbCint(L_BP96 !== "NAO" ? -1 : 0); // 6045
         L_BP14e = qbCint(
-          pot(g.V_1710 - g.V_1760, 2.0) + pot(g.V_1718 - g.V_1764, 2.0) <=
-            pot(g.V_1720 - g.V_1760, 2.0) + pot(g.V_1728 - g.V_1764, 2.0)
+          g.pot(g.V_1710 - g.V_1760, 2.0) + g.pot(g.V_1718 - g.V_1764, 2.0) <=
+            g.pot(g.V_1720 - g.V_1760, 2.0) + g.pot(g.V_1728 - g.V_1764, 2.0)
             ? -1
             : 0,
         ); // 6046
@@ -3072,9 +3079,9 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 6086
         if (
           !(
-            pot(g.V_1710 - g.V_1760, 2.0) + pot(g.V_1718 - g.V_1764, 2.0) + g.V_133a <
-            pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1760, 2.0) +
-              pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_1764, 2.0)
+            g.pot(g.V_1710 - g.V_1760, 2.0) + g.pot(g.V_1718 - g.V_1764, 2.0) + g.V_133a <
+            g.pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1760, 2.0) +
+              g.pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_1764, 2.0)
           )
         ) {
           pc = 212;
@@ -3217,8 +3224,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         // L_47686
         L_BP154 = qbCint(L_BP110 !== "NAO" ? -1 : 0); // 6145
         L_BP156 = qbCint(
-          pot(g.V_1710 - g.V_1760, 2.0) + pot(g.V_1718 - g.V_1764, 2.0) >
-            pot(g.V_1720 - g.V_1760, 2.0) + pot(g.V_1728 - g.V_1764, 2.0)
+          g.pot(g.V_1710 - g.V_1760, 2.0) + g.pot(g.V_1718 - g.V_1764, 2.0) >
+            g.pot(g.V_1720 - g.V_1760, 2.0) + g.pot(g.V_1728 - g.V_1764, 2.0)
             ? -1
             : 0,
         ); // 6146
@@ -3303,9 +3310,9 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 6183
         if (
           !(
-            pot(g.V_1720 - g.V_1760, 2.0) + pot(g.V_1728 - g.V_1764, 2.0) + g.V_133a <
-            pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1760, 2.0) +
-              pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_1764, 2.0)
+            g.pot(g.V_1720 - g.V_1760, 2.0) + g.pot(g.V_1728 - g.V_1764, 2.0) + g.V_133a <
+            g.pot(g.A_163a.get(qbCint(g.V_1780), 0) - g.V_1760, 2.0) +
+              g.pot(g.A_163a.get(qbCint(g.V_1780), 1) - g.V_1764, 2.0)
           )
         ) {
           pc = 234;
@@ -3677,11 +3684,11 @@ export function S_4019b(g: EstadoLajecalc): void {
         g.V_0ef4 = g.A_15b0.get(qbCint(Math.abs(g.A_160c.get(qbCint(g.V_0ef0), 0)))); // 6319
         g.V_0efc = g.A_15de.get(qbCint(Math.abs(g.A_160c.get(qbCint(g.V_0ef0), 0)))); // 6320
         g.V_17e0 =
-          pot(g.V_0ef4 - g.A_160c.get(qbCint(g.V_0ef0), 2), 2.0) +
-          pot(g.V_0efc - g.A_160c.get(qbCint(g.V_0ef0), 3), 2.0); // 6321
+          g.pot(g.V_0ef4 - g.A_160c.get(qbCint(g.V_0ef0), 2), 2.0) +
+          g.pot(g.V_0efc - g.A_160c.get(qbCint(g.V_0ef0), 3), 2.0); // 6321
         g.V_17f0 =
-          pot(g.V_0ef4 - g.A_160c.get(qbCint(g.V_0f14), 2), 2.0) +
-          pot(g.V_0efc - g.A_160c.get(qbCint(g.V_0f14), 3), 2.0); // 6322
+          g.pot(g.V_0ef4 - g.A_160c.get(qbCint(g.V_0f14), 2), 2.0) +
+          g.pot(g.V_0efc - g.A_160c.get(qbCint(g.V_0f14), 3), 2.0); // 6322
         if (!(g.V_17e0 > g.V_17f0)) {
           pc = 270;
           continue;
@@ -4992,8 +4999,8 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 6806
         if (
           !(
-            pot(g.V_1700 - g.V_16f0, 2.0) + pot(g.V_1708 - g.V_16f8, 2.0) >
-            pot(g.V_0ef4 - g.V_16f0, 2.0) + pot(g.V_0efc - g.V_16f8, 2.0)
+            g.pot(g.V_1700 - g.V_16f0, 2.0) + g.pot(g.V_1708 - g.V_16f8, 2.0) >
+            g.pot(g.V_0ef4 - g.V_16f0, 2.0) + g.pot(g.V_0efc - g.V_16f8, 2.0)
           )
         ) {
           pc = 380;
@@ -5319,10 +5326,10 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 6941
         g.V_1678 =
           Math.sin(g.V_0e68_pi / 2.0) /
-          (Math.sqrt(1.0 / (L_BP26 + 1.0)) + Math.cos(g.V_0e68_pi / 2.0)); // 6942
+          (g.raiz(1.0 / (L_BP26 + 1.0)) + Math.cos(g.V_0e68_pi / 2.0)); // 6942
         g.V_1680 =
           Math.sin(g.V_0e68_pi / 2.0) /
-          (Math.sqrt(1.0 / (L_BP2a + 1.0)) + Math.cos(g.V_0e68_pi / 2.0)); // 6943
+          (g.raiz(1.0 / (L_BP2a + 1.0)) + Math.cos(g.V_0e68_pi / 2.0)); // 6943
         if (!(L_BP26 > L_BP2a)) {
           pc = 412;
           continue;
@@ -5535,9 +5542,9 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 7008
         L_BP22 = g.s(
           ((g.A_10fa.get(qbCint(g.V_177c), qbCint(L_BP0e)) - 2) *
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
-                pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
             )) /
             10.0 +
             L_BP22,
@@ -5617,9 +5624,9 @@ export function S_4019b(g: EstadoLajecalc): void {
         } // 7039
         L_BP22 = g.s(
           ((g.A_10fa.get(qbCint(g.V_177c), qbCint(L_BP0e)) - 2) *
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
-                pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
             )) /
             10.0 +
             L_BP22,
@@ -5634,9 +5641,9 @@ export function S_4019b(g: EstadoLajecalc): void {
         // L_4dd0a
         L_BP22 = g.s(
           L_BP22 /
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(L_BP1a)) - g.A_15b0.get(qbCint(L_BP16)), 2.0) +
-                pot(g.A_15de.get(qbCint(L_BP1a)) - g.A_15de.get(qbCint(L_BP16)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(L_BP1a)) - g.A_15b0.get(qbCint(L_BP16)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(L_BP1a)) - g.A_15de.get(qbCint(L_BP16)), 2.0),
             ),
         ); // 7044
         pc = pilha.pop() ?? 0;
@@ -7042,7 +7049,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         } // 3300
         if (
           !(
-            Math.abs(Math.sqrt((L_BP2a + 1.0) / (L_BP26 + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)) <
+            Math.abs(g.raiz((L_BP2a + 1.0) / (L_BP26 + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)) <
             g.V_133e
           )
         ) {
@@ -7056,7 +7063,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         // L_225f3
         g.V_16a0 = Math.atan(
           Math.sin(g.V_16b0 - g.V_16a8) /
-            (Math.sqrt((L_BP2a + 1.0) / (L_BP26 + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)),
+            (g.raiz((L_BP2a + 1.0) / (L_BP26 + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)),
         ); // 3305
         if (!(g.V_16a0 < 0.0)) {
           pc = 16;
@@ -7088,7 +7095,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         } // 3312
         if (
           !(
-            Math.abs(Math.sqrt((L_BP26 + 1.0) / (L_BP2a + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)) <
+            Math.abs(g.raiz((L_BP26 + 1.0) / (L_BP2a + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)) <
             g.V_133e
           )
         ) {
@@ -7102,7 +7109,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         // L_22781
         g.V_16a0 = Math.atan(
           Math.sin(g.V_16b0 - g.V_16a8) /
-            (Math.sqrt((L_BP26 + 1.0) / (L_BP2a + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)),
+            (g.raiz((L_BP26 + 1.0) / (L_BP2a + 1.0)) + Math.cos(g.V_16b0 - g.V_16a8)),
         ); // 3317
         if (!(g.V_16a0 < 0.0)) {
           pc = 20;
@@ -7184,7 +7191,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         if (
           !(
             Math.abs(
-              Math.sqrt((L_BP2a + 1.0) / (L_BP26 + 1.0)) +
+              g.raiz((L_BP2a + 1.0) / (L_BP26 + 1.0)) +
                 Math.cos(2.0 * g.V_0e68_pi - g.V_16a8 + g.V_16b0),
             ) < g.V_133e
           )
@@ -7199,7 +7206,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         // L_22a8f
         g.V_16a0 = Math.atan(
           Math.sin(2.0 * g.V_0e68_pi - g.V_16a8 + g.V_16b0) /
-            (Math.sqrt((L_BP2a + 1.0) / (L_BP26 + 1.0)) +
+            (g.raiz((L_BP2a + 1.0) / (L_BP26 + 1.0)) +
               Math.cos(2.0 * g.V_0e68_pi - g.V_16a8 + g.V_16b0)),
         ); // 3346
         if (!(g.V_16a0 < 0.0)) {
@@ -7233,7 +7240,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         if (
           !(
             Math.abs(
-              Math.sqrt((L_BP26 + 1.0) / (L_BP2a + 1.0)) +
+              g.raiz((L_BP26 + 1.0) / (L_BP2a + 1.0)) +
                 Math.cos(2.0 * g.V_0e68_pi - g.V_16a8 + g.V_16b0),
             ) < g.V_133e
           )
@@ -7248,7 +7255,7 @@ export function S_21e5d(g: EstadoLajecalc): void {
         // L_22c3b
         g.V_16a0 = Math.atan(
           Math.sin(2.0 * g.V_0e68_pi - g.V_16a8 + g.V_16b0) /
-            (Math.sqrt((L_BP26 + 1.0) / (L_BP2a + 1.0)) +
+            (g.raiz((L_BP26 + 1.0) / (L_BP2a + 1.0)) +
               Math.cos(2.0 * g.V_0e68_pi - g.V_16a8 + g.V_16b0)),
         ); // 3358
         if (!(g.V_16a0 < 0.0)) {
@@ -7343,9 +7350,9 @@ export function S_21e5d(g: EstadoLajecalc): void {
         } // 3388
         L_BP22 = g.s(
           ((g.A_10fa.get(qbCint(g.V_177c), qbCint(L_BP0e)) - 2) *
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
-                pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
             )) /
             10.0 +
             L_BP22,
@@ -7425,9 +7432,9 @@ export function S_21e5d(g: EstadoLajecalc): void {
         } // 3419
         L_BP22 = g.s(
           ((g.A_10fa.get(qbCint(g.V_177c), qbCint(L_BP0e)) - 2) *
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
-                pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(L_BP0e)) - g.A_15b0.get(qbCint(L_BP12)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(L_BP0e)) - g.A_15de.get(qbCint(L_BP12)), 2.0),
             )) /
             10.0 +
             L_BP22,
@@ -7442,9 +7449,9 @@ export function S_21e5d(g: EstadoLajecalc): void {
         // L_2326a
         L_BP22 = g.s(
           L_BP22 /
-            Math.sqrt(
-              pot(g.A_15b0.get(qbCint(L_BP16)) - g.A_15b0.get(qbCint(L_BP1a)), 2.0) +
-                pot(g.A_15de.get(qbCint(L_BP16)) - g.A_15de.get(qbCint(L_BP1a)), 2.0),
+            g.raiz(
+              g.pot(g.A_15b0.get(qbCint(L_BP16)) - g.A_15b0.get(qbCint(L_BP1a)), 2.0) +
+                g.pot(g.A_15de.get(qbCint(L_BP16)) - g.A_15de.get(qbCint(L_BP1a)), 2.0),
             ),
         ); // 3424
         L_BP22 = g.s(qbInt(L_BP22 * 100.0) / 100.0); // 3425

@@ -73,6 +73,7 @@
 // interno custa ~1,5 µs e o F2XM1 ~0,7 µs.
 
 import { ErroQB } from "./f32";
+import type { ModoSistrut } from "./tipos";
 
 /** Número finito: valor = (-1)^s · m · 2^e; m = 0n é zero (com sinal). */
 export type Num = { readonly s: 0 | 1; readonly m: bigint; readonly e: number };
@@ -909,4 +910,53 @@ export function xMenosRaizQB(x: number, y: number, destino: Destino): number {
   const Y = deNumero(y);
   const r = raizL(somaEsp(potenciaL(X, DOIS), Y.k === 2 ? Y : negL(Y)));
   return paraNumeroL(somaEsp(X, r.k === 2 ? r : negL(r)), destino);
+}
+
+/** a · b no x87 (FMUL, 64 bits, ao par). */
+export function mulX(a: Estendido, b: Estendido): Estendido {
+  const A = deEstendido(a),
+    B_ = deEstendido(b);
+  if (A.k === 2 || B_.k === 2) return { tipo: "nan" };
+  const s = (A.s ^ B_.s) as 0 | 1;
+  if (A.k === 1 || B_.k === 1) return A.a2 === 0 && A.k === 0 ? { tipo: "nan" } : B_.a2 === 0 && B_.k === 0 ? { tipo: "nan" } : { tipo: "infinito", s };
+  return paraEstendido(estendeL(mulL(A, B_, 64)));
+}
+
+/** a / b no x87 (FDIV, 64 bits, ao par). Divisão por zero dá infinito (ZM mascarada;
+ *  sonda T17: 1/0 = 1.#INF) e 0/0 dá NaN. */
+export function divX(a: Estendido, b: Estendido): Estendido {
+  const A = deEstendido(a),
+    B_ = deEstendido(b);
+  if (A.k === 2 || B_.k === 2) return { tipo: "nan" };
+  const s = (A.s ^ B_.s) as 0 | 1;
+  if (A.k === 1) return B_.k === 1 ? { tipo: "nan" } : { tipo: "infinito", s };
+  if (B_.k === 1) return paraEstendido(zeroL(s));
+  if (B_.a2 === 0) return A.a2 === 0 ? { tipo: "nan" } : { tipo: "infinito", s };
+  return paraEstendido(estendeL(divL(A, B_, 64)));
+}
+
+/** Compara a e b no estendido, como o FCOMP: −1, 0 ou 1; NaN dá NaN. */
+export function comparaX(a: Estendido, b: Estendido): number {
+  if (a.tipo === "nan" || b.tipo === "nan") return Number.NaN;
+  const d = subX(a, b);
+  if (d.tipo === "infinito") return d.s ? -1 : 1;
+  if (d.tipo === "nan") return 0; // ∞ − ∞ do mesmo sinal
+  return d.m === 0n ? 0 : d.s ? -1 : 1;
+}
+
+/** `a ^ b` do modo, para os portes: no original, o B$POW do QB4.5 (o estendido
+ *  arredondado a DOUBLE para seguir a expressão em float64, ou a SINGLE quando a
+ *  potência é a expressão inteira gravada numa variável `!`); no corrigido, `**`.
+ *  Uso: `const pot = potencia(modo)` e `pot(a, b)`. */
+export function potencia(modo: ModoSistrut, destino: Destino = "double") {
+  if (modo === "corrigido") return (a: number, b: number) => a ** b;
+  return (a: number, b: number) => paraNumeroL(potenciaL(deNumero(a), deNumero(b)), destino);
+}
+
+/** `SQR(x)` do modo, para os portes: no original, o FSQRT do x87 (negativo dá NaN,
+ *  sem erro), arredondado a DOUBLE ou, se é a expressão inteira gravada em `!`, a
+ *  SINGLE; no corrigido, `Math.sqrt`. */
+export function raiz(modo: ModoSistrut, destino: Destino = "double") {
+  if (modo === "corrigido") return Math.sqrt;
+  return (x: number) => paraNumeroL(raizL(deNumero(x)), destino);
 }

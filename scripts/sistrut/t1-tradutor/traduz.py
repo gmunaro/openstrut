@@ -62,8 +62,8 @@ FUNCOES = {
     "FX##": "",
     "RT_SNG!": "g.s",
     "RT_DBL#": "",
-    "RT_POT##": "pot",
-    "RT_SQR##": "Math.sqrt",
+    "RT_POT##": "g.pot",
+    "RT_SQR##": "g.raiz",
     "RT_SIN##": "Math.sin",
     "RT_COS##": "Math.cos",
     "RT_TAN##": "Math.tan",
@@ -237,7 +237,7 @@ class Parser:
         while self.peek() == ("op", "^"):
             self.take()
             b = self.atom()
-            a = (f"pot({self.num(a)}, {self.num(b)})", "n")
+            a = (f"g.pot({self.num(a)}, {self.num(b)})", "n")
         return a
 
     def args(self):
@@ -310,8 +310,27 @@ def expr_de(toks, un):
 # ------------------------------------------------------------------ atribuicao
 
 
+def chamada_inteira(cod, nome):
+    """True se `cod` e uma unica chamada `nome(...)` (o parentese do nome fecha no fim)."""
+    if not cod.startswith(nome + "(") or not cod.endswith(")"):
+        return False
+    nivel = 0
+    for j, ch in enumerate(cod[len(nome):]):
+        if ch == "(":
+            nivel += 1
+        elif ch == ")":
+            nivel -= 1
+            if nivel == 0:
+                return len(nome) + j == len(cod) - 1
+    return False
+
+
 def arredonda(suf, cod):
     if suf in ("!",):
+        # ^ ou SQR que e a expressao inteira gravada em SINGLE: FSTP direto do estendido
+        for f in ("g.pot", "g.raiz"):
+            if chamada_inteira(cod, f):
+                return f + "S" + cod[len(f):]
         return f"g.s({cod})"
     if suf in ("%", "&"):
         return f"qbCint({cod})" if suf == "%" else f"qbClng({cod})"
@@ -368,6 +387,16 @@ def le_linhas(ini, fim):
         todas = f.read().split("\n")
     return [(n, todas[n - 1]) for n in range(ini, fim + 1)]
 
+
+# Linhas emitidas antes do comando da linha do .BAS (com o motivo no comentario).
+ANTES = {
+    7239: [
+        "// μ 0 (o da laje comum não calculada sem <R>elação no LAJECALC 2): o QB4.5 para",
+        '// com "Division by zero" e o ON ERROR volta ao menu (LAJECALC.BAS:169-174)',
+        "if (g.A_1210.get(qbCint(g.V_177c), 1) === 0)",
+        '  throw new ErroQB(11, "Division by zero: 1/SQR(μ) com μ 0 (LAJECALC.BAS:7239)");',
+    ],
+}
 
 # Comandos trocados de proposito (com o motivo no comentario gerado).
 SUBSTITUI = {
@@ -436,6 +465,8 @@ def traduz(nome, ini, fim, gosub=None, prologo=(), exportados=(), pula=()):
             corpo.append(("code", f"// {dado}", False))
             continue
         c = dado
+        for extra in ANTES.get(n, ()):
+            emite(extra)
         if n in SUBSTITUI:
             emite(SUBSTITUI[n], linha=n)
             continue

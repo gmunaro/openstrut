@@ -31,6 +31,7 @@ import type {
   RegiaoCharneira,
 } from "../base/tipos";
 import { ErroQB, atribuicao, qbCint, qbClng, qbFix, qbInt } from "../base/f32";
+import { potencia, raiz } from "../base/x87";
 
 // ------------------------------------------------------------------ máquina
 
@@ -83,6 +84,13 @@ export class Matriz {
  *  - V_133a, V_133e: tolerâncias de comprimento e de ângulo; V_0e68_pi = π. */
 export class EstadoLajecalc {
   readonly s: (x: number) => number;
+  /** `^` e `SQR` do modo (base/x87.ts): no original, o B$POW e o FSQRT do x87, com o
+   *  resultado em DOUBLE para seguir a expressão; `potS`/`raizS` quando a potência ou
+   *  a raiz é a expressão inteira gravada numa variável `!` (FSTP direto a SINGLE). */
+  readonly pot: (a: number, b: number) => number;
+  readonly potS: (a: number, b: number) => number;
+  readonly raiz: (x: number) => number;
+  readonly raizS: (x: number) => number;
   V_0e50 = 1;
   V_0e68_pi = 4 * Math.atan(1);
   V_0ee8 = 0;
@@ -190,6 +198,10 @@ export class EstadoLajecalc {
 
   constructor(parametros: ParametrosLaje, modo: ModoSistrut) {
     this.s = atribuicao(modo);
+    this.pot = potencia(modo);
+    this.potS = potencia(modo, "single");
+    this.raiz = raiz(modo);
+    this.raizS = raiz(modo, "single");
     this.V_133a = this.s(parametros.toleranciaComprimento);
     this.V_133e = this.s(parametros.toleranciaAngulo);
     this.V_0f82 = this.s(parametros.relacaoCantosReentrantes);
@@ -272,10 +284,6 @@ export class EstadoLajecalc {
   }
 }
 
-/** `a ^ b` do QB (RT_POT##); o quadrado sai exato como no x87. */
-export function pot(a: number, b: number) {
-  return b === 2 ? a * a : a ** b;
-}
 
 // ------------------------------------------------------------------ contratos
 
@@ -312,8 +320,8 @@ export const iDoBordo: IDoBordo = (vertices, codigos, parametros, modo) => {
   const prox = (k: number) => (k === n ? 1 : k + 1);
   const ant = (k: number) => (k === 1 ? n : k - 1);
   const comp = (a: number, b: number) =>
-    Math.sqrt(
-      pot(g.A_15b0.get(a) - g.A_15b0.get(b), 2) + pot(g.A_15de.get(a) - g.A_15de.get(b), 2),
+    g.raiz(
+      g.pot(g.A_15b0.get(a) - g.A_15b0.get(b), 2) + g.pot(g.A_15de.get(a) - g.A_15de.get(b), 2),
     );
   const parcela = (k: number) => {
     const c = g.A_10fa.get(1, k);

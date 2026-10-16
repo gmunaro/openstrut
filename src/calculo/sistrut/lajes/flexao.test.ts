@@ -62,14 +62,18 @@ describe("flexão da laje, E2E H 10 (livros_laje.md 2.3)", () => {
       expect(f.as).toBeCloseTo(c.as, 3);
     });
   }
-  it("M = 0 na positiva: x residual > 0 (x87) e o mínimo 0,15·H (v2par_laje_balanco)", () => {
-    for (const modo of ["original", "corrigido"] as const) {
-      const f = flexaoLaje({ mTcm: 0, h: 10, negativa: false }, E2E, PARAM, modo);
-      expect(f.passa).toBe(true);
-      expect(f.x).toBeGreaterThan(0);
-      expect(f.x).toBeLessThan(1e-12);
-      expect(f.as).toBeCloseTo(1.5, 6);
-    }
+  it("M = 0 na positiva: x residual do x87 e o mínimo 0,15·H (v2par_laje_balanco)", () => {
+    // original: X^2 pelo B$POW não é X·X; X − SQR(X^2) sobra 5,95e-19 com H 10 e a seção
+    // passa com o mínimo (o oráculo imprime As 1,50). Com H 15 o resíduo sai negativo
+    // (−2,38e-18) e a seção também passa. corrigido: em float64 √(X²) = X e x = 0.
+    const o = flexaoLaje({ mTcm: 0, h: 10, negativa: false }, E2E, PARAM, "original");
+    expect(o).toMatchObject({ passa: true, x: 5.952482160811085e-19, as: sng(1.5) });
+    const o15 = flexaoLaje({ mTcm: 0, h: 15, negativa: false }, E2E, PARAM, "original");
+    expect(o15).toMatchObject({ passa: true, x: -2.380992864324434e-18, as: sng(2.25) });
+    const c = flexaoLaje({ mTcm: 0, h: 10, negativa: false }, E2E, PARAM, "corrigido");
+    expect(c.passa).toBe(true);
+    expect(c.x).toBe(0);
+    expect(c.as).toBeCloseTo(1.5, 6);
   });
 });
 

@@ -9,6 +9,7 @@
 //   As = 80/(γc·fyk)·x·0,85·fck·γs              (x/d > ξlim: não passa)
 // Os fatores de unidade do original (df0) valem 1 no padrão "SISTRUT" e não aparecem.
 import { atribuicao } from "../base/f32";
+import { comparaX, divX, estendido, mulX, paraNumero, potenciaX, raizQB, subX } from "../base/x87";
 import type {
   FlexaoDeLaje,
   FlexaoLaje,
@@ -39,6 +40,37 @@ export const alturaUtilLaje = (h: number, parametros: ParametrosLaje, modo: Modo
 /** Seção que não passa: o original grava x = −1 (LAJECALC.BAS:932, 937). */
 const NAO_PASSA: FlexaoDeLaje = { passa: false, x: -1, xd: -1, as: -1 };
 
+/** x da linha neutra no modo original, com a sequência do x87 (LAJECALC.BAS:931-935,
+ *  LAJEPROC.BAS:999-1003): X e Y em estendido, na ordem do .BAS; `X^2` pelo B$POW,
+ *  comparado com Y no estendido; `X − SQR(X^2 − Y)` sem arredondar; um só FSTP para
+ *  V_13f0!. Com M = 0, X^2 por logaritmo não é exatamente X·X e o resíduo deixa x > 0:
+ *  a seção sai com o mínimo (v2par_laje_balanco, As 1,50). null: não passa. O fator de
+ *  unidade df0 (1 no padrão) não aparece. */
+function xOriginal(d: number, mTcm: number, materiais: MateriaisSistrut, s: (v: number) => number) {
+  const e = estendido;
+  const { fck, gamaF, gamaC } = materiais;
+  const X = divX(mulX(mulX(mulX(e(80), e(d)), e(s(0.85))), e(fck)), e(gamaC));
+  const Y = divX(mulX(mulX(mulX(e(s(108.8)), e(fck)), e(mTcm)), e(gamaF)), e(gamaC));
+  const X2 = potenciaX(X, e(2));
+  if (comparaX(X2, Y) < 0) return null;
+  const num = subX(X, raizQB(subX(X2, Y)));
+  return paraNumero(mulX(divX(num, mulX(e(fck), e(s(54.4)))), e(gamaC)), "single");
+}
+
+/** x da linha neutra no modo corrigido, em float64. null: não passa. */
+function xCorrigido(
+  d: number,
+  mTcm: number,
+  materiais: MateriaisSistrut,
+  s: (v: number) => number,
+) {
+  const { fck, gamaF, gamaC } = materiais;
+  const X = (80 * d * s(0.85) * fck) / gamaC;
+  const Y = (s(108.8) * fck * mTcm * gamaF) / gamaC;
+  if (X ** 2 < Y) return null;
+  return s(((X - Math.sqrt(X ** 2 - Y)) / (fck * s(54.4))) * gamaC);
+}
+
 /**
  * As de uma faixa de laje de 100 cm para o momento característico `secao.mTcm`
  * (t·cm/m) e a espessura `secao.h` (cm), com o mínimo taxa·H e, na negativa, a
@@ -49,21 +81,14 @@ const NAO_PASSA: FlexaoDeLaje = { passa: false, x: -1, xd: -1, as: -1 };
  */
 export const flexaoLaje: FlexaoLaje = (secao, materiais, parametros, modo) => {
   const s = atribuicao(modo);
-  const { fck, fyk, gamaF, gamaC, gamaS } = materiais;
+  const { fck, fyk, gamaC, gamaS } = materiais;
   const d = alturaUtilLaje(secao.h, parametros, modo);
   const xiLim = xiLimiteLaje(materiais, parametros, modo);
-  const X = (80 * d * s(0.85) * fck) / gamaC;
-  const Y = (s(108.8) * fck * secao.mTcm * gamaF) / gamaC;
-  if (X ** 2 < Y) return NAO_PASSA;
-  // M = 0 (Y = 0): o BRUN45 calcula X^2 por logaritmo (FYL2X/F2XM1) e X − √(X^2) não
-  // zera: sobra um resíduo positivo, então x > 0 e a seção sai com o mínimo. Prova:
-  // v2par_laje_balanco, As+ principal e secundária 1,50 com M+ = −0,28 (a V1, com o ^
-  // do QB64, sai −1). Em float64 √(X²) = X; o resíduo aqui é 2^-64·X, o ulp do x87.
-  // TODO(base/f32.ts): potência do BRUN45: algoritmo sendo determinado; quando sair,
-  // entra em base/f32.ts como função única e todos os ^ portados passam a usá-la. Até
-  // lá, esta aproximação (provada só em H 10) fica como está.
-  const diferenca = Y === 0 ? X * 2 ** -64 : X - Math.sqrt(X ** 2 - Y);
-  const x = s((diferenca / (fck * s(54.4))) * gamaC);
+  const x =
+    modo === "original"
+      ? xOriginal(d, secao.mTcm, materiais, s)
+      : xCorrigido(d, secao.mTcm, materiais, s);
+  if (x === null) return NAO_PASSA;
   if (x / d > xiLim) return NAO_PASSA;
   let as = s((80 / (gamaC * fyk)) * x * s(0.85) * fck * gamaS);
   if (secao.negativa) {
