@@ -147,6 +147,7 @@ export function DialogoMateriais({
   return (
     <Dialog open={aberto} onOpenChange={aoMudarAberto}>
       <DialogContent
+        formaCompacta="telaCheia"
         className="sm:max-w-lg"
         onCloseAutoFocus={(e) => {
           e.preventDefault();

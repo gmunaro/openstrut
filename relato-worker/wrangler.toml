@@ -1,0 +1,36 @@
+# Worker que recebe os relatos do botão "Relatar problema" do OpenStrut e abre
+# issues no GitHub. Deploy: bunx wrangler@4 deploy (dentro de relato-worker/).
+name = "openstrut-relato"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://gmunaro.github.io,http://localhost:4173,http://127.0.0.1:41780"
+GITHUB_REPO = "gmunaro/openstrut"
+# Repositório dos anexos (print e obra). Sem esta var, vai para GITHUB_REPO.
+# GITHUB_REPO_ARQUIVOS = "gmunaro/openstrut-relatos"
+BRANCH_ARQUIVOS = "relatos"
+# labels da issue; a triagem diária procura "relato" e o marcador oculto do corpo
+LABELS = "relato,triagem,bug"
+LIMITE_DIA_IP = "10"
+LIMITE_DIA_TOTAL = "50"
+# Sal do hash do IP. Sem esta var, usa "openstrut-relato".
+# SAL_IP = "troque-por-um-texto-qualquer"
+
+# Secrets (bunx wrangler@4 secret put <NOME>), nunca neste arquivo:
+#   GITHUB_TOKEN           obrigatório: cria issues em GITHUB_REPO
+#   GITHUB_TOKEN_ARQUIVOS  opcional: escreve em GITHUB_REPO_ARQUIVOS (padrão: GITHUB_TOKEN)
+#   TURNSTILE_SECRET       opcional: quando existe, o Turnstile passa a ser exigido
+
+# Rajada por IP: 3 relatos por minuto. namespace_id é um inteiro positivo
+# qualquer, único na conta Cloudflare.
+[[ratelimits]]
+name = "LIMITE_IP"
+namespace_id = "1001"
+simple = { limit = 3, period = 60 }
+
+# Contadores diários (IP em hash) e e-mail de contato por issue.
+# Troque o id pelo que sair de: bunx wrangler@4 kv namespace create RELATOS_KV
+[[kv_namespaces]]
+binding = "RELATOS_KV"
+id = "00000000000000000000000000000000" # placeholder

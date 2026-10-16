@@ -182,7 +182,7 @@ function AbaCargas({
   const outras = pav.vigas.filter((v) => v.id !== viga.id);
   return (
     <>
-      <div className="grid grid-cols-[1fr_1fr] gap-3">
+      <div className="compacto:grid-cols-1 grid grid-cols-[1fr_1fr] gap-3">
         <Escolha
           rotulo="Só as cargas desta tela (.VIG digitado no VIGA)"
           valor={f.somenteCargasProprias}

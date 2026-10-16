@@ -193,7 +193,7 @@ function DesenhoLaje({
         x={c.x}
         y={cabeCotas ? c.y - 4 : c.y + 4}
         textAnchor="middle"
-        fontSize={13}
+        fontSize="0.8125rem"
         fontWeight={600}
         fill="#e2e8f0"
         pointerEvents="none"
@@ -205,7 +205,7 @@ function DesenhoLaje({
           x={c.x}
           y={c.y + 12}
           textAnchor="middle"
-          fontSize={11}
+          fontSize="0.6875rem"
           fill="#94a3b8"
           pointerEvents="none"
         >
@@ -263,7 +263,7 @@ function DesenhoViga({
         y={horizontal ? meio.y - afasta : meio.y}
         transform={horizontal ? undefined : `rotate(-90 ${meio.x - afasta} ${meio.y})`}
         textAnchor="middle"
-        fontSize={11}
+        fontSize="0.6875rem"
         fill="#cbd5e1"
         pointerEvents="none"
       >
@@ -307,7 +307,7 @@ function DesenhoPilar({
         <text
           x={c.x + meiaB + 3}
           y={c.y - meiaH - 3}
-          fontSize={11}
+          fontSize="0.6875rem"
           fill="#f1f5f9"
           pointerEvents="none"
         >
@@ -348,7 +348,7 @@ function Previa({ r, invalida, vista }: { r: Retangulo; invalida: boolean; vista
         strokeDasharray="6 4"
         strokeWidth={1.5}
       />
-      <text x={rt.x + rt.width / 2} y={rt.y - 6} textAnchor="middle" fontSize={12} fill={cor}>
+      <text x={rt.x + rt.width / 2} y={rt.y - 6} textAnchor="middle" fontSize="0.75rem" fill={cor}>
         {`${fmt(r.lx)} × ${fmt(r.ly)} m`}
       </text>
     </g>
