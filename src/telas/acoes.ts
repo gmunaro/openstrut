@@ -135,22 +135,34 @@ export function useSalvarArquivo() {
   return { salvar, mensagem };
 }
 
-/** Baixa um DXF da obra ("<obra> - <sufixo>.dxf") pela pasta de downloads, como o
- *  salvar faz sem a File System Access API. Devolve o nome. */
-function baixarDxf(obra: Obra, sufixo: string, conteudo: string) {
-  const nome = `${nomeArquivoSugerido(obra.nome).slice(0, -EXTENSAO.length)} - ${sufixo}.dxf`;
-  const url = URL.createObjectURL(new Blob([conteudo], { type: "application/dxf" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nome;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  return nome;
+/** Falha de exportar DXF, no mesmo formato de `useAbrirObra`; `null` quando baixou. */
+export type FalhaDxf = { erros: string[]; detalhe: string | null } | null;
+
+/**
+ * Gera o DXF e baixa pela pasta de downloads ("<obra> - <sufixo>.dxf"), como o salvar
+ * faz sem a File System Access API. Se gerar ou baixar falhar, devolve a falha em vez
+ * de lançar, para a tela mostrar.
+ */
+function baixarDxf(obra: Obra, sufixo: string, gerar: () => string): FalhaDxf {
+  try {
+    const conteudo = gerar();
+    const nome = `${nomeArquivoSugerido(obra.nome).slice(0, -EXTENSAO.length)} - ${sufixo}.dxf`;
+    const url = URL.createObjectURL(new Blob([conteudo], { type: "application/dxf" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nome;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return null;
+  } catch (e) {
+    return falhaDe(e, `Não foi possível exportar o DXF de ${sufixo}`, "gravar");
+  }
 }
 
 /** Baixa a planta de formas da obra inteira ("<obra> - formas.dxf"). */
-export const baixarFormasDxf = (obra: Obra) => baixarDxf(obra, "formas", dxfFormasObra(obra));
+export const baixarFormasDxf = (obra: Obra): FalhaDxf =>
+  baixarDxf(obra, "formas", () => dxfFormasObra(obra));
 
 /** Baixa a armação das vigas detalhadas ("<obra> - armação.dxf"). */
-export const baixarArmacaoDxf = (obra: Obra, detalhamento: DetalhamentoVigasObra) =>
-  baixarDxf(obra, "armação", dxfArmacaoVigas(obra, detalhamento));
+export const baixarArmacaoDxf = (obra: Obra, detalhamento: DetalhamentoVigasObra): FalhaDxf =>
+  baixarDxf(obra, "armação", () => dxfArmacaoVigas(obra, detalhamento));
