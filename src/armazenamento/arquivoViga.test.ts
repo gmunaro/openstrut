@@ -27,6 +27,7 @@ const completa: Partial<Viga> = {
   cargas: [
     { tipo: "distribuida", trecho: 0, inicio: 0, fim: 4, total: 19.6, acidental: 4.9 },
     { tipo: "concentrada", trecho: 1, posicao: 0.4, total: 29.4 },
+    { tipo: "reacao", trecho: 1, posicao: 2.5, viga: "V2", apoio: 1 },
   ],
   somenteCargasProprias: true,
   vaos: [4, 5],
@@ -46,6 +47,18 @@ const completa: Partial<Viga> = {
     apoios: [{ largura: 20, tipo: "P", titulo: "P1", codigo: 1, lps: 20, dis: 0 }],
     lajesNoCorte: "nao",
   },
+  pilaresNoRep: [7, null, 9],
+  continuaSeExcederLimite: true,
+  repeticoes: 3,
+  armaduraDigitada: [
+    {
+      em: "apoio",
+      numero: 1,
+      tracionada: { bitola: 12.5, bitolaMistura: 8, barras: 2, barrasMistura: 2 },
+      comprimida: "-",
+    },
+    { em: "tramo", numero: 2, fissuracao: { quantidade: 4 } },
+  ],
 };
 
 describe("arquivo: entrada de viga do SISTRUT", () => {
@@ -85,7 +98,7 @@ describe("arquivo: entrada de viga do SISTRUT", () => {
     const erros = r.ok ? [] : r.erros;
     const c = "pavimentos[0].vigas[0]";
     expect(erros).toEqual([
-      `${c}.cargas[0].tipo: esperado um de "distribuida", "concentrada", veio "pontual".`,
+      `${c}.cargas[0].tipo: esperado um de "distribuida", "concentrada", "reacao", veio "pontual".`,
       `${c}.cargas[1].trecho: esperado um número inteiro, veio 1.5.`,
       `${c}.vaos[1]: esperado um número maior que zero, veio -1.`,
       `${c}.engaste.direito: esperado verdadeiro ou falso, veio "sim".`,

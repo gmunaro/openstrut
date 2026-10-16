@@ -162,7 +162,7 @@ describe("editaVig: cargas na viga", () => {
     ]);
   });
 
-  it("acidentais S com acidental G (VIGA.BAS:1294-1298): Pac = pct·P/100 da divisão inteira, por cima da Pac da montagem e da informada", () => {
+  it("acidentais S com acidental G (VIGA.BAS:1294-1298): Pac = pct·P/100 da divisão inteira digitada, por cima da Pac da montagem; a acidental informada fica", () => {
     const gerada = {
       ...par,
       acidentais: true,
@@ -186,9 +186,10 @@ describe("editaVig: cargas na viga", () => {
     );
     // um produto só em SINGLE: sng(30·P/100)
     expect(r.tramos[0]!.divisoes[0]!.pAcidental).toBe(sng((30 * 3) / 100));
+    // trecho 2: só cargas com a acidental informada (o .VIG gravado): ficam como estão
     expect(r.tramos[1]!.divisoes.map((x) => [x.pAcidental, x.fAcidental])).toEqual([
-      [sng((30 * 3) / 100), sng((30 * 5) / 100)],
-      [sng((30 * 3) / 100), 0],
+      [0, 1],
+      [0, 0],
     ]);
   });
 

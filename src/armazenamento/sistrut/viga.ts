@@ -29,6 +29,7 @@
 import { calcularObraSistrut } from "../../calculo/sistrut/obra";
 import { qbCint, sng } from "../../calculo/sistrut/base/f32";
 import { PARAMETROS_DSP, PARAMETROS_VIGA } from "../../calculo/sistrut/base/parametros";
+import { numeroDoPilar } from "../../calculo/sistrut/montagem/vigas";
 import type { DadosViga, DivisaoCarga, TramoViga } from "../../calculo/sistrut/base/tipos";
 import { tmParaKnm, tParaKn, tPorMParaKnPorM } from "../../calculo/sistrut/base/unidades";
 import { materiaisPadrao, novoId, pavimentoNovo } from "../../dominio/criar";
@@ -527,6 +528,44 @@ function igualSingle(a: unknown, b: unknown): boolean {
 /** Só os campos do .DSP que diferem do de fábrica (o que vai para a obra). */
 export const dspDaObra = (dsp: Dsp): Partial<Dsp> => diferentes(dsp, PARAMETROS_DSP);
 
+// ---------------------------------------------------------------- .TAB e DESENHO.INI
+
+const TAM_TAB = 70;
+
+/** O .TAB do DESINIT (70 bytes por viga, registro r = viga r; DESINIT.BAS:763-852, 933):
+ *  nome ("~" + nome, 10 caracteres) e A_1CEC(0..14) em SINGLE, com as repetições em 0.
+ *  Registro vazio fica undefined. */
+export function lerTab(b: Uint8Array) {
+  const lista: ({ nome: string; repeticoes: number } | undefined)[] = [];
+  for (let r = 0; (r + 1) * TAM_TAB <= b.length; r++) {
+    if (vazio(b, r, TAM_TAB)) {
+      lista.push(undefined);
+      continue;
+    }
+    const x = leitor(b, r * TAM_TAB, TAM_TAB);
+    lista.push({
+      nome: x.texto(1, 10).trimEnd().replace(/^~/, ""),
+      repeticoes: qbCint(x.sng(11)),
+    });
+  }
+  return lista;
+}
+
+/** DESENHO.INI como o DESENHO lê (DESENHO.BAS:738-767): uma linha por item, valor antes
+ *  do "=" (linha 1, a parametrização padrão) e os coeficientes de medida e de força por
+ *  VAL nas linhas 8 e 9. */
+export function lerDesenhoIni(texto: string) {
+  const linhas = texto.split(/\r\n|\r|\n/);
+  if (linhas.length < 9) throw new ErroImportacao("DESENHO.INI com menos de 9 linhas.");
+  const l = (i: number) => linhas[i - 1]!;
+  const antesDoIgual = (x: string) => x.slice(0, Math.max(0, x.indexOf("=")));
+  return {
+    parametrizacao: antesDoIgual(l(1)),
+    coeficienteMedida: val(l(8)),
+    coeficienteForca: val(l(9)),
+  };
+}
+
 // ---------------------------------------------------------------- VIGA.INI
 
 type ParametrosIni = typeof PARAMETROS_VIGA;
@@ -622,6 +661,15 @@ function cargasDoTrecho(
         acidental: tPorMParaKnPorM(dv.pAcidental),
       });
     }
+    // carga indexada "*n.aa" (Fac = −100): a reação do apoio aa da viga n (VIGA.BAS:1309-1312)
+    if (dv.indexada && !naPlanta(dv.d))
+      cargas.push({
+        tipo: "reacao",
+        trecho,
+        posicao: pos(dv.d),
+        viga: dv.indexada.viga,
+        apoio: dv.indexada.apoio,
+      });
     if (!dv.indexada && !naPlanta(dv.d) && (dv.f !== 0 || dv.fAcidental !== 0))
       cargas.push({
         tipo: "concentrada",
@@ -752,10 +800,18 @@ export function importarVigasSistrut(
     const iniArq = arquivos.find(
       (a) => base(a.nome).toUpperCase() === "VIGA" && extensao(a.nome) === ".INI",
     );
+    const tabArq = mesmo(".TAB");
+    const desenhoIni = arquivos.find(
+      (a) => base(a.nome).toUpperCase() === "DESENHO" && extensao(a.nome) === ".INI",
+    );
     for (const a of arquivos)
-      if (a !== iniArq && ![".VIG", ".SEC", ".FOR", ".DSP"].includes(extensao(a.nome)))
+      if (
+        a !== iniArq &&
+        a !== desenhoIni &&
+        ![".VIG", ".SEC", ".FOR", ".DSP", ".TAB"].includes(extensao(a.nome))
+      )
         avisos.push(
-          `${a.nome} ignorado: só .VIG, .SEC, .FOR, .DSP e VIGA.INI são importados aqui.`,
+          `${a.nome} ignorado: só .VIG, .SEC, .FOR, .TAB, .DSP, VIGA.INI e DESENHO.INI são importados aqui.`,
         );
 
     const registros = lerVig(vigArq.dados);
@@ -782,6 +838,8 @@ export function importarVigasSistrut(
       return s;
     });
     const formas = registros.map((_, i) => (forArq ? lerFor(forArq.dados, i) : undefined));
+    const tab = tabArq ? lerTab(tabArq.dados) : [];
+    const desenho = desenhoIni ? lerDesenhoIni(texto(desenhoIni.dados)) : undefined;
 
     const nova = obra
       ? completar(obra, pavimentoId, registros, nomes, secoes, formas, avisos)
@@ -791,6 +849,33 @@ export function importarVigasSistrut(
         ...nova.parametrosViga,
         dsp: { ...nova.parametrosViga?.dsp, ...parametrosDsp },
       };
+    // repetições da viga no DESENHO: o rept do .TAB (DESINIT.BAS:764), registro r = viga r
+    for (const [i, reg] of registros.entries()) {
+      const t = tab[i];
+      const v = nova.pavimentos.flatMap((p) => p.vigas).find((x) => x.nome === reg.nome);
+      if (t && v && t.nome === reg.nome) v.repeticoes = t.repeticoes;
+    }
+    if (desenho) {
+      const coef = diferentes(
+        {
+          coeficienteMedida: desenho.coeficienteMedida,
+          coeficienteForca: desenho.coeficienteForca,
+        },
+        {
+          coeficienteMedida: PARAMETROS_DSP.coeficienteMedida,
+          coeficienteForca: PARAMETROS_DSP.coeficienteForca,
+        },
+      );
+      if (Object.keys(coef).length > 0)
+        nova.parametrosViga = {
+          ...nova.parametrosViga,
+          dsp: { ...nova.parametrosViga?.dsp, ...coef },
+        };
+      if (!dspArq && desenho.parametrizacao.toUpperCase() !== "SISTRUT")
+        avisos.push(
+          `DESENHO.INI: a parametrização padrão é ${desenho.parametrizacao}.DSP, que não veio; valeu a SISTRUT.`,
+        );
+    }
     if (parametrosIni && Object.keys(parametrosIni).length > 0)
       nova.parametrosViga = {
         ...nova.parametrosViga,
@@ -829,10 +914,6 @@ function gerar(
     const trechos = trechosDoRegistro(d);
     const be = d.balancoEsquerdo ? 1 : 0;
     const n = d.tramos.length;
-    if (trechos.some(({ t }) => t.divisoes.some((dv) => dv.indexada)))
-      avisos.push(
-        `Viga ${reg.nome}: carga indexada (viga sobre viga) no .VIG; sem a planta, a reação da viga apoiada não chega a ela. Importe com a obra do .LAJ.`,
-      );
     const y = -ENTRE_VIGAS * iv;
     // nós: soma dos vãos (o vão exato vai em `vaos`)
     const nos = [0];
@@ -972,6 +1053,16 @@ function completar(
     if (d.engasteEsquerdo !== m.engasteEsquerdo || d.engasteDireito !== m.engasteDireito)
       viga.engaste = { esquerdo: d.engasteEsquerdo, direito: d.engasteDireito };
     if (entrada.momentosExternos) viga.momentosExternos = entrada.momentosExternos;
+    // números de pilar da opção 7: o VIGA os grava no J (VIGA.BAS:2232-2236); entram os que
+    // diferem do pilar que a planta põe no apoio, e o 471 ("*") vira apoio desconsiderado
+    const marcas = m.pilares.map((_, k) => pilarDaMarca(reg.trechos[k]?.inercia ?? 0));
+    const daPlanta = m.pilares.map((p) => (p === null ? 0 : numeroDoPilar(p)));
+    const desconsiderados = marcas.flatMap((x, k) =>
+      x === 471 && m.pilares[k] !== null ? [k] : [],
+    );
+    if (desconsiderados.length > 0) viga.apoiosDesconsiderados = desconsiderados;
+    if (marcas.some((x, k) => x !== 0 && x !== 471 && x !== daPlanta[k]))
+      viga.pilaresNoRep = marcas.map((x) => (x === 0 || x === 471 ? null : x));
     if (entrada.secoes) viga.secoes = entrada.secoes;
     if (entrada.forma) viga.forma = entrada.forma;
   });
