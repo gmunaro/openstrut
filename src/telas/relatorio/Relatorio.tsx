@@ -48,12 +48,14 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
 
   return (
     <DetalhamentoContexto value={detalhamento}>
-      <article className="mx-auto max-w-[1200px] pb-10 print:max-w-none print:p-0">
+      <article className="mx-auto max-w-[75rem] pb-10 print:max-w-none print:p-0">
         {/* o conteúdo inteiro vai numa tabela só: o <thead> é repetido pelo Chrome em cada página
             impressa (identificação da obra, modo e data). Na tela fica escondido. É tabela de
             layout: role="presentation" tira dela (e das linhas e células) os papéis de tabela,
-            para que só as tabelas de dados de dentro apareçam como tabelas aos leitores de tela. */}
-        <table role="presentation" className="w-full">
+            para que só as tabelas de dados de dentro apareçam como tabelas aos leitores de tela.
+            table-fixed: a célula fica com a largura da tela e as tabelas largas rolam dentro
+            dela, sem alargar a página no celular. */}
+        <table role="presentation" className="w-full table-fixed">
           <thead className="hidden print:table-header-group">
             <tr>
               <th className="text-muted-foreground p-0 pb-1 text-left text-[8pt] font-normal">

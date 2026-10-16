@@ -14,14 +14,16 @@ import { cn } from "@/lib/utils";
 export { TableBody as Corpo, TableHeader as Cabecalho, TableRow as Linha };
 
 /**
- * Tabela de resultados. A rolagem horizontal fica neste contêiner, focável por
- * teclado (Tab, depois as setas), e a primeira coluna (`Th`/`Td`) fica fixa.
+ * Tabela de resultados. A rolagem horizontal fica neste contêiner (a página não rola
+ * de lado), focável por teclado (Tab, depois as setas), e a primeira coluna
+ * (`Th`/`Td`) fica fixa. Na impressão a rolagem some (index.css).
  */
 export function Tabela({ className, ...props }: ComponentProps<typeof Table>) {
   return (
     <div
       tabIndex={0}
-      className="focus-visible:ring-ring rounded-sm focus-visible:ring-2 focus-visible:outline-none [&_[data-slot=table-container]]:overflow-visible"
+      data-slot="tabela-rolagem"
+      className="focus-visible:ring-ring max-w-full overflow-x-auto overscroll-x-contain rounded-sm focus-visible:ring-2 focus-visible:outline-none [&_[data-slot=table-container]]:overflow-visible"
     >
       <Table className={cn("text-xs print:text-[8pt]", className)} {...props} />
     </div>
@@ -43,7 +45,9 @@ export function Th({
     <TableHead
       className={cn(
         "text-muted-foreground h-auto px-2 py-1.5 align-bottom text-[11px] leading-tight font-medium",
-        "first:bg-background first:sticky first:left-0 last:pr-4",
+        // fixa só a primeira célula da primeira linha: na segunda linha de um cabeçalho
+        // agrupado a primeira célula é de um grupo, não da coluna do nome
+        "first:bg-background first:sticky first:left-0 last:pr-4 [tr+tr>&]:static",
         num && "text-right",
         className,
       )}
