@@ -28,6 +28,27 @@ function reduzir(origem: HTMLCanvasElement, fator: number) {
   return c;
 }
 
+/**
+ * O clone vira SVG serializado, que só leva atributos: o estado atual dos campos
+ * (opção escolhida no select, caixa marcada, texto digitado no textarea) se perderia.
+ * A biblioteca copia o valor para o atributo `value`; daqui ele vai para onde aparece.
+ */
+export function fixarEstadoDosCampos(clone: Node) {
+  if (clone instanceof HTMLSelectElement) {
+    const valor = clone.getAttribute("value");
+    for (const o of clone.querySelectorAll("option")) {
+      o.toggleAttribute("selected", o.value === valor);
+    }
+  } else if (
+    clone instanceof HTMLInputElement &&
+    (clone.type === "checkbox" || clone.type === "radio")
+  ) {
+    clone.toggleAttribute("checked", clone.checked);
+  } else if (clone instanceof HTMLTextAreaElement) {
+    clone.textContent = clone.getAttribute("value") ?? clone.value;
+  }
+}
+
 /** PNG da janela como está agora; null se a captura falhar (o relato segue sem print).
  *  Tela muito carregada que passa de LIMITE_PRINT sai em resolução menor. */
 export async function capturarTela(): Promise<Blob | null> {
@@ -38,6 +59,7 @@ export async function capturarTela(): Promise<Blob | null> {
       // o tema escuro pinta o fundo no body; sem isso o PNG sai transparente
       backgroundColor: getComputedStyle(corpo).backgroundColor,
       filter: (n) => !(n instanceof Element && n.hasAttribute(ATRIBUTO_IGNORAR)),
+      onCloneEachNode: fixarEstadoDosCampos,
       timeout: 10_000,
     });
     let png = await paraPng(canvas);
