@@ -1,7 +1,6 @@
 // Modelo da obra: o que o usuário desenha e edita, e o que vai para o
 // arquivo .openstrut.json. Geometria da planta em metros; seções em cm;
 // cargas em kN/m² (lajes) e kN/m (vigas).
-import type { PARAMETROS_DSP, PARAMETROS_VIGA } from "../calculo/sistrut/base/parametros";
 
 export type NormaId = "nb1-78" | "nbr6118-2023";
 export type Aco = "CA-25" | "CA-50" | "CA-60";
@@ -211,8 +210,93 @@ export interface Obra {
 
 /** VIGA.INI e .DSP editados: cada campo presente substitui o de fábrica inteiro (uma
  *  tabela vem inteira). Unidades do original (t/cm², cm, %). No modo corrigido, o fck,
- *  o fyk, a classe do aço e o cobrimento do .DSP não entram: valem os da obra. */
+ *  o fyk, a classe do aço e o cobrimento do .DSP não entram: valem os da obra. Os valores
+ *  de fábrica e o que cada campo faz estão em calculo/sistrut/base/parametros.ts
+ *  (PARAMETROS_VIGA e PARAMETROS_DSP, que têm esta mesma forma). */
 export interface ParametrosVigaObra {
-  viga?: Partial<typeof PARAMETROS_VIGA>;
-  dsp?: Partial<typeof PARAMETROS_DSP>;
+  viga?: Partial<ParametrosVigaIni>;
+  dsp?: Partial<ParametrosDsp>;
+}
+
+/** VIGA.INI (VIGA.BAS:518-527, 591-640). */
+export interface ParametrosVigaIni {
+  /** Fator de redução dos negativos (1 = 100 %). */
+  reducaoNegativos: number;
+  /** Acidentais "S" (envoltória). */
+  acidentais: boolean;
+  /** Acidental "G" gerada pelo % (true) ou "F" fornecida (false). */
+  acidentalGerada: boolean;
+  porcentagemAcidentalGerada: number;
+  momentosExternos: boolean;
+  /** Reação levada ao pilar: "E" estática ou "M" máxima. */
+  reacaoNoPilar: "estatica" | "maxima";
+  coeficienteMedida: number;
+  coeficienteForca: number;
+  /** % dos momentos de extremidade levados ao pilar (opção 7). */
+  multiplicadorMomentosPilar: number;
+}
+
+/** .DSP do DESENHO (DESENHO.BAS:4773-5035) e os coeficientes do DESENHO.INI. Tabelas de
+ *  tamanho fixo: bitolas 10, bitolasEstribo 6, dobrasPorBitola 10 × 5, tabelaBitola1/2 5,
+ *  limitesIntervalos 5; arranjosPorIntervalo e grupoDeCorte têm uma lista por grupo. */
+export interface ParametrosDsp {
+  coeficienteMedida: number;
+  coeficienteForca: number;
+  reducaoNegativos: number;
+  fck: number;
+  fyk: number;
+  classeAco: ClasseAco;
+  multiplicadorUnidade: number;
+  multiplicadorEc: number;
+  cobrimento: number;
+  acrescimo: number;
+  alivioCortante: boolean;
+  acidentaisEnvoltoria: boolean;
+  momentosExternos: boolean;
+  gamaF: number;
+  gamaC: number;
+  gamaS: number;
+  bitolas: { bitola: number; area: number; kgPorM: number }[];
+  taxaArmaduraMinima: number;
+  decalagem: number;
+  ancoragemPositiva: number;
+  ancoragemNegativa: number;
+  ancoragemMinimo10Diametros: boolean;
+  flechaInerciaFissurada: boolean;
+  flechaDeformacaoLenta: boolean;
+  verificaFissuracao: boolean;
+  /** 1, 2 ou 3. */
+  classeFissuracao: number;
+  /** 3 a 6. */
+  gruposBitolas: number;
+  limitesIntervalos: number[];
+  arranjosPorIntervalo: { area: number; arranjo: string }[][];
+  grupoDeCorte: number[][];
+  taxaEstriboMinima: number;
+  espacamentoEstriboMinimo: number;
+  espacamentoEstriboMaximo: number;
+  comparaEspacamentoMaximo: "d/2" | "H/2";
+  larguraEstriboSimples: number;
+  larguraEstriboDuplo: number;
+  espacamentosEstribo: number[];
+  bitolasEstribo: { maxima: number; minima: number }[];
+  dobrasPorBitola: number[][];
+  tabelaBitola1: number[];
+  tabelaBitola2: number[];
+  letraFerros: string;
+  portaEstribosAutomaticos: boolean;
+  ordemMinimaPortaEstribo: number;
+  traspassePortaEstribo: number;
+  comprimentoDesenvolvido: boolean;
+  raioDobramento: number;
+  taxaMinimaNegativa: number;
+  alturaArmaduraPele: number;
+  taxaArmaduraPele: number;
+  traspassePele: number;
+  distanciaMinimaEstribosExtremidade: number;
+  entradaMinimaApoio: number;
+  verificaGrampos: boolean;
+  reduzAncoragemPositiva: boolean;
+  ordemMaximaCA60: number;
+  comprimentoMaximoBarra: number;
 }

@@ -389,8 +389,9 @@ class Validador {
       const trechos = this.opcional(s, "trechos", cs, (x, cx) => {
         const t = this.objeto(x, cx);
         return {
-          bw: this.numero(t, "bw", cx, "positivo"),
-          h: this.numero(t, "h", cx, "positivo"),
+          // 0 no balanço = herda a seção do apoio vizinho (DESDIM.BAS:2919-2929)
+          bw: this.numero(t, "bw", cx, "naoNegativo"),
+          h: this.numero(t, "h", cx, "naoNegativo"),
           bf: this.numero(t, "bf", cx, "naoNegativo"),
           hf: this.numero(t, "hf", cx, "naoNegativo"),
         };
@@ -457,9 +458,55 @@ class Validador {
     const r: ParametrosVigaObra = {};
     if (d.viga !== undefined)
       r.viga = this.conformeTabela(this.objeto(d.viga, `${c}.viga`), PARAMETROS_VIGA, `${c}.viga`);
-    if (d.dsp !== undefined)
-      r.dsp = this.conformeTabela(this.objeto(d.dsp, `${c}.dsp`), PARAMETROS_DSP, `${c}.dsp`);
+    if (d.dsp !== undefined) {
+      const dsp = this.conformeTabela(this.objeto(d.dsp, `${c}.dsp`), PARAMETROS_DSP, `${c}.dsp`);
+      this.conferenciaDsp({ ...PARAMETROS_DSP, ...dsp }, `${c}.dsp`);
+      r.dsp = dsp;
+    }
     return r;
+  }
+
+  /** Tamanhos e faixas do .DSP que o leitor do DESENHO fixa (DESENHO.BAS:5112-5410): as
+   *  tabelas de tamanho fixo, 3 a 6 grupos de bitolas com uma lista de arranjos e uma de
+   *  grupo de corte por grupo, classe de fissuração 1 a 3, lista de espaçamentos de estribo. */
+  private conferenciaDsp(t: typeof PARAMETROS_DSP, c: string) {
+    const tamanho = (campo: string, lista: readonly unknown[], n: number) => {
+      if (lista.length !== n)
+        this.erro(`${c}.${campo}`, `esperada uma lista de ${n} itens`, lista.length);
+    };
+    tamanho("bitolas", t.bitolas, 10);
+    tamanho("bitolasEstribo", t.bitolasEstribo, 6);
+    tamanho("dobrasPorBitola", t.dobrasPorBitola, 10);
+    t.dobrasPorBitola.forEach((l, i) => tamanho(`dobrasPorBitola[${i}]`, l, 5));
+    tamanho("tabelaBitola1", t.tabelaBitola1, 5);
+    tamanho("tabelaBitola2", t.tabelaBitola2, 5);
+    tamanho("limitesIntervalos", t.limitesIntervalos, 5);
+    if (!Number.isInteger(t.gruposBitolas) || t.gruposBitolas < 3 || t.gruposBitolas > 6)
+      this.erro(`${c}.gruposBitolas`, "esperado um inteiro de 3 a 6", t.gruposBitolas);
+    else {
+      tamanho("arranjosPorIntervalo", t.arranjosPorIntervalo, t.gruposBitolas);
+      tamanho("grupoDeCorte", t.grupoDeCorte, t.gruposBitolas);
+    }
+    t.arranjosPorIntervalo.forEach((l, i) => {
+      if (l.length < 1 || l.length > 29)
+        this.erro(
+          `${c}.arranjosPorIntervalo[${i}]`,
+          "esperada uma lista de 1 a 29 arranjos",
+          l.length,
+        );
+    });
+    t.grupoDeCorte.forEach((l, i) => {
+      if (l.length > 8)
+        this.erro(`${c}.grupoDeCorte[${i}]`, "esperada uma lista de até 8 grupos", l.length);
+    });
+    if (![1, 2, 3].includes(t.classeFissuracao))
+      this.erro(`${c}.classeFissuracao`, "esperado 1, 2 ou 3", t.classeFissuracao);
+    if (t.espacamentosEstribo.length < 2)
+      this.erro(
+        `${c}.espacamentosEstribo`,
+        "esperada uma lista de ao menos 2 espaçamentos",
+        t.espacamentosEstribo.length,
+      );
   }
 
   /** Campos de uma tabela de parâmetros: só os conhecidos, cada um com a forma do valor de
@@ -467,13 +514,13 @@ class Validador {
   private conformeTabela<T extends object>(d: Dados, padrao: T, c: string): Partial<T> {
     const r: Partial<T> = {};
     for (const chave of Object.keys(d)) {
-      if (!(chave in padrao)) {
+      if (!Object.hasOwn(padrao, chave)) {
         this.erros.push(`${c}.${chave}: parâmetro desconhecido.`);
         continue;
       }
       const k = chave as keyof T;
       const x = d[chave];
-      const opcoes = OPCOES_TEXTO[chave];
+      const opcoes = Object.hasOwn(OPCOES_TEXTO, chave) ? OPCOES_TEXTO[chave] : undefined;
       if (opcoes && !opcoes.includes(String(x))) {
         this.erro(`${c}.${chave}`, `esperado um de ${opcoes.map(mostra).join(", ")}`, x);
         continue;
@@ -524,6 +571,10 @@ function mesmaForma<T>(x: unknown, padrao: T): x is T {
     return item === undefined ? x.length === 0 : x.every((v) => mesmaForma(v, item));
   }
   if (ehObjeto(padrao))
-    return ehObjeto(x) && Object.keys(padrao).every((k) => mesmaForma(x[k], padrao[k]));
+    return (
+      ehObjeto(x) &&
+      Object.keys(x).length === Object.keys(padrao).length &&
+      Object.keys(padrao).every((k) => Object.hasOwn(x, k) && mesmaForma(x[k], padrao[k]))
+    );
   return false;
 }

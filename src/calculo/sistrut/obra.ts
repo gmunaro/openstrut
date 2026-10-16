@@ -147,9 +147,7 @@ export const densidadeSistrut = (modo: ModoSistrut) =>
 /** Tabelas "SISTRUT" do original. No modo original, em SINGLE e com os cobrimentos
  *  delas; no corrigido, em decimal, com a densidade SI e os cobrimentos da obra. */
 export function parametrosSistrut(m: Materiais, modo: ModoSistrut, pv?: ParametrosVigaObra) {
-  // VIGA.INI e .DSP da obra por cima dos de fábrica (cada campo substitui o inteiro)
-  const dspObra = { ...PARAMETROS_DSP, ...pv?.dsp };
-  const vigaObra = { ...PARAMETROS_VIGA, ...pv?.viga };
+  const { dsp: dspObra, viga: vigaObra } = tabelasDaObra(pv);
   if (modo === "original")
     return {
       laje: emSingle(PARAMETROS_LAJE),
@@ -168,6 +166,16 @@ export function parametrosSistrut(m: Materiais, modo: ModoSistrut, pv?: Parametr
   };
 }
 export type ParametrosSistrut = ReturnType<typeof parametrosSistrut>;
+
+/** Adaptador domínio → cálculo: o VIGA.INI e o .DSP da obra (`ParametrosVigaObra`, tipo
+ *  próprio do domínio) por cima das tabelas de fábrica, cada campo substituindo o inteiro.
+ *  O tipo de retorno obriga o domínio a ter a forma das tabelas. */
+export function tabelasDaObra(pv: ParametrosVigaObra | undefined): {
+  dsp: typeof PARAMETROS_DSP;
+  viga: typeof PARAMETROS_VIGA;
+} {
+  return { dsp: { ...PARAMETROS_DSP, ...pv?.dsp }, viga: { ...PARAMETROS_VIGA, ...pv?.viga } };
+}
 
 /** Materiais do DESDIM/DESINIT. No modo original, o fck, o fyk, a classe do aço e os γ do
  *  .DSP da obra, quando ela os dá (o DESDIM lê os do .DSP, DESENHO.BAS:4774-4789); no
@@ -528,11 +536,7 @@ function pesosDasVigas(pav: Pavimento, modo: ModoSistrut): PesoProprioVigas {
   const dens = densidadeSistrut(modo);
   // o peso digitado (kN/m → t/m) ou o da seção
   const tPorM = (v: (typeof pav.vigas)[number]) =>
-    v.somenteCargasProprias
-      ? 0
-      : v.pesoProprio !== undefined
-        ? knPorMParaTPorM(v.pesoProprio)
-        : ((v.bw * v.h) / 10_000) * dens;
+    v.pesoProprio !== undefined ? knPorMParaTPorM(v.pesoProprio) : ((v.bw * v.h) / 10_000) * dens;
   const kg = new Map(pav.vigas.map((v) => [v.nome, pesoKgPorM(s(tPorM(v)))]));
   const contagem = new Map<number, number>();
   for (const k of kg.values()) contagem.set(k, (contagem.get(k) ?? 0) + 1);
@@ -679,11 +683,13 @@ function calcularPavimentoSistrut(
   for (const dados of vigasAnalisadas) {
     const g = geo.vigas.find((x) => x.viga.nome === dados.nome);
     if (!g) continue;
+    const avisosForma: string[] = [];
     const { secoes, forma, apoios, eixos } = secoesEFormaDaObra(
       g.viga,
       dados,
       secoesEForma(g, dados, pav),
       modo,
+      avisosForma,
     );
     const entrada: EntradaDesdim = {
       viga: dados,
@@ -692,7 +698,7 @@ function calcularPavimentoSistrut(
       materiais: matViga,
       parametros: par.dsp,
     };
-    const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: [] };
+    const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: avisosForma };
     try {
       v.dimensionamento = dimensionaViga(entrada, modo);
       v.detalhamento = detalhaViga(entrada, v.dimensionamento, modo, {

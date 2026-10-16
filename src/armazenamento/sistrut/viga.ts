@@ -27,7 +27,7 @@
 // apoio desconsiderado. Ao completar, as vigas casam pelo nome e só entra o que difere do
 // que a própria obra grava pela montagem.
 import { calcularObraSistrut } from "../../calculo/sistrut/obra";
-import { sng } from "../../calculo/sistrut/base/f32";
+import { qbCint, sng } from "../../calculo/sistrut/base/f32";
 import { PARAMETROS_DSP, PARAMETROS_VIGA } from "../../calculo/sistrut/base/parametros";
 import type { DadosViga, DivisaoCarga, TramoViga } from "../../calculo/sistrut/base/tipos";
 import { tmParaKnm, tParaKn, tPorMParaKnPorM } from "../../calculo/sistrut/base/unidades";
@@ -153,7 +153,7 @@ export function dadosDoRegistro(reg: RegistroVigLido, nomes: readonly string[]):
           ? {
               indexada: {
                 viga: nomes[viga - 1] ?? String(viga),
-                apoio: Math.round((x.f - viga) * 100),
+                apoio: qbCint((x.f - viga) * 100),
               },
             }
           : {}),
@@ -177,7 +177,7 @@ export function dadosDoRegistro(reg: RegistroVigLido, nomes: readonly string[]):
 /** Número do pilar marcado no J do apoio k: CINT((J − INT(J·100)/100)·100000)
  *  (VIGA.BAS:2140-2160). 0 = sem marca; 471 = apoio desconsiderado. */
 export function pilarDaMarca(j: number) {
-  return Math.round((j - Math.floor(j * 100) / 100) * 100000);
+  return qbCint((j - Math.floor(j * 100) / 100) * 100000);
 }
 
 /** Registro r (0-based) ausente ou só com zeros (o QB preenche os registros que pula). */
@@ -274,6 +274,17 @@ class Sequencial {
     const s = this.atual();
     let i = this.c;
     while (i < s.length && (s[i] === " " || s[i] === "\t")) i++;
+    if (s[i] === '"') {
+      // texto entre aspas: até a aspa seguinte; depois, até a vírgula ou o fim da linha
+      const fecha = s.indexOf('"', i + 1);
+      const valor = fecha < 0 ? s.slice(i + 1) : s.slice(i + 1, fecha);
+      const depois = fecha < 0 ? -1 : s.indexOf(",", fecha);
+      if (depois < 0) {
+        this.l += 1;
+        this.c = 0;
+      } else this.c = depois + 1;
+      return valor;
+    }
     const v = s.indexOf(",", i);
     if (v < 0) {
       this.l += 1;
@@ -350,7 +361,8 @@ export function lerDsp(texto: string): Dsp {
 
   a.secao((s) => s === "PARAMETROS", "PARAMETROS");
   const gruposBitolas = num();
-  const limitesIntervalos = [num(), num(), 0, 0, 0];
+  // sem o 3º..5º limite no arquivo, fica o valor anterior (o de fábrica)
+  const limitesIntervalos = [num(), num(), ...PARAMETROS_DSP.limitesIntervalos.slice(2)];
   if (gruposBitolas > 3) limitesIntervalos[2] = num();
   if (gruposBitolas > 4) limitesIntervalos[3] = num();
   if (gruposBitolas > 5) limitesIntervalos[4] = num();
@@ -372,7 +384,7 @@ export function lerDsp(texto: string): Dsp {
     for (let i = 0; i <= 7; i++) {
       const s = a.input();
       if (s === "FIM") break;
-      lista.push(Math.round(val(mid(s, 15))));
+      lista.push(qbCint(val(mid(s, 15))));
     }
     grupoDeCorte.push(lista);
   }
@@ -400,7 +412,7 @@ export function lerDsp(texto: string): Dsp {
   a.secao((s) => s === "PARAMETROS", "PARAMETROS");
   const dobrasPorBitola = Array.from({ length: 10 }, () => {
     a.input();
-    return Array.from({ length: 5 }, () => Math.round(val(a.input())));
+    return Array.from({ length: 5 }, () => qbCint(val(a.input())));
   });
   const tabela = () => {
     a.secao((s) => s === "PARAMETROS", "PARAMETROS");
@@ -432,6 +444,11 @@ export function lerDsp(texto: string): Dsp {
   const reduzAncoragemPositiva = letra() === "S";
   const ordemMaximaCA60 = num();
   const comprimentoMaximoBarra = num();
+  a.input();
+  const final = a.input();
+  // ERROR 1 do leitor (DESENHO.BAS:5466-5468): o DESENHO avisa e adota a SISTRUT
+  if (final !== "FINAL DA PARAMETRIZACAO")
+    throw new ErroImportacao(`.DSP: esperado "FINAL DA PARAMETRIZACAO", veio "${final}".`);
 
   return {
     ...PARAMETROS_DSP,
@@ -530,7 +547,7 @@ export function lerVigaIni(texto: string): ParametrosIni {
     reducaoNegativos: Math.min(val(l(7)) / 100, 15),
     acidentais: c(8) === "S",
     acidentalGerada: c(9) === "G",
-    porcentagemAcidentalGerada: Math.round(Math.max(4, Math.min(96, val(l(10))))),
+    porcentagemAcidentalGerada: qbCint(Math.max(4, Math.min(96, val(l(10))))),
     momentosExternos: c(11) === "S",
     reacaoNoPilar: c(12) === "M" ? "maxima" : "estatica",
   };
@@ -568,16 +585,32 @@ function trechosDoRegistro(d: DadosViga) {
 /** Cargas da obra a partir das divisões de um trecho: uma distribuída por divisão com P
  *  ou Pac e uma concentrada por F ou Fac. As indexadas (viga sobre viga) não entram: a
  *  reação vem da planta. Posições a partir da ponta esquerda do trecho. */
-function cargasDoTrecho(t: TramoViga, tipo: TipoTrecho, trecho: number, pular: Set<number>) {
+function cargasDoTrecho(
+  t: TramoViga,
+  tipo: TipoTrecho,
+  trecho: number,
+  indexadasNaPlanta: readonly number[],
+) {
   const cargas: CargaViga[] = [];
   const L = t.vao;
   // abscissas a partir do apoio, em ordem crescente (no balanço esquerdo o registro vem
   // da ponta para o apoio)
   const divs = tipo === "balE" ? [...t.divisoes].reverse() : t.divisoes;
-  const pos = (d: number) => (tipo === "balE" ? L - d : decimalDoSingle(d));
+  /** Posição a partir da ponta esquerda: o decimal mais curto que volta ao mesmo D. */
+  const pos = (d: number) => {
+    if (tipo !== "balE") return decimalDoSingle(d);
+    // o decimal mais curto u com sng(L − u) = D (o motor refaz D = L − u em SINGLE)
+    for (let p = 1; p <= 17; p++) {
+      const u = Number((L - d).toPrecision(p));
+      if (sng(L - u) === sng(d)) return u;
+    }
+    return L - d;
+  };
+  /** D em que a planta já leva a reação de uma viga apoiada (casa pela posição). */
+  const naPlanta = (d: number) =>
+    indexadasNaPlanta.some((x) => Math.abs(x - d) <= 1e-5 * Math.max(1, L));
   let anterior = 0;
-  divs.forEach((dv, k) => {
-    const indice = tipo === "balE" ? t.divisoes.length - 1 - k : k;
+  divs.forEach((dv) => {
     if (dv.p !== 0 || dv.pAcidental !== 0) {
       const [inicio, fim] = [pos(anterior), pos(dv.d)].sort((a, b) => a - b) as [number, number];
       cargas.push({
@@ -589,7 +622,7 @@ function cargasDoTrecho(t: TramoViga, tipo: TipoTrecho, trecho: number, pular: S
         acidental: tPorMParaKnPorM(dv.pAcidental),
       });
     }
-    if (!dv.indexada && !pular.has(indice) && (dv.f !== 0 || dv.fAcidental !== 0))
+    if (!dv.indexada && !naPlanta(dv.d) && (dv.f !== 0 || dv.fAcidental !== 0))
       cargas.push({
         tipo: "concentrada",
         trecho,
@@ -607,7 +640,7 @@ function entradaDaViga(
   d: DadosViga,
   secao: ReturnType<typeof lerSec>,
   forma: ReturnType<typeof lerFor>,
-  pularF: (trecho: number) => Set<number> = () => new Set(),
+  indexadasNaPlanta: (trecho: number) => readonly number[] = () => [],
 ): Partial<Viga> {
   const trechos = trechosDoRegistro(d);
   const be = d.balancoEsquerdo ? 1 : 0;
@@ -615,7 +648,7 @@ function entradaDaViga(
   /** Índice do original (0 balE, 1..n tramos, n+1 balD) do trecho i da obra. */
   const indice = (i: number) => (be ? i : i + 1);
   const r: Partial<Viga> = {
-    cargas: trechos.flatMap(({ t, tipo }, i) => cargasDoTrecho(t, tipo, i, pularF(i))),
+    cargas: trechos.flatMap(({ t, tipo }, i) => cargasDoTrecho(t, tipo, i, indexadasNaPlanta(i))),
     vaos: trechos.map(({ t }) => decimalDoSingle(t.vao)),
     inercias: trechos.map(({ t }) => decimalDoSingle(t.inercia)),
   };
@@ -727,7 +760,15 @@ export function importarVigasSistrut(
 
     const registros = lerVig(vigArq.dados);
     const nomes = registros.map((r) => r.nome);
-    const dsp = dspArq ? lerDsp(texto(dspArq.dados)) : undefined;
+    let dsp: Dsp | undefined;
+    if (dspArq)
+      try {
+        dsp = lerDsp(texto(dspArq.dados));
+      } catch (e) {
+        if (!(e instanceof ErroImportacao)) throw e;
+        // o DESENHO mostra "ERRO NO ARQUIVO PARAMETRIZACAO" e adota a SISTRUT (L_2041c)
+        avisos.push(`${dspArq.nome}: ${e.message} O original adota a parametrização SISTRUT.`);
+      }
     const parametrosDsp = dsp ? dspDaObra(dsp) : undefined;
     const parametrosIni = iniArq
       ? diferentes(lerVigaIni(texto(iniArq.dados)), PARAMETROS_VIGA)
@@ -831,6 +872,13 @@ function gerar(
     pav.vigas.push(viga);
   });
   pav.pilares = pilares;
+  // sem a planta, o mesmo pilar aparece uma vez em cada viga que se apoia nele
+  const nomesPilares = pilares.map((p) => p.nome);
+  const repetidos = [...new Set(nomesPilares.filter((x, i) => nomesPilares.indexOf(x) !== i))];
+  if (repetidos.length > 0)
+    avisos.push(
+      `Pilares ${repetidos.join(", ")} aparecem em mais de uma viga do .VIG e a planta gerada tem um por viga, em posição inventada: o .REP soma as reações pelo nome, como o original, mas no cálculo dos pilares só o primeiro de cada nome recebe a carga. Para os pilares, importe com a obra do .LAJ.`,
+    );
   return {
     versao: 3,
     nome,
@@ -840,6 +888,19 @@ function gerar(
     pavimentos: [pav],
   };
 }
+
+/** Campos da viga que a importação grava (os que uma reimportação limpa). */
+const CAMPOS_DA_IMPORTACAO = [
+  "cargas",
+  "somenteCargasProprias",
+  "vaos",
+  "inercias",
+  "engaste",
+  "momentosExternos",
+  "apoiosDesconsiderados",
+  "secoes",
+  "forma",
+] as const satisfies readonly (keyof Viga)[];
 
 /** Completa o pavimento: casa as vigas pelo nome e põe só o que difere do que a montagem
  *  da própria obra grava (as cargas, se alguma divisão difere; senão nada). */
@@ -856,6 +917,10 @@ function completar(
   const ip = pavimentoId ? nova.pavimentos.findIndex((p) => p.id === pavimentoId) : 0;
   const pav = nova.pavimentos[ip];
   if (!pav) throw new ErroImportacao(`Pavimento ${pavimentoId ?? ""} não existe na obra.`);
+  // reimportação: a entrada de viga de antes sai, e a montagem é a da planta
+  for (const v of pav.vigas)
+    if (registros.some((r) => r.nome === v.nome))
+      for (const campo of CAMPOS_DA_IMPORTACAO) delete v[campo];
   const montagem = calcularObraSistrut(nova, { modo: "original" }).pavimentos[ip]!.montagem.vigas;
   // a montagem da V2 e o LAJEMONT diferem em poucos ulps do SINGLE em algumas divisões
   // (E2E V3/V6, VBX V2): isso não é edição do usuário
@@ -877,9 +942,9 @@ function completar(
       );
       return;
     }
-    // F das divisões em que a planta já traz a reação de uma viga apoiada (indexada)
-    const indexadas = (i: number) =>
-      new Set(tm[i]!.t.divisoes.flatMap((dv, k) => (dv.indexada ? [k] : [])));
+    // D das divisões em que a planta já traz a reação de uma viga apoiada (indexada)
+    const indexadas = (i: number) => tm[i]!.t.divisoes.flatMap((dv) => (dv.indexada ? [dv.d] : []));
+    const indexadaEm = (i: number, d: number) => indexadas(i).some((x) => igual(x, d));
     const mesmasCargas = td.every(({ t }, i) => {
       const a = t.divisoes;
       const b = tm[i]!.t.divisoes;
@@ -890,8 +955,7 @@ function completar(
             igual(x.d, b[k]!.d) &&
             igual(x.p, b[k]!.p) &&
             igual(x.pAcidental, b[k]!.pAcidental) &&
-            (b[k]!.indexada !== undefined ||
-              (igual(x.f, b[k]!.f) && igual(x.fAcidental, b[k]!.fAcidental))),
+            (indexadaEm(i, x.d) || (igual(x.f, b[k]!.f) && igual(x.fAcidental, b[k]!.fAcidental))),
         )
       );
     });
