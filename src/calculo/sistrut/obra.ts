@@ -43,6 +43,7 @@ import { num, numAte } from "../texto";
 import type { Bordo, Laje, Materiais, Obra, Pavimento, Pilar, Vinculo } from "../../dominio/obra";
 import type { BarraImposta, ParametrosLajeObra, Ponto, TipoLaje } from "../../dominio/obra";
 import type { ParametrosVigaObra } from "../../dominio/obra";
+import { nomeArquivoEdv, type EdicaoVigaSistrut } from "../../dominio/edicaoViga";
 import { geometriaDasVigas, type GeometriaViga } from "../montagem";
 import type { Etapa } from "../tipos";
 import { atribuicao, ErroQB, qbUsing, sng } from "./base/f32";
@@ -58,6 +59,7 @@ import {
 import type {
   AnaliseViga,
   ApoioFormaViga,
+  EixoTramoViga,
   ArmadurasDeLaje,
   CargaPilarNivel,
   CargaPorArea,
@@ -912,6 +914,45 @@ function textoInterrompida(nome: string, motivos: readonly ("cisalhamento" | "mo
   return `${nome}: ${porque}. Como no original com a resposta padrão "N", a viga parou no dimensionamento, sem detalhamento nem quadro de ferros. Para seguir, marque ${rotuloOpcao("viga.continuar-acima-do-limite")} na viga.`;
 }
 
+/** Viga com armadura editada (.EDV) cujo DESDIM não concluiu: o quadro sai só da edição,
+ *  como o original ao reabrir a viga no DESEDITA (DESINIT sem o detalhamento automático,
+ *  DESINIT.BAS:84-100). É o caso de um .DSP próprio do usuário que não veio com a obra:
+ *  o .TAB do original saiu da edição, que não depende do DESDIM. */
+function quadroDaEdicao(
+  v: VigaSistrut,
+  edicao: EdicaoVigaSistrut,
+  apoios: ApoioFormaViga[],
+  eixos: EixoTramoViga[] | undefined,
+  repeticoesPavimento: number,
+  repeticoesViga: number | undefined,
+  par: ParametrosSistrut,
+  modo: ModoSistrut,
+) {
+  const { entrada } = v;
+  try {
+    const sem = { nome: v.nome, tramos: [], apoios: [] };
+    v.detalhamento = detalhaViga(entrada, sem, modo, {
+      apoios,
+      ...(eixos ? { eixos } : {}),
+      armaduraEditada: edicao,
+      reabreEdicao: true,
+    });
+    v.quadro = quadroDaViga(
+      v.detalhamento,
+      entrada.secoes,
+      entrada.forma,
+      repeticoesViga ?? repeticoesPavimento,
+      par.dsp,
+      modo,
+    );
+    v.avisos.push(
+      `${v.nome}: o detalhamento e o quadro de ferros saíram só da armadura editada no SISTRUT (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}), como o original faz ao reabrir a viga editada no DESEDITA; sem o dimensionamento${modo === "corrigido" ? " e sem a conferência da As editada" : ""}.`,
+    );
+  } catch (e) {
+    v.avisos.push(`${v.nome}: quadro da armadura editada não concluído: ${mensagem(e)}`);
+  }
+}
+
 /** A armadura comprimida digitada no DESDIM ("Armadura Comprimida", S_60137/S_61fbe) vai
  *  ao DESINIT pelo COMMON (A_13d0$, A_13a2$); os outros elementos ficam com o padrão. */
 function comprimidaDigitada(viga: Pavimento["vigas"][number], dim: DimensionamentoViga) {
@@ -1155,7 +1196,9 @@ function calcularPavimentoSistrut(
         apoios,
         ...(eixos ? { eixos } : {}),
         ...comprimidaDigitada(g.viga, v.dimensionamento),
+        ...(g.viga.armaduraEditada ? { armaduraEditada: g.viga.armaduraEditada } : {}),
       });
+      v.avisos.push(...v.detalhamento.avisos);
       // repetições da viga no DESENHO (o rept do .TAB) ou as do pavimento
       const rept = g.viga.repeticoes ?? pav.repeticoes;
       v.quadro = quadroDaViga(v.detalhamento, secoes, forma, rept, par.dsp, modo);
@@ -1164,6 +1207,9 @@ function calcularPavimentoSistrut(
       v.avisos.push(
         `${dados.nome}: dimensionamento/detalhamento não concluído: ${mensagem(e)}${qb}`,
       );
+      const edicao = g.viga.armaduraEditada;
+      if (e instanceof ErroQB && edicao && !v.detalhamento)
+        quadroDaEdicao(v, edicao, apoios, eixos, pav.repeticoes, g.viga.repeticoes, par, modo);
     }
     vigas.push(v);
   }
