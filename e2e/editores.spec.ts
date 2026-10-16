@@ -82,11 +82,15 @@ test("editor da viga: Continuo com o processamento, cargas e seção T", async (
   await dialogo.getByRole("textbox", { name: "Carga concentrada 1, Posição" }).fill("3");
   await dialogo.getByRole("textbox", { name: "Carga concentrada 1, Total" }).fill("abc");
 
-  // Aplicar com um número inválido: a mensagem diz o campo e o diálogo fica aberto
+  // Aplicar de outra aba com um número inválido em Cargas: a mensagem diz a aba e o
+  // campo, a aba Cargas ganha a marca de erro e volta a ser a aberta
+  await dialogo.getByRole("tab", { name: "Rodada" }).click();
   await dialogo.getByRole("button", { name: "Aplicar" }).click();
   await expect(dialogo.getByRole("alert")).toContainText(
-    "Carga concentrada 1, total: informe um número.",
+    "Cargas → Carga concentrada 1, total: informe um número.",
   );
+  const abaCargas = dialogo.getByRole("tab", { name: "Cargas (com erro)" });
+  await expect(abaCargas).toHaveAttribute("aria-selected", "true");
   await foto(page, "03-viga-cargas-erro");
   await dialogo.getByRole("textbox", { name: "Carga concentrada 1, Total" }).fill("10");
 

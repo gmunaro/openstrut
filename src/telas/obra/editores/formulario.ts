@@ -12,9 +12,11 @@ export type Limite = "qualquer" | "positivo" | "naoNegativo";
 /** Lê os campos de um formulário e junta os problemas, na ordem em que aparecem. */
 export class Leitor {
   erros: string[] = [];
+  /** Aba do formulário que está sendo lida: com ela, a mensagem começa por "Aba → ". */
+  secao: string | undefined;
 
   erro(mensagem: string) {
-    this.erros.push(mensagem);
+    this.erros.push(this.secao ? `${this.secao} → ${mensagem}` : mensagem);
   }
 
   /** Número obrigatório. Com problema, anota a mensagem e devolve 0 para seguir lendo. */

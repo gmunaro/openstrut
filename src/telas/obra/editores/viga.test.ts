@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { lerObra } from "../../../armazenamento/arquivo";
 import type { Pavimento, Viga } from "../../../dominio/obra";
-import { formDaViga, geometriaDaViga, vigaDoForm, vigasQueCruzam } from "./viga";
+import { abasComErro, formDaViga, geometriaDaViga, vigaDoForm, vigasQueCruzam } from "./viga";
 
 function pavimentoR3(): Pavimento {
   const r = lerObra(readFileSync("e2e/fixtures/laje-r3-original.openstrut.json", "utf8"));
@@ -112,8 +112,8 @@ describe("mensagens do formulário da viga", () => {
         f.distribuidas = [{ trecho: "2", inicio: "3", fim: "1", total: "5", acidental: "" }];
       }),
     ).toEqual([
-      "Carga distribuída 1: o fim precisa ser maior ou igual ao início.",
-      "Carga distribuída 1: a viga tem 2 trechos (0 a 1).",
+      "Cargas → Carga distribuída 1: o fim precisa ser maior ou igual ao início.",
+      "Cargas → Carga distribuída 1: a viga tem 2 trechos (0 a 1).",
     ]);
   });
 
@@ -123,8 +123,8 @@ describe("mensagens do formulário da viga", () => {
         f.concentradas = [{ trecho: "0", posicao: "-1", total: "dez", acidental: "" }];
       }),
     ).toEqual([
-      "Carga concentrada 1, posição: informe um número maior ou igual a zero.",
-      "Carga concentrada 1, total: informe um número.",
+      "Cargas → Carga concentrada 1, posição: informe um número maior ou igual a zero.",
+      "Cargas → Carga concentrada 1, total: informe um número.",
     ]);
   });
 
@@ -135,7 +135,7 @@ describe("mensagens do formulário da viga", () => {
         f.vaos = [{ vao: "6,01" }, { vao: "1,8" }];
       }),
     ).toEqual([
-      "Vão do trecho 0: 6,010 m não bate com a planta (6,000 m); o motor só aceita até 5 mm de diferença.",
+      "Vãos e apoios → Vão do trecho 0: 6,010 m não bate com a planta (6,000 m); o motor só aceita até 5 mm de diferença.",
     ]);
   });
 
@@ -163,9 +163,9 @@ describe("mensagens do formulário da viga", () => {
         ];
       }),
     ).toEqual([
-      "Reação de viga apoiada 1: escolha a viga apoiada.",
-      "Apoio 0, nº do pilar no .REP: informe um número inteiro.",
-      "Armadura alterada 1, quantidade da fissuração: informe um número.",
+      "Cargas → Reação de viga apoiada 1: escolha a viga apoiada.",
+      "Vãos e apoios → Apoio 0, nº do pilar no .REP: informe um número inteiro.",
+      "Armadura alterada → Armadura alterada 1, quantidade da fissuração: informe um número.",
     ]);
   });
 
@@ -179,6 +179,18 @@ describe("mensagens do formulário da viga", () => {
           { bw: "12", h: "50" },
         ];
       }),
-    ).toEqual(["Seção do apoio 0, bw: informe um número maior que zero."]);
+    ).toEqual(["Seções e fôrma → Seção do apoio 0, bw: informe um número maior que zero."]);
+  });
+});
+
+describe("abas com erro", () => {
+  it("pelo prefixo da mensagem, na ordem das abas", () => {
+    expect(
+      abasComErro([
+        "Armadura alterada → Armadura alterada 1, número do apoio: informe um número.",
+        "Cargas → Carga concentrada 1, total: informe um número.",
+        "O arquivo recusaria a obra (…)",
+      ]),
+    ).toEqual(["cargas", "armadura"]);
   });
 });

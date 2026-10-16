@@ -20,6 +20,9 @@ import {
   useAplicar,
 } from "./comum";
 import {
+  ABAS_VIGA,
+  type AbaViga,
+  abasComErro,
   type CampoArmadura,
   type Engaste,
   type FormViga,
@@ -86,6 +89,8 @@ function FormularioViga({ pav, viga, fechar }: { pav: Pavimento; viga: Viga; fec
   const muda = <K extends keyof FormViga>(k: K, v: FormViga[K]) => setF((x) => ({ ...x, [k]: v }));
   const { erros, aplicar } = useAplicar(fechar);
   const momentosNoIni = useObra((s) => s.obra?.parametrosViga?.viga?.momentosExternos ?? false);
+  const [aba, setAba] = useState<AbaViga>("cargas");
+  const comErro = abasComErro(erros);
 
   const aoAplicar = () =>
     aplicar((obra) => {
@@ -93,7 +98,12 @@ function FormularioViga({ pav, viga, fechar }: { pav: Pavimento; viga: Viga; fec
       const atual = p?.vigas.find((v) => v.id === viga.id);
       if (!p || !atual) return ["A viga não existe mais na obra."];
       const r = vigaDoForm(f, atual, geo);
-      if (Array.isArray(r)) return r;
+      if (Array.isArray(r)) {
+        // o erro pode estar noutra aba: abre a primeira que tem erro
+        const primeira = abasComErro(r)[0];
+        if (primeira && !abasComErro(r).includes(aba)) setAba(primeira);
+        return r;
+      }
       return substituirPavimento(obra, p.id, {
         ...p,
         vigas: p.vigas.map((v) => (v.id === viga.id ? r : v)),
@@ -102,13 +112,21 @@ function FormularioViga({ pav, viga, fechar }: { pav: Pavimento; viga: Viga; fec
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
-      <Tabs defaultValue="cargas" className="min-h-0 flex-1">
+      <Tabs value={aba} onValueChange={(v) => setAba(v as AbaViga)} className="min-h-0 flex-1">
         <TabsList variant="line">
-          <TabsTrigger value="cargas">Cargas</TabsTrigger>
-          <TabsTrigger value="secoes">Seções e fôrma</TabsTrigger>
-          <TabsTrigger value="vaos">Vãos e apoios</TabsTrigger>
-          <TabsTrigger value="rodada">Rodada</TabsTrigger>
-          <TabsTrigger value="armadura">Armadura alterada</TabsTrigger>
+          {(Object.keys(ABAS_VIGA) as AbaViga[]).map((a) => (
+            <TabsTrigger key={a} value={a}>
+              {ABAS_VIGA[a]}
+              {comErro.includes(a) && (
+                <>
+                  <span aria-hidden className="text-destructive text-[10px]">
+                    ●
+                  </span>
+                  <span className="sr-only"> (com erro)</span>
+                </>
+              )}
+            </TabsTrigger>
+          ))}
         </TabsList>
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           <TabsContent value="cargas" className="grid gap-3">

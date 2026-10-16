@@ -91,6 +91,22 @@ type Armadura = LinhaForm<CampoArmadura>;
 /** Tipos de apoio do .FOR: pilar, viga, outro, apoio. */
 export const TIPOS_APOIO_FORMA = ["P", "V", "O", "A"] as const;
 
+/** Abas do editor da viga: as mensagens de erro começam pelo rótulo da aba. */
+export const ABAS_VIGA = {
+  cargas: "Cargas",
+  secoes: "Seções e fôrma",
+  vaos: "Vãos e apoios",
+  rodada: "Rodada",
+  armadura: "Armadura alterada",
+} as const;
+export type AbaViga = keyof typeof ABAS_VIGA;
+
+/** Abas que têm alguma das mensagens de erro (pelo prefixo "Aba → "). */
+export const abasComErro = (erros: readonly string[]) =>
+  (Object.keys(ABAS_VIGA) as AbaViga[]).filter((a) =>
+    erros.some((e) => e.startsWith(`${ABAS_VIGA[a]} → `)),
+  );
+
 export type Engaste = "montagem" | "nenhum" | "esquerdo" | "direito" | "ambos";
 export type LajesNoCorte = "planta" | "nao" | "mesa";
 
@@ -306,6 +322,8 @@ export function vigaDoForm(
   geo: GeometriaEditor | undefined,
 ): Viga | string[] {
   const l = new Leitor();
+  l.secao = ABAS_VIGA.cargas;
+  const pesoProprio = l.opcional(f.pesoProprio, "Peso próprio", "naoNegativo");
   const trecho = (texto: string, rotulo: string) => {
     const k = l.numero(texto, `${rotulo}, trecho`, "naoNegativo", true);
     if (geo && Number.isInteger(k) && k >= geo.trechos.length)
@@ -352,6 +370,7 @@ export function vigaDoForm(
     }),
   ];
 
+  l.secao = ABAS_VIGA.secoes;
   const trechos = f.comSecoesTrechos
     ? f.secoesTrechos.map((s, i) => {
         const r = `Seção do trecho ${i}`;
@@ -403,6 +422,7 @@ export function vigaDoForm(
       ? soDefinidos({ trechos: formaTrechos, apoios: formaApoios, lajesNoCorte })
       : undefined;
 
+  l.secao = ABAS_VIGA.vaos;
   const vaos = f.comVaos
     ? f.vaos.map((x, i) => l.numero(x.vao, `Vão do trecho ${i}`, "positivo"))
     : undefined;
@@ -436,6 +456,9 @@ export function vigaDoForm(
       : l.numero(a.pilar, `Apoio ${k}, nº do pilar no .REP`, "positivo", true),
   );
 
+  l.secao = ABAS_VIGA.rodada;
+  const repeticoes = l.opcional(f.repeticoes, "Repetições da viga", "naoNegativo", true);
+  l.secao = ABAS_VIGA.armadura;
   const armaduras = f.armaduras.map((a, i): ArmaduraDigitada => {
     const r = `Armadura alterada ${i + 1}`;
     const tracionada = soDefinidos({
@@ -471,7 +494,7 @@ export function vigaDoForm(
   const nova: Viga = {
     ...semChaves(v, CAMPOS),
     ...soDefinidos({
-      pesoProprio: l.opcional(f.pesoProprio, "Peso próprio", "naoNegativo"),
+      pesoProprio,
       apoiaEm: listaOuNada(f.apoiaEm),
       cargas: listaOuNada(cargas),
       somenteCargasProprias: boolDe(f.somenteCargasProprias),
@@ -481,7 +504,7 @@ export function vigaDoForm(
       momentosExternos,
       apoiosDesconsiderados: listaOuNada(apoiosDesconsiderados),
       pilaresNoRep: pilares.some((p) => p !== null) ? pilares : undefined,
-      repeticoes: l.opcional(f.repeticoes, "Repetições da viga", "naoNegativo", true),
+      repeticoes,
       armaduraDigitada: listaOuNada(armaduras),
       continuaSeExcederLimite: boolDe(f.continuaSeExcederLimite),
       secoes,
