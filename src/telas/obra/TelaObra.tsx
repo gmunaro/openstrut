@@ -37,6 +37,7 @@ import { BarraPavimentos } from "./BarraPavimentos";
 import { DialogoMateriais } from "./DialogoMateriais";
 import { DialogoUnidades } from "./DialogoUnidades";
 import { useConfirmacao } from "../useConfirmacao";
+import { EditorParametros } from "./editores/DialogoParametros";
 
 export function TelaObra() {
   const obra = useObra((e) => e.obra);
@@ -250,6 +251,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
           >
             <Ruler /> Unidades
           </Button>
+          {/* .LAP, VIGA.INI, .DSP, PILAR.INI, .PIP e as opções da rodada: só o SISTRUT */}
+          {obra.norma === "nb1-78" && <EditorParametros obra={obra} />}
           <Button ref={botaoAbrir} variant="outline" size="sm" onClick={() => void abrirOutra()}>
             <FolderOpen /> Abrir
           </Button>

@@ -159,3 +159,22 @@ test("editores de pilar, laje e pavimento: seção circular, polígono e carga d
   await expect(dialogo).toBeHidden();
   await expect(painel.getByText(/1 carga de ocupação/)).toBeVisible();
 });
+
+test("editor de parâmetros: rodada, .LAP e .DSP com os campos do modo original marcados", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await abrirFixture(page);
+  await page.getByRole("button", { name: "Parâmetros", exact: true }).click();
+  const dialogo = page.getByRole("dialog", { name: "Parâmetros do SISTRUT (NB-1/78)" });
+  await expect(dialogo).toBeVisible();
+  await foto(page, "10-parametros-rodada");
+  await dialogo.getByRole("tab", { name: "Lajes (.LAP)" }).click();
+  await foto(page, "11-parametros-lap");
+  await dialogo.getByRole("tab", { name: "Vigas (VIGA.INI e .DSP)" }).click();
+  // fck do .DSP só vale no modo original: a marca entra no nome do campo
+  await expect(dialogo.getByRole("textbox", { name: /^fck.*só no modo original/ })).toBeVisible();
+  await foto(page, "12-parametros-dsp");
+  await dialogo.getByRole("button", { name: "Cancelar" }).click();
+  await expect(dialogo).toBeHidden();
+});
