@@ -185,6 +185,20 @@ export function elementoEm(pav: Pavimento, p: Ponto, tol: number): Alvo | undefi
   return laje ? { tipo: "laje", id: laje.id } : undefined;
 }
 
+/** Próximo elemento (`delta` +1) ou anterior (−1) na ordem laje → viga → pilar, com volta.
+ *  Sem seleção, +1 pega o primeiro e −1 o último. Usado pelas setas com a planta em foco. */
+export function proximoAlvo(pav: Pavimento, atual: Alvo | null, delta: 1 | -1): Alvo | undefined {
+  const lista: Alvo[] = [
+    ...pav.lajes.map((l) => ({ tipo: "laje" as const, id: l.id })),
+    ...pav.vigas.map((v) => ({ tipo: "viga" as const, id: v.id })),
+    ...pav.pilares.map((p) => ({ tipo: "pilar" as const, id: p.id })),
+  ];
+  if (lista.length === 0) return undefined;
+  const i = lista.findIndex((a) => atual !== null && a.tipo === atual.tipo && a.id === atual.id);
+  if (i < 0) return delta > 0 ? lista[0] : lista[lista.length - 1];
+  return lista[(i + delta + lista.length) % lista.length];
+}
+
 /** Espaçamento das linhas de grade desenhadas: o da grade, dobrado até ficar ≥ `minPx` na tela. */
 export function passoVisivel(grade: number, escala: number, minPx = 8) {
   let passo = grade;

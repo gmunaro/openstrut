@@ -27,6 +27,7 @@ import {
   lajeSobreposta,
   linhasDeSnap,
   normalizarRetangulo,
+  proximoAlvo,
   snap,
   telaParaMundo,
   zoomNoPonto,
@@ -185,6 +186,19 @@ function Editor({
         return;
       }
       if (e.altKey) return;
+      // com a planta em foco, as setas percorrem os elementos (Tab segue para fora da planta)
+      const passo =
+        e.key === "ArrowRight" || e.key === "ArrowDown"
+          ? 1
+          : e.key === "ArrowLeft" || e.key === "ArrowUp"
+            ? -1
+            : 0;
+      if (passo !== 0 && alvo === svgRef.current) {
+        e.preventDefault();
+        const prox = proximoAlvo(pav, selecao, passo);
+        if (prox) selecionar(prox);
+        return;
+      }
       if (e.key === " ") {
         e.preventDefault();
         setEspaco(true);
@@ -341,7 +355,8 @@ function Editor({
             ref={svgRef}
             role="application"
             aria-label="Planta do pavimento"
-            className="absolute inset-0 size-full touch-none select-none"
+            tabIndex={0}
+            className="absolute inset-0 size-full touch-none select-none outline-none focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-sky-400"
             style={{ cursor: cursorSvg }}
             onPointerDown={aoPressionar}
             onPointerMove={aoMover}

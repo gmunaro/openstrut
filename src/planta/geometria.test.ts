@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { lajeNova, pavimentoNovo } from "../dominio/criar";
 import { gerarEstrutura } from "../dominio/gerar";
 import {
+  type Alvo,
   ESCALA_MAX,
   elementoEm,
   enquadrar,
@@ -11,6 +12,7 @@ import {
   mundoParaTela,
   normalizarRetangulo,
   passoVisivel,
+  proximoAlvo,
   retanguloTela,
   snap,
   sobrepoe,
@@ -135,6 +137,37 @@ describe("elementoEm", () => {
     const sup = elementoEm(p, { x: 2, y: 5 }, 0.05);
     const v = p.vigas.find((x) => x.id === sup?.id);
     expect([v?.y1, v?.y2]).toEqual([5, 5]);
+  });
+});
+
+describe("proximoAlvo", () => {
+  const base = pavimentoNovo("T");
+  base.lajes.push(lajeNova(base, { x: 0, y: 0, lx: 4, ly: 5 }));
+  const p = gerarEstrutura(base);
+  const ordem: Alvo[] = [
+    ...p.lajes.map((l) => ({ tipo: "laje" as const, id: l.id })),
+    ...p.vigas.map((v) => ({ tipo: "viga" as const, id: v.id })),
+    ...p.pilares.map((q) => ({ tipo: "pilar" as const, id: q.id })),
+  ];
+  it("sem seleção, seta para frente pega o primeiro e para trás o último", () => {
+    expect(proximoAlvo(p, null, 1)).toEqual(ordem[0]);
+    expect(proximoAlvo(p, null, -1)).toEqual(ordem[ordem.length - 1]);
+  });
+  it("percorre laje → vigas → pilares e volta ao início", () => {
+    let atual = proximoAlvo(p, null, 1);
+    const visitados = [atual];
+    for (let i = 1; i < ordem.length; i++) {
+      atual = proximoAlvo(p, atual ?? null, 1);
+      visitados.push(atual);
+    }
+    expect(visitados).toEqual(ordem);
+    expect(proximoAlvo(p, atual ?? null, 1)).toEqual(ordem[0]);
+  });
+  it("seta para trás a partir da primeira volta ao último", () => {
+    expect(proximoAlvo(p, ordem[0] ?? null, -1)).toEqual(ordem[ordem.length - 1]);
+  });
+  it("pavimento vazio não tem alvo", () => {
+    expect(proximoAlvo(pavimentoNovo("V"), null, 1)).toBeUndefined();
   });
 });
 
