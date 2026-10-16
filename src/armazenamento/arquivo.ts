@@ -420,7 +420,13 @@ class Validador {
           ...(a.titulo === undefined ? {} : { titulo: this.texto(a, "titulo", cx) }),
         };
       });
-      r.forma = { ...(trechos ? { trechos } : {}), ...(apoios ? { apoios } : {}) };
+      r.forma = {
+        ...(trechos ? { trechos } : {}),
+        ...(apoios ? { apoios } : {}),
+        ...(f.lajesNoCorte === undefined
+          ? {}
+          : { lajesNoCorte: this.opcao(f, "lajesNoCorte", cf, LAJES_NO_CORTE) }),
+      };
     }
     return r;
   }
@@ -484,6 +490,7 @@ const TIPOS_CARGA_VIGA: readonly [CargaViga["tipo"], ...CargaViga["tipo"][]] = [
   "concentrada",
 ];
 const TIPOS_APOIO_FORMA: readonly ["P", "V", "O", "A"] = ["P", "V", "O", "A"];
+const LAJES_NO_CORTE: readonly ["nao", "mesa"] = ["nao", "mesa"];
 const CAMPOS_FORMA_TRECHO = [
   "vaoLivre",
   "pe",

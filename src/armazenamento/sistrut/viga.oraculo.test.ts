@@ -769,3 +769,71 @@ describe.skipIf(!existsSync(E2E_VIG) || !existsSync(`${RUN.vbx}/obra/VBX.VIG`))(
     });
   },
 );
+
+/** "Forneço dados sobre a posição das Lajes no Corte N" (DESENHO.BAS:6768): nos
+ *  v2par_des_* o original detalhou sem lajes no corte (pe/Hle/pd/Hld 0 no .FOR) e a fôrma
+ *  é a da viga inteira. A obra gerada do ASS.VIG ganha lajes de 10 cm ao lado da V1 e da
+ *  V5; sem a resposta, a fôrma desconta a laje da planta; com "nao", dá a do original. */
+describe.skipIf(!existsSync(ASS_VIG) || !existsSync(`${RUN.des2}/obra/ASS.FOR`))(
+  "lajes no corte (v2par_des_3tramos e v2par_des_2tramos)",
+  () => {
+    const laje = (nome: string, x: number, y: number, lx: number) => ({
+      id: nome,
+      nome,
+      x,
+      y,
+      lx,
+      ly: 3,
+      h: 10,
+      revestimento: 0,
+      sobrecarga: 0,
+      vinculos: {},
+      mu: 1,
+    });
+    const caso = (run: string, oraculo: string, viga: string, lajes: ReturnType<typeof laje>[]) => {
+      const { obra } = importa([ASS_VIG, `${run}/obra/ASS.SEC`, `${run}/obra/ASS.FOR`]);
+      const pav = obra.pavimentos[0]!;
+      pav.lajes = lajes;
+      const v = pav.vigas.find((x) => x.nome === viga)!;
+      expect(v.forma?.lajesNoCorte).toBe("nao");
+      const afor = (o: Obra) => {
+        const r = calcularObraSistrut(o, { modo: "original" });
+        return resumoGeralVigas(
+          r.quadros.filter((q) => q.nome === viga),
+          r.parametros.dsp,
+          "original",
+        ).forma;
+      };
+      const comPlanta = structuredClone(obra);
+      delete comPlanta.pavimentos[0]!.vigas.find((x) => x.nome === viga)!.forma!.lajesNoCorte;
+      return {
+        impresso: json(oraculo).valores.find((x) => x.id === `resumo.${viga}.Afor`)!,
+        nao: afor(obra),
+        planta: afor(comPlanta),
+      };
+    };
+
+    it("V5 15×45: 9 sem lajes no corte (original); 7,7 = (105 − 10)·3,80 + (105 − 20)·4,80 pela planta", () => {
+      // V5 é a 5ª viga do .VIG: linha y = −20, nós 0, 4 e 9
+      const r = caso(RUN.des2, `${CORRIGIDOS}/v2par_des_2tramos.json`, "V5", [
+        laje("A1", 0, -20, 4),
+        laje("A2", 4, -20, 5),
+        laje("A3", 4, -23, 5),
+      ]);
+      expect(bateComImpresso(r.impresso, r.nao)).toBe(true);
+      expect(r.nao).toBe(Math.fround(9));
+      expect(r.planta).toBe(Math.fround(7.7));
+    });
+
+    it("V1 20×50: 13,7 sem lajes no corte (original); 11,4 = (120 − 20)·11,40 com laje dos dois lados", () => {
+      // V1 é a 1ª viga do .VIG: linha y = 0, nós 0, 3, 8 e 12
+      const r = caso(RUN.des3, `${CORRIGIDOS}/v2par_des_3tramos.json`, "V1", [
+        laje("B1", 0, 0, 12),
+        laje("B2", 0, -3, 12),
+      ]);
+      expect(bateComImpresso(r.impresso, r.nao)).toBe(true);
+      expect(r.nao).toBe(Math.fround(13.7));
+      expect(r.planta).toBe(Math.fround(11.4));
+    });
+  },
+);

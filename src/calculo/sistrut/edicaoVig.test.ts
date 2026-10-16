@@ -8,7 +8,7 @@ import { sng } from "./base/f32";
 import { emSingle, PARAMETROS_VIGA } from "./base/parametros";
 import type { DadosViga, DivisaoCarga } from "./base/tipos";
 import { KN_POR_TF } from "./base/unidades";
-import { editaVig } from "./edicaoVig";
+import { editaVig, secoesEFormaDaObra } from "./edicaoVig";
 import { analisaViga } from "./vigas/vicalc";
 
 const div = (p: number, d: number, f = 0, pac = 0, fac = 0): DivisaoCarga => ({
@@ -233,5 +233,54 @@ describe("editaVig: vãos, J, engaste, momentos externos e apoios", () => {
     expect([r.engasteEsquerdo, r.engasteDireito]).toEqual([true, false]);
     expect(r.momentosExternos).toEqual([-1, 2]);
     expect(r.pilares).toEqual(["P1", "P2", null]);
+  });
+});
+
+describe("secoesEFormaDaObra: lajes no corte (DESENHO.BAS:6768-6779)", () => {
+  const planta = {
+    secoes: {
+      tramos: [1, 2].map(() => ({ bw: 20, hw: 50, bf: 0, hf: 0 })),
+      apoios: [1, 2, 3].map(() => ({ bw: 20, hw: 50, bf: 0, hf: 0 })),
+    },
+    forma: {
+      tramos: [1, 2].map(() => ({
+        larguraApoio: 20,
+        vaoLivre: 380,
+        pe: 0,
+        hle: 10,
+        pd: 0,
+        hld: 12,
+      })),
+    },
+    apoios: [],
+  };
+  const mesa = { trechos: [1, 2].map(() => ({ bw: 20, h: 50, bf: 80, hf: 9.6 })) };
+  const forma = (v: Partial<Viga>) =>
+    secoesEFormaDaObra(viga(v), base(), planta, "original").forma.tramos.map((t) => [
+      t.pe,
+      t.hle,
+      t.pd,
+      t.hld,
+    ]);
+
+  it("sem resposta: a laje da planta", () => {
+    expect(forma({})).toEqual([
+      [0, 10, 0, 12],
+      [0, 10, 0, 12],
+    ]);
+  });
+  it('"nao": pe, Hle, pd e Hld 0', () => {
+    expect(forma({ forma: { lajesNoCorte: "nao" } })).toEqual([
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+  });
+  it('"mesa": Hle = Hld = CINT(hf) da seção do trecho; o valor do trecho vale por cima', () => {
+    expect(
+      forma({ secoes: mesa, forma: { lajesNoCorte: "mesa", trechos: [{}, { hld: 7 }] } }),
+    ).toEqual([
+      [0, 10, 0, 10],
+      [0, 10, 0, 7],
+    ]);
   });
 });

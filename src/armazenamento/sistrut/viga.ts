@@ -639,14 +639,16 @@ function entradaDaViga(
     r.secoes = { trechos: trechosSec, apoios: apoiosSec };
   }
   if (forma) {
+    // o .FOR não grava a resposta de "Lajes no Corte", só pe/Hle/pd/Hld: tudo 0 é o "N"
+    const semLajes = trechos.every((_, i) => {
+      const f = forma[indice(i)]!;
+      return f.pe === 0 && f.hle === 0 && f.pd === 0 && f.hld === 0;
+    });
     const trechosFor: FormaTrechoViga[] = trechos.map((_, i) => {
       const f = forma[indice(i)]!;
       return {
         vaoLivre: f.vaoLivre,
-        pe: f.pe,
-        hle: f.hle,
-        pd: f.pd,
-        hld: f.hld,
+        ...(semLajes ? {} : { pe: f.pe, hle: f.hle, pd: f.pd, hld: f.hld }),
         eixo: f.eixo,
         alinhamento: f.alinhamento,
       };
@@ -663,7 +665,11 @@ function entradaDaViga(
         dis: f.dis,
       };
     });
-    r.forma = { trechos: trechosFor, apoios: apoiosFor };
+    r.forma = {
+      trechos: trechosFor,
+      apoios: apoiosFor,
+      ...(semLajes ? { lajesNoCorte: "nao" as const } : {}),
+    };
   }
   return r;
 }

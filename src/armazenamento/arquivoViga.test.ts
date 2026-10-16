@@ -44,6 +44,7 @@ const completa: Partial<Viga> = {
   forma: {
     trechos: [{ vaoLivre: 380, hle: 10, eixo: 10 }],
     apoios: [{ largura: 20, tipo: "P", titulo: "P1", codigo: 1, lps: 20, dis: 0 }],
+    lajesNoCorte: "nao",
   },
 };
 

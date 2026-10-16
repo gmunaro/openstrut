@@ -93,8 +93,17 @@ export interface Viga {
   apoiosDesconsiderados?: number[];
   /** Seção de cada trecho e de cada apoio no DESENHO (.SEC). Ausente = bw × h. */
   secoes?: { trechos?: SecaoTrechoViga[]; apoios?: SecaoApoioViga[] };
-  /** Dados de forma do DESENHO (.FOR) que substituem os tirados da planta. */
-  forma?: { trechos?: FormaTrechoViga[]; apoios?: FormaApoioViga[] };
+  /** Dados de forma do DESENHO (.FOR) que substituem os tirados da planta.
+   *  `lajesNoCorte` é a resposta a "Forneço dados sobre a posição das Lajes no Corte" e
+   *  "Adoto Flange ... como seção T" (DESENHO.BAS:6768-6779): "nao" = pe, Hle, pd e Hld 0
+   *  (a fôrma da viga inteira); "mesa" = Hle e Hld = hf da seção de cada trecho; ausente =
+   *  a espessura da laje vizinha pela planta (como se o usuário a digitasse). Os valores
+   *  de `trechos` valem por cima. */
+  forma?: {
+    trechos?: FormaTrechoViga[];
+    apoios?: FormaApoioViga[];
+    lajesNoCorte?: "nao" | "mesa";
+  };
 }
 
 /** Carga da viga num trecho: distribuída (kN/m) entre `inicio` e `fim` ou concentrada

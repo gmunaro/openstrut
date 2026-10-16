@@ -54,7 +54,7 @@ O que o usuário do original digita no VIGA e no DESENHO depois da montagem fica
 | `viga.engaste`, `viga.momentosExternos` | Ee/Ed e os momentos externos dos apoios extremos (kN·m). Os momentos só entram com `parametrosViga.viga.momentosExternos`. |
 | `viga.apoiosDesconsiderados` | o "*" no número do pilar (VIGA opção 7): a reação do apoio não vai a pilar nenhum. |
 | `viga.secoes` | o .SEC: bw, h e mesa bf/hf por trecho (seção T) e bw, h por apoio. Sem o campo, bw × h em toda a viga. |
-| `viga.forma` | o .FOR: por trecho, vão livre, pe/Hle/pd/Hld, eixo e alinhamento; por apoio, largura, tipo, título, código, LPs e Dis. Cada campo ausente vem da planta. |
+| `viga.forma` | o .FOR: por trecho, vão livre, pe/Hle/pd/Hld, eixo e alinhamento; por apoio, largura, tipo, título, código, LPs e Dis. Cada campo ausente vem da planta. `forma.lajesNoCorte` é a resposta a "Forneço dados sobre a posição das Lajes no Corte" (DESENHO.BAS:6768-6779): `"nao"` deixa pe/Hle/pd/Hld em 0 e a fôrma fica a da viga inteira; `"mesa"` ("Adoto Flange como seção T") usa Hle = Hld = CINT(hf) da seção do trecho; sem o campo, vale a espessura da laje vizinha pela planta. Os valores de `forma.trechos` valem por cima. |
 | `obra.parametrosViga.viga` / `.dsp` | o VIGA.INI e o .DSP. Cada campo presente substitui o de fábrica inteiro (uma tabela vem inteira). Os valores ficam nas unidades do original. No modo original, o DESDIM usa o fck, o fyk, a classe do aço e os γ do .DSP, quando a obra os informa (DESENHO.BAS:4774-4789). No corrigido, valem os materiais e o cobrimento da obra. A % de acidental gerada vale como na tela (opção 8, sem limite, R6). Quem lê um VIGA.INI aplica o limite 4..96 da leitura. |
 
 ### Importar a parte de viga de uma obra do SISTRUT
@@ -62,7 +62,7 @@ O que o usuário do original digita no VIGA e no DESENHO depois da montagem fica
 `importarVigasSistrut(arquivos, obra?, pavimentoId?)` (`armazenamento/sistrut/viga.ts`) lê o .VIG (registro de 855 bytes), o .SEC (346 bytes por viga), o .FOR (616 bytes por viga), um .DSP (texto lido como o DESENHO lê, L_23333) e o VIGA.INI. O leiaute de cada arquivo está no cabeçalho do arquivo.
 
 - **Sem obra (gerar)**: cada viga fica numa linha horizontal própria, com um pilar em cada apoio. O nome do pilar sai da marca no J (CINT((J − INT(J·100)/100)·100000), VIGA opção 7). A marca 471 vira apoio desconsiderado. Apoio sem marca leva o nome `<viga>.A<k>` e gera aviso. A viga recebe `somenteCargasProprias`, `vaos`, `inercias` e `cargas` (uma distribuída por divisão com P e uma concentrada por F, com a acidental explícita), além de engastes, momentos externos, `secoes` e `forma`. O .DSP e o VIGA.INI entram em `parametrosViga`, só com os campos que diferem do de fábrica. O fck, o aço e a classe da obra saem do .DSP. A obra fica no modo original.
-- **Com obra (completar)**: as vigas casam pelo nome no pavimento. O importador compara o .VIG com o registro que a montagem da própria obra grava. Se as divisões diferem em mais de 1e-5 relativo, a viga recebe as cargas do .VIG com `somenteCargasProprias`. Vãos, J e engastes entram só se diferem. `secoes` e `forma` entram sempre que o .SEC e o .FOR trazem a viga. A F de uma divisão em que a planta já tem a reação de uma viga apoiada não entra.
+- **Com obra (completar)**: as vigas casam pelo nome no pavimento. O importador compara o .VIG com o registro que a montagem da própria obra grava. Se as divisões diferem em mais de 1e-5 relativo, a viga recebe as cargas do .VIG com `somenteCargasProprias`. Vãos, J e engastes entram só se diferem. `secoes` e `forma` entram sempre que o .SEC e o .FOR trazem a viga. O .FOR não grava a resposta de "Lajes no Corte", só pe/Hle/pd/Hld; com os quatro em 0 em todos os trechos, a viga recebe `lajesNoCorte: "nao"`. A F de uma divisão em que a planta já tem a reação de uma viga apoiada não entra.
 
 A obra sai validada por `lerObra`. Um registro vazio de .SEC ou .FOR (o QB preenche com zeros os registros que pula) é ignorado. O DESENHO.INI não é lido: os coeficientes de medida e força dele ficam em `parametrosViga.dsp` (`coeficienteMedida`, `coeficienteForca`).
 
@@ -203,6 +203,8 @@ Estes recursos do original não têm campo na obra da V2, então os casos que de
   | retrad_des_det, gerada e completando a E2E | E2E.VIG, E2E.SEC/.FOR | 113 de 126, mais o .TAB; os 13 restantes são cotas, corte e anotações do desenho, eixo do .FOR e textos de tela |
   | retrad_des_p5 / p6 | E2E.VIG, E2E.SEC/.FOR | 2 de 2 / 27 de 27 |
   | retrad_des_menu / p10 | E2E.VIG/.SEC/.FOR da obra de partida | 53 de 57 / 13 de 13, mais o .TAB |
+
+  Os dois des_* de obra ASS foram detalhados sem lajes no corte: com lajes de 10 cm na planta e `lajesNoCorte: "nao"`, a fôrma do resumo dá 9 (V5) e 13,7 (V1), a do original; sem a resposta, 7,7 e 11,4, descontando a laje.
 
   Na análise do DESDIM, o teste roda o DESCALC sobre a entrada que o motor montou (o .VIG editado, as seções e o .DSP da obra).
 - **q1** (`modoCalculo.test.ts`, `formas.test.ts`): L1 4×5 apoiada e L2 em balanço 1,5×5; item D e fôrma de 53,724 m² pela regra da V2.

@@ -18,7 +18,7 @@
 // pelo % do VIGA.INI quando ele diz "G" (VIGA.BAS:1294-1298, `divisaoComAcidentalGerada`)
 // e zero quando diz "F".
 import type { CargaViga, Viga } from "../../dominio/obra";
-import { atribuicao } from "./base/f32";
+import { atribuicao, qbCint } from "./base/f32";
 import type {
   ApoioFormaViga,
   DadosViga,
@@ -287,16 +287,29 @@ export function secoesEFormaDaObra(
     };
   });
   const ft = viga.forma?.trechos;
+  const lajes = viga.forma?.lajesNoCorte;
+  /** Seção do trecho t do original (0 balE, 1..n, n+1 balD), já com a da obra. */
+  const secaoDe = (t: number) =>
+    t === 0 ? secoes.balancoEsquerdo : t === n + 1 ? secoes.balancoDireito : secoes.tramos[t - 1];
   const formaTrecho = (t: number, f: FormaTramo, largura: number): FormaTramo => {
     const x = ft?.[trechoDe(t)];
     const num = (v: number | undefined, padrao: number) => (v !== undefined ? s(v) : padrao);
+    // "Lajes no Corte" N: tudo 0; "Flange como seção T": Hle = Hld = CINT(hf) do trecho
+    // (A_1A3A% é INTEGER; DESENHO.BAS:6768-6779). Sem a resposta, a laje da planta.
+    const hf = qbCint(secaoDe(t)?.hf ?? 0);
+    const laje =
+      lajes === "nao"
+        ? { pe: 0, hle: 0, pd: 0, hld: 0 }
+        : lajes === "mesa"
+          ? { pe: 0, hle: hf, pd: 0, hld: hf }
+          : { pe: f.pe, hle: f.hle, pd: f.pd, hld: f.hld };
     return {
       larguraApoio: largura,
       vaoLivre: num(x?.vaoLivre, f.vaoLivre),
-      pe: num(x?.pe, f.pe),
-      hle: num(x?.hle, f.hle),
-      pd: num(x?.pd, f.pd),
-      hld: num(x?.hld, f.hld),
+      pe: num(x?.pe, laje.pe),
+      hle: num(x?.hle, laje.hle),
+      pd: num(x?.pd, laje.pd),
+      hld: num(x?.hld, laje.hld),
     };
   };
   // a largura do apoio à esquerda do tramo t é a do apoio t − 1 (0 no balanço esquerdo)
