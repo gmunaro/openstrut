@@ -199,8 +199,19 @@ export function entidadesPlantaFormas(obra: Obra, pav: Pavimento): Entidade[] {
 export const dxfPlantaFormas = (obra: Obra, pav: Pavimento) =>
   escreverDxf(CAMADAS_FORMAS, entidadesPlantaFormas(obra, pav));
 
-/** DXF da obra inteira: os pavimentos lado a lado em x (o primeiro na posição da obra). */
+/**
+ * DXF da obra inteira: os pavimentos lado a lado em x (o primeiro na posição da obra).
+ * Lança Error se nenhum pavimento tem laje, viga ou pilar: não há o que desenhar.
+ */
 export function dxfFormasObra(obra: Obra) {
+  const temGeometria = obra.pavimentos.some(
+    (p) => p.lajes.length + p.vigas.length + p.pilares.length > 0,
+  );
+  if (!temGeometria) {
+    throw new Error(
+      "A obra não tem lajes, vigas nem pilares: não há planta de formas para exportar.",
+    );
+  }
   const todas: Entidade[] = [];
   let cursor: number | undefined;
   for (const pav of obra.pavimentos) {

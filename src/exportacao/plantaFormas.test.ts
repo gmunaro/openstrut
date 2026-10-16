@@ -209,6 +209,11 @@ describe("DXF da planta de formas", () => {
     expect(lajes[2]?.vertices.map((v) => v.y)).toEqual([0, 0, 500, 500]);
     expect(lajes[3]?.vertices[0]?.x).toBeCloseTo(d + 400, 6);
   });
+
+  it("obra sem laje, viga nem pilar: erro claro em vez de DXF vazio", () => {
+    const vazia = obraNova("Casa vazia", "nb1-78");
+    expect(() => dxfFormasObra(vazia)).toThrow(/não há planta de formas para exportar/);
+  });
 });
 
 describe("hachura", () => {
