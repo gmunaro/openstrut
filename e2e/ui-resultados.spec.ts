@@ -9,11 +9,32 @@ const PASTA = path.resolve(process.cwd(), "e2e/prints/ui-resultados");
 const OBRAS = "C:/tmp/v2-paridade/ui-resultados";
 const SELO = "Modo: como o SISTRUT original";
 
-const CASOS = [
-  { nome: "corrigido", arquivo: "obra-corrigido.openstrut.json", selo: false },
-  { nome: "original", arquivo: "obra-original.openstrut.json", selo: true },
-  { nome: "marcas-original", arquivo: "obra-marcas-original.openstrut.json", selo: true },
-] as const;
+// `marcas`: trechos que o bloco de marcas do motor precisa mostrar nesse caso.
+const CASOS: {
+  nome: string;
+  arquivo: string;
+  selo: boolean;
+  marcas: readonly string[];
+}[] = [
+  { nome: "corrigido", arquivo: "obra-corrigido.openstrut.json", selo: false, marcas: [] },
+  { nome: "original", arquivo: "obra-original.openstrut.json", selo: true, marcas: [] },
+  {
+    nome: "marcas-original",
+    arquivo: "obra-marcas-original.openstrut.json",
+    selo: true,
+    marcas: ["Caso 1/2: a busca do equilíbrio não converge"],
+  },
+  {
+    // Geometria do r3, sobrecarga 25 kN/m2, relacaoNegPosMin 0,35 (modo original).
+    nome: "paradas-original",
+    arquivo: "obra-paradas-original.openstrut.json",
+    selo: true,
+    marcas: [
+      "otimização dos negativos parada no lado 3 (relação 0,35, código 5",
+      'parou em "Continuo com o processamento desta Viga S/N" com o padrão N',
+    ],
+  },
+];
 
 const TELAS = [
   { largura: 1366, altura: 768 },
@@ -69,6 +90,8 @@ for (const caso of CASOS) {
       );
       if (caso.selo) await expect(painel.getByText(SELO)).toBeVisible();
       else await expect(painel.getByText(SELO)).toHaveCount(0);
+      for (const trecho of caso.marcas)
+        await expect(painel.getByText(trecho, { exact: false }).first()).toBeVisible();
 
       fs.writeFileSync(path.join(PASTA, `texto-${id}.txt`), await painel.innerText());
       await page.screenshot({
