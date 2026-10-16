@@ -47,7 +47,7 @@ export function Th({
         "text-muted-foreground h-auto px-2 py-1.5 align-bottom text-[11px] leading-tight font-medium",
         // fixa só a primeira célula da primeira linha: na segunda linha de um cabeçalho
         // agrupado a primeira célula é de um grupo, não da coluna do nome
-        "first:bg-background first:sticky first:left-0 last:pr-4 [tr+tr>&]:static",
+        "first:bg-background first:sticky first:left-0 first:z-10 last:pr-4 [tr+tr>&]:static!",
         num && "text-right",
         className,
       )}
@@ -69,7 +69,8 @@ export function Td({
     <TableCell
       className={cn(
         "px-2 py-1",
-        "first:bg-background first:sticky first:left-0 last:pr-4",
+        // z-10: as células que rolam passam por baixo da coluna fixa
+        "first:bg-background first:sticky first:left-0 first:z-10 last:pr-4",
         num && "text-right font-mono tabular-nums",
         className,
       )}

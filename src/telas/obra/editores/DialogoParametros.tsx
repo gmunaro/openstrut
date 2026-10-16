@@ -181,7 +181,7 @@ function CamposEscalares<N extends string, B extends string>({
 }) {
   const doGrupo = <D extends { grupo?: string }>(d: D) => grupo === undefined || d.grupo === grupo;
   return (
-    <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+    <div className="compacto:grid-cols-2 grid grid-cols-3 gap-x-3 gap-y-2">
       {numeros.filter(doGrupo).map((d) => (
         <CampoForm
           key={d.chave}
@@ -358,7 +358,7 @@ function AbaLajes({
           aoMudar={(m) => mudaFlecha({ ligada: m })}
         />
         {fl.ligada && (
-          <div className="grid grid-cols-4 gap-x-3 gap-y-2">
+          <div className="compacto:grid-cols-2 grid grid-cols-4 gap-x-3 gap-y-2">
             <CampoForm
               rotulo="L/f total"
               unidade="L/f"

@@ -178,7 +178,7 @@ function AbaSecao({ f, muda, pilar }: { f: FormPilar; muda: Muda; pilar: Pilar }
           className="max-w-xs"
         />
         {f.tipoSecao === "retangular" && (
-          <div className="grid grid-cols-[auto_10rem] items-end gap-3">
+          <div className="compacto:grid-cols-1 grid grid-cols-[auto_10rem] items-end gap-3">
             <p className="text-xs">
               b × h = {cm(pilar.b)} × {cm(pilar.h)}
             </p>
@@ -361,7 +361,7 @@ function GrupoCarga({
       />
       {valor.ligada && (
         <>
-          <div className="grid grid-cols-[10rem_1fr] gap-3">
+          <div className="compacto:grid-cols-1 grid grid-cols-[10rem_1fr] gap-3">
             <CampoForm
               rotulo={`${titulo}, normal`}
               unidade="kN"
@@ -648,7 +648,7 @@ function Verificacao({
         aoMudar={(comEsforcos) => aoMudar({ ...valor, comEsforcos })}
       />
       {valor.comEsforcos && (
-        <div className="grid grid-cols-5 gap-3">
+        <div className="compacto:grid-cols-2 grid grid-cols-5 gap-3">
           {campo("nk", "Nk", "kN")}
           {campo("mxk", "Mxk", "kN·m")}
           {campo("myk", "Myk", "kN·m")}
