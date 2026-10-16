@@ -9,21 +9,23 @@
 //   v2par_des_especial e os retrad_des_* (V1 da obra E2E).
 // Gerar: só o .VIG/.SEC/.FOR/.DSP, sem a planta. Completar: as obras E2E e VBX da V2
 // (`__e2e__/`) com os arquivos do original por cima.
-// Arquivos: C:/tmp/oraculo/runs/<run>/obra/ (gravados pelo original no run do caso ou no
+// Arquivos (em src/calculo/sistrut/__oraculo__/arquivos/, por `arquivoOraculo`):
+// oraculo/runs/<run>/obra/ (gravados pelo original no run do caso ou no
 // run que gerou a obra de partida: E2E.VIG no caso_a_laje, ASS.VIG no v2par_laje_assim) e
-// o V2P.DSP de C:/tmp/oraculo/casos/v2par_des_especial.dados/ (o .DSP que o caso leu).
-// Índice dos casos: C:/wt/v1-v2par/tests/retraducao/V2PAR.md. Esperados:
-// C:/tmp/v2-paridade/oraculo-novos/v2par_<caso>.json (nos des_*, a cópia com a fonte do
-// cobrimento corrigida, C:/wt/v1-par2/paridade/casos/) e os JSON de src/calculo/sistrut/.
-// Sem os runs na máquina, o teste é pulado.
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+// o V2P.DSP de oraculo/casos/v2par_des_especial.dados/ (o .DSP que o caso leu).
+// Índice dos casos: tests/retraducao/V2PAR.md da V1. Esperados:
+// v2-paridade/oraculo-novos/v2par_<caso>.json (nos des_*, a cópia com a fonte do
+// cobrimento corrigida, v1-par2/paridade/casos/) e os JSON de src/calculo/sistrut/.
+// Sem um desses arquivos, o caso falha com o caminho que falta.
+import { readFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   bateComImpresso,
   type CasoOraculo,
   type ValorOraculo,
 } from "../../calculo/sistrut/__oraculo__";
+import { arquivoOraculo } from "../../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { obraE2E } from "../../calculo/sistrut/__e2e__/obraE2E";
 import { obraVBX } from "../../calculo/sistrut/__e2e__/obraVBX";
 import { qbInt } from "../../calculo/sistrut/base/f32";
@@ -42,17 +44,16 @@ import type { Obra } from "../../dominio/obra";
 import { lerObra, serializarObra } from "../arquivo";
 import { importarVigasSistrut, type ArquivoSistrut } from "./viga";
 
-const RUNS = "C:/tmp/oraculo/runs";
-const DADOS = "C:/tmp/oraculo/casos";
-const NOVOS = "C:/tmp/v2-paridade/oraculo-novos";
-const CORRIGIDOS = "C:/wt/v1-par2/paridade/casos";
+// caminhos de `arquivoOraculo` (os do original e os JSON esperados que não estão em src/calculo/sistrut/)
+const RUNS = "oraculo/runs";
+const DADOS = "oraculo/casos";
+const NOVOS = "v2-paridade/oraculo-novos";
+const CORRIGIDOS = "v1-par2/paridade/casos";
 const REPO = join(import.meta.dirname, "../../calculo/sistrut");
 
 const RUN = {
   casoA: `${RUNS}/caso_a_laje-20261015-041425`,
-  casoB: `${RUNS}/caso_b_viga-20261014-182718`,
   vbx: `${RUNS}/v2par_viga_fluxo-20261015-164332`,
-  r6: `${RUNS}/v2par_viga_r6-20261015-184612`,
   assim: `${RUNS}/v2par_laje_assim-20261015-163200`,
   des3: `${RUNS}/v2par_des_3tramos-20261015-165027`,
   des2: `${RUNS}/v2par_des_2tramos-20261015-165207`,
@@ -60,17 +61,17 @@ const RUN = {
   det: `${RUNS}/retrad_des_det-20261015-082506`,
   p5: `${RUNS}/retrad_des_p5-20261015-082948`,
   p6: `${RUNS}/retrad_des_p6-20261015-082952`,
-  menu: `${RUNS}/retrad_des_menu-20261015-082520`,
-  p10: `${RUNS}/retrad_des_p10-20261015-082955`,
 };
 const E2E_VIG = `${RUN.casoA}/obra/E2E.VIG`;
 const ASS_VIG = `${RUN.assim}/obra/ASS.VIG`;
 
 const arquivo = (caminho: string): ArquivoSistrut => ({
   nome: caminho.slice(caminho.lastIndexOf("/") + 1),
-  dados: new Uint8Array(readFileSync(caminho)),
+  dados: new Uint8Array(readFileSync(arquivoOraculo(caminho))),
 });
-const json = (caminho: string): CasoOraculo => JSON.parse(readFileSync(caminho, "utf8"));
+/** JSON esperado: os de src/calculo/sistrut/ por caminho absoluto (REPO), os outros pelo oráculo. */
+const json = (caminho: string): CasoOraculo =>
+  JSON.parse(readFileSync(isAbsolute(caminho) ? caminho : arquivoOraculo(caminho), "utf8"));
 
 function importa(caminhos: readonly string[], obra?: Obra) {
   const r = importarVigasSistrut(caminhos.map(arquivo), obra);
@@ -406,7 +407,7 @@ function resumo(r: ResultadoSistrut, vigas: readonly string[], id: string): Valo
 /** .TAB que o original gravou (70 bytes por viga: nome, A_1CEC(0..14) em SINGLE,
  *  DESINIT.BAS:933): volume e fôrma em centésimos e o comprimento por bitola. */
 function tabDoRun(caminho: string) {
-  const b = readFileSync(caminho);
+  const b = readFileSync(arquivoOraculo(caminho));
   const lista: { nome: string; volume: number; forma: number; comprimentos: number[] }[] = [];
   for (let r = 0; (r + 1) * 70 <= b.length; r++) {
     const x = b.subarray(r * 70, (r + 1) * 70);
@@ -426,8 +427,6 @@ function tabDoRun(caminho: string) {
 
 interface Caso {
   nome: string;
-  /** Arquivos que existem quando o caso roda (os runs). */
-  requer: string[];
   /** Arquivos do original importados. */
   arquivos: string[];
   /** Obra da V2 a completar (sem ela, a importação gera a obra). */
@@ -498,7 +497,7 @@ function confere(r: ResultadoSistrut, c: Caso, oraculo: CasoOraculo) {
 }
 
 /** v2par_viga_r6: a VR6 foi digitada no VIGA e o original não gravou o .VIG (o run não
- *  tem obra/). A obra repete o roteiro (C:/tmp/oraculo/casos/v2par_viga_r6.txt): opção 8
+ *  tem obra/). A obra repete o roteiro (oraculo/casos/v2par_viga_r6.txt, não versionado): opção 8
  *  com acidentais S geradas a 150 %; tramos de 4 e 5 m com J 1 e P = 2 t/m digitado (a
  *  acidental sai do %). */
 function obraR6(): Obra {
@@ -551,7 +550,6 @@ function obraR6(): Obra {
 const CASOS: Caso[] = [
   {
     nome: "caso_b_viga, gerada do E2E.VIG",
-    requer: [E2E_VIG, RUN.casoB],
     arquivos: [E2E_VIG],
     oraculo: join(REPO, "__oraculo__/caso_b_viga.json"),
     analise: "VIGA",
@@ -561,7 +559,6 @@ const CASOS: Caso[] = [
   },
   {
     nome: "caso_b_viga, obra E2E completada com o E2E.VIG",
-    requer: [E2E_VIG, RUN.casoB],
     arquivos: [E2E_VIG],
     obra: () => obraE2E("original"),
     oraculo: join(REPO, "__oraculo__/caso_b_viga.json"),
@@ -572,7 +569,6 @@ const CASOS: Caso[] = [
   },
   {
     nome: "v2par_viga_fluxo, gerada do VBX.VIG regravado pelo VIGA",
-    requer: [`${RUN.vbx}/obra/VBX.VIG`, `${NOVOS}/v2par_viga_fluxo.json`],
     arquivos: [`${RUN.vbx}/obra/VBX.VIG`],
     oraculo: `${NOVOS}/v2par_viga_fluxo.json`,
     analise: "VIGA",
@@ -582,7 +578,6 @@ const CASOS: Caso[] = [
   },
   {
     nome: "v2par_viga_fluxo, obra VBX completada com o VBX.VIG",
-    requer: [`${RUN.vbx}/obra/VBX.VIG`, `${NOVOS}/v2par_viga_fluxo.json`],
     arquivos: [`${RUN.vbx}/obra/VBX.VIG`],
     obra: () => obraVBX("original"),
     oraculo: `${NOVOS}/v2par_viga_fluxo.json`,
@@ -593,7 +588,6 @@ const CASOS: Caso[] = [
   },
   {
     nome: "v2par_viga_r6 (obra do roteiro: o original não gravou .VIG)",
-    requer: [RUN.r6, `${NOVOS}/v2par_viga_r6.json`],
     arquivos: [],
     obraPronta: obraR6,
     oraculo: `${NOVOS}/v2par_viga_r6.json`,
@@ -604,7 +598,6 @@ const CASOS: Caso[] = [
   },
   {
     nome: "v2par_des_3tramos (ASS.VIG; ASS.SEC/.FOR do run)",
-    requer: [ASS_VIG, `${RUN.des3}/obra/ASS.SEC`, `${CORRIGIDOS}/v2par_des_3tramos.json`],
     arquivos: [ASS_VIG, `${RUN.des3}/obra/ASS.SEC`, `${RUN.des3}/obra/ASS.FOR`],
     oraculo: `${CORRIGIDOS}/v2par_des_3tramos.json`,
     analise: "DESDIM",
@@ -616,7 +609,6 @@ const CASOS: Caso[] = [
   },
   {
     nome: "v2par_des_2tramos (ASS.VIG; ASS.SEC/.FOR do run)",
-    requer: [ASS_VIG, `${RUN.des2}/obra/ASS.SEC`, `${CORRIGIDOS}/v2par_des_2tramos.json`],
     arquivos: [ASS_VIG, `${RUN.des2}/obra/ASS.SEC`, `${RUN.des2}/obra/ASS.FOR`],
     oraculo: `${CORRIGIDOS}/v2par_des_2tramos.json`,
     analise: "DESDIM",
@@ -633,7 +625,6 @@ const CASOS: Caso[] = [
     respostas: (o) => {
       o.pavimentos[0]!.vigas.find((v) => v.nome === "D1")!.continuaSeExcederLimite = true;
     },
-    requer: [`${RUN.esp}/obra/DSX.VIG`, `${CORRIGIDOS}/v2par_des_especial.json`],
     arquivos: [
       `${RUN.esp}/obra/DSX.VIG`,
       `${RUN.esp}/obra/DSX.SEC`,
@@ -650,7 +641,6 @@ const CASOS: Caso[] = [
   },
   ...(["gerada", "obra E2E completada"] as const).map((modo): Caso => ({
     nome: `retrad_des_det, ${modo} (E2E.VIG; E2E.SEC/.FOR do run)`,
-    requer: [E2E_VIG, `${RUN.det}/obra/E2E.SEC`],
     arquivos: [E2E_VIG, `${RUN.det}/obra/E2E.SEC`, `${RUN.det}/obra/E2E.FOR`],
     ...(modo === "gerada" ? {} : { obra: () => obraE2E("original") }),
     oraculo: join(REPO, "__oraculo__/retrad_des_det.json"),
@@ -667,7 +657,6 @@ const CASOS: Caso[] = [
     ] as const
   ).map(([nome, r, oraculo, minimo]): Caso => ({
     nome: `${nome} (E2E.VIG; E2E.SEC/.FOR do run)`,
-    requer: [E2E_VIG, `${r}/obra/E2E.SEC`],
     arquivos: [E2E_VIG, `${r}/obra/E2E.SEC`, `${r}/obra/E2E.FOR`],
     oraculo: join(REPO, oraculo),
     analise: "DESDIM",
@@ -677,12 +666,11 @@ const CASOS: Caso[] = [
   })),
   ...(
     [
-      ["retrad_des_menu", RUN.menu, "__oraculo__/retrad_des_menu.json", 50],
-      ["retrad_des_p10", RUN.p10, "vigas/__desinit__/retrad_des_p10.json", 13],
+      ["retrad_des_menu", "__oraculo__/retrad_des_menu.json", 50],
+      ["retrad_des_p10", "vigas/__desinit__/retrad_des_p10.json", 13],
     ] as const
-  ).map(([nome, r, oraculo, minimo]): Caso => ({
+  ).map(([nome, oraculo, minimo]): Caso => ({
     nome: `${nome} (E2E.VIG, .SEC e .FOR da obra de partida, gravados pelo det)`,
-    requer: [r, `${DADOS}/${nome}.dados/E2E.SEC`],
     arquivos: [
       `${DADOS}/${nome}.dados/E2E.VIG`,
       `${DADOS}/${nome}.dados/E2E.SEC`,
@@ -698,15 +686,25 @@ const CASOS: Caso[] = [
 ];
 
 describe.each(CASOS)("$nome", (c) => {
-  const tem = existsSync(RUNS) && c.requer.every((x) => existsSync(x)) && existsSync(c.oraculo);
-  if (!tem) {
-    it.skip("pulado: sem os runs do oráculo na máquina", () => {});
+  // arquivo do oráculo ausente: o caso falha com o caminho (arquivoOraculo), não é pulado
+  let carregado;
+  try {
+    const imp = c.obraPronta
+      ? { obra: c.obraPronta(), avisos: [] }
+      : importa(c.arquivos, c.obra?.());
+    c.respostas?.(imp.obra);
+    carregado = {
+      imp,
+      r: calcularObraSistrut(imp.obra, { modo: "original" }),
+      oraculo: json(c.oraculo),
+    };
+  } catch (e) {
+    it("lê os arquivos do caso", () => {
+      throw e;
+    });
     return;
   }
-  const imp = c.obraPronta ? { obra: c.obraPronta(), avisos: [] } : importa(c.arquivos, c.obra?.());
-  c.respostas?.(imp.obra);
-  const r = calcularObraSistrut(imp.obra, { modo: "original" });
-  const oraculo = json(c.oraculo);
+  const { imp, r, oraculo } = carregado;
 
   it("a obra importada passa pela validação do arquivo e volta igual", () => {
     const lida = lerObra(serializarObra(imp.obra));
@@ -731,21 +729,18 @@ describe.each(CASOS)("$nome", (c) => {
 
   if (c.tab) {
     const tab = c.tab;
-    it.skipIf(!existsSync(tab))(
-      ".TAB: volume, fôrma e comprimento por bitola do arquivo do original",
-      () => {
-        const gravado = tabDoRun(tab).filter((x) => c.detalhadas.includes(x.nome));
-        expect(gravado.length).toBe(c.detalhadas.length);
-        for (const g of gravado) {
-          const q = r.quadros.find((x) => x.nome === g.nome);
-          expect(q && [q.volumeCentesimos, q.formaCentesimos, q.comprimentoPorBitola]).toEqual([
-            g.volume,
-            g.forma,
-            g.comprimentos,
-          ]);
-        }
-      },
-    );
+    it(".TAB: volume, fôrma e comprimento por bitola do arquivo do original", () => {
+      const gravado = tabDoRun(tab).filter((x) => c.detalhadas.includes(x.nome));
+      expect(gravado.length).toBe(c.detalhadas.length);
+      for (const g of gravado) {
+        const q = r.quadros.find((x) => x.nome === g.nome);
+        expect(q && [q.volumeCentesimos, q.formaCentesimos, q.comprimentoPorBitola]).toEqual([
+          g.volume,
+          g.forma,
+          g.comprimentos,
+        ]);
+      }
+    });
   }
 
   if (c.quadro) {
@@ -764,85 +759,79 @@ describe.each(CASOS)("$nome", (c) => {
   }
 });
 
-describe.skipIf(!existsSync(E2E_VIG) || !existsSync(`${RUN.vbx}/obra/VBX.VIG`))(
-  "completar uma obra cuja montagem já grava o mesmo .VIG",
-  () => {
-    it.each([
-      ["E2E", E2E_VIG, () => obraE2E("original")],
-      ["VBX", `${RUN.vbx}/obra/VBX.VIG`, () => obraVBX("original")],
-    ] as const)("%s: não muda as vigas nem avisa", (_n, vig, obra) => {
-      const antes = obra();
-      const r = importa([vig], antes);
-      expect(r.avisos).toEqual([]);
-      expect(r.obra.pavimentos[0]!.vigas).toEqual(antes.pavimentos[0]!.vigas);
-    });
-  },
-);
+describe("completar uma obra cuja montagem já grava o mesmo .VIG", () => {
+  it.each([
+    ["E2E", E2E_VIG, () => obraE2E("original")],
+    ["VBX", `${RUN.vbx}/obra/VBX.VIG`, () => obraVBX("original")],
+  ] as const)("%s: não muda as vigas nem avisa", (_n, vig, obra) => {
+    const antes = obra();
+    const r = importa([vig], antes);
+    expect(r.avisos).toEqual([]);
+    expect(r.obra.pavimentos[0]!.vigas).toEqual(antes.pavimentos[0]!.vigas);
+  });
+});
 
 /** "Forneço dados sobre a posição das Lajes no Corte N" (DESENHO.BAS:6768): nos
  *  v2par_des_* o original detalhou sem lajes no corte (pe/Hle/pd/Hld 0 no .FOR) e a fôrma
  *  é a da viga inteira. A obra gerada do ASS.VIG ganha lajes de 10 cm ao lado da V1 e da
  *  V5; sem a resposta, a fôrma desconta a laje da planta; com "nao", dá a do original. */
-describe.skipIf(!existsSync(ASS_VIG) || !existsSync(`${RUN.des2}/obra/ASS.FOR`))(
-  "lajes no corte (v2par_des_3tramos e v2par_des_2tramos)",
-  () => {
-    const laje = (nome: string, x: number, y: number, lx: number) => ({
-      id: nome,
-      nome,
-      x,
-      y,
-      lx,
-      ly: 3,
-      h: 10,
-      revestimento: 0,
-      sobrecarga: 0,
-      vinculos: {},
-      mu: 1,
-    });
-    const caso = (run: string, oraculo: string, viga: string, lajes: ReturnType<typeof laje>[]) => {
-      const { obra } = importa([ASS_VIG, `${run}/obra/ASS.SEC`, `${run}/obra/ASS.FOR`]);
-      const pav = obra.pavimentos[0]!;
-      pav.lajes = lajes;
-      const v = pav.vigas.find((x) => x.nome === viga)!;
-      expect(v.forma?.lajesNoCorte).toBe("nao");
-      const afor = (o: Obra) => {
-        const r = calcularObraSistrut(o, { modo: "original" });
-        return resumoGeralVigas(
-          r.quadros.filter((q) => q.nome === viga),
-          r.parametros.dsp,
-          "original",
-        ).forma;
-      };
-      const comPlanta = structuredClone(obra);
-      delete comPlanta.pavimentos[0]!.vigas.find((x) => x.nome === viga)!.forma!.lajesNoCorte;
-      return {
-        impresso: json(oraculo).valores.find((x) => x.id === `resumo.${viga}.Afor`)!,
-        nao: afor(obra),
-        planta: afor(comPlanta),
-      };
+describe("lajes no corte (v2par_des_3tramos e v2par_des_2tramos)", () => {
+  const laje = (nome: string, x: number, y: number, lx: number) => ({
+    id: nome,
+    nome,
+    x,
+    y,
+    lx,
+    ly: 3,
+    h: 10,
+    revestimento: 0,
+    sobrecarga: 0,
+    vinculos: {},
+    mu: 1,
+  });
+  const caso = (run: string, oraculo: string, viga: string, lajes: ReturnType<typeof laje>[]) => {
+    const { obra } = importa([ASS_VIG, `${run}/obra/ASS.SEC`, `${run}/obra/ASS.FOR`]);
+    const pav = obra.pavimentos[0]!;
+    pav.lajes = lajes;
+    const v = pav.vigas.find((x) => x.nome === viga)!;
+    expect(v.forma?.lajesNoCorte).toBe("nao");
+    const afor = (o: Obra) => {
+      const r = calcularObraSistrut(o, { modo: "original" });
+      return resumoGeralVigas(
+        r.quadros.filter((q) => q.nome === viga),
+        r.parametros.dsp,
+        "original",
+      ).forma;
     };
+    const comPlanta = structuredClone(obra);
+    delete comPlanta.pavimentos[0]!.vigas.find((x) => x.nome === viga)!.forma!.lajesNoCorte;
+    return {
+      impresso: json(oraculo).valores.find((x) => x.id === `resumo.${viga}.Afor`)!,
+      nao: afor(obra),
+      planta: afor(comPlanta),
+    };
+  };
 
-    it("V5 15×45: 9 sem lajes no corte (original); 7,7 = (105 − 10)·3,80 + (105 − 20)·4,80 pela planta", () => {
-      // V5 é a 5ª viga do .VIG: linha y = −20, nós 0, 4 e 9
-      const r = caso(RUN.des2, `${CORRIGIDOS}/v2par_des_2tramos.json`, "V5", [
-        laje("A1", 0, -20, 4),
-        laje("A2", 4, -20, 5),
-        laje("A3", 4, -23, 5),
-      ]);
-      expect(bateComImpresso(r.impresso, r.nao)).toBe(true);
-      expect(r.nao).toBe(Math.fround(9));
-      expect(r.planta).toBe(Math.fround(7.7));
-    });
+  it("V5 15×45: 9 sem lajes no corte (original); 7,7 = (105 − 10)·3,80 + (105 − 20)·4,80 pela planta", () => {
+    // V5 é a 5ª viga do .VIG: linha y = −20, nós 0, 4 e 9
+    const r = caso(RUN.des2, `${CORRIGIDOS}/v2par_des_2tramos.json`, "V5", [
+      laje("A1", 0, -20, 4),
+      laje("A2", 4, -20, 5),
+      laje("A3", 4, -23, 5),
+    ]);
+    expect(bateComImpresso(r.impresso, r.nao)).toBe(true);
+    expect(r.nao).toBe(Math.fround(9));
+    expect(r.planta).toBe(Math.fround(7.7));
+  });
 
-    it("V1 20×50: 13,7 sem lajes no corte (original); 11,4 = (120 − 20)·11,40 com laje dos dois lados", () => {
-      // V1 é a 1ª viga do .VIG: linha y = 0, nós 0, 3, 8 e 12
-      const r = caso(RUN.des3, `${CORRIGIDOS}/v2par_des_3tramos.json`, "V1", [
-        laje("B1", 0, 0, 12),
-        laje("B2", 0, -3, 12),
-      ]);
-      expect(bateComImpresso(r.impresso, r.nao)).toBe(true);
-      expect(r.nao).toBe(Math.fround(13.7));
-      expect(r.planta).toBe(Math.fround(11.4));
-    });
-  },
-);
+  it("V1 20×50: 13,7 sem lajes no corte (original); 11,4 = (120 − 20)·11,40 com laje dos dois lados", () => {
+    // V1 é a 1ª viga do .VIG: linha y = 0, nós 0, 3, 8 e 12
+    const r = caso(RUN.des3, `${CORRIGIDOS}/v2par_des_3tramos.json`, "V1", [
+      laje("B1", 0, 0, 12),
+      laje("B2", 0, -3, 12),
+    ]);
+    expect(bateComImpresso(r.impresso, r.nao)).toBe(true);
+    expect(r.nao).toBe(Math.fround(13.7));
+    expect(r.planta).toBe(Math.fround(11.4));
+  });
+});

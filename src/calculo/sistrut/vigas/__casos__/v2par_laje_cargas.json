@@ -1,7 +1,7 @@
 {
   "caso": "v2par_laje_cargas",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_cargas-20261015-164316",
-  "entradaDe": "obra/CAR.VIG do run (pilares pela marca no J); valores de C:/tmp/v2-paridade/oraculo-novos/v2par_laje_cargas.json",
+  "run": "oraculo/runs/v2par_laje_cargas-20261015-164316",
+  "entradaDe": "obra/CAR.VIG do run (pilares pela marca no J); valores de v2-paridade/oraculo-novos/v2par_laje_cargas.json",
   "descricao": "Cargas por área (dois polígonos de ocupação sobrepostos, com parcela acidental) e alvenarias sobre viga e sobre laje, do LAJEGEOM ao LAJEMONT (.VIG) e ao VIGA (opção 7, .REP).",
   "parametros": {
     "reducaoNegativos": 1,

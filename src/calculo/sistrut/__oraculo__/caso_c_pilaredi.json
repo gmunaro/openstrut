@@ -1,6 +1,6 @@
 {
   "caso": "caso_c_pilaredi",
-  "run": "C:/tmp/oraculo/runs/caso_c_pilaredi-20261015-041842",
+  "run": "oraculo/runs/caso_c_pilaredi-20261015-041842",
   "programa": "PILAREDI",
   "descricao": "PILAREDI (edifícios) com o pilar P5 da obra E2E: lê a carga do E2E.REP, soma o peso próprio, predimensiona a seção 20x20 e dimensiona a armadura. Exercita λ, casos 'e' (extremidade) e 'f' (flambagem) com MR de 1ª e 2ª ordem, e a escolha de As, barras e estribo.",
   "entrada": {
@@ -26,7 +26,7 @@
     "predimensionamento (3 -> 1)": "posição 1, seção 1 retangular B = 20 cm, H = 20 cm, aceita (A)",
     "dimensionamento (3 -> 2)": "posição 1; varia armadura N; para p/ visualização N; contínuo N; imprime relatório S; aceita a armadura proposta (A)",
     "obra de partida": "E2E.REP gravado pelo VIGA original no caso b (P5 = 6.93 (V2) + 10.44 (V5) = 17.37 t)",
-    "obra de partida (caminho)": "C:/tmp/oraculo/casos/caso_c_pilaredi.dados"
+    "obra de partida (caminho)": "oraculo/casos/caso_c_pilaredi.dados"
   },
   "valores": [
     {

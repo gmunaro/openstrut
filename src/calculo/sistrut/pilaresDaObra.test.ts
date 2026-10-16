@@ -10,10 +10,11 @@
 //   caso_c_pilaredi e retrad_pil_secoes/poliinv com o P5 circular ou poligonal
 //   (`Pilar.secao`), v2par_pilar_niveis com o pavimento repetido 3 vezes e o P5 25 × 40;
 //   predimensionamento com `parametrosPilar.predimensionamento = "tensoes"`.
-// Runs: C:/tmp/oraculo/runs/ (o `run` de cada JSON). Os números estão nos JSONs; o
+// Runs: oraculo/runs/ (o `run` de cada JSON). Os números estão nos JSONs; o
 // teste não precisa dos runs.
 /// <reference types="node" />
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "./__oraculo__/arquivosOraculo";
 import { describe, expect, it } from "vitest";
 import type { BarraPilarObra, Obra, Pilar } from "../../dominio/obra";
 import { obraE2E } from "./__e2e__/obraE2E";
@@ -693,11 +694,11 @@ describe("PILAREDI pelo motor: retrad_pil_dim (caso c com o resumo na fundação
 
 // ---------------------------------------------------------------- obra importada do original
 
-const ORACULO = "C:/tmp/oraculo";
+const ORACULO = "oraculo";
 const COL_NOVE = `${ORACULO}/runs/retrad_frm_sonda_pil-20261014-202358/obra/E2E.COL`;
 const COL_SONDA = `${ORACULO}/runs/sonda-20261013-221414/obra/E2E.COL`;
 const REP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.REP`;
-const le = (p: string) => readFileSync(p, "latin1");
+const le = (p: string) => readFileSync(arquivoOraculo(p), "latin1");
 
 /** Obra gerada pelo importador, com o P5 do pavimento de cima renomeado para "P5" (o
  *  id do importador é "P5@pav2") e o predimensionamento com a seção do .COL. */
@@ -725,29 +726,23 @@ function confereCasoC(r: ResultadoSistrut) {
 }
 
 describe("obra importada dos arquivos do original reproduz o caso_c_pilaredi", () => {
-  it.skipIf(!existsSync(COL_NOVE))(
-    "E2E.COL de 9 colunas (retrad_frm_sonda_pil): P5 com 17,37 t e 20 × 20 do .COL",
-    () => {
-      const r = calcularObraSistrut(importada({ col: le(COL_NOVE) }), { modo: "original" });
-      const { faltando, difere } = confereCasoC(r);
-      expect(faltando).toEqual([]);
-      expect(difere).toEqual([]);
-    },
-  );
+  it("E2E.COL de 9 colunas (retrad_frm_sonda_pil): P5 com 17,37 t e 20 × 20 do .COL", () => {
+    const r = calcularObraSistrut(importada({ col: le(COL_NOVE) }), { modo: "original" });
+    const { faltando, difere } = confereCasoC(r);
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+  });
 
-  it.skipIf(!existsSync(COL_SONDA) || !existsSync(REP_E2E))(
-    "E2E.COL da sonda (17,52 t) com o E2E.REP lido no nível 2: o .REP substitui, 17,37 t",
-    () => {
-      const obra = importada({
-        col: le(COL_SONDA),
-        reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2 }],
-      });
-      const r = calcularObraSistrut(obra, { modo: "original" });
-      const { faltando, difere } = confereCasoC(r);
-      expect(faltando).toEqual([]);
-      expect(difere).toEqual([]);
-    },
-  );
+  it("E2E.COL da sonda (17,52 t) com o E2E.REP lido no nível 2: o .REP substitui, 17,37 t", () => {
+    const obra = importada({
+      col: le(COL_SONDA),
+      reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2 }],
+    });
+    const r = calcularObraSistrut(obra, { modo: "original" });
+    const { faltando, difere } = confereCasoC(r);
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------- decisões do original
@@ -930,19 +925,16 @@ const RLP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.RLP`;
 
 describe(".RLP: inclinações das vigas no pilar (LAJEMONT.BAS:4239-4310; PILGEEDI.BAS:1010-1036)", () => {
   const r = calcularObraSistrut(obraE2E("original"), { modo: "original" });
-  it.skipIf(!existsSync(RLP_E2E))(
-    "as linhas que o motor monta são as do E2E.RLP do original",
-    () => {
-      const linhas = le(RLP_E2E).split(/\r?\n/);
-      const doArquivo = new Map<string, string>();
-      linhas.forEach((l, i) => {
-        if (/^P\d/.test(l)) doArquivo.set(l.slice(0, 15).trim(), linhas[i + 1] ?? "");
-      });
-      const rlp = inclinacoesRlp(r.pavimentos[0]!.eixos, "original");
-      for (const [pilar, linha] of doArquivo) expect(rlp.get(pilar) ?? "", pilar).toBe(linha);
-      expect(doArquivo.size).toBe(9);
-    },
-  );
+  it("as linhas que o motor monta são as do E2E.RLP do original", () => {
+    const linhas = le(RLP_E2E).split(/\r?\n/);
+    const doArquivo = new Map<string, string>();
+    linhas.forEach((l, i) => {
+      if (/^P\d/.test(l)) doArquivo.set(l.slice(0, 15).trim(), linhas[i + 1] ?? "");
+    });
+    const rlp = inclinacoesRlp(r.pavimentos[0]!.eixos, "original");
+    for (const [pilar, linha] of doArquivo) expect(rlp.get(pilar) ?? "", pilar).toBe(linha);
+    expect(doArquivo.size).toBe(9);
+  });
 
   it("P7: V1 −0,64 a 0° e V4 −1,22 a 270°, com a rigidez do .SEC: Mkx −0,139 e Mky +0,184", () => {
     // Topo do único lance (PILAREDI.BAS:7502-7510): kCima = 0, kBaixo = J/L =

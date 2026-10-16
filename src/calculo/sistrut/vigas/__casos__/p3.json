@@ -1,7 +1,7 @@
 {
   "caso": "p3",
-  "run": "C:/tmp/oraculo/runs/retrad_viga_p3-20261015-070028",
-  "entradaDe": "roteiro C:/tmp/oraculo/casos/retrad_viga_p3.txt (valores digitados; J do tramo 2 por seções 20x40 e 20x50)",
+  "run": "oraculo/runs/retrad_viga_p3-20261015-070028",
+  "entradaDe": "roteiro oraculo/casos/retrad_viga_p3.txt (valores digitados; J do tramo 2 por seções 20x40 e 20x50)",
   "descricao": "VIGA opção 3: 3 tramos, balanço à esquerda, engaste à direita, J calculado, concentradas; VIGA.INI de fábrica.",
   "parametros": {
     "reducaoNegativos": 1,

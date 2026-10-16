@@ -1,7 +1,7 @@
 {
   "caso": "c1",
-  "run": "C:/tmp/oraculo/runs/retrad_viga_c1-20261015-065711",
-  "entradaDe": "VA1: roteiro C:/tmp/oraculo/casos/retrad_viga_c1.txt (acidental gerada 25 %: Pac = 0,25·P, Fac = 0,25·F); opção 7: obra/E2E.VIG do run (V2 regravado com o apoio 0 desconsiderado)",
+  "run": "oraculo/runs/retrad_viga_c1-20261015-065711",
+  "entradaDe": "VA1: roteiro oraculo/casos/retrad_viga_c1.txt (acidental gerada 25 %: Pac = 0,25·P, Fac = 0,25·F); opção 7: obra/E2E.VIG do run (V2 regravado com o apoio 0 desconsiderado)",
   "descricao": "VIGA com redução 85 %, acidentais S geradas 25 %, momentos externos S, reação máxima. Opção 3 da VA1 (2 tramos + balanço à direita, Mext 0 e -1,5); opção 7 na E2E, registros 2/4 A 5, multiplicador 50 %.",
   "parametros": {
     "reducaoNegativos": 0.85,

@@ -1,9 +1,10 @@
 /// <reference types="node" />
-// Importador da parte de viga: os casos da revisão do 1d12659 (C:/tmp/rev-vigas/), cada um
+// Importador da parte de viga: os casos da revisão do 1d12659 (rev-vigas/, fora do repositório), cada um
 // com o comportamento do original que ele reproduz. .VIG montado no leiaute do registro
-// (__teste__/vig.ts); o .DSP e o VIGA.INI de fábrica de C:/tmp/oraculo/orig/ (pulados
-// sem eles).
-import { existsSync, readFileSync } from "node:fs";
+// (__teste__/vig.ts); o .DSP e o VIGA.INI de fábrica de oraculo/orig/
+// (em src/calculo/sistrut/__oraculo__/arquivos/, com o cabeçalho neutro).
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "../../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { describe, expect, it } from "vitest";
 import { obraVBX } from "../../calculo/sistrut/__e2e__/obraVBX";
 import type { DadosViga } from "../../calculo/sistrut/base/tipos";
@@ -13,7 +14,7 @@ import type { Obra } from "../../dominio/obra";
 import { type RegistroTeste, V1, vig } from "./__teste__/vig";
 import { importarVigasSistrut, lerDsp, lerVigaIni } from "./viga";
 
-const ORIG = "C:/tmp/oraculo/orig";
+const ORIG = "oraculo/orig";
 
 /** .VIG regravado pelo VIGA a partir de registros já resolvidos (F da indexada gravada). */
 function vigDe(dados: readonly DadosViga[]) {
@@ -153,30 +154,27 @@ describe("gerar: balanço esquerdo, pilares repetidos, seção 0 e peso próprio
   });
 });
 
-describe.skipIf(!existsSync(`${ORIG}/SISTRUT.DSP`))(
-  "leitor do .DSP: aspas e fim da parametrização",
-  () => {
-    const fabrica = readFileSync(`${ORIG}/SISTRUT.DSP`, "latin1");
-    const comAco = (texto: string, aco: string) => texto.replace(/^B( +TIPO DE ACO)/m, `${aco}$1`);
+describe("leitor do .DSP: aspas e fim da parametrização", () => {
+  const fabrica = readFileSync(arquivoOraculo(`${ORIG}/SISTRUT.DSP`), "latin1");
+  const comAco = (texto: string, aco: string) => texto.replace(/^B( +TIPO DE ACO)/m, `${aco}$1`);
 
-    it('INPUT # com texto entre aspas ("A" no tipo de aço)', () => {
-      const texto = comAco(fabrica, '"A"');
-      expect(texto).not.toBe(fabrica);
-      expect(lerDsp(texto).classeAco).toBe("A");
-    });
+  it('INPUT # com texto entre aspas ("A" no tipo de aço)', () => {
+    const texto = comAco(fabrica, '"A"');
+    expect(texto).not.toBe(fabrica);
+    expect(lerDsp(texto).classeAco).toBe("A");
+  });
 
-    it('sem "FINAL DA PARAMETRIZACAO": o DESENHO adota a SISTRUT (ERROR 1, L_2041c); a importação avisa', () => {
-      const texto = comAco(fabrica, "A").replace("FINAL DA PARAMETRIZACAO", "FIM");
-      const r = importa([vig([V1]), { nome: "X.DSP", dados: new TextEncoder().encode(texto) }]);
-      expect(r.avisos.some((a) => a.includes("adota a parametrização SISTRUT"))).toBe(true);
-      expect(r.obra.parametrosViga).toBeUndefined();
-    });
-  },
-);
+  it('sem "FINAL DA PARAMETRIZACAO": o DESENHO adota a SISTRUT (ERROR 1, L_2041c); a importação avisa', () => {
+    const texto = comAco(fabrica, "A").replace("FINAL DA PARAMETRIZACAO", "FIM");
+    const r = importa([vig([V1]), { nome: "X.DSP", dados: new TextEncoder().encode(texto) }]);
+    expect(r.avisos.some((a) => a.includes("adota a parametrização SISTRUT"))).toBe(true);
+    expect(r.obra.parametrosViga).toBeUndefined();
+  });
+});
 
-describe.skipIf(!existsSync(`${ORIG}/VIGA.INI`))("VIGA.INI com % fracionário", () => {
+describe("VIGA.INI com % fracionário", () => {
   it("CINT do QuickBASIC (meio ao par): 30,5 % → 30", () => {
-    const linhas = readFileSync(`${ORIG}/VIGA.INI`, "latin1").split("\r\n");
+    const linhas = readFileSync(arquivoOraculo(`${ORIG}/VIGA.INI`), "latin1").split("\r\n");
     linhas[9] = linhas[9]!.replace(/^30=/, "30.5=");
     expect(lerVigaIni(linhas.join("\r\n")).porcentagemAcidentalGerada).toBe(30);
   });

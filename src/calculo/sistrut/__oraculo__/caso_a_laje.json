@@ -1,6 +1,6 @@
 {
   "caso": "caso_a_laje",
-  "run": "C:/tmp/oraculo/runs/caso_a_laje-20261015-041425",
+  "run": "oraculo/runs/caso_a_laje-20261015-041425",
   "programa": "LAJECALC + LAJEGEOM 7",
   "descricao": "Obra E2E montada do zero no LAJEGEOM (painel 2x2 de lajes macicas 4x5 m) e calculada no LAJECALC com continuidade e direcoes padrao: espessuras minimas, imposicao de h=10, momentos e armaduras antes e depois da otimizacao dos negativos. No fim, o LAJEGEOM opcao 7 gera .VIG/.RLP e imprime alvenarias sobre vigas e reacoes das lajes nas vigas.",
   "entrada": {

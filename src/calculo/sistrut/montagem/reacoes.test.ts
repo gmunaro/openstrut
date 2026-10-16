@@ -3,19 +3,20 @@
 // entrada lida do E2E.LAJ que o próprio original gravou e os esperados (1) impressos no
 // relatório de reações (caso_a_laje.json), (2) ecoados pelo VIGA (caso_b_viga.json) e
 // (3) gravados no E2E.VIG binário do run (registros de 855 bytes).
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type { EixoViga, EsforcosLajes, LajeSistrut, PainelLajes } from "../base/tipos";
 import { bateComImpresso, CASOS_ORACULO, valorOraculo } from "../__oraculo__/index";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { montaPavimento } from "./reacoes";
 
 const casoA = CASOS_ORACULO.caso_a_laje;
 const casoB = CASOS_ORACULO.caso_b_viga;
 if (!casoA || !casoB) throw new Error("casos do oráculo ausentes");
 
-/** E2E.VIG do run do caso a (igual ao de C:/tmp/oraculo/casos/caso_b_viga.dados). */
-const VIG_E2E = "C:/tmp/oraculo/runs/caso_a_laje-20261015-041425/obra/E2E.VIG";
+/** E2E.VIG do run do caso a (igual ao de oraculo/casos/caso_b_viga.dados); por arquivoOraculo. */
+const VIG_E2E = "oraculo/runs/caso_a_laje-20261015-041425/obra/E2E.VIG";
 
 const P = emSingle(PARAMETROS_LAJE);
 
@@ -281,7 +282,7 @@ describe.each(["original", "corrigido"] as const)("E2E, modo %s", (modo) => {
  *  registro de 855 bytes, nome (1-20), tramos (26), Be/Bd/Ee/Ed (28-34), por tramo t
  *  (36+12t) nº de divisões, acumulado, L e J, por divisão k (216+20k) P, D, F, Pac, Fac. */
 function lerVig(caminho: string) {
-  const b = readFileSync(caminho);
+  const b = readFileSync(arquivoOraculo(caminho));
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const regs = [];
   for (let r = 1; r < b.byteLength / 855; r++) {
@@ -323,7 +324,7 @@ function lerVig(caminho: string) {
   return regs;
 }
 
-describe.skipIf(!existsSync(VIG_E2E))(`.VIG gravado pelo original (${VIG_E2E})`, () => {
+describe(`.VIG gravado pelo original (${VIG_E2E})`, () => {
   const r = monta("original");
   const regs = lerVig(VIG_E2E);
 

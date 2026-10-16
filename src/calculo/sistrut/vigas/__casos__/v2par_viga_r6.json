@@ -1,7 +1,7 @@
 {
   "caso": "v2par_viga_r6",
-  "run": "C:/tmp/oraculo/runs/v2par_viga_r6-20261015-184612",
-  "entradaDe": "roteiro C:/tmp/oraculo/casos/v2par_viga_r6.txt (opção 8: acidentais S geradas 150 %; opção 3: VR6 4 + 5 m, P 2 t/m; a acidental 3 t/m sai de divisaoComAcidentalGerada)",
+  "run": "oraculo/runs/v2par_viga_r6-20261015-184612",
+  "entradaDe": "roteiro oraculo/casos/v2par_viga_r6.txt (opção 8: acidentais S geradas 150 %; opção 3: VR6 4 + 5 m, P 2 t/m; a acidental 3 t/m sai de divisaoComAcidentalGerada)",
   "descricao": "R6 do PLANO (VIGA.BAS ≈5434, U62-025): o percentual de carga acidental gerada é validado com 'VAL > 96 AND VAL < 4' (AND no lugar de OR), então a tela aceita qualquer valor. Com 150 % a acidental gerada (3,0 t/m) passa a carga total (2,0 t/m): a envoltória usa permanente −1 t/m e dá reações mínimas negativas. A outra metade do R6 (redução dos negativos lida do VIGA.INI sem piso) só se provoca editando o VIGA.INI da instalação; não tem caso.",
   "parametros": {
     "reducaoNegativos": 1,

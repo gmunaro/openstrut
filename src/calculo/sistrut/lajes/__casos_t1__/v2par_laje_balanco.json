@@ -1,8 +1,8 @@
 {
   "caso": "v2par_laje_balanco",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_balanco-20261015-162752",
+  "run": "oraculo/runs/v2par_laje_balanco-20261015-162752",
   "descricao": "Laje interna 4 × 5 m com laje em BALANÇO 4 × 1,5 m (três bordos livres, engastada na interna pela continuidade em y = 5). O original dá ao balanço M+ 0,00 e M− negativo (−0,56), e As+ mínima 1,50.",
-  "obra": "C:/tmp/oraculo/runs/v2par_laje_balanco-20261015-162752/obra/BAL.LAJ",
+  "obra": "oraculo/runs/v2par_laje_balanco-20261015-162752/obra/BAL.LAJ",
   "parametros": {},
   "lajes": [
     {

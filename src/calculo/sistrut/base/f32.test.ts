@@ -1,8 +1,8 @@
 // Referências dos testes:
-// - "oráculo" = saída do SISTRUT 4.0 original no DOSBox-X, em C:/tmp/oraculo/runs/<run>/
+// - "oráculo" = saída do SISTRUT 4.0 original no DOSBox-X, em oraculo/runs/<run>/
 //   (o texto esperado foi copiado da linha citada; o teste não lê o disco);
 // - "QB4.5" = ajuda do QuickBASIC 4.5 (CINT/CLNG, FIX/INT, PRINT USING);
-// - contas à mão dos valores de entrada: C:/tmp/v2-paridade/apoio/livros_*.md.
+// - contas à mão dos valores de entrada: v2-paridade/apoio/livros_*.md.
 import { describe, expect, it } from "vitest";
 import {
   atribuicao,

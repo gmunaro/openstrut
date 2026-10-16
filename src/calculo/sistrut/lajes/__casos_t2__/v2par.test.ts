@@ -1,6 +1,6 @@
 // Rodada 2 da T2: espessura mínima, armaduras antes e depois da otimização, códigos
 // gravados pela otimização e LAJEPROC, contra os valores impressos pelo original nos
-// casos v2par de laje (C:/tmp/oraculo/runs/v2par_<caso>-*). Entrada: o estado gravado
+// casos v2par de laje (oraculo/runs/v2par_<caso>-*). Entrada: o estado gravado
 // no .LAJ e a conta à mão do coeficiente de carga (casos.ts).
 import { describe, expect, it } from "vitest";
 import { bateComImpresso, type CasoOraculo } from "../../__oraculo__";

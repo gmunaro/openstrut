@@ -1,7 +1,7 @@
 {
   "caso": "caso_b",
-  "run": "C:/tmp/oraculo/runs/caso_b_viga-20261014-182718",
-  "entradaDe": "C:/tmp/oraculo/casos/caso_b_viga.dados/E2E.VIG (registros 1-6 decodificados; J com a marca do pilar)",
+  "run": "oraculo/runs/caso_b_viga-20261014-182718",
+  "entradaDe": "oraculo/casos/caso_b_viga.dados/E2E.VIG (registros 1-6 decodificados; J com a marca do pilar)",
   "descricao": "VIGA opção 7 da obra E2E, VIGA.INI de fábrica. Valores impressos em __oraculo__/caso_b_viga.json; aqui só a entrada e as linhas do E2E.REP.",
   "parametros": {
     "reducaoNegativos": 1,

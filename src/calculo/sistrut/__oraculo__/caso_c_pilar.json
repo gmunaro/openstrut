@@ -1,6 +1,6 @@
 {
   "caso": "caso_c_pilar",
-  "run": "C:/tmp/oraculo/runs/caso_c_pilar-20261014-182757",
+  "run": "oraculo/runs/caso_c_pilar-20261014-182757",
   "programa": "PILAR opção 6",
   "descricao": "PILAR opção 6 (verificação NB1/78 de seção e armadura dadas) do pilar P5 da obra E2E: seção 20x20 com 4 φ12,5, Nk 17,37 t sem momento inicial, le 3 m. Exercita λ, excentricidade acidental em casos isolados, MR de 1ª ordem, desconto de 2ª ordem pela curvatura e o veredito \"ok\".",
   "entrada": {
@@ -35,7 +35,7 @@
     "Lye": "3 m",
     "coeficientes de segurança": "Csf 1.4, Csc 1.4, Csa 1.15 (padrão, tela 003)",
     "fluencia": "0 (padrão)",
-    "obra de partida": "C:/tmp/oraculo/casos/caso_c_pilar.dados (E2E.REP etc.; não lida por este programa)"
+    "obra de partida": "oraculo/casos/caso_c_pilar.dados (E2E.REP etc.; não lida por este programa)"
   },
   "valores": [
     {

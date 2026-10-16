@@ -1,6 +1,6 @@
 {
   "caso": "v2par_pilar_mk",
-  "run": "C:/tmp/oraculo/runs/v2par_pilar_mk-20261015-170447",
+  "run": "oraculo/runs/v2par_pilar_mk-20261015-170447",
   "programa": "PILAR opção 6 (verificação NB-1/78)",
   "descricao": "Pilar avulso com Mk inicial ≠ 0: o Mk entra no momento solicitante junto com o acidental (Mx = Mk(i) + ea·Nk(a)) em casos separados por direção. Conjunto 1: flexo-compressão reta, 'SITUACAO DE INSTABILIDADE'; conjuntos 2 e 3: flexão oblíqua com Mk nas duas direções, 'ok'. Ids com o prefixo e<k>. do conjunto. (As combinações que travam o original estão no v2par_pilar_trava.)",
   "entrada": {

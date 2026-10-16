@@ -1,6 +1,6 @@
 {
   "caso": "v2par_pilar_niveis",
-  "run": "C:/tmp/oraculo/runs/v2par_pilar_niveis-20261015-164933",
+  "run": "oraculo/runs/v2par_pilar_niveis-20261015-164933",
   "programa": "PILAREDI (PILGEEDI + PIPROEDI)",
   "descricao": "Pilar de edifício com vários níveis: coluna P5 do E2E.REP (17,37 t) de FUND a COB com a carga introduzida nos níveis 2, 3 e 4 (acumula 17,37 / 34,74 / 52,11 t) mais o peso próprio (Δcota·A·2,5); seção 25 × 40; dimensionamento variando a armadura de nível em nível (um relatório por lance: FUND, PAV1, PAV2). Ids com o nível: P5.FUND.1f.MRx2a.",
   "entrada": {
@@ -13,7 +13,7 @@
       "secaoComprimidaCritica": "N (resposta à pergunta 'Secao comprimida')",
       "cobrimento_cm": 2.0
     },
-    "obraDePartida": "E2E.REP gravado pelo VIGA original no caso b (C:/tmp/oraculo/casos/v2par_pilar_niveis.dados): P5 = 17,37 t",
+    "obraDePartida": "E2E.REP gravado pelo VIGA original no caso b (oraculo/casos/v2par_pilar_niveis.dados): P5 = 17,37 t",
     "niveis": [
       {
         "n": 1,

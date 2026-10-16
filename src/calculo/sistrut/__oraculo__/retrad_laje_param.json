@@ -1,10 +1,10 @@
 {
   "caso": "retrad_laje_param",
-  "run": "C:/tmp/oraculo/runs/retrad_laje_param-20261015-082447",
+  "run": "oraculo/runs/retrad_laje_param-20261015-082447",
   "programa": "LAJECALC",
   "descricao": "Obra E2E calculada com parametros e materiais alterados: gama f 1.5, Fck 0.2 t/cm2, aco tipo A e eficiencia da negativa 90 %. Exercita as telas de parametrizacao do LAJE e do LAJECALC (valores recusados e restaurados) e imprime espessuras minimas, momentos e armaduras; o LAJEPROC so imprime o desenho (grafico).",
   "entrada": {
-    "obra de partida": "E2E (C:\\E2E.LAJ, copia de C:/tmp/oraculo/casos/retrad_lajeproc.dados/ = retrad_laje_param.dados/, arquivos identicos), gravada pelo original no caso caso_a_laje",
+    "obra de partida": "E2E (C:\\E2E.LAJ, copia de oraculo/casos/retrad_lajeproc.dados/ = retrad_laje_param.dados/, arquivos identicos), gravada pelo original no caso caso_a_laje",
     "geometria": "painel 2x2 de lajes macicas L1..L4 de 4 x 5 m; eixos verticais x = 0/4/8 m, horizontais y = 0/5/10 m; vigas em todos os eixos; pilares P1..P9 nos cruzamentos",
     "vinculacao": "cada laje com dois bordos continuos (canto do painel) e dois apoiados; continuidade padrao, direcao principal padrao",
     "cargas": "permanente 0.10 t/m2; ocupacao total 0.15 t/m2 (parcela acidental 0.15); peso proprio imposto 0.25 t/m2",

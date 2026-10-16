@@ -1,6 +1,6 @@
 {
   "caso": "v2par_laje_otim",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_otim-20261015-163215",
+  "run": "oraculo/runs/v2par_laje_otim-20261015-163215",
   "programa": "LAJEGEOM + LAJECALC + LAJEMONT (LAJEGEOM 7) + LAJEPROC",
   "descricao": "Laje 6 × 6 m ao lado de uma faixa de 1,8 × 6 m: a otimização dos negativos reduz o coeficiente do lado da L1 de 2,0 (código 22) até o piso Mneg/Mpos mínimo de fábrica, 0,30 (código 5), e para ali ('coef1 = F7A'). Referência do caso R3 sem travar: com o piso 0,30 a otimização sempre converge (v2par_laje_r3 mostra o laço com o piso 0,35).",
   "entrada": {

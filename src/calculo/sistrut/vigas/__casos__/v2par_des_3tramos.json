@@ -1,7 +1,7 @@
 {
   "caso": "v2par_des_3tramos",
-  "run": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027",
-  "entradaDe": "C:/tmp/oraculo/casos/v2par_des_3tramos.dados/ASS.VIG (viga V1); SISTRUT.DSP de fábrica (acidentais N); valores de C:/tmp/v2-paridade/oraculo-novos/v2par_des_3tramos.json (só a análise)",
+  "run": "oraculo/runs/v2par_des_3tramos-20261015-165027",
+  "entradaDe": "oraculo/casos/v2par_des_3tramos.dados/ASS.VIG (viga V1); SISTRUT.DSP de fábrica (acidentais N); valores de v2-paridade/oraculo-novos/v2par_des_3tramos.json (só a análise)",
   "descricao": "Dimensionamento e detalhamento (DESDIM/DESINIT) de viga de 3 tramos (3, 5 e 4 m), com o resumo de consumo.",
   "parametros": {
     "reducaoNegativos": 1,

@@ -2,9 +2,10 @@
 // Importador da parte de viga do SISTRUT (viga.ts) sem o oráculo: um .VIG montado aqui no
 // leiaute do registro de 855 bytes (VIGA.BAS:2875-3040), a marca do pilar no J, a
 // conversão das divisões em cargas da obra e a ida pelo motor; e o .DSP e o VIGA.INI de
-// fábrica (C:/tmp/oraculo/orig/, pulado sem eles) contra as tabelas embutidas
+// fábrica (oraculo/orig/ em __oraculo__/arquivos/) contra as tabelas embutidas
 // (base/parametros.ts), com as duas diferenças que o parametros.ts documenta.
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "../../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { describe, expect, it } from "vitest";
 import { calcularObra } from "../../calculo/fluxo";
 import { nb178 } from "../../calculo/normas";
@@ -139,38 +140,37 @@ describe("gerar a obra a partir do .VIG", () => {
   });
 });
 
-const ORIG = "C:/tmp/oraculo/orig";
+const ORIG = "oraculo/orig";
 
-describe.skipIf(!existsSync(`${ORIG}/SISTRUT.DSP`))(
-  "SISTRUT.DSP de fábrica (lido do disco)",
-  () => {
-    const dsp = lerDsp(readFileSync(`${ORIG}/SISTRUT.DSP`, "latin1"));
-    it("é a tabela embutida, menos as duas diferenças documentadas em parametros.ts", () => {
-      const f = Math.fround;
-      const emSingle = (x: unknown): unknown =>
-        typeof x === "number"
-          ? f(x)
-          : Array.isArray(x)
-            ? x.map(emSingle)
-            : x && typeof x === "object"
-              ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, emSingle(v)]))
-              : x;
-      const esperado = {
-        ...PARAMETROS_DSP,
-        // o 3º intervalo termina em 70 no arquivo (170 no embutido, DESENHO.BAS:4919)
-        arranjosPorIntervalo: PARAMETROS_DSP.arranjosPorIntervalo.map((l, i) =>
-          i === 2 ? l.map((a) => (a.area === 170 ? { ...a, area: 70 } : a)) : l,
-        ),
-        // a 5ª linha da tabela 1 é 120 no arquivo (100 no embutido, DESENHO.BAS:5014)
-        tabelaBitola1: [15, 30, 70, 85, 120],
-      };
-      expect(emSingle(dsp)).toEqual(emSingle(esperado));
-    });
-  },
-);
+describe("SISTRUT.DSP de fábrica (lido do disco)", () => {
+  const dsp = lerDsp(readFileSync(arquivoOraculo(`${ORIG}/SISTRUT.DSP`), "latin1"));
+  it("é a tabela embutida, menos as duas diferenças documentadas em parametros.ts", () => {
+    const f = Math.fround;
+    const emSingle = (x: unknown): unknown =>
+      typeof x === "number"
+        ? f(x)
+        : Array.isArray(x)
+          ? x.map(emSingle)
+          : x && typeof x === "object"
+            ? Object.fromEntries(Object.entries(x).map(([k, v]) => [k, emSingle(v)]))
+            : x;
+    const esperado = {
+      ...PARAMETROS_DSP,
+      // o 3º intervalo termina em 70 no arquivo (170 no embutido, DESENHO.BAS:4919)
+      arranjosPorIntervalo: PARAMETROS_DSP.arranjosPorIntervalo.map((l, i) =>
+        i === 2 ? l.map((a) => (a.area === 170 ? { ...a, area: 70 } : a)) : l,
+      ),
+      // a 5ª linha da tabela 1 é 120 no arquivo (100 no embutido, DESENHO.BAS:5014)
+      tabelaBitola1: [15, 30, 70, 85, 120],
+    };
+    expect(emSingle(dsp)).toEqual(emSingle(esperado));
+  });
+});
 
-describe.skipIf(!existsSync(`${ORIG}/VIGA.INI`))("VIGA.INI de fábrica (lido do disco)", () => {
+describe("VIGA.INI de fábrica (lido do disco)", () => {
   it("é o PARAMETROS_VIGA", () => {
-    expect(lerVigaIni(readFileSync(`${ORIG}/VIGA.INI`, "latin1"))).toEqual(PARAMETROS_VIGA);
+    expect(lerVigaIni(readFileSync(arquivoOraculo(`${ORIG}/VIGA.INI`), "latin1"))).toEqual(
+      PARAMETROS_VIGA,
+    );
   });
 });

@@ -1,19 +1,20 @@
 /// <reference types="node" />
 // Montagem (T6) contra os casos v2par do oráculo (T10; índice em
-// C:/wt/v1-v2par/tests/retraducao/V2PAR.md). A entrada é a obra que o próprio
+// tests/retraducao/V2PAR.md da V1). A entrada é a obra que o próprio
 // original gravou no run (`obra/*.LAJ`, lida por obraLaj.ts); os esperados são os
-// valores impressos (C:/tmp/v2-paridade/oraculo-novos/<caso>.json: reações, totais,
+// valores impressos (v2-paridade/oraculo-novos/<caso>.json em __oraculo__/arquivos/: reações, totais,
 // quadro de alvenaria sobre as vigas, eco do VIGA) e o .VIG binário do run, campo a
-// campo. Sem os arquivos na máquina, o caso é pulado.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+// campo. Sem um desses arquivos, o teste falha com o caminho que falta.
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { emSingle, PARAMETROS_LAJE } from "../base/parametros";
 import type { EsforcosLajes } from "../base/tipos";
 import { bateComImpresso, type CasoOraculo, type ValorOraculo } from "../__oraculo__/index";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { lerObraLaj } from "./obraLaj";
 import { montaPavimento } from "./reacoes";
 
-const PASTA_JSON = "C:/tmp/v2-paridade/oraculo-novos";
+const PASTA_JSON = "v2-paridade/oraculo-novos";
 
 /** A montagem sempre grava o registro do .VIG; sem ele o teste falha. */
 const ausente = (viga: string): never => {
@@ -63,14 +64,13 @@ function lerVig(caminho: string) {
 }
 
 for (const { caso, apoiosEmViga } of CASOS) {
-  const arqJson = `${PASTA_JSON}/${caso}.json`;
-  const json = existsSync(arqJson)
-    ? (JSON.parse(readFileSync(arqJson, "utf8")) as CasoOraculo)
-    : null;
-  const pastaObra = json ? `${json.run}/obra` : "";
-  const temObra = json !== null && existsSync(pastaObra);
-  describe.skipIf(!temObra)(`${caso} (${json?.run ?? "sem run"})`, () => {
-    const arquivos = temObra ? readdirSync(pastaObra) : [];
+  // sem o JSON ou a pasta do run, arquivoOraculo falha com o caminho
+  const json = JSON.parse(
+    readFileSync(arquivoOraculo(`${PASTA_JSON}/${caso}.json`), "utf8"),
+  ) as CasoOraculo;
+  const pastaObra = arquivoOraculo(`${json.run}/obra`);
+  describe(`${caso} (${json.run})`, () => {
+    const arquivos = readdirSync(pastaObra);
     const laj = arquivos.find((a) => a.endsWith(".LAJ")) ?? "";
     const vig = arquivos.find((a) => a.endsWith(".VIG")) ?? "";
     const obra = lerObraLaj(readFileSync(`${pastaObra}/${laj}`, "latin1"), apoiosEmViga);
@@ -93,7 +93,7 @@ for (const { caso, apoiosEmViga } of CASOS) {
       emSingle(PARAMETROS_LAJE),
       "original",
     );
-    const valores = new Map((json?.valores ?? []).map((v) => [v.id, v] as const));
+    const valores = new Map(json.valores.map((v) => [v.id, v] as const));
     const confere = (id: string, calc: number, erros: string[]) => {
       const v: ValorOraculo | undefined = valores.get(id);
       if (!v) return false;

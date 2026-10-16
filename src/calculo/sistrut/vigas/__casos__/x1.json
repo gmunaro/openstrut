@@ -1,7 +1,7 @@
 {
   "caso": "x1",
-  "run": "C:/tmp/oraculo/runs/retrad_viga_x1-20261015-065711",
-  "entradaDe": "opção 2: roteiro C:/tmp/oraculo/casos/retrad_viga_x1.txt (F = *1.01 = reação do apoio 1 da posição 1, V20); opção 7: obra/IDX.VIG do run (J com a marca do pilar, F já resolvido)",
+  "run": "oraculo/runs/retrad_viga_x1-20261015-065711",
+  "entradaDe": "opção 2: roteiro oraculo/casos/retrad_viga_x1.txt (F = *1.01 = reação do apoio 1 da posição 1, V20); opção 7: obra/IDX.VIG do run (J com a marca do pilar, F já resolvido)",
   "descricao": "VIGA com acidentais S fornecidas, reação estática. Opção 2 (V21 só depois da V20, com a reação transferida) e opção 7 na IDX (pilares 1, 2 / 3, *, 4).",
   "parametros": {
     "reducaoNegativos": 1,

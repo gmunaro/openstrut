@@ -1,6 +1,6 @@
 {
   "caso": "retrad_des_p5",
-  "run": "C:/tmp/oraculo/runs/retrad_des_p5-20261015-082948",
+  "run": "oraculo/runs/retrad_des_p5-20261015-082948",
   "programa": "DESENHO",
   "descricao": "Sonda p5: detalhamento com Enter em todas as opções de saída. Nada é mostrado nem impresso pelo DESDIM; só os dados de forma conferidos na tela.",
   "entrada": {

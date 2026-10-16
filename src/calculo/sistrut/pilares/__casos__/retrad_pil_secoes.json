@@ -1,6 +1,6 @@
 {
   "caso": "retrad_pil_secoes",
-  "run": "C:/tmp/oraculo/runs/retrad_pil_secoes-20261015-083558",
+  "run": "oraculo/runs/retrad_pil_secoes-20261015-083558",
   "programa": "PILAREDI",
   "descricao": "PILAREDI com o P5 da E2E (17,37 t do .REP, níveis FUND 0 e PAV1 3 m, travado): seção circular D 25 (prefixo C) e poligonal de 4 vértices no sentido horário 20x20 (prefixo Q), predimensionamento e dimensionamento impressos.",
   "entrada": {

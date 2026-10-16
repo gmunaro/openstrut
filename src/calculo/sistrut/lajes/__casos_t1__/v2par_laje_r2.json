@@ -1,8 +1,8 @@
 {
   "caso": "v2par_laje_r2",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_r2-20261015-163144",
+  "run": "oraculo/runs/v2par_laje_r2-20261015-163144",
   "descricao": "R2 do PLANO (LAJEPROC.BAS:855): continuidade em que o lado da vizinha tem o MESMO número do lado da laje atual (L1 lado 3 com L2 lado 3). O LAJEPROC não recalcula a vizinha e grava um código por continuidade com a As da última laje processada: a negativa sai # 6.3 c/10 (3,15 cm2/m), que atende a L2 (As− 2,86) mas não a L1 (As− 4,70, que pede # 8.0 c/10). Sem otimização, para os M− das duas lajes ficarem diferentes (2 × M+ de cada uma).",
-  "obra": "C:/tmp/oraculo/runs/v2par_laje_r2-20261015-163144/obra/RDOIS.LAJ",
+  "obra": "oraculo/runs/v2par_laje_r2-20261015-163144/obra/RDOIS.LAJ",
   "parametros": {},
   "lajes": [
     {

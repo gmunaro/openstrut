@@ -1,8 +1,8 @@
 {
   "caso": "v2par_laje_r3",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_r3-20261015-164300",
+  "run": "oraculo/runs/v2par_laje_r3-20261015-164300",
   "descricao": "R3 do PLANO (LAJECALC.BAS:2111-2145): a otimização dos negativos NÃO CONVERGE quando o piso Mneg/Mpos mínimo não é múltiplo de 0,1. Mesma obra do v2par_laje_otim com o parâmetro 'Minima Relacao Mneg/Mpos' (LAJECALC 7, item 6) em 0,35: o coeficiente reduzido vira max(INT(100·c·M2/M1)/100; 0,35) = 0,35 em SINGLE (0,3499999940), gravado como CINT(0,35·10 + 2) = CINT(5,4999999) = 5 (0,30); como 0,30 ≠ 0,35 e (M1 − M2)/M1 > 10 %, o mesmo bordo é refeito para sempre. Telas aos 30 s e 60 s iguais ('Relacao Mneg/Mpos da Laje L1 alterada para .35 .. Aguarde'); F2 interrompe e volta ao LAJE. Com o piso de fábrica 0,30 não há laço (o mesmo CINT faz o código andar: 0,4 → 0,3 = piso).",
-  "obra": "C:/tmp/oraculo/runs/v2par_laje_otim-20261015-163215/obra/OTIM.LAJ",
+  "obra": "oraculo/runs/v2par_laje_otim-20261015-163215/obra/OTIM.LAJ",
   "parametros": {
     "relacaoNegPosMin": 0.35
   },

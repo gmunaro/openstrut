@@ -1,12 +1,13 @@
 /// <reference types="node" />
 // Referências independentes da transcrição dos .BAS:
 // 1. os arquivos de parametrização de fábrica que o INSTALAR do original grava
-//    (C:/tmp/oraculo/orig/SISTRUT.LAP, SISTRUT.DSP, SISTRUT.PIP, VIGA.INI, PILAR.INI),
-//    lidos do disco; sem a pasta, esses testes são pulados;
+//    (oraculo/orig/SISTRUT.LAP, SISTRUT.DSP, SISTRUT.PIP, VIGA.INI, PILAR.INI em
+//    __oraculo__/arquivos/, com o cabeçalho neutro), lidos do disco;
 // 2. os parâmetros impressos pelo original nos casos do oráculo (`__oraculo__/`).
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CASOS_ORACULO, numeroOraculo, valorOraculo } from "../__oraculo__";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { sng } from "./f32";
 import {
   emSingle,
@@ -19,13 +20,9 @@ import {
 } from "./parametros";
 import type { ParametrosDsp, ParametrosLaje, ParametrosPip, ParametrosVicalc } from "./tipos";
 
-const ORIG = "C:/tmp/oraculo/orig";
-const temOrig = existsSync(ORIG);
-const pulado = temOrig ? "" : ` (pulado: ${ORIG} não existe nesta máquina)`;
-
 /** Linhas de dados do arquivo (sem os comentários "*" e sem CR). */
 function linhas(arquivo: string) {
-  return readFileSync(`${ORIG}/${arquivo}`, "latin1")
+  return readFileSync(arquivoOraculo(`oraculo/orig/${arquivo}`), "latin1")
     .split("\n")
     .map((l) => l.replace(/\r$/, ""))
     .filter((l) => !l.startsWith("*"));
@@ -62,8 +59,8 @@ function linhasDeNumeros(ls: string[], de: number, n: number) {
   );
 }
 
-describe.skipIf(!temOrig)(`SISTRUT.LAP de fábrica${pulado}`, () => {
-  const ls = temOrig ? linhas("SISTRUT.LAP") : [];
+describe("SISTRUT.LAP de fábrica", () => {
+  const ls = linhas("SISTRUT.LAP");
   const p = PARAMETROS_LAJE;
 
   it("cobrimento, acréscimo, bitolas e áreas", () => {
@@ -149,8 +146,8 @@ describe("LAJE: parâmetros impressos pelo original", () => {
   });
 });
 
-describe.skipIf(!temOrig)(`SISTRUT.DSP de fábrica${pulado}`, () => {
-  const ls = temOrig ? linhas("SISTRUT.DSP") : [];
+describe("SISTRUT.DSP de fábrica", () => {
+  const ls = linhas("SISTRUT.DSP");
   const p = PARAMETROS_DSP;
 
   it("parâmetros globais", () => {
@@ -293,7 +290,7 @@ describe("DSP: parâmetros impressos pelo original (retrad_des_menu, retrad_des_
   });
 });
 
-describe.skipIf(!temOrig)(`VIGA.INI e PILAR.INI de fábrica${pulado}`, () => {
+describe("VIGA.INI e PILAR.INI de fábrica", () => {
   it("VIGA.INI", () => {
     const ls = linhas("VIGA.INI");
     const v = PARAMETROS_VIGA;
@@ -336,8 +333,8 @@ describe.skipIf(!temOrig)(`VIGA.INI e PILAR.INI de fábrica${pulado}`, () => {
   });
 });
 
-describe.skipIf(!temOrig)(`SISTRUT.PIP de fábrica${pulado}`, () => {
-  const ls = temOrig ? linhas("SISTRUT.PIP") : [];
+describe("SISTRUT.PIP de fábrica", () => {
+  const ls = linhas("SISTRUT.PIP");
   const p = PARAMETROS_PIP;
 
   it("parâmetros, taxas e cargas", () => {

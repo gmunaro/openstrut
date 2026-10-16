@@ -1,10 +1,10 @@
 {
   "caso": "retrad_des_det",
-  "run": "C:/tmp/oraculo/runs/retrad_des_det-20261015-082506",
+  "run": "oraculo/runs/retrad_des_det-20261015-082506",
   "programa": "DESENHO",
   "descricao": "Detalhamento completo da viga V1 (20x50, 2 tramos) da obra E2E pelo DESENHO -> DESDIM -> DESINIT: impressão dos esforços (M-, reações, M+, MEP) e da armação (x/d, As, barras, estribos alívio do cortante, flecha), desenho definitivo 1/50 na impressora (bit-image) e arquivo CAD R1__E2E.DXF com rótulos das barras, estribos, corte A e quadro de ferros/aço. O .TAB gravado (binário) guarda volume 76 e fôrma 912.",
   "entrada": {
-    "obra de partida": "E2E (C:/tmp/oraculo/casos/retrad_des_det.dados: E2E.LAJ, E2E.VIG, E2E.RLP, E2E.BAK gravados pelo original); E2E.VIG com 6 vigas gravadas",
+    "obra de partida": "E2E (oraculo/casos/retrad_des_det.dados: E2E.LAJ, E2E.VIG, E2E.RLP, E2E.BAK gravados pelo original); E2E.VIG com 6 vigas gravadas",
     "parametrização": "padrão SISTRUT do DESENHO (.DSP de fábrica em C:\\SISTRUT\\EXEC40): Fck .15 t/cm2, aço B Fyk 5 t/cm2, cobrimento 2 cm, redução dos negativos 100 %, alívio do cortante S, acidentais N, momentos externos N, desenho definitivo S",
     "roteiro": "gerenciador V (Viga) -> DESENHO; item 1 (Detalhamento e Desenho); obra E2E; não lista as vigas; continua; todas as vigas N; registro 1",
     "viga": "V1 (registro 1), 2 tramos de L = 4.000 m, J = 1.00, P = 0.486 t/m em D = 4.00 m, F = 0.00 (ecoados na impressora, linhas 9-12)",

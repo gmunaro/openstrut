@@ -1,7 +1,7 @@
 {
   "caso": "v2par_des_especial",
-  "run": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646",
-  "entradaDe": "obra/DSX.VIG do run; V2P.DSP com acidentais envoltórias S (redução 100 %, Mext N); valores de C:/tmp/v2-paridade/oraculo-novos/v2par_des_especial.json (só a análise)",
+  "run": "oraculo/runs/v2par_des_especial-20261015-171646",
+  "entradaDe": "obra/DSX.VIG do run; V2P.DSP com acidentais envoltórias S (redução 100 %, Mext N); valores de v2-paridade/oraculo-novos/v2par_des_especial.json (só a análise)",
   "descricao": "Dimensionamento de viga com: seção T (Bf 80, Hf 10) nos tramos; armadura dupla no apoio 1 (x/d no limite do aço A, 0,628; Ast 10,18 e Asc 2,61); aço classe A; balanço à esquerda e à direita; carga concentrada de 3 t a 0,4 m do apoio (alívio do cortante: Vke 8,98 no DESDIM contra Ve 10,98 da análise); flecha com inércia fissurada e deformação lenta (impressa, 1,97 cm no tramo 1); verificação de fissuração (só na tela: janelas 'Fissura(1)' por apoio e por tramo; o original não imprime fissuração); envoltória de acidentais (acidentais S: linhas 'max' na impressão).",
   "parametros": {
     "reducaoNegativos": 1,

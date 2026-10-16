@@ -1,10 +1,10 @@
 {
   "caso": "retrad_lajeproc",
-  "run": "C:/tmp/oraculo/runs/retrad_lajeproc-20261015-082452",
+  "run": "oraculo/runs/retrad_lajeproc-20261015-082452",
   "programa": "LAJEPROC",
   "descricao": "LAJEPROC sobre a obra E2E (4 lajes 4x5 m, h 10): escolha automatica das armaduras de todas as lajes, modificacao da laje L1 aceitando as propostas (positivas principal e secundaria e negativas com L2 e L3), desenho das positivas na tela e impressao do desenho das armaduras. A impressora sai so em grafico; os numeros vem da tela de modificacao da L1.",
   "entrada": {
-    "obra de partida": "E2E (C:\\E2E.LAJ, copia de C:/tmp/oraculo/casos/retrad_lajeproc.dados/ = retrad_laje_param.dados/, arquivos identicos), gravada pelo original no caso caso_a_laje",
+    "obra de partida": "E2E (C:\\E2E.LAJ, copia de oraculo/casos/retrad_lajeproc.dados/ = retrad_laje_param.dados/, arquivos identicos), gravada pelo original no caso caso_a_laje",
     "geometria": "painel 2x2 de lajes macicas L1..L4 de 4 x 5 m; eixos verticais x = 0/4/8 m, horizontais y = 0/5/10 m; vigas em todos os eixos; pilares P1..P9 nos cruzamentos",
     "vinculacao": "cada laje com dois bordos continuos (canto do painel) e dois apoiados; continuidade padrao, direcao principal padrao",
     "cargas": "permanente 0.10 t/m2; ocupacao total 0.15 t/m2 (parcela acidental 0.15); peso proprio imposto 0.25 t/m2",

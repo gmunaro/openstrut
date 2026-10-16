@@ -1,5 +1,5 @@
 // Valores de referência: definição de 1 tf = 9,80665 kN e a medição de
-// C:/tmp/v2-paridade/PLANO.md seção 2 ("fck 0,15 t/cm² exatos (14,71 MPa) e concreto
+// v2-paridade/PLANO.md seção 2 ("fck 0,15 t/cm² exatos (14,71 MPa) e concreto
 // 2,5 t/m³ (24,517 kN/m³)"; "5 t/cm² = 490,3 MPa").
 import { describe, expect, it } from "vitest";
 import {

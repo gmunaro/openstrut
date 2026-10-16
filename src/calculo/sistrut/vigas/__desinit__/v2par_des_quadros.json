@@ -1,6 +1,6 @@
 {
   "v2par_des_3tramos": {
-    "run": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027",
+    "run": "oraculo/runs/v2par_des_3tramos-20261015-165027",
     "quadro": {
       "fonte": "impressora.png do run: quadro de ferros do desenho definitivo (N, #, Q, UNI, TOTAL), lido da imagem (o desenho sai em bit-image, sem texto)",
       "linhas": [
@@ -58,7 +58,7 @@
     }
   },
   "v2par_des_2tramos": {
-    "run": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207",
+    "run": "oraculo/runs/v2par_des_2tramos-20261015-165207",
     "quadro": {
       "fonte": "impressora.png do run: quadro de ferros do desenho definitivo (N, #, Q, UNI, TOTAL), lido da imagem (o desenho sai em bit-image, sem texto)",
       "linhas": [
@@ -128,7 +128,7 @@
     }
   },
   "v2par_des_especial": {
-    "run": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646",
+    "run": "oraculo/runs/v2par_des_especial-20261015-171646",
     "quadro": {
       "fonte": "impressora.png do run: quadro de ferros do desenho definitivo (N, #, Q, UNI, TOTAL), lido da imagem (o desenho sai em bit-image, sem texto)",
       "linhas": [

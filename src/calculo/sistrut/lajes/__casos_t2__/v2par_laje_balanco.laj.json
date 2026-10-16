@@ -1,6 +1,6 @@
 {
   "caso": "v2par_laje_balanco",
-  "laj": "C:/tmp/oraculo/runs/v2par_laje_balanco-20261015-162752/obra/BAL.LAJ",
+  "laj": "oraculo/runs/v2par_laje_balanco-20261015-162752/obra/BAL.LAJ",
   "lajes": [
     {
       "nome": "L1",

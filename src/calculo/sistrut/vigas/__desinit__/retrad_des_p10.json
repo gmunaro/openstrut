@@ -1,6 +1,6 @@
 {
   "caso": "retrad_des_p10",
-  "run": "C:/tmp/oraculo/runs/retrad_des_p10-20261015-082955",
+  "run": "oraculo/runs/retrad_des_p10-20261015-082955",
   "programa": "DESENHO",
   "descricao": "Sonda p10: itens 3, 4 e 2 do DESENHO com a obra E2E já detalhada (E2E.SEC/.FOR/.TAB gravados pelo original no caso det). O item 4 mostra na tela o resumo geral de ferragem lido do .TAB.",
   "entrada": {

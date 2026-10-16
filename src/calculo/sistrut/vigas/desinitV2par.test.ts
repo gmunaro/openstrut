@@ -1,11 +1,12 @@
 /// <reference types="node" />
 // Rodada 2 do oráculo da T4b: casos v2par_des_3tramos, v2par_des_2tramos e
-// v2par_des_especial (C:/wt/v1-v2par/tests/retraducao/V2PAR.md). Valores esperados:
+// v2par_des_especial (tests/retraducao/V2PAR.md da V1). Valores esperados:
 // - análise do DESDIM, dimensionamento e resumo: vigas/__desinit__/v2par_des_*.json
 //   (impressora.prn do run);
 // - quadro de ferros do desenho definitivo e .TAB: vigas/__desinit__/v2par_des_quadros.json
 //   (lido da impressora.png e decodificado do .TAB gravado pelo original).
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -125,21 +126,20 @@ describe.each(CASOS)("%s: detalhamento, .TAB e resumo", (nome, caso, v) => {
     expect(esperado.tab.nome).toBe(`~${v}`);
   });
 
-  const temTab = existsSync(esperado.run);
-  it.skipIf(!temTab)(
-    `o .TAB decodificado é o do run${temTab ? "" : " (pulado: sem o run)"}`,
-    () => {
-      const [arquivo, , reg] = esperado.tab.fonte.split(" ");
-      const r = Number(reg);
-      const b = readFileSync(join(esperado.run, arquivo!)).subarray((r - 1) * 70, r * 70);
-      const vals = Array.from({ length: 15 }, (_, i) => b.readFloatLE(10 + 4 * i));
-      expect([vals[1], vals[2], vals.slice(5)]).toEqual([
-        esperado.tab.volume,
-        esperado.tab.forma,
-        esperado.tab.comprimentos,
-      ]);
-    },
-  );
+  it(`o .TAB decodificado é o do run`, () => {
+    const [arquivo, , reg] = esperado.tab.fonte.split(" ");
+    const r = Number(reg);
+    const b = readFileSync(arquivoOraculo(join(esperado.run, arquivo!))).subarray(
+      (r - 1) * 70,
+      r * 70,
+    );
+    const vals = Array.from({ length: 15 }, (_, i) => b.readFloatLE(10 + 4 * i));
+    expect([vals[1], vals[2], vals.slice(5)]).toEqual([
+      esperado.tab.volume,
+      esperado.tab.forma,
+      esperado.tab.comprimentos,
+    ]);
+  });
 
   it("resumo geral impresso (por viga, totais e pesos)", () => {
     const r = resumoGeralVigas([q], entrada.parametros, "original");
@@ -158,17 +158,14 @@ describe.each(CASOS)("%s: detalhamento, .TAB e resumo", (nome, caso, v) => {
 });
 
 describe.each(CASOS)("%s: fontes do JSON", (_nome, caso) => {
-  const tem = existsSync(caso.run);
-  it.skipIf(!tem)(
-    `cada fonte existe e contém o impresso${tem ? "" : " (pulado: sem o run)"}`,
-    () => {
-      for (const x of caso.valores) {
-        const sep = x.fonte.lastIndexOf(":");
-        const linha = readFileSync(join(caso.run, x.fonte.slice(0, sep)), "latin1").split("\n")[
-          Number(x.fonte.slice(sep + 1)) - 1
-        ];
-        expect(linha, x.id).toContain(x.impresso);
-      }
-    },
-  );
+  it(`cada fonte existe e contém o impresso`, () => {
+    for (const x of caso.valores) {
+      const sep = x.fonte.lastIndexOf(":");
+      const linha = readFileSync(
+        arquivoOraculo(join(caso.run, x.fonte.slice(0, sep))),
+        "latin1",
+      ).split("\n")[Number(x.fonte.slice(sep + 1)) - 1];
+      expect(linha, x.id).toContain(x.impresso);
+    }
+  });
 });

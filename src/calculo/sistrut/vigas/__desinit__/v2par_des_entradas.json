@@ -1,9 +1,9 @@
 {
   "v2par_des_3tramos": {
     "fonte": {
-      "vig": "C:/tmp/oraculo/casos/v2par_des_3tramos.dados/ASS.VIG registro 2",
-      "sec": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027/obra/ASS.SEC registro 1",
-      "for": "C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027/obra/ASS.FOR registro 1"
+      "vig": "oraculo/casos/v2par_des_3tramos.dados/ASS.VIG registro 2",
+      "sec": "oraculo/runs/v2par_des_3tramos-20261015-165027/obra/ASS.SEC registro 1",
+      "for": "oraculo/runs/v2par_des_3tramos-20261015-165027/obra/ASS.FOR registro 1"
     },
     "vig": {
       "nome": "V1",
@@ -300,9 +300,9 @@
   },
   "v2par_des_2tramos": {
     "fonte": {
-      "vig": "C:/tmp/oraculo/casos/v2par_des_2tramos.dados/ASS.VIG registro 6",
-      "sec": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207/obra/ASS.SEC registro 5",
-      "for": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207/obra/ASS.FOR registro 5"
+      "vig": "oraculo/casos/v2par_des_2tramos.dados/ASS.VIG registro 6",
+      "sec": "oraculo/runs/v2par_des_2tramos-20261015-165207/obra/ASS.SEC registro 5",
+      "for": "oraculo/runs/v2par_des_2tramos-20261015-165207/obra/ASS.FOR registro 5"
     },
     "vig": {
       "nome": "V5",
@@ -586,9 +586,9 @@
   },
   "v2par_des_especial": {
     "fonte": {
-      "vig": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.VIG registro 2",
-      "sec": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.SEC registro 1",
-      "for": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.FOR registro 1"
+      "vig": "oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.VIG registro 2",
+      "sec": "oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.SEC registro 1",
+      "for": "oraculo/runs/v2par_des_especial-20261015-171646/obra/DSX.FOR registro 1"
     },
     "vig": {
       "nome": "D1",

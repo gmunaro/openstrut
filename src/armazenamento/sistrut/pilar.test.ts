@@ -2,12 +2,13 @@
 // Importador de pilares do SISTRUT (pilar.ts). Os valores esperados são os escritos
 // nos arquivos do original (linha citada em cada comentário) ou nos arquivos
 // montados à mão aqui, que seguem o PRINT # do programa que grava cada formato. Os
-// arquivos reais ficam em C:/tmp/oraculo; sem eles os testes são pulados.
-import { existsSync, readFileSync } from "node:fs";
+// arquivos reais estão em src/calculo/sistrut/__oraculo__/arquivos/ (README.md de lá).
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { lerObra, serializarObra } from "../arquivo";
 import { obraE2E } from "../../calculo/sistrut/__e2e__/obraE2E";
 import { PARAMETROS_PIP } from "../../calculo/sistrut/base/parametros";
+import { arquivoOraculo } from "../../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { KN_POR_TF as KN } from "../../calculo/unidades";
 import type { Obra } from "../../dominio/obra";
 import {
@@ -21,15 +22,14 @@ import {
   type Lido,
 } from "./pilar";
 
-const ORACULO = "C:/tmp/oraculo";
-const COL_GEO = `${ORACULO}/runs/retrad_pil_geo-20261015-082515/obra/E2E.COL`;
-const COL_NOVE = `${ORACULO}/runs/retrad_frm_sonda_pil-20261014-202358/obra/E2E.COL`;
-const COL_SONDA = `${ORACULO}/runs/sonda-20261013-221414/obra/E2E.COL`;
-const COL_FRM = `${ORACULO}/casos/retrad_frm_edita.dados/E2E.COL`;
-const PIP_SISTRUT = `${ORACULO}/orig/SISTRUT.PIP`;
-const REP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.REP`;
+const COL_GEO = "oraculo/runs/retrad_pil_geo-20261015-082515/obra/E2E.COL";
+const COL_NOVE = "oraculo/runs/retrad_frm_sonda_pil-20261014-202358/obra/E2E.COL";
+const COL_SONDA = "oraculo/runs/sonda-20261013-221414/obra/E2E.COL";
+const COL_FRM = "oraculo/casos/retrad_frm_edita.dados/E2E.COL";
+const PIP_SISTRUT = "oraculo/orig/SISTRUT.PIP";
+const REP_E2E = "oraculo/casos/caso_c_pilaredi.dados/E2E.REP";
 
-const le = (caminho: string) => readFileSync(caminho, "latin1");
+const le = (caminho: string) => readFileSync(arquivoOraculo(caminho), "latin1");
 
 function valor<T>(r: Lido<T>): T {
   if (!r.ok) throw new Error(r.erros.join("\n"));
@@ -58,7 +58,7 @@ function idaEVolta(obra: Obra) {
 // ---------------------------------------------------------------- .COL reais
 
 describe(".COL real de uma coluna (retrad_pil_geo)", () => {
-  it.skipIf(!existsSync(COL_GEO))("lê níveis, coluna, parâmetros, vínculos, carga e vento", () => {
+  it("lê níveis, coluna, parâmetros, vínculos, carga e vento", () => {
     const col = valor(lerCol(le(COL_GEO)));
     expect(col.obra).toBe("E2E"); // linha 2 "Obra - E2E"
     // linhas 7-8: " 0 ,FUND" e " 3 ,PAV1"
@@ -103,7 +103,7 @@ describe(".COL real de uma coluna (retrad_pil_geo)", () => {
     expect([col.temSecoes, col.temArmaduras]).toEqual([false, false]);
   });
 
-  it.skipIf(!existsSync(COL_GEO))("gera a obra: PAV1 de 3 m, P5 com a carga do nível 2", () => {
+  it("gera a obra: PAV1 de 3 m, P5 com a carga do nível 2", () => {
     const { obra, avisos } = importa({ col: le(COL_GEO) });
     expect(obra).toMatchObject({
       versao: 3,
@@ -141,7 +141,7 @@ describe(".COL real de uma coluna (retrad_pil_geo)", () => {
 });
 
 describe(".COL real de 9 colunas com momentos (retrad_frm_sonda_pil)", () => {
-  it.skipIf(!existsSync(COL_NOVE))("lê as cargas com momentos e as seções 20 × 20", () => {
+  it("lê as cargas com momentos e as seções 20 × 20", () => {
     const col = valor(lerCol(le(COL_NOVE)));
     expect(col.colunas.map((c) => c.nome)).toEqual(
       [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => `P   ${i}`),
@@ -165,7 +165,7 @@ describe(".COL real de 9 colunas com momentos (retrad_frm_sonda_pil)", () => {
     ]);
   });
 
-  it.skipIf(!existsSync(COL_NOVE))("gera a obra com os slots de momento como gravados", () => {
+  it("gera a obra com os slots de momento como gravados", () => {
     const { obra } = importa({ col: le(COL_NOVE) });
     // slot A_1280 como gravado (linhas 51-60): |M| e vão +4 = −SGN(M)·4 do .REP; o
     // PILAREDI usa esses números (PILAREDI.BAS:7502-7506)
@@ -193,14 +193,14 @@ describe(".COL real de 9 colunas com momentos (retrad_frm_sonda_pil)", () => {
     idaEVolta(obra);
   });
 
-  it.skipIf(!existsSync(COL_FRM))("o .COL dos casos retrad_frm é o mesmo formato", () => {
+  it("o .COL dos casos retrad_frm é o mesmo formato", () => {
     const col = valor(lerCol(le(COL_FRM)));
     expect(col.colunas).toHaveLength(9);
   });
 });
 
 describe(".COL real sem vínculos (sonda)", () => {
-  it.skipIf(!existsSync(COL_SONDA))("vínculos ausentes; carga 17,52 no nível 2", () => {
+  it("vínculos ausentes; carga 17,52 no nível 2", () => {
     const col = valor(lerCol(le(COL_SONDA)));
     // linha 11 começa com " 0 [1]": sem bloco de vínculos; linha 17: 17.52
     expect(col.temVinculos).toBe(false);
@@ -565,22 +565,19 @@ const PIP_MONTADO = [
 ].join("\r\n");
 
 describe(".PIP", () => {
-  it.skipIf(!existsSync(PIP_SISTRUT))(
-    "SISTRUT.PIP de fábrica: só a área 0,00 de 3,2 e 4 mm difere",
-    () => {
-      const pip = valor(lerPip(le(PIP_SISTRUT)));
-      // linhas 43-44: "0.00" nas bitolas 3,2 e 4; o resto igual ao embutido (PILAREDI.BAS:1834-1890)
-      expect(diferencasPip(pip)).toEqual({
-        bitolas: PARAMETROS_PIP.bitolas.map((b, i) => (i < 2 ? { ...b, area: 0 } : b)),
-      });
-      // linha 32: cobrimento 2; linha 77: 2,50 t/m³; linha 105: "NAO" → 100
-      expect(pip.cobrimento).toBe(2);
-      expect(pip.densidade).toBe(2.5 * KN);
-      expect(pip.coeficienteFlambagem[3]![3]).toBe(100);
-      // linha 162: estribo 6,3 c/12 na de 10 mm
-      expect(pip.estriboPorBitola[5]).toEqual({ bitola: 6.3, espacamento: 12 });
-    },
-  );
+  it("SISTRUT.PIP de fábrica: só a área 0,00 de 3,2 e 4 mm difere", () => {
+    const pip = valor(lerPip(le(PIP_SISTRUT)));
+    // linhas 43-44: "0.00" nas bitolas 3,2 e 4; o resto igual ao embutido (PILAREDI.BAS:1834-1890)
+    expect(diferencasPip(pip)).toEqual({
+      bitolas: PARAMETROS_PIP.bitolas.map((b, i) => (i < 2 ? { ...b, area: 0 } : b)),
+    });
+    // linha 32: cobrimento 2; linha 77: 2,50 t/m³; linha 105: "NAO" → 100
+    expect(pip.cobrimento).toBe(2);
+    expect(pip.densidade).toBe(2.5 * KN);
+    expect(pip.coeficienteFlambagem[3]![3]).toBe(100);
+    // linha 162: estribo 6,3 c/12 na de 10 mm
+    expect(pip.estriboPorBitola[5]).toEqual({ bitola: 6.3, espacamento: 12 });
+  });
 
   it("montado: as diferenças são as alterações", () => {
     const pip = valor(lerPip(PIP_MONTADO));
@@ -604,15 +601,12 @@ describe(".PIP", () => {
     });
   });
 
-  it.skipIf(!existsSync(COL_GEO) || !existsSync(PIP_SISTRUT))(
-    'com o nome "SISTRUT" no .COL o .PIP passado é ignorado',
-    () => {
-      const { obra, avisos } = importa({ col: le(COL_GEO), pip: PIP_MONTADO });
-      expect(obra.parametrosPilar).toBeUndefined();
-      expect(obra.materiais.cobrimentoPilar).toBe(2);
-      expect(avisos.some((a) => a.includes('"SISTRUT"'))).toBe(true);
-    },
-  );
+  it('com o nome "SISTRUT" no .COL o .PIP passado é ignorado', () => {
+    const { obra, avisos } = importa({ col: le(COL_GEO), pip: PIP_MONTADO });
+    expect(obra.parametrosPilar).toBeUndefined();
+    expect(obra.materiais.cobrimentoPilar).toBe(2);
+    expect(avisos.some((a) => a.includes('"SISTRUT"'))).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------- .PIL
@@ -753,25 +747,22 @@ describe(".PIL montado à mão", () => {
     expect(r.ok ? [] : r.erros[0]).toMatch(/tipo de seção 4 desconhecido/);
   });
 
-  it.skipIf(!existsSync(COL_GEO))(
-    "na obra nova, vira a seção e a verificação das colunas sem seção no .COL",
-    () => {
-      const { obra } = importa({ col: le(COL_GEO), pil: PIL_CIRCULAR });
-      expect(pilar(obra, "P5@pav2")).toMatchObject({
-        b: 40,
-        h: 40,
-        secao: { tipo: "circular", d: 40, dInterno: 10 },
-        verificacoes: [{ barras: valor(lerPil(PIL_CIRCULAR)).barras }],
-      });
-      idaEVolta(obra);
-    },
-  );
+  it("na obra nova, vira a seção e a verificação das colunas sem seção no .COL", () => {
+    const { obra } = importa({ col: le(COL_GEO), pil: PIL_CIRCULAR });
+    expect(pilar(obra, "P5@pav2")).toMatchObject({
+      b: 40,
+      h: 40,
+      secao: { tipo: "circular", d: 40, dInterno: 10 },
+      verificacoes: [{ barras: valor(lerPil(PIL_CIRCULAR)).barras }],
+    });
+    idaEVolta(obra);
+  });
 });
 
 // ---------------------------------------------------------------- .REP
 
 describe(".REP", () => {
-  it.skipIf(!existsSync(REP_E2E))("lê o E2E.REP do caso_c_pilaredi", () => {
+  it("lê o E2E.REP do caso_c_pilaredi", () => {
     const linhas = valor(lerRep(le(REP_E2E)));
     expect(linhas).toHaveLength(9);
     // linhas 22-24: "P   5        17.37", parcelas 6.93 (V2) + 10.44 (V5), ">" sem momentos
@@ -791,39 +782,33 @@ describe(".REP", () => {
     ]);
   });
 
-  it.skipIf(!existsSync(REP_E2E) || !existsSync(COL_NOVE))(
-    "importa as cargas do .REP no nível 2 (substitui as do .COL)",
-    () => {
-      const { obra, avisos } = importa({
-        col: le(COL_NOVE),
-        reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2 }],
-      });
-      expect(pilar(obra, "P5@pav2").cargaTopo).toEqual({ normal: 17.37 * KN, momentos: [] });
-      // M −.64 e −1.22 lidos como o PILGEEDI grava: |M| e vão·(−SGN(M)) = +4 e +5;
-      // inclinação e rigidez 0 (PILGEEDI.BAS:606-608)
-      expect(pilar(obra, "P7@pav2").cargaTopo).toEqual({
-        normal: 1.82 * KN,
-        momentos: [
-          { m: 0.64 * KN, inclinacao: 0, vao: 4, rigidez: 0 },
-          { m: 1.22 * KN, inclinacao: 0, vao: 5, rigidez: 0 },
-        ],
-      });
-      expect(avisos).toContain("As cargas gravadas no .COL foram trocadas pelas dos .REP.");
-      idaEVolta(obra);
-    },
-  );
+  it("importa as cargas do .REP no nível 2 (substitui as do .COL)", () => {
+    const { obra, avisos } = importa({
+      col: le(COL_NOVE),
+      reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2 }],
+    });
+    expect(pilar(obra, "P5@pav2").cargaTopo).toEqual({ normal: 17.37 * KN, momentos: [] });
+    // M −.64 e −1.22 lidos como o PILGEEDI grava: |M| e vão·(−SGN(M)) = +4 e +5;
+    // inclinação e rigidez 0 (PILGEEDI.BAS:606-608)
+    expect(pilar(obra, "P7@pav2").cargaTopo).toEqual({
+      normal: 1.82 * KN,
+      momentos: [
+        { m: 0.64 * KN, inclinacao: 0, vao: 4, rigidez: 0 },
+        { m: 1.22 * KN, inclinacao: 0, vao: 5, rigidez: 0 },
+      ],
+    });
+    expect(avisos).toContain("As cargas gravadas no .COL foram trocadas pelas dos .REP.");
+    idaEVolta(obra);
+  });
 
-  it.skipIf(!existsSync(REP_E2E) || !existsSync(COL_SONDA))(
-    "pilar do .REP sem coluna: aviso",
-    () => {
-      const { obra, avisos } = importa({
-        col: le(COL_SONDA),
-        reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2, modo: "soma" }],
-      });
-      expect(pilar(obra, "P5@pav2").cargaTopo).toEqual({ normal: 17.37 * KN, momentos: [] });
-      expect(avisos.filter((a) => a.includes("não casa com nenhuma coluna"))).toHaveLength(8);
-    },
-  );
+  it("pilar do .REP sem coluna: aviso", () => {
+    const { obra, avisos } = importa({
+      col: le(COL_SONDA),
+      reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2, modo: "soma" }],
+    });
+    expect(pilar(obra, "P5@pav2").cargaTopo).toEqual({ normal: 17.37 * KN, momentos: [] });
+    expect(avisos.filter((a) => a.includes("não casa com nenhuma coluna"))).toHaveLength(8);
+  });
 
   it("faixa de níveis fora do .COL é erro", () => {
     const r = importarPilaresSistrut({
@@ -837,7 +822,7 @@ describe(".REP", () => {
 // ---------------------------------------------------------------- completar uma obra
 
 describe("completar a obra E2E", () => {
-  it.skipIf(!existsSync(COL_NOVE))("sem cargas: casa P1..P9 e não mexe em lajes e vigas", () => {
+  it("sem cargas: casa P1..P9 e não mexe em lajes e vigas", () => {
     const base = obraE2E("original");
     const { obra, avisos } = importa({ col: le(COL_NOVE) }, { base });
     expect(avisos).toEqual([]);
@@ -846,7 +831,7 @@ describe("completar a obra E2E", () => {
     idaEVolta(obra);
   });
 
-  it.skipIf(!existsSync(COL_NOVE))("com cargas: cargaTopo do nível 2", () => {
+  it("com cargas: cargaTopo do nível 2", () => {
     const base = obraE2E("original");
     const { obra } = importa({ col: le(COL_NOVE) }, { base, cargas: true });
     expect(pilar(obra, "P5").cargaTopo).toEqual({ normal: 17.37 * KN, momentos: [] });
@@ -862,17 +847,14 @@ describe("completar a obra E2E", () => {
     idaEVolta(obra);
   });
 
-  it.skipIf(!existsSync(COL_GEO))(
-    "materiais diferentes vão para o PILAR.INI e o que não casou é avisado",
-    () => {
-      const { obra, avisos } = importa({ col: le(COL_GEO) }, { base: obraE2E("original") });
-      // fck .2 e classe A (linha 11) contra 15 MPa e classe B da obra
-      expect(obra.parametrosPilar).toEqual({ ini: { fck: 20, classeAco: "A" } });
-      expect(obra.materiais.fck).toBe(15);
-      expect(avisos.filter((a) => a.includes("não casa com nenhuma coluna"))).toHaveLength(8);
-      idaEVolta(obra);
-    },
-  );
+  it("materiais diferentes vão para o PILAR.INI e o que não casou é avisado", () => {
+    const { obra, avisos } = importa({ col: le(COL_GEO) }, { base: obraE2E("original") });
+    // fck .2 e classe A (linha 11) contra 15 MPa e classe B da obra
+    expect(obra.parametrosPilar).toEqual({ ini: { fck: 20, classeAco: "A" } });
+    expect(obra.materiais.fck).toBe(15);
+    expect(avisos.filter((a) => a.includes("não casa com nenhuma coluna"))).toHaveLength(8);
+    idaEVolta(obra);
+  });
 
   it("seção, vínculos, excentricidade e vento do .COL montado", () => {
     const base = obraE2E("original");
@@ -916,10 +898,10 @@ describe("completar a obra E2E", () => {
 
 // ---------------------------------------------------------------- .RLP e transição (rodada 2)
 
-const RLP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.RLP`;
+const RLP_E2E = "oraculo/casos/caso_c_pilaredi.dados/E2E.RLP";
 
 describe(".RLP", () => {
-  it.skipIf(!existsSync(RLP_E2E))("lê o E2E.RLP: 9 pilares com 0,000 t e as inclinações", () => {
+  it("lê o E2E.RLP: 9 pilares com 0,000 t e as inclinações", () => {
     const rlp = valor(lerRlp(le(RLP_E2E)));
     // linhas 8-9: "P1                   0.000" e "V3[0] >V4[90] >"; linhas 20-21: P7
     expect(rlp).toHaveLength(9);
@@ -928,20 +910,17 @@ describe(".RLP", () => {
     expect(rlp.find((p) => p.pilar === "P5")?.inclinacoes).toBe("");
   });
 
-  it.skipIf(!existsSync(RLP_E2E) || !existsSync(COL_NOVE) || !existsSync(REP_E2E))(
-    ".REP com o .RLP: a inclinação de cada momento vem do .RLP (PILGEEDI.BAS:1021-1023)",
-    () => {
-      const { obra } = importa({
-        col: le(COL_NOVE),
-        reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2, rlp: le(RLP_E2E) }],
-      });
-      // P7: ">-.64@1 [4]  (V1) > -1.22@2 [5]  (V4) >" e "V1[0] >V4[270] >"
-      expect(pilar(obra, "P7@pav2").cargaTopo?.momentos.map((m) => m.inclinacao)).toEqual([0, 270]);
-      // P1: "V3[0] >V4[90] >"
-      expect(pilar(obra, "P1@pav2").cargaTopo?.momentos.map((m) => m.inclinacao)).toEqual([0, 90]);
-      idaEVolta(obra);
-    },
-  );
+  it(".REP com o .RLP: a inclinação de cada momento vem do .RLP (PILGEEDI.BAS:1021-1023)", () => {
+    const { obra } = importa({
+      col: le(COL_NOVE),
+      reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2, rlp: le(RLP_E2E) }],
+    });
+    // P7: ">-.64@1 [4]  (V1) > -1.22@2 [5]  (V4) >" e "V1[0] >V4[270] >"
+    expect(pilar(obra, "P7@pav2").cargaTopo?.momentos.map((m) => m.inclinacao)).toEqual([0, 270]);
+    // P1: "V3[0] >V4[90] >"
+    expect(pilar(obra, "P1@pav2").cargaTopo?.momentos.map((m) => m.inclinacao)).toEqual([0, 90]);
+    idaEVolta(obra);
+  });
 
   it(".RLP com carga de laje no pilar: soma na normal depois da do .REP (PILGEEDI.BAS:1017)", () => {
     const rep = [

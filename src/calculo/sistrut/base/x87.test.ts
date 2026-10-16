@@ -1,6 +1,6 @@
 // Referências dos testes (fixtures em __x87__/):
 // - QB45_T20.BAS / .saida.bin: sonda rodada no SISTRUT original (QB4.5 + BRUN45)
-//   no oráculo DOSBox-X (C:/wt/v1-difs/tests/retraducao, oráculo
+//   no oráculo DOSBox-X (tests/retraducao da V1, oráculo
 //   runs/retrad_t20-20261015-191529): 130 valores SINGLE × 12 campos, crus;
 // - QB45_T13 / QB45_T17: casos especiais (erros 5 e 6, NaN, infinito) no oráculo;
 // - *_zen2.bin: as instruções FYL2X, F2XM1 e FSQRT executadas no processador do

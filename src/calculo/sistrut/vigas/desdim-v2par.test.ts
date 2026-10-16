@@ -1,4 +1,4 @@
-// Casos da rodada 2 do oráculo para o DESDIM (C:/tmp/oraculo/runs/v2par_des_*):
+// Casos da rodada 2 do oráculo para o DESDIM (oraculo/runs/v2par_des_*):
 // - v2par_des_especial: viga D1 (balanços 1,5 e 1,2 m, tramos 6 e 4 m, T 20/40/80/10,
 //   concentrada a 0,4 m do apoio) com o V2P.DSP (aço A, envoltória de acidentais,
 //   flecha com inércia fissurada e deformação lenta, fissuração com limite 1);
@@ -6,11 +6,11 @@
 // - v2par_des_2tramos: V5 da obra ASS (4, 5 m; 15×45).
 // A entrada é só a viga (.VIG), as seções e o .DSP: o DESDIM refaz a análise (DESCALC)
 // como o original. Esperados: o que o DESDIM imprime em cada run
-// (C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646,
-// C:/tmp/oraculo/runs/v2par_des_3tramos-20261015-165027,
-// C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207; impressora.prn/.txt).
+// (oraculo/runs/v2par_des_especial-20261015-171646,
+// oraculo/runs/v2par_des_3tramos-20261015-165027,
+// oraculo/runs/v2par_des_2tramos-20261015-165207; impressora.prn/.txt).
 // As cargas da obra ASS são os SINGLE do ASS.VIG (registros 1 e 5,
-// C:/tmp/oraculo/casos/v2par_des_3tramos.dados/ASS.VIG: P em +235, J em +55, ...).
+// oraculo/casos/v2par_des_3tramos.dados/ASS.VIG: P em +235, J em +55, ...).
 import { describe, expect, it } from "vitest";
 import { bateComImpresso, type CasoOraculo, valorOraculo } from "../__oraculo__";
 import { sng } from "../base/f32";

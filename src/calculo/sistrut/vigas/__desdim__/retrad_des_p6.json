@@ -1,6 +1,6 @@
 {
   "caso": "retrad_des_p6",
-  "run": "C:/tmp/oraculo/runs/retrad_des_p6-20261015-082952",
+  "run": "oraculo/runs/retrad_des_p6-20261015-082952",
   "programa": "DESENHO",
   "descricao": "Sonda p6: detalhamento da V1 (20x50, 2 tramos) com 'Altero a armadura' = S. O DESDIM mostra a tabela de armação na tela (1ª passada), abre as janelas de alteração por apoio, por tramo e das bitolas de estribo (Enter em tudo) e imprime a tabela na 2ª passada.",
   "entrada": {

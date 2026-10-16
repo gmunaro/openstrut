@@ -1,10 +1,11 @@
 /// <reference types="node" />
 // Confere os JSONs do oráculo contra os runs gravados em disco: cada "fonte"
-// existe e a linha citada contém o texto "impresso". Na máquina sem
-// C:/tmp/oraculo/runs os testes de fonte são pulados (com o run no nome).
-import { existsSync, readFileSync } from "node:fs";
+// existe e a linha citada contém o texto "impresso". Os runs estão em
+// arquivos/oraculo/runs/ (README.md de lá); sem o arquivo, o teste falha com o caminho.
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { arquivoOraculo } from "./arquivosOraculo";
 import {
   bateComImpresso,
   CASOS_ORACULO,
@@ -36,7 +37,7 @@ describe("JSONs do oráculo: forma", () => {
 
   it.each(casos)("%s: campos, ids únicos, fonte no formato arquivo:linha", (nome, caso) => {
     expect(caso.caso).toBe(nome);
-    expect(caso.run).toMatch(/^C:\/tmp\/oraculo\/runs\/.+-\d{8}-\d{6}$/);
+    expect(caso.run).toMatch(/^oraculo\/runs\/.+-\d{8}-\d{6}$/);
     for (const campo of [caso.programa, caso.descricao]) expect(campo.length).toBeGreaterThan(0);
     expect(Object.keys(caso.entrada).length).toBeGreaterThan(0);
     expect(caso.valores.length).toBeGreaterThan(0);
@@ -55,31 +56,24 @@ describe("JSONs do oráculo: forma", () => {
 });
 
 describe.each(casos)("JSONs do oráculo: fontes de %s", (_nome, caso) => {
-  const temRun = existsSync(caso.run);
-  it.skipIf(!temRun)(
-    `cada fonte existe e contém o impresso${temRun ? "" : ` (pulado: ${caso.run} não existe nesta máquina)`}`,
-    () => {
-      const arquivos = new Map<string, string[]>();
-      const linhasDe = (arquivo: string) => {
-        let linhas = arquivos.get(arquivo);
-        if (!linhas) {
-          const caminho = join(caso.run, arquivo);
-          expect(existsSync(caminho), caminho).toBe(true);
-          linhas = readFileSync(caminho, "latin1").split("\n");
-          arquivos.set(arquivo, linhas);
-        }
-        return linhas;
-      };
-      for (const v of caso.valores) {
-        const separador = v.fonte.lastIndexOf(":");
-        const linha = linhasDe(v.fonte.slice(0, separador))[
-          Number(v.fonte.slice(separador + 1)) - 1
-        ];
-        expect(linha, `${v.id} em ${v.fonte}`).toBeDefined();
-        expect(linha, `${v.id} em ${v.fonte}`).toContain(v.impresso);
+  it(`cada fonte existe e contém o impresso`, () => {
+    const arquivos = new Map<string, string[]>();
+    const linhasDe = (arquivo: string) => {
+      let linhas = arquivos.get(arquivo);
+      if (!linhas) {
+        const caminho = arquivoOraculo(join(caso.run, arquivo));
+        linhas = readFileSync(caminho, "latin1").split("\n");
+        arquivos.set(arquivo, linhas);
       }
-    },
-  );
+      return linhas;
+    };
+    for (const v of caso.valores) {
+      const separador = v.fonte.lastIndexOf(":");
+      const linha = linhasDe(v.fonte.slice(0, separador))[Number(v.fonte.slice(separador + 1)) - 1];
+      expect(linha, `${v.id} em ${v.fonte}`).toBeDefined();
+      expect(linha, `${v.id} em ${v.fonte}`).toContain(v.impresso);
+    }
+  });
 });
 
 describe("leitura dos valores", () => {

@@ -1,10 +1,10 @@
 {
   "caso": "retrad_des_menu",
-  "run": "C:/tmp/oraculo/runs/retrad_des_menu-20261015-082520",
+  "run": "oraculo/runs/retrad_des_menu-20261015-082520",
   "programa": "DESENHO",
   "descricao": "Menu do DESENHO sobre a obra E2E já detalhada no caso det: tecla inválida, F1 e Esc; item 5 (parâmetros, sem alterar); item 6 (diretórios); item 3 (listagem impressa da V1); item 4 (resumo geral de consumo impresso: metros por bitola, volume, fôrma e pesos); item 2 sem obra; Esc no item 1; F2 sai.",
   "entrada": {
-    "obra de partida": "E2E (C:/tmp/oraculo/casos/retrad_des_menu.dados: E2E.BAK, .FOR, .LAJ, .RLP, .SEC, .TAB, .VIG; .SEC/.FOR/.TAB gravados pelo original no caso retrad_des_det); E2E.VIG com 6 vigas gravadas, só a V1 detalhada",
+    "obra de partida": "E2E (oraculo/casos/retrad_des_menu.dados: E2E.BAK, .FOR, .LAJ, .RLP, .SEC, .TAB, .VIG; .SEC/.FOR/.TAB gravados pelo original no caso retrad_des_det); E2E.VIG com 6 vigas gravadas, só a V1 detalhada",
     ".TAB": "registro ~V1: rept 0, volume 76 (centésimos de m3), fôrma 912 (centésimos de m2), fck .15, fyk 5; comprimentos (cm) phi5 8448, phi6.3 1153, phi10 2612",
     "roteiro": "x (inválida); F1+ENTER; Esc+ENTER; 5 (parâmetros, ENTER = não altera); 6 (ENTER nos 4 diretórios: .VIG C:\\, .EDV C:\\, .DSP C:\\SISTRUT\\EXEC40\\, .DXF C:\\); 3 obra E2E, todas as vigas S, seção S, forma S, não para no monitor, salta formulário S, dados corretos; 4 obra E2E, nenhum registro anulado, imprime S, ENTER (avança formulário); 2 sem nome; 1 com Esc; F2",
     "listagem impressa (eco dos dados gravados)": "V1 registro 1: tramos 1 e 2 Bw 20 Hw 50 Bf 0 Hf 0, apoio 1 Bw 20 Hw 50; apoios 0/1/2 tipo P, P1/P2/P3, LPi 20, LPs 20, Dis 0; tramos 1 e 2 vão livre 380, alinhamento 0, pe 0, Hle 0, pd 0, Hld 0",

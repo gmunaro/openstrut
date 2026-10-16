@@ -1,6 +1,6 @@
 {
   "caso": "v2par_laje_otim",
-  "laj": "C:/tmp/oraculo/runs/v2par_laje_otim-20261015-163215/obra/OTIM.LAJ",
+  "laj": "oraculo/runs/v2par_laje_otim-20261015-163215/obra/OTIM.LAJ",
   "lajes": [
     {
       "nome": "L1",

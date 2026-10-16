@@ -3,7 +3,8 @@
 // oráculo: retrad_des_det (quadro de aço do DXF), retrad_des_menu (resumo impresso),
 // retrad_des_p5/p6 (.TAB gravado) e retrad_des_p10 (resumo na tela, vigas/__desinit__/),
 // e contra as contas à mão de livros_arm_forma_des.md 2.2.
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -43,7 +44,7 @@ const quadroV1 = (modo: "original" | "corrigido") =>
 
 /** Registro do .TAB (70 bytes: nome, A_1CEC(0..14) em SINGLE; DESINIT.BAS:933). */
 function leTab(run: string) {
-  const b = readFileSync(join(run, "obra/E2E.TAB"));
+  const b = readFileSync(arquivoOraculo(join(run, "obra/E2E.TAB")));
   const v = Array.from({ length: 15 }, (_, i) => b.readFloatLE(10 + 4 * i));
   return {
     nome: b.toString("latin1", 0, 10).trim(),
@@ -95,21 +96,15 @@ describe("quadro da V1 (.TAB de retrad_des_det)", () => {
 
   for (const run of [
     det.run,
-    ...["p5-20261015-082948", "p6-20261015-082952"].map(
-      (r) => `C:/tmp/oraculo/runs/retrad_des_${r}`,
-    ),
+    ...["p5-20261015-082948", "p6-20261015-082952"].map((r) => `oraculo/runs/retrad_des_${r}`),
   ]) {
-    const tem = existsSync(join(run, "obra/E2E.TAB"));
-    it.skipIf(!tem)(
-      `igual ao .TAB gravado pelo original em ${run}${tem ? "" : " (pulado: sem o run)"}`,
-      () => {
-        const tab = leTab(run);
-        expect(tab.nome).toBe("~V1");
-        expect(tab.rept).toBe(q.repeticoes);
-        expect([tab.vol, tab.forma]).toEqual([q.volumeCentesimos, q.formaCentesimos]);
-        expect(tab.comp).toEqual(q.comprimentoPorBitola);
-      },
-    );
+    it(`igual ao .TAB gravado pelo original em ${run}`, () => {
+      const tab = leTab(run);
+      expect(tab.nome).toBe("~V1");
+      expect(tab.rept).toBe(q.repeticoes);
+      expect([tab.vol, tab.forma]).toEqual([q.volumeCentesimos, q.formaCentesimos]);
+      expect(tab.comp).toEqual(q.comprimentoPorBitola);
+    });
   }
 });
 
@@ -193,17 +188,13 @@ describe("fôrma e volume das 6 vigas 12×40 do .FOR da E2E (conta à mão, livr
 });
 
 describe("dados de teste vigas/__desinit__/retrad_des_p10.json", () => {
-  const tem = existsSync(casoP10.run);
-  it.skipIf(!tem)(
-    `cada fonte existe e contém o impresso${tem ? "" : " (pulado: sem o run)"}`,
-    () => {
-      for (const v of casoP10.valores) {
-        const [arquivo, linha] = v.fonte.split(":");
-        const texto = readFileSync(join(casoP10.run, arquivo!), "latin1").split("\n")[
-          Number(linha) - 1
-        ];
-        expect(texto, v.id).toContain(v.impresso);
-      }
-    },
-  );
+  it(`cada fonte existe e contém o impresso`, () => {
+    for (const v of casoP10.valores) {
+      const [arquivo, linha] = v.fonte.split(":");
+      const texto = readFileSync(arquivoOraculo(join(casoP10.run, arquivo!)), "latin1").split("\n")[
+        Number(linha) - 1
+      ];
+      expect(texto, v.id).toContain(v.impresso);
+    }
+  });
 });

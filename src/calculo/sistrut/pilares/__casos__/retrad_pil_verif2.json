@@ -1,6 +1,6 @@
 {
   "caso": "retrad_pil_verif2",
-  "run": "C:/tmp/oraculo/runs/retrad_pil_verif2-20261015-082939",
+  "run": "oraculo/runs/retrad_pil_verif2-20261015-082939",
   "programa": "PILAR opção 6",
   "descricao": "PILAR opção 6 com dois carregamentos na mesma seção 20x40 (3+3 φ16 e 1 lateral de cada lado a 20 cm): flexo-compressão com 2ª ordem em situação de instabilidade e compressão centrada com λ 139 (instabilidade no caso 1, ok no caso 2).",
   "entrada": {

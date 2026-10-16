@@ -1,6 +1,6 @@
 {
   "caso": "v2par_viga_fluxo",
-  "laj": "C:/tmp/oraculo/runs/v2par_viga_fluxo-20261015-164332/obra/VBX.LAJ",
+  "laj": "oraculo/runs/v2par_viga_fluxo-20261015-164332/obra/VBX.LAJ",
   "lajes": [
     {
       "nome": "L1",

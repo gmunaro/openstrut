@@ -1,6 +1,6 @@
 {
   "caso": "v2par_laje_umadir",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_umadir-20261015-162808",
+  "run": "oraculo/runs/v2par_laje_umadir-20261015-162808",
   "programa": "LAJEGEOM + LAJECALC + LAJEMONT (LAJEGEOM 7) + LAJEPROC",
   "descricao": "Duas lajes 3 × 7,5 m (ly/lx = 2,5 > 2, 'armada em uma direção' no critério usual) contínuas no lado maior. O original não tem regra de uma direção: usa o mesmo padrão de charneiras com μ da tabela (0,55).",
   "entrada": {

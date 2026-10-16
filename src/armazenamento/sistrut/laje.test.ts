@@ -5,8 +5,8 @@
 // (LAJECALC, LAJEPROC), da montagem (LAJEMONT: reações e totais) e, no
 // v2par_laje_cargas, do VIGA e do .REP saem iguais aos impressos (meia unidade da
 // última casa, ou FIX onde o original trunca). Casos: caso_a_laje e os v2par_laje_*
-// (índice em C:/wt/v1-v2par/tests/retraducao/V2PAR.md; os JSONs de
-// C:/tmp/v2-paridade/oraculo-novos ficam ao lado dos .LAJ). E as variantes do E2E com a
+// (índice em tests/retraducao/V2PAR.md da V1; os JSONs de
+// v2-paridade/oraculo-novos ficam ao lado dos .LAJ). E as variantes do E2E com a
 // entrada editada no original (retrad_laje_calc2: direção 90°, μ informado,
 // continuidade eliminada e um trecho engastado sem vizinha; retrad_laje_param: γf 1,5,
 // eficiência 90 %, fck 0,2, aço A) e o que o importador representa ou avisa, sobre o

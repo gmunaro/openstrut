@@ -1,6 +1,6 @@
 {
   "caso": "v2par_pilar_lambda",
-  "run": "C:/tmp/oraculo/runs/v2par_pilar_lambda-20261015-164824",
+  "run": "oraculo/runs/v2par_pilar_lambda-20261015-164824",
   "programa": "PILAR opção 6 (verificação NB-1/78)",
   "descricao": "Pilar avulso com esbeltez acima de 80 (λ = CINT(L/i·100) inteiro): seção do caso c com le 5 m (λ 87), le 6/3 m (λx 104: 'SITUACAO DE INSTABILIDADE' na direção x) e le 4,8 m com Mk 0,2 (λ 83). Fluência 0 (padrão). Ids com o prefixo e<k>. do conjunto.",
   "entrada": {

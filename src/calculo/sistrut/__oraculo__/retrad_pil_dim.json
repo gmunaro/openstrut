@@ -1,6 +1,6 @@
 {
   "caso": "retrad_pil_dim",
-  "run": "C:/tmp/oraculo/runs/retrad_pil_dim-20261015-082854",
+  "run": "oraculo/runs/retrad_pil_dim-20261015-082854",
   "programa": "PILAREDI",
   "descricao": "Mesmo caminho do caso_c_pilaredi (P5 da E2E, seção 20x20, dimensionamento com relatório) seguido do resumo de cargas na fundação, dos diagramas Nk/Mkx/Mky, do processamento/detalhamento e da lista de colunas. Exercita o dimensionamento e a acumulação de cargas com peso próprio.",
   "entrada": {
@@ -20,7 +20,7 @@
     "parâmetros (3 -> 5)": "só visualiza (*NAO*)",
     "processar / detalhar (4)": "posição 1, impresso (gráfico na impressora)",
     "lista das colunas (5)": "só visualiza",
-    "obra de partida (caminho)": "C:/tmp/oraculo/casos/retrad_pil_dim.dados"
+    "obra de partida (caminho)": "oraculo/casos/retrad_pil_dim.dados"
   },
   "valores": [
     {

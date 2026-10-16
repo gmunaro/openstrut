@@ -1,6 +1,6 @@
 {
   "caso": "v2par_des_especial",
-  "run": "C:/tmp/oraculo/runs/v2par_des_especial-20261015-171646",
+  "run": "oraculo/runs/v2par_des_especial-20261015-171646",
   "programa": "VIGA (opções 8, 1, 6) → DESENHO (6, 5, 1, 4) → DESDIM → DESGRAF → DESINIT → DESIMP",
   "descricao": "Dimensionamento de viga com: seção T (Bf 80, Hf 10) nos tramos; armadura dupla no apoio 1 (x/d no limite do aço A, 0,628; Ast 10,18 e Asc 2,61); aço classe A; balanço à esquerda e à direita; carga concentrada de 3 t a 0,4 m do apoio (alívio do cortante: Vke 8,98 no DESDIM contra Ve 10,98 da análise); flecha com inércia fissurada e deformação lenta (impressa, 1,97 cm no tramo 1); verificação de fissuração (só na tela: janelas 'Fissura(1)' por apoio e por tramo; o original não imprime fissuração); envoltória de acidentais (acidentais S: linhas 'max' na impressão).",
   "entrada": {

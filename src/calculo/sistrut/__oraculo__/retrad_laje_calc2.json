@@ -1,6 +1,6 @@
 {
   "caso": "retrad_laje_calc2",
-  "run": "C:/tmp/oraculo/runs/retrad_laje_calc2-20261015-082441",
+  "run": "oraculo/runs/retrad_laje_calc2-20261015-082441",
   "programa": "LAJECALC",
   "descricao": "LAJECALC sobre a obra E2E (4 lajes 4x5, h 10) com outras condicoes de contorno e direcoes: toda a continuidade eliminada, so o primeiro trecho da L1 engastado, L1 com direcao principal a 90 graus e L2 com relacao entre esforcos 1.5. Imprime espessuras minimas e momentos/armaduras.",
   "entrada": {

@@ -1,7 +1,7 @@
 {
   "caso": "a1",
-  "run": "C:/tmp/oraculo/runs/retrad_viga_a1-20261015-065711",
-  "entradaDe": "obra/NOVA.VIG do run (V10 e V11 digitadas na opção 1, roteiro C:/tmp/oraculo/casos/retrad_viga_a1.txt)",
+  "run": "oraculo/runs/retrad_viga_a1-20261015-065711",
+  "entradaDe": "obra/NOVA.VIG do run (V10 e V11 digitadas na opção 1, roteiro oraculo/casos/retrad_viga_a1.txt)",
   "descricao": "VIGA opção 2 na tela: V10 (1 tramo de 6 m) e V11 (2 tramos engastados nas duas pontas, concentrada de 2 t); VIGA.INI de fábrica.",
   "parametros": {
     "reducaoNegativos": 1,

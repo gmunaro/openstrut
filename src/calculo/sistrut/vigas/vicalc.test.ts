@@ -4,7 +4,8 @@
 // confere de dois jeitos: meia unidade da última casa impressa (`bateComImpresso`) e
 // o texto exato do PRINT USING do original sobre o SINGLE calculado.
 /// <reference types="node" />
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { qbUsing, sng } from "../base/f32";
@@ -309,7 +310,7 @@ describe("a1 (opção 2 na tela: engaste nas duas pontas e concentrada)", () => 
   });
 });
 
-describe("rodada 2: casos v2par_* (T10; valores de C:/tmp/v2-paridade/oraculo-novos/)", () => {
+describe("rodada 2: casos v2par_* (T10; valores de v2-paridade/oraculo-novos/)", () => {
   /** Analisa cada viga do caso e confere todos os valores com o prefixo dela. */
   const confereCaso = (nome: string, preparar = (v: DadosViga) => v) => {
     const caso = casoVicalc(nome);
@@ -453,15 +454,14 @@ describe("modo corrigido: R6 (redução e % gerada do VIGA.INI)", () => {
 
 describe("__casos__: cada fonte existe no run e contém o impresso", () => {
   for (const [nome, caso] of Object.entries(CASOS_VICALC)) {
-    const temRun = existsSync(caso.run);
-    it.skipIf(!temRun)(`${nome}${temRun ? "" : ` (pulado: ${caso.run} não existe)`}`, () => {
+    it(`${nome}`, () => {
       const cache = new Map<string, string[]>();
       const linha = (fonte: string) => {
         const i = fonte.lastIndexOf(":");
         const arq = fonte.slice(0, i);
         let linhas = cache.get(arq);
         if (!linhas) {
-          linhas = readFileSync(join(caso.run, arq), "latin1").split("\n");
+          linhas = readFileSync(arquivoOraculo(join(caso.run, arq)), "latin1").split("\n");
           cache.set(arq, linhas);
         }
         return (linhas[Number(fonte.slice(i + 1)) - 1] ?? "").replace(/\r$/, "");

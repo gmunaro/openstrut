@@ -1,13 +1,13 @@
 // De ponta a ponta: a obra E2E montada como obra da V2 (`__e2e__/obraE2E.ts`) passa por
 // `calcularObraSistrut` no modo original e reproduz os números impressos pelo SISTRUT
 // 4.0 nos casos a, b e c do oráculo:
-// - caso a (LAJECALC + LAJEGEOM 7): C:/tmp/oraculo/runs/caso_a_laje-20261015-041425
-// - caso b (VIGA opção 7 sobre o E2E.VIG do caso a): C:/tmp/oraculo/runs/caso_b_viga-20261014-182718
-// - caso c (PILAREDI, P5): C:/tmp/oraculo/runs/caso_c_pilaredi-20261015-041842
-// - LAJEPROC sobre a mesma obra (tela da L1): C:/tmp/oraculo/runs/retrad_lajeproc-20261015-082452
+// - caso a (LAJECALC + LAJEGEOM 7): oraculo/runs/caso_a_laje-20261015-041425
+// - caso b (VIGA opção 7 sobre o E2E.VIG do caso a): oraculo/runs/caso_b_viga-20261014-182718
+// - caso c (PILAREDI, P5): oraculo/runs/caso_c_pilaredi-20261015-041842
+// - LAJEPROC sobre a mesma obra (tela da L1): oraculo/runs/retrad_lajeproc-20261015-082452
 // E a obra VBX (`__e2e__/obraVBX.ts`) do caso v2par_viga_fluxo (viga sobre as pontas de
 // dois balanços, carga indexada, .REP com parcelas truncadas):
-// C:/tmp/oraculo/runs/v2par_viga_fluxo-20261015-164332
+// oraculo/runs/v2par_viga_fluxo-20261015-164332
 // Esperado = texto impresso (meia unidade da última casa, ou FIX onde o original trunca).
 // Os ids que o motor não produz estão em NAO_PRODUZIDOS, com o motivo.
 import { describe, expect, it } from "vitest";

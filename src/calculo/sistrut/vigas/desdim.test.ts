@@ -1,12 +1,13 @@
 /// <reference types="node" />
 // Dimensionamento da V1 da obra E2E (20×50, 2 tramos de 4 m, q = 0,486 t/m) contra o
-// que o original imprime: retrad_des_det (C:/tmp/oraculo/runs/retrad_des_det-20261015-082506,
-// impressora.prn:16-51) e a sonda p6 (C:/tmp/oraculo/runs/retrad_des_p6-20261015-082952,
+// que o original imprime: retrad_des_det (oraculo/runs/retrad_des_det-20261015-082506,
+// impressora.prn:16-51) e a sonda p6 (oraculo/runs/retrad_des_p6-20261015-082952,
 // tela g14 e impressão da 2ª passada). A entrada é só a viga do .VIG: o DESDIM refaz a
 // análise (DESCALC) como o original. Os esforços do DESCALC são conferidos contra os que
 // o original imprime e contra a conta à mão da viga contínua de dois vãos iguais com
 // carga uniforme (M = −qL²/8, Ve = 3qL/8, Vd = 5qL/8, x = 3L/8, M+ = 9qL²/128).
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { arquivoOraculo } from "../__oraculo__/arquivosOraculo";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -384,11 +385,13 @@ describe("modo corrigido", () => {
 
 describe("fontes dos JSONs de __desdim__", () => {
   for (const caso of Object.values(CASOS_DESDIM)) {
-    const temRun = existsSync(caso.run);
-    it.skipIf(!temRun)(`${caso.caso}: cada fonte contém o impresso`, () => {
+    it(`${caso.caso}: cada fonte contém o impresso`, () => {
       for (const v of caso.valores) {
         const sep = v.fonte.lastIndexOf(":");
-        const linhas = readFileSync(join(caso.run, v.fonte.slice(0, sep)), "latin1").split("\n");
+        const linhas = readFileSync(
+          arquivoOraculo(join(caso.run, v.fonte.slice(0, sep))),
+          "latin1",
+        ).split("\n");
         expect(linhas[Number(v.fonte.slice(sep + 1)) - 1], `${v.id} em ${v.fonte}`).toContain(
           v.impresso,
         );

@@ -1,6 +1,6 @@
 {
   "caso": "v2par_laje_cargas",
-  "laj": "C:/tmp/oraculo/runs/v2par_laje_cargas-20261015-164316/obra/CAR.LAJ",
+  "laj": "oraculo/runs/v2par_laje_cargas-20261015-164316/obra/CAR.LAJ",
   "lajes": [
     {
       "nome": "L1",

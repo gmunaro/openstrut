@@ -1,8 +1,8 @@
 {
   "caso": "v2par_laje_livre",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_livre-20261015-162737",
+  "run": "oraculo/runs/v2par_laje_livre-20261015-162737",
   "descricao": "Duas lajes 4 × 5 m lado a lado com o bordo superior LIVRE (sem viga em y = 5: trecho só de arquitetura, código 1). Exercita o padrão de charneiras com bordo livre (L13), a continuidade com bordo livre adjacente e as reações sem o bordo livre.",
-  "obra": "C:/tmp/oraculo/runs/v2par_laje_livre-20261015-162737/obra/LIV.LAJ",
+  "obra": "oraculo/runs/v2par_laje_livre-20261015-162737/obra/LIV.LAJ",
   "parametros": {},
   "lajes": [
     {

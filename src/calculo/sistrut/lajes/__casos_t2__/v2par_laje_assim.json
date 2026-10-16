@@ -1,6 +1,6 @@
 {
   "caso": "v2par_laje_assim",
-  "run": "C:/tmp/oraculo/runs/v2par_laje_assim-20261015-163200",
+  "run": "oraculo/runs/v2par_laje_assim-20261015-163200",
   "programa": "LAJEGEOM + LAJECALC + LAJEMONT (LAJEGEOM 7) + LAJEPROC",
   "descricao": "Planta em T com 4 lajes de vãos diferentes: vínculos assimétricos (L2 com 3 bordos contínuos e 1 apoiado; L1, L3 e L4 com 1 contínuo) e otimização dos negativos que MUDA o coeficiente: L3 lado 3 de 22 para 16 (i 2,0 → 1,4) e L4 lado 1 de 22 para 15 (i 1,3), com M+ recalculado (L3 0,32 → 0,36; L4 0,31 → 0,35).",
   "entrada": {

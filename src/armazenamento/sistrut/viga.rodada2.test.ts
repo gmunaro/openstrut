@@ -1,19 +1,20 @@
 /// <reference types="node" />
 // Rodada 2 do modelo de vigas contra o oráculo e contra a conta à mão:
 // - carga indexada digitada no VIGA ("*1.01", a reação do apoio 1 da V20 na V21) e números
-//   de pilar da opção 7 gravados no J: retrad_viga_x1 (C:/tmp/oraculo/runs/
-//   retrad_viga_x1-20261015-065711; esperados em src/calculo/sistrut/vigas/__casos__/x1.json:
+//   de pilar da opção 7 gravados no J: retrad_viga_x1 (oraculo/runs/
+//   retrad_viga_x1-20261015-065711 em src/calculo/sistrut/__oraculo__/arquivos/; esperados em src/calculo/sistrut/vigas/__casos__/x1.json:
 //   op2.* da opção 2, com J 1, e op7.* da opção 7 sobre o IDX.VIG regravado, mais o IDX.REP);
 // - vigas digitadas sem marca no J: retrad_viga_a1 (NOVA.VIG do run);
 // - opção 7 com apoio desconsiderado, redução 85 %, momentos externos e reação máxima:
 //   retrad_viga_c1 (E2E.VIG do run; os valores da V2, V4 e V5);
 // - repetições por viga do .TAB, DESENHO.INI, números de pilar diferentes dos da planta;
 // - a montagem da obra importada do .LAJ grava o .VIG do LAJEMONT bit a bit (item 6).
-// Sem os runs, os casos do oráculo são pulados.
-import { existsSync, readFileSync } from "node:fs";
+// Sem um arquivo do oráculo, o teste que o lê falha com o caminho (arquivoOraculo).
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bateComImpresso, type CasoOraculo } from "../../calculo/sistrut/__oraculo__";
+import { arquivoOraculo } from "../../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { obraE2E } from "../../calculo/sistrut/__e2e__/obraE2E";
 import { KN_POR_TF } from "../../calculo/sistrut/base/unidades";
 import { calcularObraSistrut, type ResultadoSistrut } from "../../calculo/sistrut/obra";
@@ -29,18 +30,18 @@ import { type RegistroTeste, vig } from "./__teste__/vig";
 import { importarLaj } from "./laje";
 import { dadosDoRegistro, importarVigasSistrut, lerDesenhoIni, lerTab, lerVig } from "./viga";
 
-const RUNS = "C:/tmp/oraculo/runs";
+const RUNS = "oraculo/runs";
 const CASOS = join(import.meta.dirname, "../../calculo/sistrut/vigas/__casos__");
 const X1 = `${RUNS}/retrad_viga_x1-20261015-065711/obra`;
 const A1 = `${RUNS}/retrad_viga_a1-20261015-065711/obra`;
 const C1 = `${RUNS}/retrad_viga_c1-20261015-065711/obra`;
 const CASO_A = `${RUNS}/caso_a_laje-20261015-041425/obra`;
 const VBX = `${RUNS}/v2par_viga_fluxo-20261015-164332/obra`;
-const ORIG = "C:/tmp/oraculo/orig";
+const ORIG = "oraculo/orig";
 
 const arquivo = (caminho: string) => ({
   nome: caminho.slice(caminho.lastIndexOf("/") + 1),
-  dados: new Uint8Array(readFileSync(caminho)),
+  dados: new Uint8Array(readFileSync(arquivoOraculo(caminho))),
 });
 const caso = (nome: string): CasoOraculo & { parametros: ParametrosVigaIni } =>
   JSON.parse(readFileSync(join(CASOS, `${nome}.json`), "utf8"));
@@ -120,7 +121,7 @@ function confere(r: ResultadoSistrut, c: CasoOraculo, filtro: (id: string) => bo
   return { difere, faltando, conferidos };
 }
 
-/** retrad_viga_x1 pela opção 2: a obra do roteiro (C:/tmp/oraculo/casos/retrad_viga_x1.txt),
+/** retrad_viga_x1 pela opção 2: a obra do roteiro (oraculo/casos/retrad_viga_x1.txt, não versionado),
  *  com o "*1.01" do F da V21 como carga indexada. VIGA com acidentais S fornecidas. */
 function obraX1(): Obra {
   const g = KN_POR_TF;
@@ -196,7 +197,7 @@ function obraX1(): Obra {
   };
 }
 
-describe.skipIf(!existsSync(X1))("retrad_viga_x1: carga indexada e pilares da opção 7", () => {
+describe("retrad_viga_x1: carga indexada e pilares da opção 7", () => {
   const c = caso("x1");
 
   it("opção 2: a V21 com a reação da V20 em D = 2,5 (carga indexada), todos os valores impressos", () => {
@@ -257,7 +258,7 @@ describe.skipIf(!existsSync(X1))("retrad_viga_x1: carga indexada e pilares da op
     const { difere, faltando } = confere(r, c, (id) => id.startsWith("op7."));
     expect(faltando).toEqual([]);
     expect(difere).toEqual([]);
-    const gravado = readFileSync(`${X1}/IDX.REP`, "latin1")
+    const gravado = readFileSync(arquivoOraculo(`${X1}/IDX.REP`), "latin1")
       .split(/\r\n/)
       .slice(9)
       .filter((l) => l !== "");
@@ -270,23 +271,20 @@ describe.skipIf(!existsSync(X1))("retrad_viga_x1: carga indexada e pilares da op
   });
 });
 
-describe.skipIf(!existsSync(A1))(
-  "retrad_viga_a1: vigas digitadas sem a marca no J (NOVA.VIG)",
-  () => {
-    it("todos os valores impressos; pilares sem número ficam <viga>.A<k>", () => {
-      const c = caso("a1");
-      const imp = importa([arquivo(`${A1}/NOVA.VIG`)]);
-      expect(imp.obra.pavimentos[0]!.pilares.map((p) => p.nome)).toContain("V10.A0");
-      const r = calcularObraSistrut(imp.obra, { modo: "original" });
-      const { difere, faltando, conferidos } = confere(r, c, () => true);
-      expect(faltando).toEqual([]);
-      expect(difere).toEqual([]);
-      expect(conferidos).toBe(c.valores.length);
-    });
-  },
-);
+describe("retrad_viga_a1: vigas digitadas sem a marca no J (NOVA.VIG)", () => {
+  it("todos os valores impressos; pilares sem número ficam <viga>.A<k>", () => {
+    const c = caso("a1");
+    const imp = importa([arquivo(`${A1}/NOVA.VIG`)]);
+    expect(imp.obra.pavimentos[0]!.pilares.map((p) => p.nome)).toContain("V10.A0");
+    const r = calcularObraSistrut(imp.obra, { modo: "original" });
+    const { difere, faltando, conferidos } = confere(r, c, () => true);
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+    expect(conferidos).toBe(c.valores.length);
+  });
+});
 
-describe.skipIf(!existsSync(C1))("retrad_viga_c1: opção 7 sobre o E2E.VIG regravado", () => {
+describe("retrad_viga_c1: opção 7 sobre o E2E.VIG regravado", () => {
   it("V2 (apoio 0 desconsiderado), V4 e V5 com redução 85 %, acidentais S geradas 25 %, Mext, reação máxima", () => {
     const c = caso("c1");
     const imp = importa([arquivo(`${C1}/E2E.VIG`)]);
@@ -331,84 +329,75 @@ describe("repetições por viga (.TAB) e DESENHO.INI", () => {
     );
   });
 
-  it.skipIf(!existsSync(`${ORIG}/DESENHO.INI`))(
-    "DESENHO.INI: os de fábrica dão 1 e 1; coeficiente de medida 2 entra no .DSP da obra",
-    () => {
-      const fabrica = readFileSync(`${ORIG}/DESENHO.INI`, "latin1");
-      expect(lerDesenhoIni(fabrica)).toEqual({
-        parametrizacao: "SISTRUT",
-        coeficienteMedida: 1,
-        coeficienteForca: 1,
-      });
-      expect(
-        importa([vig([V1]), { nome: "DESENHO.INI", dados: new TextEncoder().encode(fabrica) }]).obra
-          .parametrosViga,
-      ).toBeUndefined();
-      const linhas = fabrica.split("\r\n");
-      linhas[7] = linhas[7]!.replace(/^1=/, "2=");
-      const r = importa([
-        vig([V1]),
-        { nome: "DESENHO.INI", dados: new TextEncoder().encode(linhas.join("\r\n")) },
-      ]);
-      expect(r.obra.parametrosViga?.dsp).toEqual({ coeficienteMedida: 2 });
-    },
-  );
+  it("DESENHO.INI: os de fábrica dão 1 e 1; coeficiente de medida 2 entra no .DSP da obra", () => {
+    const fabrica = readFileSync(arquivoOraculo(`${ORIG}/DESENHO.INI`), "latin1");
+    expect(lerDesenhoIni(fabrica)).toEqual({
+      parametrizacao: "SISTRUT",
+      coeficienteMedida: 1,
+      coeficienteForca: 1,
+    });
+    expect(
+      importa([vig([V1]), { nome: "DESENHO.INI", dados: new TextEncoder().encode(fabrica) }]).obra
+        .parametrosViga,
+    ).toBeUndefined();
+    const linhas = fabrica.split("\r\n");
+    linhas[7] = linhas[7]!.replace(/^1=/, "2=");
+    const r = importa([
+      vig([V1]),
+      { nome: "DESENHO.INI", dados: new TextEncoder().encode(linhas.join("\r\n")) },
+    ]);
+    expect(r.obra.parametrosViga?.dsp).toEqual({ coeficienteMedida: 2 });
+  });
 });
 
-describe.skipIf(!existsSync(`${CASO_A}/E2E.VIG`))(
-  "número de pilar da opção 7 diferente do da planta",
-  () => {
-    it("o J da V1 com 5 no apoio 0 (no lugar do P7): pilaresNoRep e a parcela da V1 vai ao P5 no .REP", () => {
-      const b = new Uint8Array(readFileSync(`${CASO_A}/E2E.VIG`));
-      const regs = lerVig(b);
-      const i = regs.findIndex((r) => r.nome === "V1");
-      // J do trecho 0 do registro i + 2 (o 1 é o cabeçalho): INT(J·100)/100 + 5/100000
-      new DataView(b.buffer).setFloat32((i + 1) * 855 + 43, Math.fround(1.00005), true);
-      const r = importa([{ nome: "E2E.VIG", dados: b }], obraE2E("original"));
-      const v1 = r.obra.pavimentos[0]!.vigas.find((v) => v.nome === "V1")!;
-      expect(v1.pilaresNoRep).toEqual([5, 8, 9]);
-      const rep = calcularObraSistrut(r.obra, { modo: "original" }).pavimentos[0]!.rep;
-      expect(rep.find((l) => l.pilar === "P5")!.parcelas.map((p) => p.viga)).toContain("V1");
-      expect(rep.find((l) => l.pilar === "P7")!.parcelas.map((p) => p.viga)).not.toContain("V1");
-    });
-  },
-);
+describe("número de pilar da opção 7 diferente do da planta", () => {
+  it("o J da V1 com 5 no apoio 0 (no lugar do P7): pilaresNoRep e a parcela da V1 vai ao P5 no .REP", () => {
+    const b = new Uint8Array(readFileSync(arquivoOraculo(`${CASO_A}/E2E.VIG`)));
+    const regs = lerVig(b);
+    const i = regs.findIndex((r) => r.nome === "V1");
+    // J do trecho 0 do registro i + 2 (o 1 é o cabeçalho): INT(J·100)/100 + 5/100000
+    new DataView(b.buffer).setFloat32((i + 1) * 855 + 43, Math.fround(1.00005), true);
+    const r = importa([{ nome: "E2E.VIG", dados: b }], obraE2E("original"));
+    const v1 = r.obra.pavimentos[0]!.vigas.find((v) => v.nome === "V1")!;
+    expect(v1.pilaresNoRep).toEqual([5, 8, 9]);
+    const rep = calcularObraSistrut(r.obra, { modo: "original" }).pavimentos[0]!.rep;
+    expect(rep.find((l) => l.pilar === "P5")!.parcelas.map((p) => p.viga)).toContain("V1");
+    expect(rep.find((l) => l.pilar === "P7")!.parcelas.map((p) => p.viga)).not.toContain("V1");
+  });
+});
 
-describe.skipIf(!existsSync(`${CASO_A}/E2E.LAJ`) || !existsSync(`${VBX}/VBX.LAJ`))(
-  "item 6: a montagem da obra importada do .LAJ grava o .VIG do LAJEMONT bit a bit",
-  () => {
-    it.each([
-      [
-        "E2E",
-        `${CASO_A}/E2E.LAJ`,
-        `${CASO_A}/E2E.VIG`,
-        { secaoVigas: { bw: 12, h: 40 }, vigas: { V4: { h: 50 }, V5: { h: 50 }, V6: { h: 50 } } },
-      ],
-      ["VBX", `${VBX}/VBX.LAJ`, `${VBX}/VBX.VIG`, { secaoVigas: { bw: 12, h: 50 } }],
-    ] as const)("%s: P, Pac, D e vão de toda divisão iguais ao .VIG", (_n, laj, vigF, opcoes) => {
-      const imp = importarLaj(readFileSync(laj, "latin1"), opcoes);
-      if (!imp.ok) throw new Error(imp.erros.join("\n"));
-      const regs = lerVig(new Uint8Array(readFileSync(vigF)));
-      const montagem = calcularObraSistrut(imp.obra, { modo: "original" }).pavimentos[0]!.montagem
-        .vigas;
-      const trechos = (d: ReturnType<typeof dadosDoRegistro>) =>
-        [d.balancoEsquerdo, ...d.tramos, d.balancoDireito].flatMap((t) =>
-          t ? [{ vao: t.vao, divs: t.divisoes.map((x) => [x.p, x.pAcidental, x.d]) }] : [],
-        );
-      for (const reg of regs) {
-        const m = montagem.find((x) => x.nome === reg.nome)!;
-        expect(trechos(m), reg.nome).toEqual(
-          trechos(
-            dadosDoRegistro(
-              reg,
-              regs.map((x) => x.nome),
-            ),
+describe("item 6: a montagem da obra importada do .LAJ grava o .VIG do LAJEMONT bit a bit", () => {
+  it.each([
+    [
+      "E2E",
+      `${CASO_A}/E2E.LAJ`,
+      `${CASO_A}/E2E.VIG`,
+      { secaoVigas: { bw: 12, h: 40 }, vigas: { V4: { h: 50 }, V5: { h: 50 }, V6: { h: 50 } } },
+    ],
+    ["VBX", `${VBX}/VBX.LAJ`, `${VBX}/VBX.VIG`, { secaoVigas: { bw: 12, h: 50 } }],
+  ] as const)("%s: P, Pac, D e vão de toda divisão iguais ao .VIG", (_n, laj, vigF, opcoes) => {
+    const imp = importarLaj(readFileSync(arquivoOraculo(laj), "latin1"), opcoes);
+    if (!imp.ok) throw new Error(imp.erros.join("\n"));
+    const regs = lerVig(new Uint8Array(readFileSync(arquivoOraculo(vigF))));
+    const montagem = calcularObraSistrut(imp.obra, { modo: "original" }).pavimentos[0]!.montagem
+      .vigas;
+    const trechos = (d: ReturnType<typeof dadosDoRegistro>) =>
+      [d.balancoEsquerdo, ...d.tramos, d.balancoDireito].flatMap((t) =>
+        t ? [{ vao: t.vao, divs: t.divisoes.map((x) => [x.p, x.pAcidental, x.d]) }] : [],
+      );
+    for (const reg of regs) {
+      const m = montagem.find((x) => x.nome === reg.nome)!;
+      expect(trechos(m), reg.nome).toEqual(
+        trechos(
+          dadosDoRegistro(
+            reg,
+            regs.map((x) => x.nome),
           ),
-        );
-      }
-    });
-  },
-);
+        ),
+      );
+    }
+  });
+});
 
 describe("armadura digitada no DESDIM pela obra (motor → DESDIM → DESINIT)", () => {
   /** V1 de 2 tramos de 4 m com 2 t/m nos pilares 7, 8, 9 (20 × 50 sem .SEC). */

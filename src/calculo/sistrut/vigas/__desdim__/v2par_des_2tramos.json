@@ -1,6 +1,6 @@
 {
   "caso": "v2par_des_2tramos",
-  "run": "C:/tmp/oraculo/runs/v2par_des_2tramos-20261015-165207",
+  "run": "oraculo/runs/v2par_des_2tramos-20261015-165207",
   "programa": "DESENHO → DESDIM → DESGRAF → DESINIT → DESIMP; DESENHO 4",
   "descricao": "Dimensionamento e detalhamento (DESDIM/DESINIT) de viga de 2 tramos desiguais (4 e 5 m; o tramo 2 recebe a laje 5 × 5 e a 5 × 4) com o resumo de consumo.",
   "entrada": {
@@ -11,7 +11,7 @@
       "classeAco": "B",
       "cobrimento_cm": 2.0
     },
-    "obra": "Obra ASS gravada pelo original no caso v2par_laje_assim (ASS.LAJ/.VIG/.RLP em C:/tmp/oraculo/casos/v2par_des_*.dados). As cargas da viga são as do ASS.VIG (impressas como <V>.t<k>.P; o DESDIM analisa a viga de novo, VIGA.INI de fábrica).",
+    "obra": "Obra ASS gravada pelo original no caso v2par_laje_assim (ASS.LAJ/.VIG/.RLP em oraculo/casos/v2par_des_*.dados). As cargas da viga são as do ASS.VIG (impressas como <V>.t<k>.P; o DESDIM analisa a viga de novo, VIGA.INI de fábrica).",
     "viga": {
       "registro": 5,
       "nome": "V5",

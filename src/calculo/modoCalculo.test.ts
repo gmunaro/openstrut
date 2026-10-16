@@ -111,7 +111,7 @@ describe("negativas das lajes: cada laje conta o seu lado", () => {
 // Item D (regra da V2): a negativa do bordo comum é a armadura do balanço e vai da
 // borda livre até 0,25·x dentro da vizinha, x = máx(lmenor do balanço; menor vão da
 // vizinha); a vizinha não conta esse bordo. Obra do caso v2par_laje_balanco do oráculo
-// (C:/tmp/oraculo/runs/v2par_laje_balanco-20261015-162752): L2 interna 4 × 5 e L1 em
+// (oraculo/runs/v2par_laje_balanco-20261015-162752): L2 interna 4 × 5 e L1 em
 // balanço 4 × 1,5 sobre ela (três bordos livres), h 10, permanente 0,10 e ocupação 0,15
 // t/m², fck 0,15 t/cm², CA-50 classe B, modo original. As malhas são as que o LAJEPROC
 // do original imprimiu (pré-condição): positivas # 6.3 c/20, negativa # 6.3 c/10.

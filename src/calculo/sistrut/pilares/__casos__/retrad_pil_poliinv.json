@@ -1,6 +1,6 @@
 {
   "caso": "retrad_pil_poliinv",
-  "run": "C:/tmp/oraculo/runs/retrad_pil_poliinv-20261015-084151",
+  "run": "oraculo/runs/retrad_pil_poliinv-20261015-084151",
   "programa": "PILAREDI",
   "descricao": "Como retrad_pil_secoes, com a poligonal no sentido anti-horário (0,0) (20,0) (20,20) (0,20): área negativa, peso próprio negativo (17,37 − 0,30 = 17,07) e recusa 'NAO SUPORTA' (D-6). A circular D 25 (prefixo C) é igual à do secoes.",
   "entrada": {

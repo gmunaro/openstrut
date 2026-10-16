@@ -1,6 +1,6 @@
 {
   "caso": "retrad_pil_trava",
-  "run": "C:/tmp/oraculo/runs/retrad_pil_trava-20261015-083047",
+  "run": "oraculo/runs/retrad_pil_trava-20261015-083047",
   "programa": "PILAR opção 6",
   "descricao": "PILAR opção 6, seção do verif2 em flexão oblíqua (Nk 40, Mxk 2, Myk 1): caso 1/2 em instabilidade; o caso 2/2 fica em laço sem fim na busca do equilíbrio (D-2, U49-009), a impressora para em 'Esforcos resistentes do Pilar'.",
   "entrada": {

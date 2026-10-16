@@ -1,6 +1,6 @@
 {
   "caso": "caso_b_viga",
-  "run": "C:/tmp/oraculo/runs/caso_b_viga-20261014-182718",
+  "run": "oraculo/runs/caso_b_viga-20261014-182718",
   "programa": "VIGA opção 7",
   "descricao": "As 6 vigas da obra E2E (E2E.VIG gerado no caso a), VIGA.INI de fábrica (acidentais N, redução 100 %, reação estática); gera o E2E.REP. Inclui também os dados de tramo ecoados no relatório (L, J, D, F) e as linhas gravadas em obra/E2E.REP (ids REParq.*; os REP.* vêm do quadro impresso).",
   "entrada": {
@@ -8,7 +8,7 @@
     "vigas": "V1..V3 2×4 m, V4..V6 2×5 m",
     "acidentais": "N",
     "reacao": "estática",
-    "obra de partida": "E2E (C:/tmp/oraculo/casos/caso_b_viga.dados: E2E.LAJ, E2E.VIG, E2E.RLP gravados pelo próprio original no caso a)",
+    "obra de partida": "E2E (oraculo/casos/caso_b_viga.dados: E2E.LAJ, E2E.VIG, E2E.RLP gravados pelo próprio original no caso a)",
     "VIGA.INI": "de fábrica: unidades m/t, coeficientes 1, redução dos negativos 100 % (fator 1), acidentais N (sem envoltória), acidental Fornecida, 30 %, momentos externos N, reação levada ao pilar Estática",
     "roteiro": "V → opção 7 → obra E2E → lista as vigas (ENTER) → continua (ENTER) → todas as vigas S → registros 1 a 6 com os apoios como gerados (ENTER) → multiplicador dos momentos de vigas apoiadas padrão 100 % (ENTER) → imprime resultados S → sem diagrama de esforços → sem esquema estrutural → dados corretos → segue → grava a somatória em E2E.REP S",
     "vigas (detalhe)": "6 registros no E2E.VIG de 855 bytes (registro 0 = cabeçalho com contagem 6), todas com 2 tramos, sem balanço, sem engaste, uma divisão por tramo com D = L e F = 0; valores SINGLE lidos do arquivo",

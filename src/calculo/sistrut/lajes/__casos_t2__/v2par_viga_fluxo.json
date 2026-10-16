@@ -1,6 +1,6 @@
 {
   "caso": "v2par_viga_fluxo",
-  "run": "C:/tmp/oraculo/runs/v2par_viga_fluxo-20261015-164332",
+  "run": "oraculo/runs/v2par_viga_fluxo-20261015-164332",
   "programa": "LAJEGEOM + LAJECALC + LAJEMONT + LAJEPROC + VIGA (opções 6, 2 e 7)",
   "descricao": "Viga com BALANÇO e CARGA INDEXADA no fluxo da obra (LAJEMONT → VIGA) e reações no .REP com truncamento (R5). Pilares só em x = 0 e x = 4: as vigas V1 (y = 5) e V2 (y = 0) têm balanço de 4 m e a V5 (x = 8) se apoia nas pontas dos balanços ('V5 apoia em V1' e 'V5 apoia em V2' no LAJEMONT). O VIGA 7 recusa obra com carga indexada ('Leia o arquivo, processe e regrave'): lê, processa (opção 2: V3, V4, V5 e só então V1 e V2 com a reação da V5 como carga F = 1,67 t na ponta), regrava e roda a opção 7. No .REP o P4 recebe −1,67 (V1) + 1,66 (V3: R = 1,67 truncado) = −0,01.",
   "entrada": {

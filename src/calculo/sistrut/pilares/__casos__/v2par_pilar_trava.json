@@ -1,6 +1,6 @@
 {
   "caso": "v2par_pilar_trava",
-  "run": "C:/tmp/oraculo/runs/v2par_pilar_trava-20261015-171708",
+  "run": "oraculo/runs/v2par_pilar_trava-20261015-171708",
   "programa": "PILAR opção 6 (verificação NB-1/78)",
   "descricao": "Achado da T10: o PILAR opção 6 não termina a verificação de alguns casos de flexão oblíqua (laço na busca do momento resistente). Seção 20 × 30, c' 3, 2 + 2 φ16, Nk 20 t, Mxk 0,8, Myk 0, le 3 m: o caso 1/2 termina 'ok'; o caso 2/2 (Mx 0,80 inicial, My acidental, inclinação 27°) fica em 'Esforcos resistentes do Pilar — Aguarde ...' aos 30 s e aos 60 s; F2 leva a 'Erro de Operacao'. Também travam (V1 nova, código nativo): Nk 30, Mxk 1,0, Myk 0,6 (caso 1, 21°) e Nk 30, Mxk 0,8 (caso 2, 37°). Terminam: inclinações 15°, 18°, 22°, 53°, 61°, 72°.",
   "entrada": {

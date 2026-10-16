@@ -1,6 +1,6 @@
 {
   "caso": "retrad_arm_param",
-  "run": "C:/tmp/oraculo/runs/retrad_arm_param-20261014-202844",
+  "run": "oraculo/runs/retrad_arm_param-20261014-202844",
   "programa": "ARMADURA",
   "descricao": "Módulo ARMADURA com unidades e parâmetros fora do padrão (Fck em kgf/cm2, forças em kN, medidas em cm, x/d lim 0.45, @1 2 %, gamas 1.5/1.6/1.2): tabela de capacidade da seção 20x50 (Mk por número de barras e bitola, dc+10fi/50fi, Vk por espaçamento de estribo, Twu) impressa pelo item 4 e pelo item 3, e dimensionamento do item 6 para Mk 500 kNcm, Vk 100 kN e Tk 100 kNcm.",
   "entrada": {
