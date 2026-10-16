@@ -19,7 +19,8 @@ import { coeficientesReacao } from "./reacoes";
 
 /** Coeficiente de Poisson: o que reproduz as tabelas de Bares/Pinheiro (docs/norma/bares-reacoes-flechas.md 3.2). */
 export const NU = 0.15;
-/** Termos das séries de momento de bordo (convergido a 10⁻⁴ em μ; ver o teste). */
+/** Termos das séries de momento de bordo. Dobrar para 200 muda no máximo 4,6·10⁻⁵ na
+ *  tabela inteira (50 já muda células arredondadas); ver o teste "converge". */
 export const TERMOS = 100;
 
 /** Tipos na ordem da tabela (Object.keys poria "1", "3" e "6" na frente, por serem números). */

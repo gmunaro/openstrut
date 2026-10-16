@@ -59,8 +59,8 @@ describe("obra de duas lajes pela NBR 6118:2023", () => {
     // Compatibilizado: o maior, 10,07 · 0,8 = 8,056, nas duas.
     perto(l1.negativos.direito, 10.07 * 0.8, 1e-9);
     perto(laje("L2").esforcos.negativos.esquerdo, 10.07 * 0.8, 1e-9);
-    // flecha L1: Ma = 3,64 < Mr = 6,41 (estádio I); α = 4,29 (2B, λ 1,25);
-    // ai = 4,29/1200 · (3,5 + 0,3 · 1,5) · 4⁴ / (24 150 · 10³ · 0,1³/12) = 0,1797 cm;
+    // flecha L1: Ma = 3,65 < Mr = 6,41 (estádio I); α = 4,29 (2B, λ 1,25);
+    // ai = 4,29/1200 · (3,5 + 0,3 · 1,5) · 4⁴ / (24 150 · 10³ · 0,1³/12) = 0,1796 cm;
     // at = 2,32 ai = 0,417 cm < 400/250 = 1,6 cm
     perto(l1.flecha, ((4.29 / 1200) * 3.95 * 256 * 100 * 2.32) / ((24150e3 * 0.001) / 12), 1e-9);
     expect(l1.flecha).toBeLessThan(l1.flechaLimite);

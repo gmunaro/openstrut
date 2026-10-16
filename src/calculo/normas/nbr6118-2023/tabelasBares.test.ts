@@ -6,7 +6,7 @@
 // linha "> 2,00". O resto são propriedades (simetria, monotonia, convergência).
 import { describe, expect, it } from "vitest";
 import { resolvePlaca } from "../../../../scripts/bares/placas";
-import { coeficientesPlaca, LAMBDAS, tabelaTipo } from "../../../../scripts/bares/tabela";
+import { coeficientesPlaca, LAMBDAS, tabelaTipo, TERMOS } from "../../../../scripts/bares/tabela";
 import { BARES, type TipoBares } from "./tabelasBares";
 
 const perto = (valor: number, esperado: number, tol: number) =>
@@ -26,10 +26,22 @@ describe("solver de placas contra Timoshenko & Woinowsky-Krieger (ν = 0,3)", ()
     perto(p.campo(0.5, 0.5).w, 0.00126, 0.00001);
     for (const b of ["E", "D", "I", "S"] as const) perto(p.momentoBordo(b, 0.5), -0.0513, 0.00005);
   });
-  it("converge: 50 e 100 termos diferem menos de 0,001 em μ (tipo 3, λ = 1,5)", () => {
-    const a = coeficientesPlaca("3", 1.5, 50);
-    const b = coeficientesPlaca("3", 1.5, 100);
-    for (const k of ["mx", "my", "mxNeg", "myNeg", "alfa"] as const) perto(a[k]!, b[k]!, 0.001);
+  it("engastada 2 : 1: −0,0829 qa² no meio do bordo longo (T&W Tabela 35)", () => {
+    // momento de bordo não depende de ν (w,yy = 0 ao longo do bordo engastado)
+    const p = resolvePlaca({ a: 1, b: 2, nu: 0.3, engastados: ["E", "D", "I", "S"], termos: 100 });
+    perto(p.momentoBordo("E", 1), -0.0829, 0.00005);
+  });
+  it("converge: dobrar os termos muda menos de 10⁻⁴, bem abaixo das 2 casas da tabela", () => {
+    // os piores casos da tabela inteira (100 contra 200 termos: no máximo 4,6·10⁻⁵)
+    for (const [tipo, lambda] of [
+      ["3", 1.85],
+      ["5A", 1.5],
+      ["6", 2],
+    ] as const) {
+      const a = coeficientesPlaca(tipo, lambda, TERMOS);
+      const b = coeficientesPlaca(tipo, lambda, 2 * TERMOS);
+      for (const k of ["mx", "my", "mxNeg", "myNeg", "alfa"] as const) perto(a[k]!, b[k]!, 1e-4);
+    }
   });
 });
 
@@ -80,9 +92,12 @@ describe("tabela gerada (tabelasBares.ts)", () => {
   });
 
   it("fica a até 0,03 da tabela impressa de Bares/Pinheiro nos casos clássicos", () => {
-    // Impressos: Bastos, Lajes, Anexo, A-8 (μ, tipo 1), A-10 (μ, tipo 6) e A-1 (α);
+    // Impressos: Pinheiro, Tabelas de lajes (EESC-USP, 2007), 2.3a, 2.3c e 2.5a, os
+    // mesmos de Bastos, Lajes, Anexo, A-8, A-10 e A-1;
     // comparação completa em docs/norma/bares-reacoes-flechas.md 5.1.
-    const impressos: [TipoBares, number, "mx" | "my" | "mxNeg" | "alfa", number][] = [
+    // Tipo 6, λ = 2: o μ'x impresso (8,33 = 100/12, a faixa infinita) fica de fora;
+    // T&W Tabela 35 dá −0,0829 qa² na placa 2 : 1, e o teste abaixo confere esse valor.
+    const impressos: [TipoBares, number, "mx" | "my" | "mxNeg" | "myNeg" | "alfa", number][] = [
       ["1", 1, "mx", 4.23],
       ["1", 1, "alfa", 4.76],
       ["1", 1.5, "mx", 7.72],
@@ -94,6 +109,10 @@ describe("tabela gerada (tabelasBares.ts)", () => {
       ["6", 1, "mx", 2.02],
       ["6", 1, "mxNeg", 5.15],
       ["6", 1, "alfa", 1.49],
+      ["6", 2, "mx", 4.05],
+      ["6", 2, "my", 0.96],
+      ["6", 2, "myNeg", 5.72],
+      ["6", 2, "alfa", 2.96],
     ];
     for (const [tipo, lambda, coluna, impresso] of impressos) {
       const i = Math.round((lambda - 1) / 0.05);
