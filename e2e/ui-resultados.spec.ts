@@ -130,3 +130,32 @@ test("resultados secoes paradas-original-1366", async ({ page }) => {
   }
   fs.writeFileSync(path.join(PASTA, "secoes-1366.txt"), lista.join("\n"));
 });
+
+// Memória de cálculo: cada detalhamento traz um "Memória do detalhamento" fechado por
+// padrão. Abre cada um com foco e Enter, tira uma captura por botão e grava o estado.
+test("resultados memoria paradas-original-1366", async ({ page }) => {
+  test.setTimeout(180_000);
+  await semFileSystemAccess(page);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/");
+  await abrirObra(page, "obra-paradas-original.openstrut.json");
+  await page.getByRole("tab", { name: "Resultados" }).focus();
+  await page.keyboard.press("Enter");
+  const painel = page.getByRole("tabpanel", { name: "Resultados" });
+  await expect(painel).toBeVisible();
+
+  const botoes = painel.locator("summary", { hasText: "Memória do detalhamento" });
+  const total = await botoes.count();
+  expect(total).toBeGreaterThan(0);
+  const lista: string[] = [];
+  for (let i = 0; i < total; i++) {
+    const botao = botoes.nth(i);
+    await botao.focus();
+    await page.keyboard.press("Enter");
+    const aberto = await botao.evaluate((el) => el.closest("details")?.hasAttribute("open"));
+    lista.push(`${i}: aberto=${aberto}`);
+    await botao.evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: path.join(PASTA, `memoria-${String(i).padStart(2, "0")}.png`) });
+  }
+  fs.writeFileSync(path.join(PASTA, "memoria-1366.txt"), lista.join("\n"));
+});
