@@ -182,10 +182,14 @@ test("setas selecionam a planta pelo teclado e Delete apaga a laje", async ({ pa
   await desenharObra(page, svg);
   await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
 
-  // só teclado: foca a planta, a seta seleciona o primeiro elemento (laje)
+  // ao soltar o desenho, a última laje fica selecionada; Escape limpa para a seta partir do início
+  await page.keyboard.press("Escape");
   await svg.focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("button", { name: "Apagar (Delete)" })).toBeVisible();
+  await expect(page.locator("aside").getByText("Laje", { exact: true })).toBeVisible();
+  // contorno azul da laje selecionada, por cima das vigas
+  await expect(svg.locator('rect[fill="none"][stroke="#38bdf8"]')).toHaveCount(1);
   await page.screenshot({ path: `${SAIDA}/teclado-01-selecionada.png` });
 
   await page.keyboard.press("Delete");
