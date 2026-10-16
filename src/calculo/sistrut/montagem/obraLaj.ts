@@ -29,6 +29,12 @@ export interface ObraLaj {
  *  apoia nos cruzamentos sem pilar (a escolha "Vx apoia em Vy" do LAJEMONT, que não
  *  fica no .LAJ). Pilares: o ponto do eixo a menos de 0,005 m de um pilar. */
 export function lerObraLaj(texto: string, apoiosEmViga: Record<string, string> = {}): ObraLaj {
+  // o formato de entrada da V1 ("SISTRUT40","LAJ",1,…) não tem polígonos nem montagem:
+  // quem o lê é `importarV1` (armazenamento/importarV1.ts), pelo `importarLaj`
+  if (texto.trimStart().startsWith('"SISTRUT40"'))
+    throw new Error(
+      'o .LAJ está no formato de entrada ("SISTRUT40"), sem a geometria que a montagem lê',
+    );
   const linhas = texto.split(/\r?\n/);
   const nomeObra = (linhas[1] ?? "").replace(/^\s*Obra\s*-\s*/, "").trim();
   let i = 3;

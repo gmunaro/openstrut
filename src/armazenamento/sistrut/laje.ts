@@ -39,6 +39,7 @@ import type {
   Vinculo,
 } from "../../dominio/obra";
 import { lerObra, serializarObra, VERSAO_ATUAL } from "../arquivo";
+import { importarV1 } from "../importarV1";
 
 export interface OpcoesImportacaoLaj {
   /** Materiais (o .LAJ não os tem). Padrão: os de fábrica do SISTRUT, fck 15 MPa
@@ -136,11 +137,38 @@ function envolvente(p: readonly Ponto[]) {
   return { x, y, lx: Math.max(...xs) - x, ly: Math.max(...ys) - y };
 }
 
-/** Lê o .LAJ do original e monta a obra da V2 (um pavimento). Tudo o que não tem
- *  representação vira aviso; a obra sai validada pelo leitor do arquivo da V2. */
-export function importarLaj(texto: string, opcoes: OpcoesImportacaoLaj = {}): ImportacaoLaj {
-  if (!texto.trimStart().startsWith("SISTRUT"))
-    return { ok: false, erros: ["O arquivo não é um .LAJ do SISTRUT (falta o cabeçalho)."] };
+/** Formato do .LAJ pela primeira linha: o de saída do LAJEGRAV ("SISTRUT Software e
+ *  Tecnologia s/c Ltda", LAJEGRAV.BAS:484), o de entrada da V1 ("SISTRUT40","LAJ",1,…,
+ *  gravado com WRITE #; DADOS.md da V1) ou nenhum dos dois. */
+export function formatoLaj(texto: string): "saida" | "entrada" | undefined {
+  const inicio = texto.trimStart();
+  if (inicio.startsWith('"SISTRUT40"')) return "entrada";
+  if (inicio.startsWith("SISTRUT")) return "saida";
+  return undefined;
+}
+
+/** Lê o .LAJ e monta a obra da V2 (um pavimento). Aceita os dois formatos:
+ *  - o de saída, que o LAJEGRAV grava: polígonos, códigos, montagem; obra no modo
+ *    original, com as `opcoes`;
+ *  - o de entrada, com cabeçalho entre aspas (lajes retangulares com bordos, cargas e
+ *    vigas): lido por `importarV1`, que gera vigas e pilares a partir das lajes; as
+ *    `opcoes` não se aplicam.
+ *  Tudo o que não tem representação vira aviso; a obra sai validada pelo leitor do
+ *  arquivo da V2. `nomeArquivo` só entra nas mensagens. */
+export function importarLaj(
+  texto: string,
+  opcoes: OpcoesImportacaoLaj = {},
+  nomeArquivo = "obra.LAJ",
+): ImportacaoLaj {
+  const formato = formatoLaj(texto);
+  if (formato === "entrada") return importarLajDeEntrada(texto, opcoes, nomeArquivo);
+  if (!formato)
+    return {
+      ok: false,
+      erros: [
+        "O arquivo não é um .LAJ do SISTRUT: a primeira linha deveria ser o cabeçalho do SISTRUT.",
+      ],
+    };
   let lida: ObraLaj;
   try {
     lida = lerObraLaj(texto);
@@ -351,4 +379,24 @@ export function importarLaj(texto: string, opcoes: OpcoesImportacaoLaj = {}): Im
   // a obra passa pela mesma validação de um arquivo aberto
   const lido = lerObra(serializarObra(obra));
   return lido.ok ? { ok: true, obra: lido.obra, avisos } : { ok: false, erros: lido.erros };
+}
+
+/** .LAJ no formato de entrada (cabeçalho "SISTRUT40"): a obra da V1, pelo importador
+ *  dela. As opções do .LAJ de saída (materiais, seções, "apoia em") não valem aqui. */
+function importarLajDeEntrada(
+  texto: string,
+  opcoes: OpcoesImportacaoLaj,
+  nomeArquivo: string,
+): ImportacaoLaj {
+  const nome = /\.laj$/i.test(nomeArquivo) ? nomeArquivo : `${nomeArquivo}.LAJ`;
+  const r = importarV1([{ nome, texto }]);
+  if (!r.ok) return r;
+  const avisos = [
+    `${nome} está no formato de entrada (cabeçalho "SISTRUT40"): lajes retangulares com bordos e cargas, sem a geometria da montagem. Vigas e pilares foram gerados a partir das lajes; confira a planta.`,
+    ...(Object.keys(opcoes).length > 0
+      ? ["As opções de importação do .LAJ gravado pelo LAJEGRAV não valem neste formato."]
+      : []),
+    ...r.avisos,
+  ];
+  return { ok: true, obra: r.obra, avisos };
 }

@@ -29,6 +29,7 @@ import { calcularObraSistrut } from "../../calculo/sistrut/obra";
 import type { Obra } from "../../dominio/obra";
 import vigaFluxo from "../../calculo/sistrut/lajes/__casos_t2__/v2par_viga_fluxo.json";
 import { KN_POR_TF } from "../../calculo/sistrut/base/unidades";
+import { lerObraLaj } from "../../calculo/sistrut/montagem/obraLaj";
 import { importarLaj, type OpcoesImportacaoLaj } from "./laje";
 
 /** O .LAJ que o original gravou no run do caso (cópia versionada). */
@@ -481,7 +482,43 @@ describe("importarLaj: o que a obra não representa vira aviso", () => {
   it("arquivo sem o cabeçalho do SISTRUT", () => {
     expect(importarLaj("{}")).toEqual({
       ok: false,
-      erros: ["O arquivo não é um .LAJ do SISTRUT (falta o cabeçalho)."],
+      erros: [
+        "O arquivo não é um .LAJ do SISTRUT: a primeira linha deveria ser o cabeçalho do SISTRUT.",
+      ],
     });
+  });
+});
+
+describe("importarLaj: .LAJ no formato de entrada (cabeçalho entre aspas)", () => {
+  // o E2E.LAJ do roteiro e2e_10_forma: "SISTRUT40","LAJ",1,"E2E", 4 lajes 4 × 5 h 10,
+  // g 0,1 e q 0,15 t/m², bordos AAEE/EAAE/AEEA/EEAA, com o bloco RES
+  const texto = laj("e2e_10_forma_entrada");
+
+  it("lê as lajes, gera vigas e pilares e avisa o formato", () => {
+    const imp = importarLaj(texto, {}, "E2E.LAJ");
+    if (!imp.ok) throw new Error(imp.erros.join("\n"));
+    const pav = imp.obra.pavimentos[0]!;
+    expect(imp.obra.nome).toBe("E2E");
+    expect(pav.lajes.map((l) => [l.nome, l.x, l.y, l.lx, l.ly, l.h])).toEqual([
+      ["L1", 0, 0, 4, 5, 10],
+      ["L2", 4, 0, 4, 5, 10],
+      ["L3", 0, 5, 4, 5, 10],
+      ["L4", 4, 5, 4, 5, 10],
+    ]);
+    // 0,1 e 0,15 t/m² × 9,80665 kN/tf
+    expect(pav.lajes[0]!.revestimento).toBeCloseTo(0.980665, 9);
+    expect(pav.lajes[0]!.sobrecarga).toBeCloseTo(1.4709975, 9);
+    // 3 × 3 cruzamentos de eixos: 9 pilares; 3 vigas em x e 3 em y
+    expect(pav.pilares).toHaveLength(9);
+    expect(pav.vigas).toHaveLength(6);
+    expect(imp.avisos[0]).toMatch(/^E2E\.LAJ está no formato de entrada/);
+  });
+
+  it("as opções do .LAJ de saída não valem e o leitor da montagem recusa o formato", () => {
+    const imp = importarLaj(texto, { peDireito: 2.8 }, "E2E.LAJ");
+    expect(imp.ok && imp.avisos[1]).toBe(
+      "As opções de importação do .LAJ gravado pelo LAJEGRAV não valem neste formato.",
+    );
+    expect(() => lerObraLaj(texto)).toThrow(/formato de entrada/);
   });
 });
