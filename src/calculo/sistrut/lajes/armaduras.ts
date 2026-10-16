@@ -26,9 +26,10 @@ export function relacoesNegativas(
   return { maior: Math.max(...engastados), menor: Math.min(...engastados) };
 }
 
-/** M+ por metro antes do produto por 100, t/m (V_1400 = q/coef, LAJECALC.BAS:825, 876). */
-export const cargaPorCoeficiente = (momentos: MomentosDeLaje, modo: ModoSistrut) =>
-  atribuicao(modo)(momentos.q / momentos.coeficiente.coeficiente);
+/** M+ por metro antes do produto por 100, t/m: V_1400 = q/coef (LAJECALC.BAS:825 na
+ *  espessura, 876 nos momentos), com o q da expressão inteira em precisão estendida, só
+ *  o quociente vai a SINGLE. É o `p` dos momentos (q exato, não o q já em SINGLE). */
+export const cargaPorCoeficiente = (momentos: MomentosDeLaje) => momentos.p;
 
 /** Seção dimensionada com barra (a sub-rotina L_14312 fora do modo 4). */
 export interface SecaoComBarra {
@@ -67,7 +68,7 @@ export function secaoDeMaiorX(
 ): SecaoComBarra {
   const s = atribuicao(modo);
   const naoPassa: SecaoComBarra = { x: -1, xd: -1, as: -1, barra: { ok: false } };
-  const p = cargaPorCoeficiente(momentos, modo);
+  const p = cargaPorCoeficiente(momentos);
   const h = momentos.h;
   const positiva = secaoComBarra(p > 0 ? s(100 * p) : 0, h, false, materiais, parametros, modo);
   // LAJECALC.BAS:889-893: p > 0 e x ≤ 0 grava "NAO".

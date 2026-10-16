@@ -12,7 +12,7 @@ import type {
   ParametrosLaje,
 } from "../base/tipos";
 import { ErroQB, atribuicao, qbCint, qbInt } from "../base/f32";
-import { EstadoLajecalc, S_23341, carregaPadrao, padraoPorCodigos, pot } from "./charneiras";
+import { EstadoLajecalc, S_23341, carregaPadrao, padraoDeCharneiras, pot } from "./charneiras";
 import { S_578ad, coeficienteDoEstado } from "./coeficiente";
 
 /** Direção e μ (GOSUB L_3744e, LAJECALC.BAS:4801-4971; livros_laje.md 1.4): maior
@@ -106,22 +106,21 @@ export function coeficientesDosBordos(laje: LajeSistrut, modo: ModoSistrut) {
 export const momentosLaje: MomentosLaje = (entrada, modo) => {
   const { laje, preparada, h, parametros } = entrada;
   const g = new EstadoLajecalc(parametros, modo);
-  const padrao = padraoPorCodigos(preparada.poligono, laje.codigos, parametros, modo, laje.tipo);
+  const padrao = padraoDeCharneiras(preparada.poligono, laje.codigos, parametros, modo, laje.tipo);
   carregaPadrao(g, padrao.bruto);
   S_578ad(g);
   const coeficiente = coeficienteDoEstado(g);
-  return momentosComCoeficiente(laje, preparada.alvenaria, preparada.cargaArea, preparada.area, h, coeficiente, parametros, modo);
+  return momentosComCoeficiente(
+    laje,
+    preparada.alvenaria,
+    preparada.cargaArea,
+    preparada.area,
+    h,
+    coeficiente,
+    parametros,
+    modo,
+  );
 };
-
-/** `MomentosDeLaje` com a carga antes do arredondamento (mudança de contrato pedida
- *  no relatório): o original divide q ainda em precisão estendida pelo coeficiente
- *  e só então grava V_1400! (LAJECALC.BAS:875). */
-export interface MomentosDeLajeSistrut extends MomentosDeLaje {
-  /** q(H) sem arredondar, t/m². */
-  qSemArredondar: number;
-  /** p = q/coef (V_1400!, SINGLE no original), t/m; M+ = 100·p em t·cm/m. */
-  p: number;
-}
 
 /** Momentos com o coeficiente de carga já calculado (o que muda com H). Só aqui
  *  entram a carga e H; `momentosLaje` e o painel usam esta função. */
@@ -134,7 +133,7 @@ export function momentosComCoeficiente(
   coeficiente: MomentosDeLaje["coeficiente"],
   parametros: ParametrosLaje,
   modo: ModoSistrut,
-): MomentosDeLajeSistrut {
+): MomentosDeLaje {
   const s = atribuicao(modo);
   // de8 = dec = 1 (fatores de unidade do padrão, LAJE.BAS:111-118)
   const dec = 1;
@@ -183,7 +182,9 @@ export const impoeEspessura: ImpoeEspessura = (laje, h, parametros, modo) => {
   if (qbInt(hS) !== hS || hS > s(parametros.hMax) || hS < s(parametros.hMin)) {
     return {
       laje,
-      avisos: [`${laje.nome}: H ${h} cm recusado (inteiro entre ${parametros.hMin} e ${parametros.hMax})`],
+      avisos: [
+        `${laje.nome}: H ${h} cm recusado (inteiro entre ${parametros.hMin} e ${parametros.hMax})`,
+      ],
     };
   }
   if (laje.tipo !== 0 && laje.tipo !== 3) {

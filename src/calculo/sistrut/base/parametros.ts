@@ -139,6 +139,13 @@ export const PARAMETROS_LAJE = {
  *  DESINIT. Rótulos do arquivo de fábrica SISTRUT.DSP. Especificação:
  *  apoio/livros_arm_forma_des.md 4.3. */
 export const PARAMETROS_DSP = {
+  /** Coeficientes de medida (V_0FA2) e de força (V_0FA6) do DESENHO.INI: o DESENHO os
+   *  lê (DESENHO.BAS:754-756; antes da leitura valem 1, 680-681) e o DESDIM os usa nos
+   *  momentos, cortantes, flecha e corte das barras (DESDIM.BAS:2840, 2955, 2984,
+   *  3184, 3895, 5045-5135). O DESENHO.INI de fábrica traz 1 e 1
+   *  (C:/tmp/oraculo/orig/DESENHO.INI, linhas 8-9); o .DSP não os tem. */
+  coeficienteMedida: 1,
+  coeficienteForca: 1,
   /** Coeficiente multiplicador dos momentos negativos (DESENHO.BAS:4773). */
   reducaoNegativos: 1,
   /** fck, fyk (t/cm²), classe do aço e multiplicador de unidade (DESENHO.BAS:4774-4777). */
@@ -368,6 +375,12 @@ export const PARAMETROS_VIGA = {
  *  em DATA (PILAR.BAS:2793 e 2795). Uso: PILAR e PILAREDI (T5). Especificação:
  *  apoio/livros_viga_pilar.md 2. */
 export const PARAMETROS_PILAR = {
+  /** Número máximo de barras numa seção (V_0e30, compartilhada com o PILAREDI, que a
+   *  compara em PILAREDI.BAS:6715 e 6832). 60 é o valor antes da leitura do INI
+   *  (PILAR.BAS:559); o original o relê do PILAR.INI (PILAR.BAS:616), e o PILAR.INI de
+   *  fábrica traz 200 ("NUMERO MAXIMO DE BARRAS INTERNAS A UMA SECAO",
+   *  C:/tmp/oraculo/orig/PILAR.INI, linha 6). */
+  maximoBarras: 200,
   /** Coeficientes de medida, força e de fck/fyk (PILAR.BAS:566, 567, 569). */
   coeficienteMedida: 1,
   coeficienteForca: 1,

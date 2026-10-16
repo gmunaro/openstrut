@@ -441,7 +441,10 @@ export type EscolheBarraLaje = (
 /** Espessura mínima de uma laje (LAJECALC.BAS:818-869; livros_laje.md 1.11):
  *  H de Hmin a Hmax, passo 1, só por flexão (negativa máxima e positiva); fica a
  *  seção de maior x. Corrigido (R1): verifica também a flecha (L/f 300/500 do .LAP)
- *  e inclui na procura de H. E2E: H 7,0, x/d 0,382, # 6.3 c/ 7.5. */
+ *  e inclui na procura de H. E2E: H 7,0, x/d 0,382, # 6.3 c/ 7.5.
+ *  Sem lista de avisos: a etapa (LAJECALC opção 3) só imprime "H necessario > H maximo
+ *  configurado" (`ok: false`, LAJECALC.BAS:800-809) e "espac/bitola" quando nenhuma barra
+ *  serve (`barra.ok: false`, LAJECALC.BAS:756-785); não há outro aviso a reproduzir. */
 export type EspessuraDeLaje =
   | {
       ok: true;

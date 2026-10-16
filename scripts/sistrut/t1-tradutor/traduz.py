@@ -371,9 +371,9 @@ def le_linhas(ini, fim):
 
 # Comandos trocados de proposito (com o motivo no comentario gerado).
 SUBSTITUI = {
-    # i do bordo na bissetriz: o LAJECALC trunca em 2 casas; a copia do LAJEMONT
-    # (LAJEMONT.BAS:14b11-1505c) nao. A maquina escolhe por g.truncaIDaBissetriz.
-    3425: "L_BP22 = g.truncaIDaBissetriz ? g.s(qbInt(L_BP22 * 100.0) / 100.0) : L_BP22;",
+    # i do bordo na bissetriz: o LAJECALC trunca em 2 casas (LAJECALC.BAS:3425). A copia
+    # do LAJEMONT, que nao trunca, tem porte proprio (src/calculo/sistrut/montagem/charneiras.ts).
+    3425: "L_BP22 = g.s(qbInt(L_BP22 * 100.0) / 100.0);",
 }
 
 IGNORA = re.compile(

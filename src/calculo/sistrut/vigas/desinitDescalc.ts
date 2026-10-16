@@ -79,6 +79,9 @@ export function analisaDescalc(entrada: EntradaDesdim, modo: ModoSistrut) {
   c.v0f62 = c.s(materiais.gamaF);
   c.v0f66 = c.s(materiais.gamaS);
   c.v0eaa = c.s(p.cobrimento);
+  // coeficientes de medida e de força do DESENHO.INI (V_0FA2, V_0FA6)
+  c.v0fa2 = c.s(p.coeficienteMedida);
+  c.v0fa6 = c.s(p.coeficienteForca);
   c.v0ea6 = c.s(c.v0eaa + c.s(p.acrescimo));
   for (const [i, b] of p.bitolas.entries()) {
     c.bitola.p(i, b.bitola);

@@ -61,9 +61,9 @@ Exemplos prontos: `sistrut/__e2e__/obraE2E.ts` (casos a, b e c) e `sistrut/__e2e
   - `avisos` e `memoria`.
 - `colunas[]`: as colunas do PILGEEDI (níveis, cotas, seções e vínculos). `lances[]`: um por coluna e nível, com `pavimentoId`, `repeticao`, `pilarId` e `carga` (Nk, Mk do caso "e", da flambagem e da base, peso próprio, le). Cada lance traz o `dimensionamento` do PILAREDI: λ, casos 1e/1f/2e/2f (Mk atuante, MR de 1ª e 2ª ordem, ângulo da LN, 1/r, x/d, deformações, veredito), As, taxa, barras, estribo e recusa.
 - `quadros[]` e `resumoVigas`: quadros das vigas e resumo do DESENHO (item 4).
-- `avisos`.
+- `avisos` e `falhas[]` (`{ pavimentoId, texto }`): carga que não chega à fundação (pilar que não continua até a fundação, linha do .REP sem coluna). A projeção as põe em `ResultadoPavimento.falhas`, com as lajes sem cálculo, as vigas não processadas e os bordos de laje sem viga.
 
-Na projeção em SI, `PilarResultado.mkX/mkY` é o Mk característico (o "Mx/My" impresso pelo PILAR/PILAREDI) e `mdX/mdY` vale γf × Mk.
+Na projeção em SI, `PilarResultado.mkX/mkY` é o Mk característico (o "Mx/My" impresso pelo PILAR/PILAREDI) e `mdX/mdY` vale γf × Mk. Com μ > 1, o M+ principal (sem redução) está em y: a projeção põe `my` e a armadura principal do LAJEPROC em y. Bitolas e espaçamentos saem nominais (6,3, não 6,3000002), e `BarrasNaAlma.grupos` traz os dois grupos do arranjo de viga do .DSP.
 
 ## Defeitos do original corrigidos no modo corrigido
 

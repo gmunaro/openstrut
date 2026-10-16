@@ -8,8 +8,8 @@
 // inteiros"). Reescrevê-lo "limpo" mudaria a geometria em polígonos e bordos
 // livres sem oráculo para conferir. Por isso as rotinas abaixo do marcador são
 // traduzidas comando a comando da V1 nova (`dist/src-original/laje/LAJECALC.BAS`,
-// conferida byte a byte contra o oráculo) por um tradutor (`C:/tmp/t1-scratch/traduz.py` + `gera.sh`/`monta.sh`, fora do
-// repositório): cada GOTO vira um salto da máquina de estados, cada variável `!`
+// conferida byte a byte contra o oráculo) por um tradutor
+// (`scripts/sistrut/t1-tradutor/`: `traduz.py`, `gera.sh`, `monta.sh`): cada GOTO vira um salto da máquina de estados, cada variável `!`
 // é arredondada para SINGLE na atribuição (`g.s`), `%` por CINT, e o comentário
 // `// nnnn` no fim de cada comando é a linha do LAJECALC.BAS. Os nomes V_xxxx e
 // A_xxxx são os endereços DS:xxxx do original; o significado dos que importam

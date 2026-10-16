@@ -33,11 +33,6 @@ import { type SecaoCalculo, flexaoSecao, taxaArmaduraMinima, xiLimite } from "./
 import { type Fissuracao, fissuracao, flechaEJ, flechaTramo, moduloEc } from "./desdim-flecha";
 import { analisaDescalc } from "./desinitDescalc";
 
-/** Coeficientes de medida e de força do DESENHO.INI (V_0fa2, V_0fa6; DESENHO.BAS:680-681,
- *  754-756). O INI de fábrica dá 1 e 1; o .DSP não os tem. */
-const COEFICIENTE_MEDIDA = 1;
-const COEFICIENTE_FORCA = 1;
-
 // ---------------------------------------------------------------- esforços do DESCALC
 
 /** Seção de cálculo de um índice de tramo do original. Balanço sem seção própria
@@ -180,17 +175,19 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
   const asRhoDo = (t: EsforcosTramoDesdim, sec: SecaoCalculo) => {
     if (modo === "original") return 0;
     if (t.indice >= 1 && t.indice <= n)
-      return asDeFlexao(t.mPositivo * 100 * COEFICIENTE_MEDIDA * COEFICIENTE_FORCA, sec);
+      return asDeFlexao(t.mPositivo * 100 * p.coeficienteMedida * p.coeficienteForca, sec);
     const mApoio = esforcos.momentosApoio[t.indice === 0 ? 0 : n] ?? 0;
-    return mApoio < 0 ? asDeFlexao(-mApoio * 100 * COEFICIENTE_MEDIDA * COEFICIENTE_FORCA, sec) : 0;
+    return mApoio < 0
+      ? asDeFlexao(-mApoio * 100 * p.coeficienteMedida * p.coeficienteForca, sec)
+      : 0;
   };
   const aswDos = (t: EsforcosTramoDesdim) => {
     const sec = secaoCalculo(secaoDoTramo(entrada, t.indice));
     const asRho = asRhoDo(t, sec);
     return {
       sec,
-      aswEsquerda: aswCortante(t.vkEsquerda, sec, asRho, materiais, p, COEFICIENTE_FORCA, modo),
-      aswDireita: aswCortante(t.vkDireita, sec, asRho, materiais, p, COEFICIENTE_FORCA, modo),
+      aswEsquerda: aswCortante(t.vkEsquerda, sec, asRho, materiais, p, p.coeficienteForca, modo),
+      aswDireita: aswCortante(t.vkDireita, sec, asRho, materiais, p, p.coeficienteForca, modo),
     };
   };
   const bitolas = bitolasEstriboViga(
@@ -256,7 +253,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
     if (!secApoio) throw new Error(`Viga ${viga.nome}: sem seção no apoio ${k}`);
     const sec = secaoCalculo({ bw: secApoio.bw, hw: secApoio.hw, bf: 0, hf: 0 });
     const mApoio = esforcos.momentosApoio[k] ?? 0;
-    const m = mApoio < 0 ? s(-mApoio * 100 * COEFICIENTE_MEDIDA * COEFICIENTE_FORCA) : 0;
+    const m = mApoio < 0 ? s(-mApoio * 100 * p.coeficienteMedida * p.coeficienteForca) : 0;
     const r = flexaoSecao(m, sec, materiais, mult, modo);
     avisaFlexao(r, `apoio ${k}`);
     let as = r.as;
@@ -311,7 +308,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
     let m = 0;
     if (interno) {
       m = s(t.mPositivo * 100);
-      m = s(m * COEFICIENTE_MEDIDA * COEFICIENTE_FORCA);
+      m = s(m * p.coeficienteMedida * p.coeficienteForca);
       const r = flexaoSecao(m, sec, materiais, mult, modo);
       avisaFlexao(r, `tramo ${t.indice}`);
       let as = r.as;
@@ -320,7 +317,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
       avisaArranjo(arranjo, `tramo ${t.indice}`);
       flexao = {
         xd: r.xd,
-        mk: s(s(m / 100) / (COEFICIENTE_MEDIDA * COEFICIENTE_FORCA)),
+        mk: s(s(m / 100) / (p.coeficienteMedida * p.coeficienteForca)),
         as,
         asCompressao: r.asc,
         arranjo: arranjo.trim(),
@@ -336,7 +333,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
     const temDireita = t.indice < n + 1;
     // τwd ≥ 0,25·fcd com o cortante sem alívio (DESDIM.BAS:2984-2988).
     const tauAcima = (v: number) =>
-      (v / (sec.d * sec.bw)) * COEFICIENTE_FORCA * materiais.gamaF * 1000 >=
+      (v / (sec.d * sec.bw)) * p.coeficienteForca * materiais.gamaF * 1000 >=
       (250 * mult * materiais.fck) / materiais.gamaC;
     if ((temEsquerda && tauAcima(t.ve)) || (temDireita && tauAcima(t.vd)))
       avisos.push(`${viga.nome} tramo ${t.indice}: tensão de cisalhamento acima do limite.`);
@@ -370,8 +367,8 @@ export const dimensionaViga: DimensionaViga = (entrada, modo) => {
         ec,
         asEfetiva(flexao.barras, true),
         p.flechaInerciaFissurada,
-        COEFICIENTE_MEDIDA,
-        COEFICIENTE_FORCA,
+        p.coeficienteMedida,
+        p.coeficienteForca,
         modo,
       );
       flecha = f.valor;

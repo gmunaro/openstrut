@@ -7,6 +7,7 @@
 // livros_viga_pilar.md 2.13 itens 4-9 (U53-051..062, U54-008..026). PLANO P8-P10, P14, P15.
 import type { Etapa } from "../../tipos";
 import { ErroNaoConverge, qbClng, qbInt } from "../base/f32";
+import { PARAMETROS_PILAR } from "../base/parametros";
 import type {
   BarraPilar,
   CasoPilar,
@@ -32,13 +33,6 @@ import {
   novoEstado,
   posiciona,
 } from "./secao";
-
-/** Número máximo de barras numa seção (V_0e30, comparado em PILAREDI.BAS:6715, 6832).
- *  60 é o valor embutido (PILAR.BAS:559), mas o original o relê do PILAR.INI
- *  (PILAR.BAS:616), e o PILAR.INI de fábrica traz 200 ("NUMERO MAXIMO DE BARRAS
- *  INTERNAS A UMA SECAO", C:/tmp/oraculo/orig/PILAR.INI, linha 6). Pendente de decisão:
- *  levar a `PARAMETROS_PILAR` com 200 muda o arranjo de seções com mais de 60 barras. */
-export const MAXIMO_BARRAS = 60;
 
 /** Geometria do original para o arranjo: polígono horário com o fecho, ou círculo. */
 type Geometria =
@@ -173,6 +167,7 @@ function arranjoPoligonal(
   i2: number,
   tab: Tabela,
   cobrimento: number,
+  maximoBarras: number,
 ): Arranjo {
   const { s } = ctx;
   const v = g.vertices;
@@ -185,7 +180,7 @@ function arranjoPoligonal(
     if (a1 * n + a2 * n2 < as) n2 += 1;
     if (g.tipo === 1 && n2 / 2 !== Math.trunc(qbClng(n2) / 2)) n2 += 1;
   }
-  if (n + n2 > MAXIMO_BARRAS) return i2 < i1 ? { tipo: "misto" } : { tipo: "bitola" };
+  if (n + n2 > maximoBarras) return i2 < i1 ? { tipo: "misto" } : { tipo: "bitola" };
   const offset = s(tab[i1]!.bitola / 20 + cobrimento);
   const barras: BarraCalculo[] = [];
   const indices: number[] = [];
@@ -258,12 +253,13 @@ export function arranjoCircular(
   tab: Tabela,
   cobrimento: number,
   barrasAnteriores?: number,
+  maximoBarras: number = PARAMETROS_PILAR.maximoBarras,
 ): Arranjo {
   const { s, k } = ctx;
   const a1 = tab[i1]!.area;
   const n1 = s(qbInt((((g.dInterno > 0 ? -k.c03 : 0) + 1) / a1) * as) + 1);
   const n2 = g.dInterno > 0 ? s(qbInt((as / tab[i2]!.area) * k.c03) + 1) : 0;
-  if (n1 + n2 > MAXIMO_BARRAS) return i2 < i1 ? { tipo: "misto" } : { tipo: "bitola" };
+  if (n1 + n2 > maximoBarras) return i2 < i1 ? { tipo: "misto" } : { tipo: "bitola" };
   if (barrasAnteriores !== undefined && n1 + n2 > barrasAnteriores) return { tipo: "bitola" };
   const barras: BarraCalculo[] = [];
   const indices: number[] = [];
@@ -551,8 +547,18 @@ export const dimensionaPilar: DimensionaPilar = (
         for (;;) {
           r =
             g.tipo === 2
-              ? arranjoCircular(ctx, g, as, i1, i2, tab, cobrimento, opcoes.barrasAnteriores)
-              : arranjoPoligonal(ctx, g, as, i1, i2, tab, cobrimento);
+              ? arranjoCircular(
+                  ctx,
+                  g,
+                  as,
+                  i1,
+                  i2,
+                  tab,
+                  cobrimento,
+                  opcoes.barrasAnteriores,
+                  par.maximoBarras,
+                )
+              : arranjoPoligonal(ctx, g, as, i1, i2, tab, cobrimento, par.maximoBarras);
           if (r.tipo === "misto") {
             i2 = i1;
             continue;

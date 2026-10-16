@@ -251,6 +251,19 @@ describe("circular numa variação de armadura que não é a primeira (PILAREDI.
     expect(r.tipo === "ok" && r.n1).toBe(5);
     expect(arranjoCircular(ctx, g, 3.52, 5, 5, PARAMETROS_PIP.bitolas, 2).tipo).toBe("ok");
   });
+
+  // Máximo de barras (V_0e30, PILAREDI.BAS:6715/6832): o PILAR.INI de fábrica traz 200
+  // (PILAR.BAS:616), não os 60 de antes da leitura (PILAR.BAS:559). D 120, As 56, φ10:
+  // n1 = INT(56/0,8) + 1 = 71 barras, acima de 60 e abaixo de 200.
+  it("71 barras de φ10: arranjo com o máximo de fábrica (200); com 60 troca de bitola", () => {
+    const grande = { tipo: 2 as const, d: 120, dInterno: 0 };
+    expect(PARAMETROS_PILAR.maximoBarras).toBe(200);
+    const r = arranjoCircular(ctx, grande, 56, 5, 5, PARAMETROS_PIP.bitolas, 2);
+    expect(r.tipo === "ok" && r.n1).toBe(71);
+    expect(
+      arranjoCircular(ctx, grande, 56, 5, 5, PARAMETROS_PIP.bitolas, 2, undefined, 60).tipo,
+    ).toBe("bitola");
+  });
 });
 
 describe("v2par_pilar_niveis: P5 25×40 de FUND a COB, carga do .REP nos níveis 2, 3 e 4", () => {

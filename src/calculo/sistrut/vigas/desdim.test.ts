@@ -423,3 +423,28 @@ describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado 
     expect(r.tramos[0]!.cisalhamento.aswEsquerda).toBeLessThan(asw(0.001) - 0.1);
   });
 });
+
+describe("coeficientes do DESENHO.INI (V_0FA2, V_0FA6) chegam ao dimensionamento", () => {
+  // DESDIM.BAS:2840, 2955: m = M·100·coefMedida·coefForca. Com coefForca = 2 a seção
+  // vê o dobro do momento, como a mesma viga com o dobro da carga e coeficientes 1.
+  it("coeficiente de força 2 = carga em dobro (As do apoio e do tramo)", () => {
+    // carga 10× a do caso, para a flexão governar (não a mínima)
+    const v1 = entradaV1("corrigido");
+    const vezes = (k: number) => ({
+      ...v1.viga,
+      tramos: v1.viga.tramos.map((t) => ({
+        ...t,
+        divisoes: t.divisoes.map((d) => ({ ...d, p: k * d.p })),
+      })),
+    });
+    const base = { ...v1, viga: vezes(10) };
+    const comCoef = dimensionaViga(
+      { ...base, parametros: { ...base.parametros, coeficienteForca: 2 } },
+      "corrigido",
+    );
+    const dobro = dimensionaViga({ ...v1, viga: vezes(20) }, "corrigido");
+    expect(comCoef.apoios[1]!.as).toBeCloseTo(dobro.apoios[1]!.as, 9);
+    expect(comCoef.tramos[0]!.flexao.as).toBeCloseTo(dobro.tramos[0]!.flexao.as, 9);
+    expect(comCoef.apoios[1]!.as).toBeGreaterThan(dimensionaViga(base, "corrigido").apoios[1]!.as);
+  });
+});

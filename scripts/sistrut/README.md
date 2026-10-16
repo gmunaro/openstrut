@@ -20,7 +20,7 @@ Traduz trechos do `LAJECALC.BAS` para TypeScript, comando a comando. Cada SUB vi
 - `python -I fixtures.py` gera `src/calculo/sistrut/lajes/__casos_t1__/v2par_laje_<caso>.json`. Lê o `.LAJ` final de cada run com `lajinfo_t1.py` e filtra do JSON da T10 os valores do estágio T1. Grava μ por polígono e corrige o `.mu` herdado da T10 (campo `obs` do JSON).
 - `python -I lajinfo_t1.py <arquivo.LAJ>` imprime a obra do `.LAJ` em JSON (ordem do `LAJEGRAV.BAS:483-620`).
 
-`monta.sh` e `fixtures.py` gravam em `C:/wt/v2-par-t1/...`, o worktree onde a T1 foi feita. Para rodar aqui, troque `DEST` (e o `cd` do `monta.sh`) pela raiz deste repositório.
+`monta.sh` grava em `src/calculo/sistrut/lajes/` deste repositório (ou em `DEST=<pasta> sh monta.sh`) e formata com o `oxfmt` do repositório. Os `cab_<f>.ts` são o cabeçalho dos arquivos atuais (tudo antes do primeiro "Traducao mecanica"); conferido em 15/10/2026: `DEST=/tmp/x sh monta.sh` regenera `charneiras.ts`, `coeficiente.ts` e `momentos.ts` idênticos aos do repositório. O tradutor não gera mais a chave `truncaIDaBissetriz`: o ponto LAJECALC.BAS:3425 trunca sempre (o padrão de charneiras do LAJEMONT tem porte próprio em `montagem/charneiras.ts`). O `fixtures.py` ainda grava em `C:/wt/v2-par-t1/...`.
 
 ## t2-fixtures
 
@@ -44,7 +44,7 @@ Monta roteiros de teclas, roda os casos `v2par_*` no oráculo e na V1 nova e ext
 - `t10-oraculo/lajinfo.py` e `t1-tradutor/lajinfo_t1.py` liam μ e ângulo com o índice da laje (`dirmu[l + 1]`). O LAJECALC grava em `A_1210(A_10cc(i, 0), .)`, indexado pelo polígono. Agora usam `dirmu[int(c[0])]`. Esse erro deu `.mu` trocado em `v2par_laje_balanco` (L1/L2) e `v2par_laje_assim` (L2/L3). Conferido contra os runs: o resultado agora coincide com `__casos_t2__/*.laj.json`.
 - `t10-oraculo/extrai_v2par.py` gravava a fonte de `<viga>.cobrimento` como `iarm - 1`, uma linha abaixo de onde "Cobrimento" está impresso. Agora grava a linha que casou. Nos runs `v2par_des_*` a fonte passa de 41/46/58 para 40/45/57.
 - `F=` dos `gen_laje.sh`, `lote.sh`, `lote2.sh` e `varre_otim.sh` e os caminhos de `fixtures.py` apontavam para a própria pasta em `C:/tmp`. Agora são relativos ao script.
-- `t1-tradutor/cab_charneiras.ts` cita `scripts/sistrut/t1-tradutor/traduz.py` em vez de `C:/tmp/t1-scratch/traduz.py`. O `charneiras.ts` do repositório ainda tem o caminho antigo até o próximo `monta.sh`.
+- Os `cab_*.ts` foram refeitos a partir dos arquivos atuais do repositório (com o contrato final da T7).
 
 Os demais caminhos absolutos (`C:/tmp/oraculo`, `C:/wt/v1-v2par`, `C:/wt/v2-par-t1`, `C:/wt/v2-par-t2`, o `.BAS` da V1) apontam para fora destas pastas e ficaram como estavam.
 

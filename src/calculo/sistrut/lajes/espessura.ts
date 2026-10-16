@@ -134,7 +134,7 @@ export const espessuraMinimaLaje: EspessuraMinimaLaje = (
   // FOR H = Hmin TO Hmax com H SINGLE (LAJECALC.BAS:823).
   for (let h = parametros.hMin; h <= parametros.hMax; h = s(h + 1)) {
     const momentos: MomentosDeLaje = momentosComH(h);
-    const p = cargaPorCoeficiente(momentos, modo);
+    const p = cargaPorCoeficiente(momentos);
     const { maior } = relacoesNegativas(momentos.bordos, modo);
     let negativa: SecaoComBarra = { x: 0, xd: 0, as: 0, barra: { ok: false } };
     if (maior > 0) {
