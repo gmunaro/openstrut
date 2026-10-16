@@ -89,9 +89,10 @@
 }
 
 @media print {
+  /* o cabeçalho repetido de cada página (thead em Relatorio.tsx) fica abaixo desta margem */
   @page {
     size: A4;
-    margin: 12mm;
+    margin: 22mm 12mm 14mm;
   }
   :root,
   .dark {
@@ -109,14 +110,24 @@
   body {
     font-size: 9pt;
   }
+  /* o Table põe overflow-x-auto: no papel isso corta a coluna da direita */
+  [data-slot="table-container"] {
+    overflow: visible;
+  }
   table {
     break-inside: auto;
   }
-  tr {
+  /* linha que não parte ao meio; a linha de fora (que embrulha o relatório) pode partir */
+  td tr {
     break-inside: avoid;
   }
   h2,
   h3 {
     break-after: avoid;
+  }
+  /* seções grandes do relatório começam em página nova (classes em Relatorio.tsx) */
+  .relatorio-obra > section,
+  .relatorio-secao {
+    break-before: page;
   }
 }
