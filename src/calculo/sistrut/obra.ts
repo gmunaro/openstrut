@@ -488,6 +488,59 @@ function poligonoDaLaje(l: Laje, outras: readonly Laje[]) {
 const CODIGO_ENGASTE = 22;
 const codigoForcado = (v: Vinculo) => (v === "livre" ? 1 : v === "apoiado" ? 0 : CODIGO_ENGASTE);
 
+/** Código do lado engastado no LAJECALC 1: CINT(máximo Mneg/Mpos·10 + 2) (22 de
+ *  fábrica; LAJECALC.BAS:3961, 3730-3731). */
+const codigoDoEngaste = (par: ParametrosSistrut) => qbCint(sng(par.laje.relacaoNegPosMax) * 10 + 2);
+
+/** As continuidades da lista confirmada (`Pavimento.continuidadesLajes`): os lados
+ *  dela engastados com o código do engaste, os livres com 1 e os outros com 0. Linha
+ *  com laje inexistente, lado fora do polígono ou laje não maciça (o assistente as
+ *  recusa, LAJECALC.BAS:3912) fica de fora, com aviso. */
+function continuidadesDaLista(
+  pav: Pavimento,
+  sistrut: readonly LajeSistrut[],
+  doPainel: readonly LajeDoPainel[],
+  par: ParametrosSistrut,
+  avisos: string[],
+) {
+  const lajes = sistrut.map((sl, i) => ({
+    ...sl,
+    codigos: sl.codigos.map((_, k): number =>
+      vinculoDoLado(pav.lajes[i]!, doPainel[i]!.bordos, k) === "livre" ? 1 : 0,
+    ),
+  }));
+  const indice = new Map(pav.lajes.map((l, i) => [l.id, i]));
+  const codigo = codigoDoEngaste(par);
+  const continuidades: Continuidade[] = [];
+  for (const c of pav.continuidadesLajes ?? []) {
+    const a = lajes[indice.get(c.lajeA) ?? -1];
+    const b = c.lajeB === undefined ? undefined : lajes[indice.get(c.lajeB) ?? -1];
+    const ladoB = c.ladoB ?? -1;
+    const texto = `Continuidade ${c.lajeA} lado ${c.ladoA + 1}${c.lajeB ? ` × ${c.lajeB} lado ${ladoB + 1}` : ""}`;
+    if (!a || (c.lajeB !== undefined && !b)) {
+      avisos.push(`${texto}: laje que não existe no pavimento; ignorada.`);
+      continue;
+    }
+    if (c.ladoA >= a.codigos.length || (b && (ladoB < 0 || ladoB >= b.codigos.length))) {
+      avisos.push(`${texto}: lado fora do polígono; ignorada.`);
+      continue;
+    }
+    if (a.tipo !== 0 || (b && b.tipo !== 0)) {
+      avisos.push(`${texto}: laje não maciça; o SISTRUT não a aceita e ela foi ignorada.`);
+      continue;
+    }
+    a.codigos[c.ladoA] = codigo;
+    if (b) b.codigos[ladoB] = codigo;
+    continuidades.push({
+      lajeA: a.nome,
+      bordoA: c.ladoA,
+      lajeB: b?.nome ?? null,
+      bordoB: b ? ladoB : c.ladoA,
+    });
+  }
+  return { lajes, continuidades };
+}
+
 /** Código da barra imposta: no LAJECALC, CINT(1000·índice da bitola + espaçamento em
  *  cm) (LAJECALC.BAS:4166); no LAJEPROC, −(1000·índice da bitola + índice 1-based do
  *  espaçamento) (LAJEPROC.BAS:451, 892). Bitola ou espaçamento fora das tabelas do .LAP:
@@ -571,7 +624,7 @@ function painelDoPavimento(
       tipo,
       vertices,
       indicesVertices: vertices.map(indice),
-      grupo: 0,
+      grupo: l.grupo ?? 0,
       // código 1 (livre) antes da automática: ela preserva o 1 e zera o resto
       codigos: poligono.bordos.map((_, k) =>
         vinculoDoLado(l, poligono.bordos, k) === "livre" ? 1 : 0,
@@ -582,7 +635,7 @@ function painelDoPavimento(
       // (o original para em 1/√μ, LAJECALC.BAS:7239). Na pré-moldada o ângulo é o das
       // nervuras (A_10cc(·,5)), que a montagem usa.
       angulo: tipo === 3 && l.anguloArmadura === undefined ? s(-1) : s(l.anguloArmadura ?? 0),
-      mu: tipo === 1 || l.mu === 1 ? 0 : s(l.mu),
+      mu: tipo === 1 || (l.mu === 1 && !l.muInformado) ? 0 : s(l.mu),
       ...armaduraImpostaDaLaje(l, par, avisos),
       cargaPermanente: s(knPorM2ParaTPorM2(l.revestimento)),
       pesoProprio: 0,
@@ -615,6 +668,8 @@ function painelDoPavimento(
       const doBordo = (c: Continuidade) =>
         (c.lajeA === sl.nome && c.bordoA === k) || (c.lajeB === sl.nome && c.bordoB === k);
       sl.codigos[k] = codigoForcado(v);
+      // o engaste do LAJECALC 1 grava CINT(máximo·10 + 2) (LAJECALC.BAS:3961)
+      if (v === "engastado") sl.codigos[k] = codigoDoEngaste(par);
       if (v !== "engastado") {
         // o lado da vizinha fica engastado sem laje deste lado
         continuidades = continuidades.flatMap((c) => {
@@ -630,6 +685,32 @@ function painelDoPavimento(
       }
     });
   });
+
+  // LAJECALC 1 confirmado trecho a trecho (`Pavimento.continuidadesLajes`, o A_11e0):
+  // a lista vale no lugar da automática e dos vínculos forçados; os livres ficam
+  if (pav.continuidadesLajes) {
+    const confirmadas = continuidadesDaLista(pav, lajes, lajesDoPainel, par, avisos);
+    lajes = confirmadas.lajes;
+    continuidades = confirmadas.continuidades;
+  }
+
+  // i digitado por lado no <A>ltera do LAJECALC 1 (LAJECALC.BAS:4058-4104)
+  pav.lajes.forEach((l, i) =>
+    l.coeficientesLados?.forEach((coef, k) => {
+      const sl = lajes[i]!;
+      if (coef === null || !((sl.codigos[k] ?? 0) > 2)) return;
+      const c = s(coef);
+      if (c > par.laje.relacaoNegPosMax || c < par.laje.relacaoNegPosMin) {
+        // o original recusa (BEEP, LAJECALC.BAS:4096)
+        avisos.push(
+          `Laje ${l.nome}, lado ${k + 1}: i = ${coef} fora de ${Number(par.laje.relacaoNegPosMin.toFixed(2))} a ${Number(par.laje.relacaoNegPosMax.toFixed(2))}; vale o do engaste.`,
+        );
+        return;
+      }
+      // corrigido: sem o CINT, como o R3 na otimização
+      sl.codigos[k] = modo === "original" ? qbCint(10 * c + 2) : 2 + 10 * c;
+    }),
+  );
 
   // negativas impostas na continuidade (A_11e0(c,4)), pelo lado de qualquer das lajes
   continuidades = continuidades.map((c) => {
@@ -842,7 +923,13 @@ function calcularPavimentoSistrut(
   };
 
   // LAJECALC 5 (antes da otimização) e LAJECALC 3 (espessura mínima)
-  const esforcosAntesOtimizacao = esforcosDoPainelCom()(painel, par.laje, modo);
+  // no original, a falha de execução numa laje para a opção 5 "todas" (e a 3)
+  const paraNaFalha = modo === "original";
+  const esforcosAntesOtimizacao = esforcosDoPainelCom(undefined, paraNaFalha)(
+    painel,
+    par.laje,
+    modo,
+  );
   const espessuras: Record<string, EspessuraDeLaje> = {};
   for (const l of esforcosAntesOtimizacao.lajes) {
     const prep = esforcosAntesOtimizacao.preparadas[l.nome];
@@ -888,8 +975,9 @@ function calcularPavimentoSistrut(
   let otimizacaoParada: OtimizacaoParada | undefined;
   if (otimiza) {
     try {
-      esforcos = esforcosDoPainelCom((e, recalcula) =>
-        otimizaNegativos(e, recalcula, matL, par.laje, modo),
+      esforcos = esforcosDoPainelCom(
+        (e, recalcula) => otimizaNegativos(e, recalcula, matL, par.laje, modo),
+        paraNaFalha,
       )(painel, par.laje, modo);
     } catch (e) {
       if (e instanceof ErroNaoConverge && ehOtimizacaoParada(e.estado)) otimizacaoParada = e.estado;

@@ -37,6 +37,7 @@ import type {
   TipoLaje,
   TrechoPilar,
 } from "../dominio/obra";
+import type { ContinuidadeLajes } from "../dominio/obra";
 import {
   PARAMETROS_DSP,
   PARAMETROS_LAJE,
@@ -572,7 +573,62 @@ class Validador {
       ...(d.trechosPilares === undefined
         ? {}
         : { trechosPilares: cada("trechosPilares", (x, cx) => this.trechoPilar(x, cx)) }),
+      ...(d.continuidadesLajes === undefined
+        ? {}
+        : {
+            continuidadesLajes: cada("continuidadesLajes", (x, cx) =>
+              this.continuidadeLajes(x, cx, d),
+            ),
+          }),
+      ...this.confereApoiaEm(d, c),
     };
+  }
+
+  /** Lados das lajes do pavimento (cru): id → nº de lados do polígono (0 = sem). */
+  private ladosDasLajes(pav: Dados) {
+    const lados = new Map<string, number>();
+    for (const l of Array.isArray(pav.lajes) ? pav.lajes : [])
+      if (ehObjeto(l) && typeof l.id === "string")
+        lados.set(l.id, Array.isArray(l.poligono) ? l.poligono.length : 0);
+    return lados;
+  }
+
+  /** Uma linha do A_11e0: lajes com polígono do pavimento e lados que existem. */
+  private continuidadeLajes(d: Dados, c: string, pav: Dados): ContinuidadeLajes {
+    const lados = this.ladosDasLajes(pav);
+    const lado = (laje: string, campo: string) => {
+      const k = this.numero(d, campo, c, "naoNegativo");
+      const n = lados.get(laje);
+      if (!Number.isInteger(k)) this.erro(`${c}.${campo}`, "esperado um índice inteiro", d[campo]);
+      else if (n === undefined) this.erro(`${c}`, `laje ${laje} não existe no pavimento`, laje);
+      else if (n === 0) this.erro(`${c}`, `a laje ${laje} não tem polígono`, laje);
+      else if (k >= n) this.erro(`${c}.${campo}`, `a laje ${laje} tem ${n} lados`, d[campo]);
+      return k;
+    };
+    const lajeA = this.texto(d, "lajeA", c);
+    const r: ContinuidadeLajes = { lajeA, ladoA: lado(lajeA, "ladoA") };
+    if (d.lajeB !== undefined) {
+      r.lajeB = this.texto(d, "lajeB", c);
+      r.ladoB = lado(r.lajeB, "ladoB");
+    } else if (d.ladoB !== undefined) this.erro(`${c}.ladoB`, "sem lajeB", d.ladoB);
+    return r;
+  }
+
+  /** `Viga.apoiaEm`: ids de outras vigas do pavimento. */
+  private confereApoiaEm(pav: Dados, c: string) {
+    const vigas = Array.isArray(pav.vigas) ? pav.vigas.filter(ehObjeto) : [];
+    const ids = new Set(vigas.map((v) => v.id));
+    vigas.forEach((v, i) => {
+      if (!Array.isArray(v.apoiaEm)) return;
+      for (const [k, id] of v.apoiaEm.entries())
+        if (!ids.has(id) || id === v.id)
+          this.erro(
+            `${c}.vigas[${i}].apoiaEm[${k}]`,
+            "esperado o id de outra viga do pavimento",
+            id,
+          );
+    });
+    return {};
   }
 
   /** Lista de pontos com pelo menos `minimo` itens. */
@@ -823,6 +879,13 @@ class Validador {
         );
     }
     if (d.tipo !== undefined) r.tipo = this.opcao(d, "tipo", c, TIPOS_LAJE);
+    if (d.grupo !== undefined) {
+      r.grupo = this.numero(d, "grupo", c, "naoNegativo");
+      if (!Number.isInteger(r.grupo)) this.erro(`${c}.grupo`, "esperado um inteiro", d.grupo);
+    }
+    if (d.coeficientesLados !== undefined)
+      r.coeficientesLados = porLado("coeficientesLados", (v, ci) => this.item(v, ci));
+    if (d.muInformado !== undefined) r.muInformado = this.booleano(d, "muInformado", c);
     return r;
   }
 
@@ -841,6 +904,16 @@ class Validador {
         ? {}
         : { pesoProprio: this.numero(d, "pesoProprio", c, "naoNegativo") }),
       ...this.entradaVigaSistrut(d, c),
+      // campo opcional novo: "Vx apoia em Vy" (ids conferidos no pavimento)
+      ...(d.apoiaEm === undefined
+        ? {}
+        : {
+            apoiaEm: this.lista(d.apoiaEm, `${c}.apoiaEm`).map((x, i) =>
+              typeof x === "string"
+                ? x
+                : (this.erro(`${c}.apoiaEm[${i}]`, "esperado um texto", x), ""),
+            ),
+          }),
     };
     const horizontal = v.y1 === v.y2;
     const vertical = v.x1 === v.x2;

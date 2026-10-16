@@ -173,3 +173,62 @@ describe("campos de laje do SISTRUT no arquivo", () => {
     ]);
   });
 });
+
+describe("campos de laje do SISTRUT no arquivo, rodada 2", () => {
+  /** A obra de exemplo com duas lajes com polígono, grupo, i por lado, μ informado, a
+   *  lista do LAJECALC 1 e "apoia em". */
+  function obraRodada2(): Obra {
+    const obra = obraComLajeSistrut();
+    const p = obra.pavimentos[0]!;
+    const l = p.lajes[0]!;
+    p.lajes[0] = {
+      ...l,
+      grupo: 1,
+      coeficientesLados: [null, null, null, null, 1.5, null],
+      mu: 1,
+      muInformado: true,
+    };
+    p.continuidadesLajes = [{ lajeA: l.id, ladoA: 4 }];
+    p.vigas = [
+      { id: "V1", nome: "V1", x1: 0, y1: 0, x2: 6, y2: 0, bw: 12, h: 50, cargaLinear: 0 },
+      {
+        id: "V2",
+        nome: "V2",
+        x1: 3,
+        y1: 0,
+        x2: 3,
+        y2: 3,
+        bw: 12,
+        h: 50,
+        cargaLinear: 0,
+        apoiaEm: ["V1"],
+      },
+    ];
+    return obra;
+  }
+
+  it("salvar e abrir devolve a mesma obra", () => {
+    const obra = obraRodada2();
+    expect(lerObra(serializarObra(obra))).toEqual({ ok: true, obra });
+  });
+
+  it("recusa referências que não existem e listas que não casam com os lados", () => {
+    const d = JSON.parse(serializarObra(obraRodada2()));
+    const p = d.pavimentos[0];
+    const id = p.lajes[0].id;
+    p.lajes[0].coeficientesLados = [1.5];
+    p.continuidadesLajes = [
+      { lajeA: id, ladoA: 6 },
+      { lajeA: "L9", ladoA: 0 },
+      { lajeA: id, ladoA: 0, ladoB: 1 },
+    ];
+    p.vigas[1].apoiaEm = ["V9"];
+    expect(erros(d)).toEqual([
+      "pavimentos[0].lajes[0].coeficientesLados: esperado um item por lado do polígono (6), veio [1.5].",
+      `pavimentos[0].continuidadesLajes[0].ladoA: a laje ${id} tem 6 lados, veio 6.`,
+      'pavimentos[0].continuidadesLajes[1]: laje L9 não existe no pavimento, veio "L9".',
+      "pavimentos[0].continuidadesLajes[2].ladoB: sem lajeB, veio 1.",
+      'pavimentos[0].vigas[1].apoiaEm[0]: esperado o id de outra viga do pavimento, veio "V9".',
+    ]);
+  });
+});

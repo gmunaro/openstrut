@@ -13,7 +13,7 @@ import type {
   PainelLajes,
   ParametrosLaje,
 } from "../base/tipos";
-import { ErroNaoConverge } from "../base/f32";
+import { ErroNaoConverge, ErroQB } from "../base/f32";
 import { EstadoLajecalc, S_4019b, areaLajegeom } from "./charneiras";
 import {
   S_50187,
@@ -66,7 +66,7 @@ const calculavel = (l: LajeSistrut) => l.tipo === 0 || l.tipo === 3;
  *     com H, os momentos (opção 5).
  *  4. Com `otimiza`, a otimização dos negativos (opção 6), que recalcula as lajes
  *     cujo código mudou. */
-export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza) => {
+export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza, paraNaPrimeiraFalha) => {
   return (painel, parametros, modo) => {
     const avisos: string[] = [];
     const memoria: Etapa[] = [];
@@ -109,13 +109,25 @@ export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza) => {
             parametros,
             modo,
           );
+    // laje em que a opção 5 "todas" do original parou (`paraNaPrimeiraFalha`)
+    let parou: string | undefined;
+    const para = (laje: LajeSistrut, e: unknown) => {
+      if (paraNaPrimeiraFalha && e instanceof ErroQB) parou = laje.nome;
+    };
     for (const laje of lajes) {
       if (!calculavel(laje)) continue;
+      if (parou !== undefined) {
+        avisos.push(
+          `${laje.nome}: não calculada: a opção 5 "todas" do original para na laje ${parou} (erro de execução, volta ao menu).`,
+        );
+        continue;
+      }
       let calculada: ReturnType<typeof calculaSemH>;
       try {
         calculada = calculaSemH(laje, painel, parametros, modo);
       } catch (e) {
         avisos.push(`${laje.nome}: não calculada (${e instanceof Error ? e.message : String(e)})`);
+        para(laje, e);
         continue;
       }
       const { preparada, coeficiente } = calculada;
@@ -139,6 +151,7 @@ export const esforcosDoPainelCom: EsforcosDoPainelCom = (otimiza) => {
         avisos.push(
           `${laje.nome}: momentos não calculados (${e instanceof Error ? e.message : String(e)})`,
         );
+        para(laje, e);
       }
     }
 

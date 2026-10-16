@@ -13,6 +13,7 @@ import {
   type Pilar,
   type Viga,
 } from "../dominio/obra";
+import type { TrechoPilar } from "../dominio/obra";
 import {
   TOL,
   colineares,
@@ -142,6 +143,26 @@ interface VigaEixo {
   eixo: Eixo;
 }
 
+/** Escolha explícita do par (`Viga.apoiaEm`, o "Vx apoia em Vy" do LAJEMONT): true se
+ *  `a` se apoia em `b`, false se `b` se apoia em `a`, undefined sem escolha. */
+const escolha = (a: VigaEixo, b: VigaEixo) =>
+  a.viga.apoiaEm?.includes(b.viga.id)
+    ? true
+    : b.viga.apoiaEm?.includes(a.viga.id)
+      ? false
+      : undefined;
+
+/** O ponto está no trecho do pilar-parede (tolerância TOL), como o LAJEMONT o procura
+ *  (pilarDoPonto, LAJEMONT.BAS:4831-4920): faixa exata na direção do trecho. */
+function noTrecho(t: TrechoPilar, x: number, y: number) {
+  const { inicio: a, fim: b } = t;
+  const dentro = (v: number, p: number, q: number) => v >= Math.min(p, q) && v <= Math.max(p, q);
+  if (Math.abs(a.x - b.x) <= TOL) return Math.abs(x - a.x) <= TOL && dentro(y, a.y, b.y);
+  if (Math.abs(a.y - b.y) <= TOL) return Math.abs(y - a.y) <= TOL && dentro(x, a.x, b.x);
+  const naReta = Math.abs(y - (((b.y - a.y) * (x - a.x)) / (b.x - a.x) + a.y)) <= TOL;
+  return naReta && dentro(x, a.x, b.x) && dentro(y, a.y, b.y);
+}
+
 /** Num cruzamento sem pilar, decide se `a` se apoia em `b` (regra da V2; a V1
  *  punha pilar em todo cruzamento). A viga que termina no ponto se apoia na que
  *  passa; se as duas passam, a de menor h se apoia na de maior h (empate: a mais
@@ -149,6 +170,8 @@ interface VigaEixo {
  *  terminam no ponto, aqui nenhuma se apoia; `geometriaDasVigas` depois apoia a que
  *  ficaria sem 2 apoios na outra (viga sobre as pontas de balanços). */
 function apoiaEm(a: VigaEixo, b: VigaEixo, sa: number, sb: number) {
+  const escolhida = escolha(a, b);
+  if (escolhida !== undefined) return escolhida;
   const aTermina = extremidade(a.eixo, sa);
   const bTermina = extremidade(b.eixo, sb);
   if (aTermina !== bTermina) return aTermina;
@@ -186,10 +209,55 @@ export function geometriaDasVigas(pavimento: Pavimento): {
     else avisos.push(`Viga ${viga.nome} não é horizontal nem vertical: ignorada.`);
   }
 
+  // pilares-parede (`Pavimento.trechosPilares`): apoio em cada ponto do eixo sobre o
+  // trecho, como o LAJEMONT (L_312b3, LAJEMONT.BAS:4819-4920): as pontas da viga, os
+  // cruzamentos com outras vigas e os vértices das lajes que caem nele; o centro, onde
+  // fica o pilar da V2, não é ponto do eixo
+  const paredes = (pavimento.trechosPilares ?? []).flatMap((t) => {
+    const p = pavimento.pilares.find((x) => x.id === t.pilar);
+    return p ? [{ t, p }] : [];
+  });
+  const paredeEm = (x: number, y: number) => paredes.find((w) => noTrecho(w.t, x, y))?.p;
+  const temPilar = (x: number, y: number) =>
+    pilarEm(pavimento.pilares, x, y) !== undefined || paredeEm(x, y) !== undefined;
+  const verticesDasLajes = pavimento.lajes.flatMap(
+    (l) =>
+      l.poligono ?? [
+        { x: l.x, y: l.y },
+        { x: l.x, y: l.y + l.ly },
+        { x: l.x + l.lx, y: l.y + l.ly },
+        { x: l.x + l.lx, y: l.y },
+      ],
+  );
+  const apoiosNasParedes = (ve: VigaEixo) => {
+    if (paredes.length === 0) return [];
+    const ss = [ve.eixo.s1, ve.eixo.s2];
+    for (const outra of vigasEixo) {
+      if (outra.eixo.horizontal === ve.eixo.horizontal) continue;
+      const ponto = ve.eixo.horizontal
+        ? cruzamento(ve.eixo, outra.eixo)
+        : cruzamento(outra.eixo, ve.eixo);
+      if (ponto) ss.push(ve.eixo.horizontal ? ponto.x : ponto.y);
+    }
+    for (const v of verticesDasLajes) {
+      const s = posicaoNoEixo(ve.eixo, v.x, v.y);
+      if (s !== undefined) ss.push(s);
+    }
+    const apoios: { s: number; apoio: ApoioMontado }[] = [];
+    for (const s of ss) {
+      if (apoios.some((a) => Math.abs(a.s - s) <= TOL)) continue;
+      const { x, y } = pontoDoEixo(ve.eixo, s);
+      const p = paredeEm(x, y);
+      if (p) apoios.push({ s, apoio: { tipo: "pilar", id: p.id, nome: p.nome } });
+    }
+    return apoios;
+  };
+
   // apoios de cada viga: pilares sobre o eixo e vigas em que ela se apoia
   const apoiosPorViga = vigasEixo.map((ve) => {
-    const apoios: { s: number; apoio: ApoioMontado }[] = [];
+    const apoios: { s: number; apoio: ApoioMontado }[] = apoiosNasParedes(ve);
     for (const p of pavimento.pilares) {
+      if (paredes.some((w) => w.p.id === p.id)) continue;
       const s = posicaoNoEixo(ve.eixo, p.x, p.y);
       if (s !== undefined) apoios.push({ s, apoio: { tipo: "pilar", id: p.id, nome: p.nome } });
     }
@@ -198,7 +266,7 @@ export function geometriaDasVigas(pavimento: Pavimento): {
       const ponto = ve.eixo.horizontal
         ? cruzamento(ve.eixo, outra.eixo)
         : cruzamento(outra.eixo, ve.eixo);
-      if (!ponto || pilarEm(pavimento.pilares, ponto.x, ponto.y)) continue;
+      if (!ponto || temPilar(ponto.x, ponto.y)) continue;
       const s = ve.eixo.horizontal ? ponto.x : ponto.y;
       const so = outra.eixo.horizontal ? ponto.x : ponto.y;
       if (apoiaEm(ve, outra, s, so))
@@ -217,10 +285,12 @@ export function geometriaDasVigas(pavimento: Pavimento): {
     if (!precisa[i]) return;
     for (const [j, outra] of vigasEixo.entries()) {
       if (outra.eixo.horizontal === ve.eixo.horizontal || precisa[j]) continue;
+      // com escolha explícita do par, vale ela (já aplicada em `apoiaEm`)
+      if (escolha(ve, outra) !== undefined) continue;
       const ponto = ve.eixo.horizontal
         ? cruzamento(ve.eixo, outra.eixo)
         : cruzamento(outra.eixo, ve.eixo);
-      if (!ponto || pilarEm(pavimento.pilares, ponto.x, ponto.y)) continue;
+      if (!ponto || temPilar(ponto.x, ponto.y)) continue;
       const s = ve.eixo.horizontal ? ponto.x : ponto.y;
       const so = outra.eixo.horizontal ? ponto.x : ponto.y;
       if (!extremidade(ve.eixo, s) || !extremidade(outra.eixo, so)) continue;
