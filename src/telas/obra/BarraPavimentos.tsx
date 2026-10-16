@@ -1,6 +1,9 @@
 // Barra de pavimentos: escolhe o pavimento ativo e edita o ativo (nome,
 // pé-direito, repetições, posição, apagar, copiar a planta de outro).
-import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
+// No celular os pavimentos rolam na horizontal numa linha só e os campos do ativo
+// ficam recolhidos atrás do botão "Editar pavimento".
+import { ArrowDown, ArrowUp, Copy, Plus, Settings2, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,6 +27,7 @@ import {
   problemaRepeticoes,
   renomearPavimento,
 } from "../pavimentos";
+import { useCompacto } from "../tela";
 import { useConfirmacao } from "../useConfirmacao";
 import { CampoTexto } from "./campos";
 import { CampoPavimentoNumero } from "./BarraPavimentosNumero";
@@ -34,6 +38,10 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
   const indice = obra.pavimentos.findIndex((p) => p.id === ativoId);
   const ativo = obra.pavimentos[indice];
   const { confirmar, dialogo } = useConfirmacao();
+  const compacto = useCompacto();
+  const [editando, setEditando] = useState(false);
+  // no celular os botões de ícone crescem para o alvo de toque (44 px)
+  const icone = compacto ? "size-11 [&_svg:not([class*='size-'])]:size-4" : undefined;
 
   const novo = () => {
     // a criação precisa do id do pavimento novo para selecioná-lo depois
@@ -75,9 +83,25 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
   };
 
   return (
-    <div className="bg-card flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2 print:hidden">
-      <nav aria-label="Pavimentos" className="flex flex-wrap items-center gap-1">
-        <span className="text-muted-foreground mr-1 text-xs">Pavimentos (topo → base)</span>
+    <div
+      className={cn(
+        "bg-card flex flex-wrap items-center border-b print:hidden",
+        compacto ? "gap-x-1 gap-y-1 px-1 py-0.5" : "gap-x-4 gap-y-2 px-4 py-2",
+      )}
+    >
+      <nav
+        aria-label="Pavimentos"
+        className={cn(
+          "flex items-center gap-1",
+          // celular: uma linha que rola de lado, sem barra de rolagem à vista
+          compacto
+            ? "min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none]"
+            : "flex-wrap",
+        )}
+      >
+        <span className={cn("text-muted-foreground mr-1 text-xs", compacto && "sr-only")}>
+          Pavimentos (topo → base)
+        </span>
         {obra.pavimentos.map((p) => (
           <button
             key={p.id}
@@ -86,6 +110,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
             aria-current={p.id === ativoId ? "true" : undefined}
             className={cn(
               "rounded-md border px-2 py-0.5 text-xs",
+              compacto && "h-11 shrink-0 px-3 text-sm whitespace-nowrap",
               p.id === ativoId
                 ? "border-primary bg-primary/15 text-foreground"
                 : "text-muted-foreground hover:bg-accent",
@@ -98,6 +123,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
         <Button
           variant="ghost"
           size="icon-xs"
+          className={cn(icone, "shrink-0")}
           title="Novo pavimento (acima do ativo)"
           aria-label="Novo pavimento"
           onClick={novo}
@@ -105,11 +131,29 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
           <Plus />
         </Button>
       </nav>
+      {compacto && (
+        <Button
+          variant={editando ? "secondary" : "ghost"}
+          size="icon"
+          className="size-11"
+          aria-label="Editar pavimento"
+          aria-expanded={editando}
+          onClick={() => setEditando((e) => !e)}
+        >
+          <Settings2 />
+        </Button>
+      )}
 
-      {ativo && (
+      {ativo && (!compacto || editando) && (
         // key: ao trocar de pavimento os campos recomeçam com os valores dele (sem levar
         // texto digitado e não confirmado de um pavimento para outro)
-        <div key={ativo.id} className="flex flex-wrap items-center gap-2 text-xs">
+        <div
+          key={ativo.id}
+          className={cn(
+            "flex flex-wrap items-center gap-2 text-xs",
+            compacto && "basis-full gap-x-3 px-2 pb-1 text-sm",
+          )}
+        >
           <CampoTexto
             rotulo="Nome"
             className="w-36"
@@ -139,6 +183,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
           <Button
             variant="ghost"
             size="icon-xs"
+            className={icone}
             title="Subir (para o topo)"
             aria-label="Subir pavimento"
             disabled={indice <= 0}
@@ -149,6 +194,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
           <Button
             variant="ghost"
             size="icon-xs"
+            className={icone}
             title="Descer (para a base)"
             aria-label="Descer pavimento"
             disabled={indice >= obra.pavimentos.length - 1}
@@ -160,7 +206,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
             <Select value="" onValueChange={(id) => void copiarDe(id)}>
               <SelectTrigger
                 size="sm"
-                className="h-7 text-xs"
+                className={cn("h-7 text-xs", compacto && "h-11")}
                 aria-label="Copiar planta de outro pavimento"
               >
                 <Copy className="size-3.5" />
@@ -180,11 +226,11 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
           <Button
             variant="ghost"
             size="icon-xs"
+            className={cn("hover:text-destructive", icone)}
             title="Apagar pavimento"
             aria-label="Apagar pavimento"
             disabled={obra.pavimentos.length <= 1}
             onClick={() => void apagar()}
-            className="hover:text-destructive"
           >
             <Trash2 />
           </Button>

@@ -1,8 +1,11 @@
 // Tela da obra aberta: cabeçalho (arquivo, desfazer/refazer, materiais,
 // unidades), barra de pavimentos e as abas Planta | Resultados | Relatório.
+// No celular (useCompacto) o cabeçalho fica numa linha e as outras ações vão para
+// a folha "Mais ações"; deitado, as abas sobem para o cabeçalho.
 // Salva o rascunho no navegador a cada edição (com debounce).
 import { Link } from "@tanstack/react-router";
 import {
+  EllipsisVertical,
   FileDown,
   FolderOpen,
   Home,
@@ -15,7 +18,15 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { VERSAO_ATUAL } from "../../armazenamento/arquivo";
 import { criarSalvadorRascunho } from "../../armazenamento/rascunho";
 import type { Obra } from "../../dominio/obra";
@@ -34,6 +45,7 @@ import { Erros } from "../Erros";
 import { Relatorio } from "../relatorio/Relatorio";
 import { Resultados } from "../resultados/Resultados";
 import { useSessao } from "../sessao";
+import { useCompacto, usePaisagem } from "../tela";
 import { BarraPavimentos } from "./BarraPavimentos";
 import { DialogoMateriais } from "./DialogoMateriais";
 import { DialogoUnidades } from "./DialogoUnidades";
@@ -156,6 +168,11 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const botaoAbrir = useRef<HTMLButtonElement>(null);
   const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao(botaoAbrir);
   const [aba, setAba] = useState("planta");
+  const compacto = useCompacto();
+  const paisagem = usePaisagem() && compacto;
+  // celular: "Mais ações" abre a folha com o resto do cabeçalho e recebe o foco dos diálogos
+  const botaoMais = useRef<HTMLButtonElement>(null);
+  const [menu, setMenu] = useState(false);
 
   const calculo = useMemo(() => calcular(obra), [obra]);
   const detalhamento = useMemo(
@@ -199,108 +216,256 @@ function ObraAberta({ obra }: { obra: Obra }) {
     void abrirArquivo();
   };
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex flex-wrap items-center gap-2 border-b px-4 py-2 print:hidden">
-        <Button asChild variant="ghost" size="icon-sm" title="Início" aria-label="Início">
-          <Link to="/">
-            <Home />
-          </Link>
-        </Button>
-        <div className="mr-2 min-w-0">
-          <h1 className="truncate text-base leading-tight font-semibold">
-            {obra.nome || "(sem nome)"}
-          </h1>
-          <p className="text-muted-foreground truncate text-[11px]">
-            {nomeArquivo ?? "sem arquivo"}
-            {naoSalvo ? " · alterações não salvas em arquivo" : " · salvo"}
-          </p>
-        </div>
-        <Badge variant="outline">{NOME_NORMA[obra.norma]}</Badge>
-        <Badge variant="outline">{unidades === "si" ? "SI" : "tf"}</Badge>
+  const abas = (
+    <TabsList
+      variant="line"
+      className={
+        compacto
+          ? paisagem
+            ? "h-12! shrink-0 print:hidden"
+            : "h-12! w-full shrink-0 border-b px-1 print:hidden"
+          : "mx-4 mt-2 print:hidden"
+      }
+    >
+      <TabsTrigger value="planta">Planta</TabsTrigger>
+      <TabsTrigger value="resultados">Resultados</TabsTrigger>
+      <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+    </TabsList>
+  );
+  /** Fecha a folha de ações e faz a ação escolhida. */
+  const doMenu = (acao: () => void) => () => {
+    setMenu(false);
+    acao();
+  };
+  const linhaMenu = "h-12 w-full justify-start px-3 text-base";
 
-        <div className="ml-auto flex flex-wrap items-center gap-1">
+  return (
+    <Tabs value={aba} onValueChange={setAba} className="flex min-h-0 flex-1 flex-col gap-0">
+      {compacto ? (
+        <header className="flex items-center gap-0.5 border-b px-1 py-0.5 print:hidden">
+          <Button asChild variant="ghost" size="icon" className="size-11" aria-label="Início">
+            <Link to="/">
+              <Home />
+            </Link>
+          </Button>
+          <div className="min-w-0 flex-1 px-1">
+            <h1 className="truncate text-sm leading-tight font-semibold">
+              {obra.nome || "(sem nome)"}
+            </h1>
+            <p className="text-muted-foreground truncate text-[11px]">
+              {NOME_NORMA[obra.norma]} · {unidades === "si" ? "SI" : "tf"} ·{" "}
+              {naoSalvo ? "não salvo em arquivo" : "salvo"}
+            </p>
+          </div>
+          {paisagem && abas}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="size-11"
             onClick={desfazer}
             disabled={!podeDesfazer}
-            title="Desfazer"
+            aria-label="Desfazer"
           >
-            <Undo2 /> Desfazer
+            <Undo2 />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="size-11"
             onClick={refazer}
             disabled={!podeRefazer}
-            title="Refazer"
+            aria-label="Refazer"
           >
-            <Redo2 /> Refazer
+            <Redo2 />
           </Button>
           <Button
-            ref={botaoMateriais}
-            variant="outline"
-            size="sm"
-            onClick={() => setDialogo("materiais")}
+            size="icon"
+            className="size-11"
+            onClick={() => void salvar(false)}
+            aria-label="Salvar"
           >
-            <SlidersHorizontal /> Materiais
+            <Save />
           </Button>
           <Button
-            ref={botaoUnidades}
-            variant="outline"
-            size="sm"
-            onClick={() => setDialogo("unidades")}
+            ref={botaoMais}
+            variant="ghost"
+            size="icon"
+            className="size-11"
+            aria-label="Mais ações"
+            aria-haspopup="dialog"
+            onClick={() => setMenu(true)}
           >
-            <Ruler /> Unidades
+            <EllipsisVertical />
           </Button>
-          {/* .LAP, VIGA.INI, .DSP, PILAR.INI, .PIP e as opções da rodada: só o SISTRUT */}
-          {obra.norma === "nb1-78" && <EditorParametros obra={obra} />}
-          <Button ref={botaoAbrir} variant="outline" size="sm" onClick={() => void abrirOutra()}>
-            <FolderOpen /> Abrir
+          <Dialog open={menu} onOpenChange={setMenu}>
+            <DialogContent formaCompacta="folha" className="gap-2">
+              <DialogHeader className="text-left">
+                <DialogTitle>Ações da obra</DialogTitle>
+                <DialogDescription className="text-xs">
+                  {nomeArquivo ?? "sem arquivo"} ·{" "}
+                  {naoSalvo ? "alterações não salvas em arquivo" : "salvo"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-1">
+                <Button
+                  variant="ghost"
+                  className={linhaMenu}
+                  onClick={doMenu(() => setDialogo("materiais"))}
+                >
+                  <SlidersHorizontal /> Materiais
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={linhaMenu}
+                  onClick={doMenu(() => setDialogo("unidades"))}
+                >
+                  <Ruler /> Unidades
+                </Button>
+                {obra.norma === "nb1-78" && (
+                  <EditorParametros
+                    obra={obra}
+                    classeGatilho={cn(linhaMenu, "border-0 bg-transparent shadow-none")}
+                  />
+                )}
+                <Button
+                  variant="ghost"
+                  className={linhaMenu}
+                  onClick={doMenu(() => void abrirOutra())}
+                >
+                  <FolderOpen /> Abrir
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={linhaMenu}
+                  onClick={doMenu(() => void salvar(true))}
+                >
+                  <Save /> Salvar como…
+                </Button>
+                <BotaoExportar
+                  rotulo="Exportar DXF (formas)"
+                  motivo={motivoFormas}
+                  className={linhaMenu}
+                  aoClicar={doMenu(() => void exportar(motivoFormas, () => baixarFormasDxf(obra)))}
+                />
+                <BotaoExportar
+                  rotulo="Exportar DXF (armação)"
+                  motivo={motivoArmacao}
+                  className={linhaMenu}
+                  aoClicar={doMenu(
+                    () =>
+                      void exportar(motivoArmacao, () =>
+                        detalhamento ? baixarArmacaoDxf(obra, detalhamento) : null,
+                      ),
+                  )}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        </header>
+      ) : (
+        <header className="flex flex-wrap items-center gap-2 border-b px-4 py-2 print:hidden">
+          <Button asChild variant="ghost" size="icon-sm" title="Início" aria-label="Início">
+            <Link to="/">
+              <Home />
+            </Link>
           </Button>
-          <Button size="sm" onClick={() => void salvar(false)}>
-            <Save /> Salvar
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => void salvar(true)}>
-            Salvar como…
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="aria-disabled:opacity-50"
-            aria-disabled={motivoFormas !== undefined}
-            aria-describedby={motivoFormas ? "motivo-dxf-formas" : undefined}
-            title={motivoFormas}
-            onClick={() => void exportar(motivoFormas, () => baixarFormasDxf(obra))}
-          >
-            <FileDown /> Exportar DXF (formas)
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="aria-disabled:opacity-50"
-            aria-disabled={motivoArmacao !== undefined}
-            aria-describedby={motivoArmacao ? "motivo-dxf-armacao" : undefined}
-            title={motivoArmacao}
-            onClick={() =>
-              void exportar(motivoArmacao, () =>
-                detalhamento ? baixarArmacaoDxf(obra, detalhamento) : null,
-              )
-            }
-          >
-            <FileDown /> Exportar DXF (armação)
-          </Button>
-        </div>
-        {(motivoFormas || motivoArmacao) && (
-          // por que a exportação está indisponível, à vista e ligado ao botão (aria-describedby)
-          <p className="text-muted-foreground basis-full text-right text-[11px]">
-            {motivoFormas && <span id="motivo-dxf-formas">DXF de formas: {motivoFormas}</span>}
-            {motivoFormas && motivoArmacao && " · "}
-            {motivoArmacao && <span id="motivo-dxf-armacao">DXF de armação: {motivoArmacao}</span>}
-          </p>
-        )}
-      </header>
+          <div className="mr-2 min-w-0">
+            <h1 className="truncate text-base leading-tight font-semibold">
+              {obra.nome || "(sem nome)"}
+            </h1>
+            <p className="text-muted-foreground truncate text-[11px]">
+              {nomeArquivo ?? "sem arquivo"}
+              {naoSalvo ? " · alterações não salvas em arquivo" : " · salvo"}
+            </p>
+          </div>
+          <Badge variant="outline">{NOME_NORMA[obra.norma]}</Badge>
+          <Badge variant="outline">{unidades === "si" ? "SI" : "tf"}</Badge>
+
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={desfazer}
+              disabled={!podeDesfazer}
+              title="Desfazer"
+            >
+              <Undo2 /> Desfazer
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refazer}
+              disabled={!podeRefazer}
+              title="Refazer"
+            >
+              <Redo2 /> Refazer
+            </Button>
+            <Button
+              ref={botaoMateriais}
+              variant="outline"
+              size="sm"
+              onClick={() => setDialogo("materiais")}
+            >
+              <SlidersHorizontal /> Materiais
+            </Button>
+            <Button
+              ref={botaoUnidades}
+              variant="outline"
+              size="sm"
+              onClick={() => setDialogo("unidades")}
+            >
+              <Ruler /> Unidades
+            </Button>
+            {/* .LAP, VIGA.INI, .DSP, PILAR.INI, .PIP e as opções da rodada: só o SISTRUT */}
+            {obra.norma === "nb1-78" && <EditorParametros obra={obra} />}
+            <Button ref={botaoAbrir} variant="outline" size="sm" onClick={() => void abrirOutra()}>
+              <FolderOpen /> Abrir
+            </Button>
+            <Button size="sm" onClick={() => void salvar(false)}>
+              <Save /> Salvar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => void salvar(true)}>
+              Salvar como…
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="aria-disabled:opacity-50"
+              aria-disabled={motivoFormas !== undefined}
+              aria-describedby={motivoFormas ? "motivo-dxf-formas" : undefined}
+              title={motivoFormas}
+              onClick={() => void exportar(motivoFormas, () => baixarFormasDxf(obra))}
+            >
+              <FileDown /> Exportar DXF (formas)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="aria-disabled:opacity-50"
+              aria-disabled={motivoArmacao !== undefined}
+              aria-describedby={motivoArmacao ? "motivo-dxf-armacao" : undefined}
+              title={motivoArmacao}
+              onClick={() =>
+                void exportar(motivoArmacao, () =>
+                  detalhamento ? baixarArmacaoDxf(obra, detalhamento) : null,
+                )
+              }
+            >
+              <FileDown /> Exportar DXF (armação)
+            </Button>
+          </div>
+          {(motivoFormas || motivoArmacao) && (
+            // por que a exportação está indisponível, à vista e ligado ao botão (aria-describedby)
+            <p className="text-muted-foreground basis-full text-right text-[11px]">
+              {motivoFormas && <span id="motivo-dxf-formas">DXF de formas: {motivoFormas}</span>}
+              {motivoFormas && motivoArmacao && " · "}
+              {motivoArmacao && (
+                <span id="motivo-dxf-armacao">DXF de armação: {motivoArmacao}</span>
+              )}
+            </p>
+          )}
+        </header>
+      )}
 
       {(mensagem ||
         bloqueio ||
@@ -343,46 +508,72 @@ function ObraAberta({ obra }: { obra: Obra }) {
 
       <BarraPavimentos obra={obra} ativoId={pavimentoId} />
 
-      <Tabs value={aba} onValueChange={setAba} className="flex min-h-0 flex-1 flex-col gap-0">
-        <TabsList variant="line" className="mx-4 mt-2 print:hidden">
-          <TabsTrigger value="planta">Planta</TabsTrigger>
-          <TabsTrigger value="resultados">Resultados</TabsTrigger>
-          <TabsTrigger value="relatorio">Relatório</TabsTrigger>
-        </TabsList>
-        <TabsContent value="planta" className="min-h-0 flex-1">
-          <EditorPlanta
-            {...(resultadoPavimento ? { resultado: resultadoPavimento } : {})}
-            {...(calculo.tipo === "ok" ? { pilares: calculo.resultado.pilares } : {})}
-          />
-        </TabsContent>
-        <TabsContent value="resultados" className="overflow-auto px-4 py-3">
+      {!paisagem && abas}
+      <TabsContent value="planta" className="min-h-0 flex-1">
+        <EditorPlanta
+          {...(resultadoPavimento ? { resultado: resultadoPavimento } : {})}
+          {...(calculo.tipo === "ok" ? { pilares: calculo.resultado.pilares } : {})}
+        />
+      </TabsContent>
+      <TabsContent value="resultados" className="compacto:px-3 overflow-auto px-4 py-3">
+        {/* largura máxima de leitura: em tela larga as colunas não se espalham */}
+        <div className="mx-auto max-w-[110rem]">
           <DetalhamentoContexto value={detalhamento}>
             <Resultados calculo={calculo} />
           </DetalhamentoContexto>
-        </TabsContent>
-        <TabsContent
-          value="relatorio"
-          className="overflow-auto px-4 py-3 print:overflow-visible print:p-0"
-        >
-          <DetalhamentoContexto value={detalhamento}>
-            <Relatorio obra={obra} calculo={calculo} />
-          </DetalhamentoContexto>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </TabsContent>
+      <TabsContent
+        value="relatorio"
+        className="compacto:px-3 overflow-auto px-4 py-3 print:overflow-visible print:p-0"
+      >
+        <DetalhamentoContexto value={detalhamento}>
+          <Relatorio obra={obra} calculo={calculo} />
+        </DetalhamentoContexto>
+      </TabsContent>
 
       <DialogoMateriais
         obra={obra}
         aberto={dialogo === "materiais"}
         aoMudarAberto={(a) => setDialogo(a ? "materiais" : null)}
-        botaoOrigem={botaoMateriais}
+        botaoOrigem={compacto ? botaoMais : botaoMateriais}
       />
       <DialogoUnidades
         aberto={dialogo === "unidades"}
         aoMudarAberto={(a) => setDialogo(a ? "unidades" : null)}
-        botaoOrigem={botaoUnidades}
+        botaoOrigem={compacto ? botaoMais : botaoUnidades}
       />
       {dialogoConfirmacao}
-    </div>
+    </Tabs>
+  );
+}
+
+/** Exportação na folha de ações do celular: indisponível, mostra o motivo embaixo. */
+function BotaoExportar({
+  rotulo,
+  motivo,
+  className,
+  aoClicar,
+}: {
+  rotulo: string;
+  motivo: string | undefined;
+  className: string;
+  aoClicar: () => void;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      className={cn(className, "h-auto min-h-12 flex-wrap py-2 aria-disabled:opacity-60")}
+      aria-disabled={motivo !== undefined}
+      onClick={aoClicar}
+    >
+      <FileDown /> {rotulo}
+      {motivo && (
+        <span className="text-muted-foreground basis-full pl-6 text-left text-xs whitespace-normal">
+          {motivo}
+        </span>
+      )}
+    </Button>
   );
 }
 

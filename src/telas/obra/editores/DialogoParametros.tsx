@@ -51,7 +51,8 @@ import {
 } from "./parametros";
 
 /** Botão "Parâmetros" e o diálogo do editor. */
-export function EditorParametros({ obra }: { obra: Obra }) {
+/** `classeGatilho`: estilo do botão que abre (no menu de ações do celular ele ocupa a linha). */
+export function EditorParametros({ obra, classeGatilho }: { obra: Obra; classeGatilho?: string }) {
   const [aberto, setAberto] = useState(false);
   return (
     <DialogoEditor
@@ -68,7 +69,7 @@ export function EditorParametros({ obra }: { obra: Obra }) {
         </>
       }
       gatilho={
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className={classeGatilho}>
           <SlidersHorizontal /> Parâmetros
         </Button>
       }
