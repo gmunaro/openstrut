@@ -56,7 +56,10 @@ export function DialogoEditor({
   return (
     <Dialog open={aberto} onOpenChange={aoMudarAberto}>
       <DialogTrigger asChild>{gatilho}</DialogTrigger>
-      <DialogContent className="max-h-[94vh] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-5 sm:max-w-5xl">
+      <DialogContent
+        formaCompacta="telaCheia"
+        className="max-h-[94vh] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-5 sm:max-w-5xl"
+      >
         <DialogHeader>
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription className="text-xs">{descricao}</DialogDescription>

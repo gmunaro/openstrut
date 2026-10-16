@@ -39,13 +39,26 @@ function DialogOverlay({
   );
 }
 
+/** Forma do diálogo no celular (variante `compacto:` do index.css). Fora dele, todos
+ *  ficam centrados. `centro`: confirmações curtas; `telaCheia`: formulários, que no
+ *  celular ocupam a tela inteira; `folha`: lista de ações presa à borda de baixo. */
+const FORMA_COMPACTA = {
+  centro: "",
+  telaCheia:
+    "compacto:content-start compacto:inset-0 compacto:top-0 compacto:left-0 compacto:h-dvh compacto:max-h-dvh! compacto:w-full compacto:max-w-none! compacto:translate-x-0 compacto:translate-y-0 compacto:rounded-none compacto:border-0 compacto:px-4 compacto:pt-[max(1rem,env(safe-area-inset-top))] compacto:pb-[max(1rem,env(safe-area-inset-bottom))] compacto:data-[state=open]:zoom-in-100 compacto:data-[state=closed]:zoom-out-100",
+  folha:
+    "compacto:top-auto compacto:bottom-0 compacto:left-0 compacto:w-full compacto:max-w-none! compacto:max-h-[85dvh]! compacto:translate-x-0 compacto:translate-y-0 compacto:rounded-b-none compacto:px-3 compacto:pb-[max(0.75rem,env(safe-area-inset-bottom))] compacto:data-[state=open]:zoom-in-100 compacto:data-[state=open]:slide-in-from-bottom-8",
+} as const;
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  formaCompacta = "centro",
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  formaCompacta?: keyof typeof FORMA_COMPACTA;
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -53,7 +66,9 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          // max-h + overflow: o diálogo cabe em qualquer tela e rola por dentro
+          "fixed top-[50%] left-[50%] z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          FORMA_COMPACTA[formaCompacta],
           className,
         )}
         {...props}
@@ -62,7 +77,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className="absolute top-4 right-4 rounded-xs opacity-70 compacto:top-[max(0.25rem,env(safe-area-inset-top))] compacto:right-1 compacto:flex compacto:size-11 compacto:items-center compacto:justify-center ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
             <span className="sr-only">Fechar</span>
