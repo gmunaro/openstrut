@@ -700,6 +700,43 @@ export function lerRep(texto: string): Lido<LinhaRep[]> {
 
 // ---------------------------------------------------------------- obra
 
+/** Um pilar do .RLP (LAJEMONT.BAS:600-625): "P5" + a carga de laje direto no pilar
+ *  (t, VAL(MID$(l, 15)), PILGEEDI.BAS:1017) na linha do pilar, e a linha seguinte com
+ *  as inclinações das vigas, "V1[0] >V4[270] >". */
+export interface PilarRlp {
+  pilar: string;
+  normal: number;
+  inclinacoes: string;
+}
+
+/** Lê o .RLP: depois do cabeçalho, pares de linhas (pilar e inclinações) até "FIM". A
+ *  linha do pilar é a que não tem "[" (PILGEEDI.BAS:1013-1015). */
+export function lerRlp(texto: string): Lido<PilarRlp[]> {
+  const linhas = semFimDeArquivo(texto).split(/\r?\n/);
+  const avisos: string[] = [];
+  const pilares: PilarRlp[] = [];
+  const inicio = linhas.findIndex((l) => l.includes("INCLINACOES"));
+  if (inicio < 0)
+    return {
+      ok: false,
+      erros: ['.RLP: cabeçalho "SOMATORIA DE REACOES EM PILARES E INCLINACOES" não encontrado.'],
+    };
+  for (let i = inicio + 1; i < linhas.length; i++) {
+    const l = linhas[i]!;
+    if (l.includes("FIM")) break;
+    if (!/^\S/.test(l) || l.includes("[") || l.trim() === "") continue;
+    if (l.includes("OBRA") || l.includes("GERADO")) continue;
+    pilares.push({
+      pilar: l.slice(0, 15).trim(),
+      normal: qbVal(l.slice(14)),
+      inclinacoes: linhas[i + 1] ?? "",
+    });
+    i += 1;
+  }
+  if (pilares.length === 0) avisos.push(".RLP sem pilares.");
+  return { ok: true, valor: pilares, avisos };
+}
+
 export interface RepPilarSistrut {
   texto: string;
   /** Faixa de níveis do PILGEEDI, 1-based (PILGEEDI.BAS:557). */
@@ -707,6 +744,9 @@ export interface RepPilarSistrut {
   nivelFinal: number;
   /** Padrão "substitui". */
   modo?: LeituraRep["modo"];
+  /** Texto do .RLP do LAJEMONT com o mesmo nome do .REP: o PILGEEDI o lê junto
+   *  (PILGEEDI.BAS:425-446): carga de laje no pilar e inclinações das vigas. */
+  rlp?: string;
 }
 
 export interface ArquivosPilarSistrut {
@@ -752,6 +792,10 @@ interface Lance {
   cargaTopo?: CargaTopoPilar;
   barras?: BarraPilarObra[];
   estribo?: { bitola: number; espacamento: number };
+  /** Barras do .PIL (as do PILAR, que o PILAREDI não lê, PILAREDI.BAS:3518-3545):
+   *  viram uma verificação de seção dada. */
+  barrasPil?: BarraPilarObra[];
+  cargaBase?: CargaTopoPilar;
 }
 
 const semEspacos = (s: string) => s.replace(/\s+/g, "");
@@ -830,11 +874,9 @@ function lancesDaColuna(
 ) {
   const nome = semEspacos(col.nome);
   const nivel = (n: number) => col.niveis[n - col.nivelInferior];
-  const baixo = cargas[col.nivelInferior - 1];
-  if (baixo && (baixo.normal !== 0 || baixo.momentos.length > 0))
-    avisos.push(
-      `Coluna ${nome}: carga de ${fmt(baixo.normal)} t no nível ${col.nivelInferior}, o mais baixo da coluna; não entra em nenhum lance (o PILAREDI só a soma no resumo da fundação). Descartada.`,
-    );
+  // carga no nível mais baixo: não entra em lance nenhum, só no resumo na fundação
+  // (PILAREDI.BAS:960-1000, 4067): `cargaBase` do primeiro lance
+  const cargaBase = cargaTopoDe(cargas[col.nivelInferior - 1]);
   const ventoTopo = ventoDe(nivel(col.nivelSuperior)?.vento);
   if (ventoTopo)
     avisos.push(
@@ -848,7 +890,10 @@ function lancesDaColuna(
       avisos.push(`${onde}: nenhuma seção do .COL cobre o lance.`);
     const ex =
       secao && secao.indice > 0 && secao.inicio === j ? secao.item.excentricidade : undefined;
-    const armadura = itemDoLance(col.armaduras, col.nivelInferior, j)?.item;
+    // variação de armadura (A_141e): vale do fim da anterior até o fim dela; a obra a
+    // guarda no lance onde ela começa (`Pilar.armadura`, PILAREDI 3.2)
+    const daVariacao = itemDoLance(col.armaduras, col.nivelInferior, j);
+    const armadura = daVariacao && daVariacao.inicio === j ? daVariacao.item : undefined;
     const barras = armadura?.barras.flatMap((b) => {
       const bitola = bitolas[b.indiceBitola]?.bitola;
       if (bitola === undefined || !Number.isInteger(b.indiceBitola)) {
@@ -864,6 +909,7 @@ function lancesDaColuna(
       j === col.nivelSuperior - 1 ? vinculosDoCodigo(nivel(j + 1)?.vinculo) : undefined;
     const vento = ventoDe(nivel(j)?.vento);
     const cargaTopo = cargaTopoDe(cargas[j]);
+    const base = j === col.nivelInferior ? cargaBase : undefined;
     lances.set(j, {
       ...(secao
         ? {
@@ -875,6 +921,7 @@ function lancesDaColuna(
       ...(ex && (ex.x !== 0 || ex.y !== 0) ? { excentricidade: ex } : {}),
       ...(vento ? { vento } : {}),
       ...(cargaTopo ? { cargaTopo } : {}),
+      ...(base ? { cargaBase: base } : {}),
       ...(barras && barras.length > 0 ? { barras } : {}),
       ...(armadura && armadura.estribo.bitola > 0 ? { estribo: armadura.estribo } : {}),
     });
@@ -926,11 +973,18 @@ function cargasDasColunas(
             `.REP ${i + 1}: o pilar ${semEspacos(linha.pilar)} não casa com nenhuma coluna do .COL que cubra o nível ${nivel}; carga ignorada nesse nível, como no PILGEEDI.`,
           );
     }
+    const rlp = rep.rlp === undefined ? undefined : lerRlp(rep.rlp);
+    if (rlp && !rlp.ok) {
+      erros.push(...rlp.erros.map((e) => `.RLP ${i + 1}: ${e}`));
+      return;
+    }
+    if (rlp) avisos.push(...rlp.avisos);
     leituras.push({
       linhas: lido.valor,
       nivelInicial: rep.nivelInicial - 1,
       nivelFinal: rep.nivelFinal - 1,
       modo: rep.modo ?? "substitui",
+      ...(rlp ? { rlp: rlp.valor } : {}),
     });
   });
   if (erros.length > 0) return { ok: false, erros };
@@ -1023,9 +1077,11 @@ function pipDaObra(
 const aplicaLance = (p: Pilar, l: Lance, cargas: boolean): Pilar => {
   const geo = l.geometria ?? { b: p.b, h: p.h, ...(p.secao ? { secao: p.secao } : {}) };
   const carga = cargas ? l.cargaTopo : p.cargaTopo;
-  const verificacoes = l.barras
-    ? [{ barras: l.barras, ...(l.estribo ? { estribo: l.estribo } : {}) }]
-    : p.verificacoes;
+  const cargaBase = cargas ? l.cargaBase : p.cargaBase;
+  const armadura = l.barras
+    ? { barras: l.barras, ...(l.estribo ? { estribo: l.estribo } : {}) }
+    : p.armadura;
+  const verificacoes = l.barrasPil ? [{ barras: l.barrasPil }] : p.verificacoes;
   return {
     id: p.id,
     nome: p.nome,
@@ -1037,7 +1093,10 @@ const aplicaLance = (p: Pilar, l: Lance, cargas: boolean): Pilar => {
     ...(l.excentricidade ? { excentricidade: l.excentricidade } : {}),
     ...(l.vento ? { vento: l.vento } : {}),
     ...(carga ? { cargaTopo: carga } : {}),
+    ...(cargaBase ? { cargaBase } : {}),
     ...(verificacoes ? { verificacoes } : {}),
+    ...(armadura ? { armadura } : {}),
+    ...(p.transicao ? { transicao: p.transicao } : {}),
   };
 };
 
@@ -1053,11 +1112,16 @@ interface Contexto {
 function parametrosPilarDe(
   ini: Partial<IniPilar>,
   pip: PipPilar | undefined,
+  col?: ArquivoCol,
 ): ParametrosPilarObra | undefined {
   const dif = pip ? diferencasPip(pip) : {};
+  // com as armaduras do .COL, as variações são as gravadas (`Pilar.armadura`) e o
+  // motor não acrescenta as de "n em n": "N" (V_168c$ = "0")
+  const comArmaduras = col?.colunas.some((c) => c.armaduras.length > 0) ?? false;
   const r: ParametrosPilarObra = {
     ...(Object.keys(ini).length > 0 ? { ini } : {}),
     ...(Object.keys(dif).length > 0 ? { pip: dif } : {}),
+    ...(comArmaduras ? { variaArmadura: 0 } : {}),
   };
   return Object.keys(r).length > 0 ? r : undefined;
 }
@@ -1097,7 +1161,7 @@ function gerarObra(ctx: Contexto, nome: string | undefined): Obra | { erros: str
     bases.add(base);
     if (c.nivelInferior > 1)
       avisos.push(
-        `Coluna ${semEspacos(c.nome)} começa no nível ${c.nivelInferior}: não chega à fundação, e o motor marca falha nesse pilar.`,
+        `Coluna ${semEspacos(c.nome)} começa no nível ${c.nivelInferior}, sobre viga de transição: o motor a dimensiona desde a base e marca a carga da base como falha até ela ir para a viga (Viga.cargas) e o pilar ganhar transicao.`,
       );
     if (c.secoes.length === 0)
       avisos.push(
@@ -1113,7 +1177,7 @@ function gerarObra(ctx: Contexto, nome: string | undefined): Obra | { erros: str
         geometria: pil
           ? { b: pil.b, h: pil.h, ...(pil.secao ? { secao: pil.secao } : {}) }
           : { b: 20, h: 20 },
-        ...(pil && pil.barras.length > 0 && !l.geometria ? { barras: pil.barras } : {}),
+        ...(pil && pil.barras.length > 0 && !l.geometria ? { barrasPil: pil.barras } : {}),
       };
       const pilar: Pilar = {
         id: `${base}@${pav.id}`,
@@ -1151,7 +1215,7 @@ function gerarObra(ctx: Contexto, nome: string | undefined): Obra | { erros: str
     cobrimentoViga: PARAMETROS_DSP.cobrimento,
     cobrimentoPilar,
   };
-  const parametrosPilar = parametrosPilarDe(ini, ctx.pip);
+  const parametrosPilar = parametrosPilarDe(ini, ctx.pip, col);
   return {
     versao: 3,
     nome: nome ?? col.obra,
@@ -1250,12 +1314,13 @@ function completarObra(ctx: Contexto, base: Obra, cargas: boolean): Obra {
       `.COL: aço classe ${mat.classeAco}, a obra tem classe ${obra.materiais.classeAco}; gravado em parametrosPilar.ini.classeAco.`,
     );
   }
-  const novos = parametrosPilarDe(ini, ctx.pip);
+  const novos = parametrosPilarDe(ini, ctx.pip, col);
   const { parametrosPilar: antigos, ...resto } = obra;
   const parametrosPilar: ParametrosPilarObra = {
     ...antigos,
     ...(novos?.ini ? { ini: novos.ini } : {}),
     ...(ctx.pip ? { pip: novos?.pip ?? {} } : {}),
+    ...(novos?.variaArmadura !== undefined ? { variaArmadura: novos.variaArmadura } : {}),
   };
   return Object.keys(parametrosPilar).length > 0 ? { ...resto, parametrosPilar } : resto;
 }

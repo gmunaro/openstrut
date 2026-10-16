@@ -19,9 +19,10 @@ import type { BarraPilarObra, Obra, Pilar } from "../../dominio/obra";
 import { obraE2E } from "./__e2e__/obraE2E";
 import { bateComImpresso, CASOS_ORACULO, type CasoOraculo } from "./__oraculo__";
 import { KN_POR_TF } from "./base/unidades";
-import type { CasoPilar, VerificacaoPilar } from "./base/tipos";
+import type { CasoPilar, ColunaEdificio, VerificacaoPilar } from "./base/tipos";
 import { calcularObraSistrut, type LancePilarSistrut, type ResultadoSistrut } from "./obra";
 import { CASOS_PILAR } from "./pilares/__casos__";
+import { inclinacoesRlp, planoDeVariacoes } from "./pilaresDaObra";
 import { importarPilaresSistrut } from "../../armazenamento/sistrut/pilar";
 
 type Valor = number | string | undefined;
@@ -813,5 +814,193 @@ describe("PILAR.INI coeficienteTensao (o [12] do .COL) no predimensionamento", (
     const d = lanceP5(r)!.dimensionamento!;
     expect(d.as).toBeCloseTo(3.2, 2);
     expect(d.barras).toEqual([{ quantidade: 4, bitola: 10 }]);
+  });
+});
+
+// ---------------------------------------------------------------- rodada 2: variações, transição, .RLP
+
+describe("PILAREDI 3.2: variação de armadura (v2par_pilar_niveis, P5 25 × 40 em 3 níveis)", () => {
+  const caso = CASOS_PILAR.v2par_pilar_niveis!;
+  const calcula = (variaArmadura: number) => {
+    const o = obraE2EComP5({ b: 25, h: 40 }, 3);
+    o.parametrosPilar = { ...o.parametrosPilar, variaArmadura };
+    return calcularObraSistrut(o, { modo: "original" });
+  };
+  /** Ids do lance `nome` do caso, conferidos no lance de nível `nivel`. */
+  const confereLance = (r: ResultadoSistrut, nome: string, nivel: number) =>
+    confere(
+      { ...caso, valores: caso.valores.filter((v) => v.id.startsWith(`P5.${nome}.`)) },
+      (id) => campoP5(r, id.replace(`P5.${nome}.`, ""), nivel),
+    );
+
+  it('"N" (0): uma variação, dimensionada no FUND, vale nos três lances (PILAREDI.BAS:5988)', () => {
+    const r = calcula(0);
+    const p5 = r.lances.filter((l) => l.pilarId === "P5");
+    expect(p5.map((l) => l.variacao)).toEqual(
+      [0, 1, 2].map(() => ({ indice: 0, inicio: 0, fim: 3 })),
+    );
+    expect(p5[1]!.dimensionamento).toBe(p5[0]!.dimensionamento);
+    expect(p5[2]!.dimensionamento).toBe(p5[0]!.dimensionamento);
+    // o FUND é o dimensionado: os números do relatório do FUND do oráculo
+    const { faltando, difere } = confereLance(r, "FUND", 0);
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+  });
+
+  it("de 2 em 2: variações no FUND e no PAV2; o PAV1 fica com a do FUND (PILAREDI.BAS:5989-6003)", () => {
+    const r = calcula(2);
+    const p5 = r.lances.filter((l) => l.pilarId === "P5");
+    expect(p5.map((l) => l.variacao.inicio)).toEqual([0, 0, 2]);
+    expect(p5[1]!.dimensionamento).toBe(p5[0]!.dimensionamento);
+    for (const [nome, nivel] of [
+      ["FUND", 0],
+      ["PAV2", 2],
+    ] as const) {
+      const { faltando, difere } = confereLance(r, nome, nivel);
+      expect(faltando).toEqual([]);
+      expect(difere).toEqual([]);
+    }
+  });
+});
+
+describe("planoDeVariacoes: limite e níveis livres (PILAREDI.BAS:5990-6001)", () => {
+  const coluna = (n: number, livres: number[] = []): ColunaEdificio => ({
+    nome: "P 1",
+    pilarRep: "P 1",
+    niveis: Array.from({ length: n + 1 }, (_, k) => ({
+      cota: 3 * k,
+      secao: { tipo: "retangular" as const, b: 20, h: 20, barras: [] },
+      vinculoX: (livres.includes(k) ? 3 : 2) as 2 | 3,
+      vinculoY: (livres.includes(k) ? 3 : 2) as 2 | 3,
+      normalVento: 0,
+      mkx: 0,
+      mky: 0,
+    })),
+  });
+  it("15 lances de 1 em 1 com o máximo de fábrica (15): 0 + 14 − 3 > v deixa 12 variações", () => {
+    const p = planoDeVariacoes(coluna(15), [], 1, 15, []);
+    expect(p.map((v) => v.inicio)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(p.at(-1)).toEqual({ inicio: 11, fim: 15 });
+  });
+  it("nível livre nas duas direções é pulado: de 1 em 1 com o 1 livre começa em 0 e 2", () => {
+    expect(planoDeVariacoes(coluna(3, [1]), [], 1, 15, []).map((v) => v.inicio)).toEqual([0, 2]);
+  });
+  it("variação manual (Pilar.armadura) entra no plano", () => {
+    expect(planoDeVariacoes(coluna(4), [2], 0, 15, []).map((v) => v.inicio)).toEqual([0, 2]);
+  });
+});
+
+describe("Pilar.armadura com barras: a armadura do caso c verificada reproduz o caso_c_pilaredi", () => {
+  // 4 φ10 a 2,0 + 0,5 cm das faces, a que o PILAREDI escolheu e imprimiu, nas posições
+  // do arranjo (S_24f4a, com o ruído de 2e-6 da trigonometria em SINGLE, que decide o
+  // sinal do "-0.00" do MRx dos casos 2e/2f). Verificada sem escolha (REDEFINE,
+  // PILAREDI.BAS:6897-6898), dá os mesmos casos, As e estribo.
+  const escolhida = lanceP5(calcularObraSistrut(obraE2EComP5({}), { modo: "original" }));
+  const barras = escolhida!.dimensionamento!.secao.barras;
+  const r = calcularObraSistrut(obraE2EComP5({ armadura: { barras } }), { modo: "original" });
+  it("todos os valores impressos", () => {
+    expect(lanceP5(r)?.dimensionamento?.armaduraDada).toBe(true);
+    const { faltando, difere } = confere(CASOS_ORACULO.caso_c_pilaredi!, (id) =>
+      campoP5(r, id.replace(/^P5\./, "")),
+    );
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+  });
+});
+
+describe("cargaTopo.modo: outra leitura de .REP no nível (PILGEEDI.BAS:588-660)", () => {
+  // P5 da E2E: 17,37 t do .REP + 0,30 de peso próprio
+  const nk = (normal: number, modo?: "soma" | "substitui" | "maxima") => {
+    const p5 = { cargaTopo: { normal: t(normal), momentos: [], ...(modo ? { modo } : {}) } };
+    return lanceP5(calcularObraSistrut(obraE2EComP5(p5), { modo: "original" }))!.carga.nk;
+  };
+  it("soma 10 → 27,67; substitui 10 → 10,30; máxima 20 → 20,30; máxima 10 → 17,67", () => {
+    expect(nk(10)).toBeCloseTo(27.67, 4);
+    expect(nk(10, "substitui")).toBeCloseTo(10.3, 4);
+    expect(nk(20, "maxima")).toBeCloseTo(20.3, 4);
+    expect(nk(10, "maxima")).toBeCloseTo(17.67, 4);
+  });
+});
+
+const RLP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.RLP`;
+
+describe(".RLP: inclinações das vigas no pilar (LAJEMONT.BAS:4239-4310; PILGEEDI.BAS:1010-1036)", () => {
+  const r = calcularObraSistrut(obraE2E("original"), { modo: "original" });
+  it.skipIf(!existsSync(RLP_E2E))(
+    "as linhas que o motor monta são as do E2E.RLP do original",
+    () => {
+      const linhas = le(RLP_E2E).split(/\r?\n/);
+      const doArquivo = new Map<string, string>();
+      linhas.forEach((l, i) => {
+        if (/^P\d/.test(l)) doArquivo.set(l.slice(0, 15).trim(), linhas[i + 1] ?? "");
+      });
+      const rlp = inclinacoesRlp(r.pavimentos[0]!.eixos, "original");
+      for (const [pilar, linha] of doArquivo) expect(rlp.get(pilar) ?? "", pilar).toBe(linha);
+      expect(doArquivo.size).toBe(9);
+    },
+  );
+
+  it("P7: V1 −0,64 a 0° e V4 −1,22 a 270°: Mkx −0,64 e Mky +1,22; sem .RLP, Mkx −1,86", () => {
+    // no topo do único lance, e = −|M| (kCima = 0) e o componente é cos/sin da
+    // inclinação (PILAREDI.BAS:7505-7510): V1 → x −0,64; V4 a 270° → y −1,22·sin 270°
+    const p7 = (rr: ResultadoSistrut) => rr.lances.find((l) => l.pilarId === "P7")!.carga;
+    expect(p7(r).mkx).toBeCloseTo(-0.64, 4);
+    expect(p7(r).mky).toBeCloseTo(1.22, 4);
+    const o = obraE2E("original");
+    const sem = calcularObraSistrut(
+      { ...o, parametrosPilar: { rlp: false } },
+      { modo: "original" },
+    );
+    expect(p7(sem).mkx).toBeCloseTo(-1.86, 4);
+    expect(p7(sem).mky).toBe(0);
+  });
+});
+
+describe("coluna sobre viga de transição: dimensionada desde a própria base", () => {
+  // E2E em 3 pavimentos sem o P5 no do meio: o P5 de cima é uma coluna do PILGEEDI com
+  // nível inferior 3 (A_1224(c, 0)); o PILAREDI usa os limites da coluna
+  // (PILAREDI.BAS:7342-7420, 4743-4757), então o lance dá os números do caso c.
+  const base = obraE2E("original");
+  const pav = base.pavimentos[0]!;
+  const obra: Obra = {
+    ...base,
+    parametrosPilar: { predimensionamento: "tensoes" },
+    pavimentos: [
+      { ...pav, id: "COB", nome: "COB" },
+      { ...pav, id: "MEIO", nome: "MEIO", pilares: pav.pilares.filter((p) => p.id !== "P5") },
+      { ...pav, id: "TERREO", nome: "TERREO" },
+    ],
+  };
+  const r = calcularObraSistrut(obra, { modo: "original" });
+  it("o lance do COB reproduz o caso_c_pilaredi", () => {
+    const l = r.lances.find((x) => x.pilarId === "P5" && x.pavimentoId === "COB")!;
+    expect([l.nivel, l.nivelColuna]).toEqual([2, 0]);
+    const so = {
+      ...r,
+      lances: [{ ...l, nivel: 0 }],
+      predimensionamentos: r.predimensionamentos.filter(
+        (p) =>
+          p.pilarId === "P5" && r.colunas.find((c) => c.nome === p.coluna)?.niveis[0]?.cota === 6,
+      ),
+    };
+    const { faltando, difere } = confere(CASOS_ORACULO.caso_c_pilaredi!, (id) => {
+      const resto = id.replace(/^P5\./, "");
+      if (resto === "cargaREP") return l.carga.cargaAcumulada;
+      return campoP5(so, resto);
+    });
+    expect(faltando).toEqual([]);
+    expect(difere).toEqual([]);
+  });
+});
+
+describe("Pilar.cargaBase: só o resumo na fundação a soma (PILAREDI.BAS:960-1000, 4067)", () => {
+  // P5 da E2E com 1 t no nível da fundação: o lance tira a carga do próprio nível
+  // (V_0f88 − A_1280(nível base)), Nk 17,67; a fundação soma tudo: 17,37 + 1 + 0,30.
+  const r = calcularObraSistrut(obraE2EComP5({ cargaBase: { normal: t(1), momentos: [] } }), {
+    modo: "original",
+  });
+  it("Nk do lance 17,67 e carga na fundação 18,67", () => {
+    expect(lanceP5(r)!.carga.nk).toBeCloseTo(17.67, 4);
+    expect(r.fundacoes.find((f) => f.pilarId === "P5")!.fundacao).toBeCloseTo(18.67, 4);
   });
 });

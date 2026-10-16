@@ -87,6 +87,14 @@ export function casaNome(nome: string, numero: number) {
   return false;
 }
 
+/** Inclinação de um momento pelo .RLP (PILGEEDI.BAS:1021-1023): INSTR do rótulo da
+ *  viga na linha de inclinações e VAL logo depois do caractere que o segue (o "[");
+ *  sem o rótulo, `undefined`. */
+export function inclinacaoDoRlp(linha: string, viga: string) {
+  const p = linha.length > 0 ? linha.indexOf(viga) : -1;
+  return p < 0 ? undefined : qbVal(linha.slice(p + viga.length + 1));
+}
+
 const slotsVazios = (): MomentoNivel[] =>
   Array.from({ length: 4 }, () => ({ m: 0, inclinacao: 0, vao: 0, rigidez: 0 }));
 
@@ -111,6 +119,8 @@ export function leCargasRep(
   for (const rep of reps) {
     registros: for (const linha of rep.linhas) {
       const numero = qbVal(linha.pilar.slice(1, 11));
+      // .RLP: a linha do pilar com o mesmo número, VAL(MID$(l, 2, 5)) (PILGEEDI.BAS:1013)
+      const rlp = rep.rlp?.find((r) => qbVal(r.pilar.slice(1, 6)) === numero);
       for (let nivel = rep.nivelInicial; nivel <= rep.nivelFinal; nivel++) {
         const ci = colunas.findIndex(
           (c) =>
@@ -130,13 +140,17 @@ export function leCargasRep(
           alvo.normal[nivel] = s(linha.total);
           alvo.slots[nivel] = slotsVazios();
         }
+        // carga de laje no pilar do .RLP, depois da normal (L_14aad, V_1946 = 1)
+        if (rlp) alvo.normal[nivel] = s(alvo.normal[nivel]! + rlp.normal);
         const slots = alvo.slots[nivel]!;
         for (let i = 0; i < linha.momentos.length; i++) {
           const mo = linha.momentos[i]!;
           const v = qbVal(mo.texto);
+          // inclinação do .RLP pelo rótulo (L_14aad, V_1946 = 2)
+          const doRlp = rlp ? inclinacaoDoRlp(rlp.inclinacoes, mo.viga) : undefined;
           slots[k] = {
             m: s(Math.abs(v)),
-            inclinacao: s(mo.inclinacao ?? 0),
+            inclinacao: s(doRlp ?? mo.inclinacao ?? 0),
             vao: s(mo.vao * -Math.sign(v)),
             rigidez: s(mo.rigidez ?? 0),
           };
@@ -152,6 +166,11 @@ export function leCargasRep(
       const a = n.cargaAdicional;
       if (!a) return;
       const alvo = lidas[ci]!;
+      if (a.modo === "maxima" && !(a.normal > alvo.normal[i]!)) return;
+      if (a.modo === "substitui" || a.modo === "maxima") {
+        alvo.normal[i] = 0;
+        alvo.slots[i] = slotsVazios();
+      }
       alvo.normal[i] = s(alvo.normal[i]! + a.normal);
       const slots = alvo.slots[i]!;
       let k = slots.findIndex((x) => x.m === 0);

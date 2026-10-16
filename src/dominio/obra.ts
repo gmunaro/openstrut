@@ -309,6 +309,28 @@ export interface Pilar {
   cargaTopo?: CargaTopoPilar;
   /** PILAR opção 6: verificações da seção do lance com a armadura dada. */
   verificacoes?: VerificacaoPilarObra[];
+  /** Este lance começa uma variação de armadura (A_141e do PILAREDI 3.2, a <V> que o
+   *  usuário define ou a gravada no .COL). Com `barras`, a armadura dada (<R>, a
+   *  "Redefine manualmente", ou a do .COL), só verificada; sem `barras`, dimensionada.
+   *  Ver `ParametrosPilarObra.variaArmadura`. */
+  armadura?: ArmaduraPilarObra;
+  /** O pilar nasce sobre uma viga de transição e a carga da base dele foi lançada na
+   *  viga pelo usuário (`Viga.cargas`), como no original. Sem o campo, a carga da base
+   *  de um pilar que não chega à fundação é marcada como falha. */
+  transicao?: true;
+  /** Carga no nível da base do lance mais baixo da coluna (a fundação ou a viga de
+   *  transição), como `cargaTopo`. O PILAREDI não a põe em nenhum lance (o lance que
+   *  começa no nível tira a carga do próprio nível, PILAREDI.BAS:4067); só soma no
+   *  resumo na fundação (PILAREDI.BAS:960-1000). Nos outros lances é ignorada. */
+  cargaBase?: CargaTopoPilar;
+}
+
+/** Armadura de uma variação (PILAREDI 3.2). */
+export interface ArmaduraPilarObra {
+  /** Barras dadas, cm e mm (mesma origem de `VerificacaoPilarObra.barras`). */
+  barras?: BarraPilarObra[];
+  /** Estribo dado: bitola, mm, e espaçamento, cm. Ausente = o da tabela do .PIP. */
+  estribo?: { bitola: number; espacamento: number };
 }
 
 /** Ponto de uma seção de pilar, cm. */
@@ -355,6 +377,10 @@ export interface CargaTopoPilar {
    *  rigidez não conta. Digitado, M com sinal, vão 1 e rigidez = Jvig/Lvig
    *  (PILGEEDI.BAS:2407-2413). */
   momentos: { m: number; inclinacao: number; vao: number; rigidez: number }[];
+  /** Como esta leitura combina com a do .REP do pavimento no mesmo nível
+   *  (PILGEEDI.BAS:588-660): "soma" (padrão), "substitui", ou "maxima" (substitui só se
+   *  a normal for maior, > estrito). */
+  modo?: "soma" | "substitui" | "maxima";
 }
 
 /** Barra longitudinal na seção: posição, cm (mesma origem dos vértices; na
@@ -437,12 +463,22 @@ export interface ParametrosPilarObra {
    *  só as tensões com a seção da obra (B e H digitados); "secao" = o quadrado que o
    *  PILAREDI escolhe passa a ser a seção da coluna. Ausente = não roda. */
   predimensionamento?: "tensoes" | "secao";
+  /** "Vario a armadura ao longo da coluna em trecho de seção constante" do PILAREDI
+   *  3.2 (V_168c$, PILAREDI.BAS:5612-5633): 0 = "N", uma armadura por trecho de seção
+   *  constante; n ≥ 1 = de n em n níveis. Ausente = 1 (cada lance com a sua). */
+  variaArmadura?: number;
+  /** O PILGEEDI lê o .RLP do LAJEMONT junto com o .REP (inclinação de cada viga no
+   *  pilar e carga de laje direto no pilar, PILGEEDI.BAS:425-446, 1010-1036), como no
+   *  fluxo do original, em que o LAJEMONT grava o .RLP com o .VIG. Ausente = lê. */
+  rlp?: boolean;
 }
 
 /** PILAR.INI (PILAR.BAS:566-588). fck e fyk em MPa (no original vão como MPa/100 =
  *  t/cm², a convenção de `materiais.fck`); ausentes = os de `obra.materiais`. */
 export interface IniPilar {
   maximoBarras: number;
+  /** Número máximo de variações de armadura numa coluna (PILAR.BAS:632). */
+  maximoVariacoes: number;
   coeficienteMedida: number;
   coeficienteForca: number;
   coeficienteTensao: number;

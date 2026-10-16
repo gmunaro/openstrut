@@ -22,6 +22,7 @@ import type {
   BarraPilar,
   CargaPilarNivel,
   ColunaEdificio,
+  EixoViga,
   EntradaVerificacaoPilar,
   LeituraRep,
   MateriaisSistrut,
@@ -30,6 +31,7 @@ import type {
   ParametrosPilar,
   ParametrosPip,
   ParametrosPredimensionamento,
+  Ponto,
   PredimensionamentoPilar,
   SecaoPilar,
   VerificacaoPilar,
@@ -159,8 +161,12 @@ export function nivelDoPilar(p: Pilar, cota: number, modo: ModoSistrut, topo = f
 /** `cargaTopo` do pilar como o slot A_1280 do nível do topo do lance
  *  (`NivelColuna.cargaAdicional`, t e tm): normal e momentos com o sinal, sem passar
  *  pelo ABS da leitura do .REP. */
-export function cargaDoNivel(p: Pilar, modo: ModoSistrut): NivelColuna["cargaAdicional"] {
-  const c = p.cargaTopo;
+export function cargaDoNivel(
+  p: Pilar,
+  modo: ModoSistrut,
+  qual: "cargaTopo" | "cargaBase" = "cargaTopo",
+): NivelColuna["cargaAdicional"] {
+  const c = p[qual];
   if (!c) return undefined;
   const s = atribuicao(modo);
   return {
@@ -171,6 +177,7 @@ export function cargaDoNivel(p: Pilar, modo: ModoSistrut): NivelColuna["cargaAdi
       vao: s(m.vao),
       rigidez: s(m.rigidez),
     })),
+    ...(c.modo ? { modo: c.modo } : {}),
   };
 }
 
@@ -295,4 +302,109 @@ export function verificacoesDoPilar(
     }
   });
   return saida;
+}
+
+// ---------------------------------------------------------------- variações de armadura (PILAREDI 3.2)
+
+/** Uma variação de armadura de uma coluna: os lances `inicio` ≤ k < `fim` (índices da
+ *  coluna) têm a armadura dimensionada (ou dada) no lance `inicio`, o "Nivel
+ *  Dimensionado" do relatório. */
+export interface VariacaoArmadura {
+  inicio: number;
+  fim: number;
+}
+
+/** Variações de armadura de uma coluna (PILAREDI.BAS:5985-6012): cada trecho de seção
+ *  constante (A_1338) começa uma variação; com `n` ≥ 1 ("varia de n em n níveis"), a
+ *  seguinte começa n níveis acima, pulando os níveis livres nas duas direções, enquanto
+ *  couber no trecho e no limite V_0ff8% + V_0e3c% − V_0e3e% > V_0fec! (V_0e3c% =
+ *  máximo de variações − 1, V_0e3e% = 3, PILAREDI.BAS:70, 5999); com `n` = 0 ("N"),
+ *  uma por trecho. `manuais`: lances que começam uma variação definida pelo usuário
+ *  (a <V> de PILAREDI.BAS:6368-6420, ou a gravada no .COL). */
+export function planoDeVariacoes(
+  coluna: ColunaEdificio,
+  manuais: readonly number[],
+  n: number,
+  maximoVariacoes: number,
+  avisos: string[],
+): VariacaoArmadura[] {
+  const nv = coluna.niveis;
+  const topo = nv.length - 1;
+  const chave = (j: number) => JSON.stringify({ ...nv[j]!.secao, barras: [] });
+  const secoes = [0];
+  for (let j = 1; j < topo; j++) if (chave(j) !== chave(j - 1)) secoes.push(j);
+  if (secoes.length > 4)
+    avisos.push(
+      `${coluna.nome}: ${secoes.length} seções; o PILAREDI aceita no máximo 4 por coluna (V_0e3e% = 3, PILAREDI.BAS:70, 4307).`,
+    );
+  const livre = (j: number) => nv[j]?.vinculoX === 3 && nv[j]?.vinculoY === 3;
+  const inicios: number[] = [];
+  secoes.forEach((a, s) => {
+    const b = secoes[s + 1] ?? topo;
+    inicios.push(a);
+    if (n <= 0) return;
+    let j = a;
+    for (;;) {
+      j += n - 1;
+      do j += 1;
+      while (j < topo && livre(j));
+      if (s + (maximoVariacoes - 1) - 3 > inicios.length - 1 && j < b) inicios.push(j);
+      else break;
+    }
+  });
+  const todos = [...new Set([...inicios, ...manuais.filter((k) => k >= 0 && k < topo)])].sort(
+    (a, b) => a - b,
+  );
+  if (todos.length > maximoVariacoes)
+    avisos.push(
+      `${coluna.nome}: ${todos.length} variações de armadura; o PILAREDI guarda no máximo ${maximoVariacoes} (PILAR.INI, PILAR.BAS:632).`,
+    );
+  return todos.map((inicio, i) => ({ inicio, fim: todos[i + 1] ?? topo }));
+}
+
+// ---------------------------------------------------------------- .RLP
+
+/** Ângulo da viga a partir do pilar, graus inteiros (L_2e40f, LAJEMONT.BAS:6185-6225):
+ *  de `de` para `para`; vertical = 90 ou 270, senão pelo ATN por quadrante; INT(θ·180/π)
+ *  com θ em SINGLE no original. */
+export function anguloRlp(de: Ponto, para: Ponto, modo: ModoSistrut) {
+  const s = atribuicao(modo);
+  const x1 = de.x;
+  const x2 = para.x;
+  const y1 = de.y;
+  const y2 = Math.abs(de.y - para.y) < 1e-6 ? de.y : para.y;
+  let t = 0;
+  if (x1 === x2) t = y1 > y2 ? (3 * Math.PI) / 2 : Math.PI / 2;
+  else if (y1 <= y2 && x1 < x2) t = Math.atan((y2 - y1) / (x2 - x1));
+  else if (y1 < y2 && x1 > x2) t = Math.PI - Math.atan((y2 - y1) / (x1 - x2));
+  else if (y1 >= y2 && x1 > x2) t = Math.atan((y1 - y2) / (x1 - x2)) + Math.PI;
+  else if (y1 > y2 && x1 < x2) t = 2 * Math.PI - Math.atan((y1 - y2) / (x2 - x1));
+  const graus = (s(t) * 180) / Math.PI;
+  return Math.floor(modo === "original" ? graus : graus + 1e-9);
+}
+
+/** Linha de inclinações do .RLP de cada pilar do pavimento, como o LAJEMONT grava
+ *  (LAJEMONT.BAS:4239-4310, 614-625): as vigas que começam ou terminam no pilar, na
+ *  ordem dos eixos (a do começo antes da do fim), até 4 (a 5ª fica no lugar da 4ª),
+ *  "V1[0] >V4[270] >". Ângulo da ponta no pilar para a outra ponta da viga. */
+export function inclinacoesRlp(eixos: readonly EixoViga[], modo: ModoSistrut) {
+  const porPilar = new Map<string, { viga: string; angulo: number }[]>();
+  const poe = (pilar: string, viga: string, angulo: number) => {
+    const lista = porPilar.get(pilar) ?? [];
+    if (lista.length < 4) lista.push({ viga, angulo });
+    else lista[3] = { viga, angulo };
+    porPilar.set(pilar, lista);
+  };
+  for (const e of eixos) {
+    const a = e.pontos[0];
+    const b = e.pontos.at(-1);
+    if (!a || !b) continue;
+    const ini = e.apoios[0];
+    const fim = e.apoios.at(-1);
+    if (ini && "pilar" in ini) poe(ini.pilar, e.nome, anguloRlp(a, b, modo));
+    if (fim && "pilar" in fim) poe(fim.pilar, e.nome, anguloRlp(b, a, modo));
+  }
+  return new Map(
+    [...porPilar].map(([p, l]) => [p, l.map((x) => `${x.viga}[${x.angulo}] >`).join("")]),
+  );
 }

@@ -1362,6 +1362,10 @@ export interface NivelColuna {
   cargaAdicional?: {
     normal: number;
     momentos: { m: number; inclinacao: number; vao: number; rigidez: number }[];
+    /** Como combina com o .REP (PILGEEDI.BAS:588-660): "soma" (padrão; momentos nos
+     *  slots livres), "substitui" (zera o nível e grava) ou "maxima" (substitui só se a
+     *  normal for maior que a do nível, > estrito). */
+    modo?: "soma" | "substitui" | "maxima";
   };
 }
 
@@ -1412,6 +1416,11 @@ export interface LeituraRep {
   nivelInicial: number;
   nivelFinal: number;
   modo: "substitui" | "soma" | "maxima";
+  /** O .RLP do LAJEMONT lido junto com o .REP (PILGEEDI.BAS:425-446, 1010-1036): por
+   *  pilar ("P5"), a carga de laje direto no pilar (t), somada depois de gravar a normal
+   *  do registro, e a linha de inclinações ("V1[0] >V4[270] >"), que dá a inclinação de
+   *  cada momento pelo rótulo da viga. */
+  rlp?: { pilar: string; normal: number; inclinacoes: string }[];
 }
 /** `coeficientes`: coeficientes de medida e de força do PILAR.INI (padrão 1 e 1). */
 export type CargasPilares = (
@@ -1447,9 +1456,15 @@ export interface DimensionamentoPilar extends ComMemoria {
   secao: SecaoPilar;
   /** Presente quando o original interrompe o nível; os casos já calculados ficam. */
   recusa?: RecusaPilar;
+  /** A armadura veio dada (`opcoes.barrasDadas`): só verificada, sem escolha. */
+  armaduraDada?: true;
 }
 /** `opcoes.barrasAnteriores`: na seção circular, o nº de barras da variação de
- *  armadura anterior (A_141e 1 + 3; PILAREDI.BAS:6848-6859). */
+ *  armadura anterior (A_141e 1 + 3; PILAREDI.BAS:6848-6859). `opcoes.barrasDadas`: a
+ *  armadura redefinida à mão (<R> do PILAREDI 3.2) ou gravada no .COL; o nível é
+ *  verificado nos casos "e" e "f" com essas barras, sem os ajustes de NAO e DIMINUI
+ *  (V_107e$ = "REDEFINE", PILAREDI.BAS:6897-6898, 6919). Estribo: `opcoes.estribo`
+ *  ou o da tabela pela maior bitola (A_141e 5..6 = A_0f56(V_1086), 5838-5839). */
 export type DimensionaPilar = (
   carga: CargaPilarNivel,
   coluna: ColunaEdificio,
@@ -1457,7 +1472,11 @@ export type DimensionaPilar = (
   parametrosPilar: ParametrosPilar,
   parametrosPip: ParametrosPip,
   modo: ModoSistrut,
-  opcoes?: { barrasAnteriores?: number },
+  opcoes?: {
+    barrasAnteriores?: number;
+    barrasDadas?: BarraPilar[];
+    estribo?: { bitola: number; espacamento: number };
+  },
 ) => DimensionamentoPilar;
 
 /** Parâmetros do PILAR.INI usados no predimensionamento (PILAR.BAS:566-567, 576-577). */

@@ -109,7 +109,8 @@ import { lajeproc } from "./lajes/proc";
 import { montaPavimento } from "./montagem/reacoes";
 import { pesoKgPorM } from "./montagem/vigas";
 import { dimensionaPilar } from "./pilares/armadura";
-import { cargasPilares, qbVal, resumoFundacao } from "./pilares/carga";
+import { girado } from "./pilares/secao";
+import { cargasPilares, inclinacaoDoRlp, qbVal, resumoFundacao } from "./pilares/carga";
 import { quadroDaViga, resumoGeralVigas } from "./quant/vigas";
 import { dimensionaViga } from "./vigas/desdim";
 import { detalhaViga } from "./vigas/desinit";
@@ -117,7 +118,9 @@ import { somaReacoesPilares } from "./vigas/rep";
 import { analisaVigas } from "./vigas/vicalc";
 import {
   cargaDoNivel,
+  inclinacoesRlp,
   materiaisPilar,
+  planoDeVariacoes,
   nivelDoPilar,
   parametrosPilarDaObra,
   predimensionaColuna,
@@ -308,6 +311,12 @@ export interface LancePilarSistrut {
   carga: CargaPilarNivel;
   dimensionamento?: DimensionamentoPilar;
   avisos: string[];
+  /** Nível do lance na coluna (0 = a base da coluna; difere de `nivel` na coluna que
+   *  nasce sobre viga de transição). */
+  nivelColuna: number;
+  /** Variação de armadura do lance (PILAREDI 3.2): índice e níveis do edifício
+   *  [inicio, fim); a armadura foi dimensionada no lance `inicio`. */
+  variacao: { indice: number; inicio: number; fim: number };
 }
 
 export interface ResultadoSistrut {
@@ -1038,24 +1047,35 @@ function calcularPilaresSistrut(
   const s = atribuicao(modo);
   const niveis = niveisDoEdificio(obra);
   const porId = new Map(pavimentos.map((p) => [p.pavimentoId, p]));
-  // colunas: posição de pilar do nível mais baixo, subindo enquanto o pilar existir
+  // colunas: cada trecho contínuo de pavimentos em que o pilar existe numa posição; o
+  // que não começa no nível mais baixo nasce sobre uma viga de transição (coluna do
+  // PILGEEDI com nível inferior > 1: o PILAREDI a calcula desde a própria base,
+  // A_1224(c, 0), PILAREDI.BAS:7342-7420, 4743-4757)
   const chaves: string[] = [];
   for (const { pav } of niveis)
     for (const p of pav.pilares) if (!chaves.includes(chavePilar(p))) chaves.push(chavePilar(p));
-  const colunas: ColunaEdificio[] = [];
-  /** Lances de cada coluna (mesmo índice de `colunas`): pilar e nível de baixo. */
-  const lancesDasColunas: { pilar: Pilar; nivel: number }[][] = [];
-  chaves.forEach((chave, i) => {
-    const lances: { pilar: Pilar; nivel: number }[] = [];
+  const cotaDoNivel = (k: number) =>
+    niveis.slice(0, k).reduce((soma, n) => soma + n.pav.peDireito, 0);
+  const trechos: { pilar: Pilar; nivel: number }[][] = [];
+  for (const chave of chaves) {
+    let atual: { pilar: Pilar; nivel: number }[] = [];
     for (const [k, { pav }] of niveis.entries()) {
       const p = pav.pilares.find((q) => chavePilar(q) === chave);
-      if (!p) break;
-      lances.push({ pilar: p, nivel: k });
+      if (p) atual.push({ pilar: p, nivel: k });
+      else if (atual.length > 0) {
+        trechos.push(atual);
+        atual = [];
+      }
     }
-    if (lances.length === 0) return;
+    if (atual.length > 0) trechos.push(atual);
+  }
+  const colunas: ColunaEdificio[] = [];
+  /** Lances de cada coluna (mesmo índice de `colunas`): pilar e nível do edifício. */
+  const lancesDasColunas: { pilar: Pilar; nivel: number }[][] = [];
+  trechos.forEach((lances, i) => {
     // nome com o número da coluna: o PILGEEDI casa o .REP pelo número no nome
     const nome = `P ${i + 1}`;
-    let cota = 0;
+    let cota = cotaDoNivel(lances[0]!.nivel);
     // seção, vínculos, excentricidade e vento do lance no nível da base (pilaresDaObra.ts)
     const nvs: NivelColuna[] = [];
     for (const l of lances) {
@@ -1068,29 +1088,28 @@ function calcularPilaresSistrut(
       const carga = cargaDoNivel(l.pilar, modo);
       if (carga) nvs[k + 1]!.cargaAdicional = carga;
     });
+    // Pilar.cargaBase do lance de baixo: o nível da base (só o resumo na fundação a usa)
+    const naBase = cargaDoNivel(lances[0]!.pilar, modo, "cargaBase");
+    if (naBase) nvs[0]!.cargaAdicional = naBase;
     colunas.push({ nome, pilarRep: nome, niveis: nvs });
     lancesDasColunas.push(lances);
   });
 
-  // pilar fora de coluna: não chega à fundação (falta num pavimento de baixo)
-  const naColuna = new Set(lancesDasColunas.flat().map((l) => `${l.nivel}|${l.pilar.id}`));
   const falha = (pavimentoId: string, texto: string) => {
     if (!falhas.some((f) => f.pavimentoId === pavimentoId && f.texto === texto))
       falhas.push({ pavimentoId, texto });
   };
-  for (const [k, { pav }] of niveis.entries())
-    for (const p of pav.pilares)
-      if (!naColuna.has(`${k}|${p.id}`))
-        falha(
-          pav.id,
-          `Pilar ${p.nome} do pavimento ${pav.nome} não continua até a fundação (falta num pavimento de baixo): o PILAREDI não o dimensiona e a carga dele não chega à fundação — modele a transição.`,
-        );
+  /** Base de cada coluna no edifício (o nível do lance de baixo). */
+  const baseDa = (ci: number) => lancesDasColunas[ci]![0]!.nivel;
 
   // .REP de cada nível (o do pavimento, com o nome do pilar trocado pelo da coluna)
   const reps: LeituraRep[] = [];
   for (const [k, { pav }] of niveis.entries()) {
     const ps = porId.get(pav.id);
     if (!ps) continue;
+    // .RLP do LAJEMONT ao lado do .REP: inclinação de cada viga no pilar
+    const rlp = (obra.parametrosPilar?.rlp ?? true) ? inclinacoesRlp(ps.eixos, modo) : undefined;
+    const porBase = new Map<number, LinhaRep[]>();
     const linhas = ps.rep.flatMap((linha) => {
       const p = pav.pilares.find((q) => q.nome === linha.pilar);
       const c = p
@@ -1109,23 +1128,44 @@ function calcularPilaresSistrut(
       // usuário digitar no PILGEEDI (PILGEEDI.BAS:597-640): com 0, o momento de uma viga
       // vertical entra na direção x e o pilar leva 100 % do MEP (kViga = 0 na
       // repartição por rigidez de PILAREDI.BAS:7470-7520).
+      // Com o .RLP (PILGEEDI.BAS:1021-1023), a inclinação de cada momento é a da viga no
+      // pilar, nos dois modos; o corrigido acrescenta a rigidez, e sem .RLP a inclinação
+      // pela direção da viga.
+      const linhaRlp = rlp?.get(linha.pilar) ?? "";
+      const doRlp = linha.momentos.map((m) => {
+        const i = rlp ? inclinacaoDoRlp(linhaRlp, m.viga) : undefined;
+        return i === undefined ? m : { ...m, inclinacao: s(i) };
+      });
       const momentos =
         modo === "original"
-          ? linha.momentos
-          : linha.momentos.map((m) => {
+          ? doRlp
+          : doRlp.map((m) => {
               const v = pav.vigas.find((x) => x.nome === m.viga);
               if (!v) return m;
               const horizontal = Math.abs(v.y1 - v.y2) < 1e-9;
-              return { ...m, inclinacao: horizontal ? 0 : 90, rigidez: (v.bw * v.h ** 3) / 12 };
+              const inclinacao = rlp ? (m.inclinacao ?? 0) : horizontal ? 0 : 90;
+              return { ...m, inclinacao, rigidez: (v.bw * v.h ** 3) / 12 };
             });
       // o PILGEEDI lê o total do texto do .REP, gravado com PRINT USING "#####.##"
       // (VIGA.BAS:2545; PILGEEDI.BAS:541-544: N = VAL(MID$(L1, 10))): 17,3699989 da soma
       // em SINGLE vira VAL("17.37") = 17,3700008
       const total = s(qbVal(qbUsing("#####.##", linha.total)));
-      return [{ ...linha, pilar: c.nome, total, momentos }];
+      const lida: LinhaRep = { ...linha, pilar: c.nome, total, momentos };
+      const base = baseDa(colunas.indexOf(c));
+      porBase.set(base, [...(porBase.get(base) ?? []), lida]);
+      return [lida];
     });
-    // o nível k do .REP é o topo do lance k − 1: carga no nível k + 1 da coluna
-    reps.push({ linhas, nivelInicial: k + 1, nivelFinal: k + 1, modo: "substitui" });
+    // o .REP do pavimento do lance k vai ao topo do lance: nível k + 1 do edifício, que
+    // na coluna com base b é o nível k + 1 − b
+    if (linhas.length === 0)
+      reps.push({ linhas, nivelInicial: k + 1, nivelFinal: k + 1, modo: "substitui" });
+    for (const [base, ls] of porBase)
+      reps.push({
+        linhas: ls,
+        nivelInicial: k + 1 - base,
+        nivelFinal: k + 1 - base,
+        modo: "substitui",
+      });
   }
 
   // PILAREDI 3.1: predimensionamento; com "secao", o quadrado vira a seção da coluna
@@ -1157,34 +1197,77 @@ function calcularPilaresSistrut(
     forca: par.pilar.coeficienteForca,
   });
   const lances: LancePilarSistrut[] = [];
-  for (const carga of cargas) {
-    const ci = colunas.findIndex((c) => c.nome === carga.coluna);
-    const coluna = colunas[ci]!;
-    const lance = lancesDasColunas[ci]![carga.nivel];
-    if (!lance) continue;
-    const { pav, repeticao } = niveis[lance.nivel]!;
-    const l: LancePilarSistrut = {
-      coluna: coluna.nome,
-      nivel: carga.nivel,
-      pavimentoId: pav.id,
-      repeticao,
-      pilarId: lance.pilar.id,
-      carga,
-      avisos: [],
-    };
-    // a seção do predimensionamento vale em todos os lances da coluna: o aviso também
+  const n = obra.parametrosPilar?.variaArmadura ?? 1;
+  colunas.forEach((coluna, ci) => {
+    const daColuna = cargas.filter((c) => c.coluna === coluna.nome);
+    const lancesCol = lancesDasColunas[ci]!;
     const predim = predimensionamentos.find((p) => p.coluna === coluna.nome);
-    if (predim?.modo === "secao" && predim.resultado)
-      l.avisos.push(
-        `${lance.pilar.nome}: dimensionado com a seção do predimensionamento, ${predim.resultado.b} × ${predim.resultado.h} cm, no lugar da seção da obra.`,
-      );
-    try {
-      l.dimensionamento = dimensionaPilar(carga, coluna, mat, par.pilar, par.pip, modo);
-    } catch (e) {
-      l.avisos.push(`${lance.pilar.nome}: dimensionamento não concluído: ${mensagem(e)}`);
-    }
-    lances.push(l);
-  }
+    const avisosColuna: string[] = [];
+    // PILAREDI 3.2: variações de armadura (as <V> e as do .COL em `Pilar.armadura`)
+    const manuais = lancesCol.flatMap((l, k) => (l.pilar.armadura ? [k] : []));
+    const plano = planoDeVariacoes(coluna, manuais, n, par.pilar.maximoVariacoes, avisosColuna);
+    let anterior: number | undefined;
+    plano.forEach((v, iv) => {
+      const carga = daColuna.find((c) => c.nivel === v.inicio);
+      const base = lancesCol[v.inicio];
+      if (!carga || !base) return;
+      const armadura = base.pilar.armadura;
+      const rotacao = base.pilar.secao ? 0 : (base.pilar.rotacao ?? 0);
+      const barrasDadas = armadura?.barras?.map((b) => {
+        // como nas verificações: barras no retângulo sem giro giram com ele
+        const p = rotacao ? girado({ x: s(b.x), y: s(b.y) }, rotacao, modo) : b;
+        return { x: s(p.x), y: s(p.y), bitola: b.bitola };
+      });
+      let dimensionamento: DimensionamentoPilar | undefined;
+      const avisosVar: string[] = [];
+      try {
+        dimensionamento = dimensionaPilar(carga, coluna, mat, par.pilar, par.pip, modo, {
+          ...(anterior !== undefined ? { barrasAnteriores: anterior } : {}),
+          ...(barrasDadas ? { barrasDadas } : {}),
+          ...(armadura?.estribo ? { estribo: armadura.estribo } : {}),
+        });
+        anterior = dimensionamento.barras.reduce((t, b) => t + b.quantidade, 0);
+      } catch (e) {
+        avisosVar.push(`${base.pilar.nome}: dimensionamento não concluído: ${mensagem(e)}`);
+      }
+      for (let k = v.inicio; k < v.fim; k++) {
+        const lance = lancesCol[k];
+        const cargaK = daColuna.find((c) => c.nivel === k);
+        if (!lance || !cargaK) continue;
+        const { pav, repeticao } = niveis[lance.nivel]!;
+        const l: LancePilarSistrut = {
+          coluna: coluna.nome,
+          nivel: lance.nivel,
+          pavimentoId: pav.id,
+          repeticao,
+          pilarId: lance.pilar.id,
+          carga: cargaK,
+          avisos: k === v.inicio ? [...avisosColuna.splice(0), ...avisosVar] : [],
+          nivelColuna: k,
+          variacao: {
+            indice: iv,
+            inicio: lancesCol[v.inicio]!.nivel,
+            fim: lancesCol[v.fim - 1]!.nivel + 1,
+          },
+          ...(dimensionamento ? { dimensionamento } : {}),
+        };
+        if (k !== v.inicio)
+          l.avisos.push(
+            `${lance.pilar.nome}: armadura da variação dimensionada no nível da base dela (PILAREDI 3.2, "varia armadura").`,
+          );
+        // a seção do predimensionamento vale em todos os lances da coluna: o aviso também
+        if (predim?.modo === "secao" && predim.resultado)
+          l.avisos.push(
+            `${lance.pilar.nome}: dimensionado com a seção do predimensionamento, ${predim.resultado.b} × ${predim.resultado.h} cm, no lugar da seção da obra.`,
+          );
+        if (lance.pilar.armadura && k !== v.inicio)
+          l.avisos.push(
+            `${lance.pilar.nome}: armadura do pilar ignorada fora do início da variação.`,
+          );
+        lances.push(l);
+      }
+    });
+  });
 
   // PILAR opção 6: as verificações de seção dada de cada pilar
   const verificacoes = obra.pavimentos.flatMap((pav) =>
@@ -1196,7 +1279,7 @@ function calcularPilaresSistrut(
           .filter((l) => l.pavimentoId === pav.id && l.pilarId === p.id)
           .map((l) => ({
             ...l,
-            secao: colunas.find((c) => c.nome === l.coluna)!.niveis[l.nivel]!.secao,
+            secao: colunas.find((c) => c.nome === l.coluna)!.niveis[l.nivelColuna]!.secao,
           })),
         mat,
         par.pilar,
@@ -1209,6 +1292,26 @@ function calcularPilaresSistrut(
     pilarId: lancesDasColunas[i]![0]!.pilar.id,
     ...resumoFundacao(reps, c, par.pip, modo),
   }));
+  // coluna que nasce sobre viga de transição: a carga da base não chega à fundação
+  // pelo PILAREDI; no original o usuário a lança na viga (carga concentrada no VIGA)
+  fundacoes.forEach((f, i) => {
+    const base = lancesDasColunas[i]![0]!;
+    if (base.nivel === 0) return;
+    const { pav } = niveis[base.nivel]!;
+    const abaixo = niveis[base.nivel - 1]!.pav;
+    const carga = `${(f.fundacao * KN_POR_TF).toFixed(1)} kN (${f.fundacao.toFixed(2)} t)`;
+    if (base.pilar.transicao)
+      lances
+        .find((l) => l.pilarId === base.pilar.id && l.nivel === base.nivel)
+        ?.avisos.push(
+          `${base.pilar.nome}: nasce sobre viga de transição no pavimento ${abaixo.nome}; a carga na base, ${carga}, tem de estar nas cargas da viga (Pilar.transicao).`,
+        );
+    else
+      falha(
+        abaixo.id,
+        `Pilar ${base.pilar.nome} do pavimento ${pav.nome} nasce acima da fundação: a carga na base dele, ${carga}, não chega à fundação. Lance-a na viga de transição (Viga.cargas) e marque o pilar com transicao, como o usuário do original faz no VIGA.`,
+      );
+  });
   return { colunas, lances, verificacoes, predimensionamentos, fundacoes };
 }
 

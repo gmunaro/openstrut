@@ -471,6 +471,7 @@ export function detalharPilaresObra(resultado: ResultadoObra, obra: Obra): Detal
       peDireito: peDireito(p.pavimentoId),
       b: p.pilar.b,
       h: p.pilar.h,
+      ...(p.pilar.secao ? { secao: p.pilar.secao } : {}),
       resultado: p.resultado,
     }));
     const nome = g.niveis[0]?.pilar.nome ?? "";

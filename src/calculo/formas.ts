@@ -17,6 +17,7 @@
 // As regras "editor" (FORMEDCA) e "impressao" (FORMIMP) que a V2 tinha como "modo
 // original" vinham da V1 antiga: o FORMEDCA e o FORMIMP do SISTRUT não calculam fôrma
 // (PLANO da paridade, 4.1 item G; docs/MODO-CALCULO.md). Saíram.
+import { geometriaPilar } from "./secaoPilar";
 import {
   colineares,
   eixoDaViga,
@@ -98,12 +99,14 @@ export const SEM_ENCONTRO: EncontroPilar = { hLaje: 0, vigas: [] };
  *  largura h; vertical, nas de largura b (bw maior que a face desconta a face).
  *  Pé-direito em m; seções e hlaje em cm. Com SEM_ENCONTRO dá perímetro × pé-direito. */
 export function formaPilar(
-  p: Pick<Pilar, "b" | "h">,
+  p: Pick<Pilar, "b" | "h" | "secao">,
   peDireito: number,
   encontro: EncontroPilar = SEM_ENCONTRO,
 ) {
   const altura = Math.max(0, peDireito - encontro.hLaje / 100);
-  let area = ((2 * (p.b + p.h)) / 100) * altura;
+  // seção circular ou poligonal: o perímetro real, mais o do vazado (secaoPilar.ts)
+  const g = geometriaPilar(p);
+  let area = ((g.perimetro + g.perimetroInterno) / 100) * altura;
   for (const v of encontro.vigas) {
     const face = v.horizontal ? p.h : p.b;
     const faixa = Math.min(altura, Math.max(0, v.h - encontro.hLaje) / 100);
@@ -153,7 +156,16 @@ export function espessuraLajeNaViga(viga: Viga, lajes: readonly Laje[]) {
 }
 
 /** Conta da fôrma do pilar para a memória. */
-export function formulaFormaPilar(p: Pick<Pilar, "b" | "h">, peDireito: number, e: EncontroPilar) {
+export function formulaFormaPilar(
+  p: Pick<Pilar, "b" | "h" | "secao">,
+  peDireito: number,
+  e: EncontroPilar,
+) {
+  if (p.secao) {
+    const g = geometriaPilar(p);
+    const pr = f((g.perimetro + g.perimetroInterno) / 100);
+    return `perímetro da seção ${p.secao.tipo}·(pé-direito − hlaje) − Σ faces·bw·(hviga − hlaje) = ${pr}·(${f(peDireito)} − ${f(e.hLaje / 100, 3)})`;
+  }
   const perimetro = f((2 * (p.b + p.h)) / 100);
   if (e.hLaje === 0 && e.vigas.length === 0)
     return `2(b + h)·pé-direito = ${perimetro}·${f(peDireito)}`;

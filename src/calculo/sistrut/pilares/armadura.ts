@@ -521,6 +521,74 @@ export const dimensionaPilar: DimensionaPilar = (
     avisos.push(texto);
     return { ...resultado, casos: [...casosE, ...casosF], recusa: r };
   };
+  /** Estribo pela tabela do .PIP, limitado a MIN(B, H) e a D − Dint (PILAREDI.BAS:5876-5885). */
+  const estriboDa = (indice: number) => {
+    const estribo = { ...pip.estriboPorBitola[indice]! };
+    if (g.tipo === 1) {
+      const b = Math.round(g.b);
+      const h = Math.round(g.h);
+      if (b < h) {
+        if (b < estribo.espacamento) estribo.espacamento = b;
+      } else if (h < estribo.espacamento) estribo.espacamento = h;
+    }
+    if (g.tipo === 2 && g.d - g.dInterno < estribo.espacamento)
+      estribo.espacamento = g.d - g.dInterno;
+    return estribo;
+  };
+  if (opcoes.barrasDadas) {
+    // armadura dada: casos "e" e "f" com as barras, sem os ajustes (REDEFINE)
+    const dadas = opcoes.barrasDadas;
+    const indices = dadas.map((b) => tab.findIndex((t) => s(t.bitola) === s(b.bitola)));
+    const fora = dadas.find((_, i) => indices[i]! < 0);
+    if (fora) throw new Error(`Bitola ${fora.bitola} mm fora da tabela do .PIP`);
+    const calc: BarraCalculo[] = dadas.map((b, i) => ({
+      x: s(b.x),
+      y: s(b.y),
+      area: tab[indices[i]!]!.area,
+    }));
+    try {
+      const e = verificaArranjo(ctx, secaoDe(calc), false, dados, par, ctl);
+      casosE = e.casos;
+      if (e.recusa === "LAMBDA")
+        return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+      ctl.anguloInicial = -1;
+      const f = verificaArranjo(ctx, secaoDe(calc), true, dadosF, par, ctl);
+      casosF = f.casos;
+      lambdas = { lambdaX: f.lambdaX, lambdaY: f.lambdaY };
+      if (f.recusa === "LAMBDA")
+        return recusa("LAMBDA", `λ > ${par.lambdaProcessoExato}: o PILAREDI recusa o nível (P15).`);
+    } catch (erro) {
+      if (erro instanceof ErroNaoConverge)
+        return recusa(
+          "NAOCONVERGE",
+          "A busca do equilíbrio não converge; o original fica em laço (D-2).",
+        );
+      throw erro;
+    }
+    let asDada = 0;
+    for (const b of calc) asDada = s(asDada + b.area);
+    const grupos = new Map<number, number>();
+    indices.forEach((i) => grupos.set(i, (grupos.get(i) ?? 0) + 1));
+    const ordem = [...grupos.keys()].sort((a, b) => b - a);
+    memoria.push({
+      descricao: "Armadura dada: verificada sem escolha nem ajuste",
+      valor: asDada,
+      unidade: "cm²",
+      ref: "PILAREDI.BAS:6897-6898",
+    });
+    return {
+      ...resultado,
+      lambdaX: lambdas.lambdaX,
+      lambdaY: lambdas.lambdaY,
+      casos: [...casosE, ...casosF],
+      as: asDada,
+      taxa: s(qbInt((asDada * 10000) / area) / 100),
+      barras: ordem.map((i) => ({ quantidade: grupos.get(i)!, bitola: tab[i]!.bitola })),
+      estribo: opcoes.estribo ? { ...opcoes.estribo } : estriboDa(ordem[0] ?? 0),
+      secao: { ...nivel.secao, barras: dadas.map((b) => ({ ...b })) },
+      armaduraDada: true,
+    };
+  }
   try {
     for (let volta = 0; ; volta++) {
       if (volta > 1000) throw naoConverge();
@@ -644,16 +712,7 @@ export const dimensionaPilar: DimensionaPilar = (
           { quantidade: final.n2, bitola: tab[i2]!.bitola },
         ];
   const taxa = s(qbInt((asEf * 10000) / area) / 100);
-  const estribo = { ...pip.estriboPorBitola[i1]! };
-  if (g.tipo === 1) {
-    const b = Math.round(g.b);
-    const h = Math.round(g.h);
-    if (b < h) {
-      if (b < estribo.espacamento) estribo.espacamento = b;
-    } else if (h < estribo.espacamento) estribo.espacamento = h;
-  }
-  if (g.tipo === 2 && g.d - g.dInterno < estribo.espacamento)
-    estribo.espacamento = g.d - g.dInterno;
+  const estribo = estriboDa(i1);
   const barrasSecao: BarraPilar[] = final.barras.map((b, i) => ({
     x: b.x,
     y: b.y,

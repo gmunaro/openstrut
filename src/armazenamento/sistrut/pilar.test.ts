@@ -17,6 +17,7 @@ import {
   lerPil,
   lerPip,
   lerRep,
+  lerRlp,
   type Lido,
 } from "./pilar";
 
@@ -339,7 +340,8 @@ describe(".COL montado à mão", () => {
       classeAco: "B",
       cobrimentoPilar: 2.5,
     });
-    expect(obra.parametrosPilar).toEqual({ ini: { fyk: 420 } });
+    // com as armaduras do .COL, as variações são as gravadas: "N" (V_168c$ = "0")
+    expect(obra.parametrosPilar).toEqual({ ini: { fyk: 420 }, variaArmadura: 0 });
     const barras = [
       { x: 2.5, y: 2.5, bitola: 12.5 },
       { x: 2.5, y: 27.5, bitola: 12.5 },
@@ -372,7 +374,9 @@ describe(".COL montado à mão", () => {
           { m: 1.2 * KN, inclinacao: 90, vao: 5, rigidez: 64000 },
         ],
       },
-      verificacoes: [{ barras, estribo: { bitola: 6.3, espacamento: 15 } }],
+      // linha do nível 1: 2 t no nível da fundação, só para o resumo na fundação
+      cargaBase: { normal: 2 * KN, momentos: [] },
+      armadura: { barras, estribo: { bitola: 6.3, espacamento: 15 } },
     });
     expect(pilar(obra, "P1@pav3")).toEqual({
       id: "P1@pav3",
@@ -382,7 +386,6 @@ describe(".COL montado à mão", () => {
       b: 20,
       h: 30,
       cargaTopo: { normal: 8 * KN, momentos: [] },
-      verificacoes: [{ barras, estribo: { bitola: 6.3, espacamento: 15 } }],
     });
     // lance 3→4: seção nova girada 30° com excentricidade; A = 1 (Rx 2 livre); topo
     // A = 200 (Ry 3 engaste); digitados como gravados: −,3 com o sinal e ,4 com vão 1 e
@@ -441,7 +444,6 @@ describe(".COL montado à mão", () => {
     });
     expect(obra.pavimentos[2]!.pilares.map((p) => p.id)).toEqual(["P1@pav2", "P2@pav2"]);
     for (const trecho of [
-      "carga de 2 t no nível 1",
       "vento no nível 4",
       "P10 começa no nível 2",
       "MEUPIP.PIP, que não foi passada",
@@ -906,5 +908,88 @@ describe("completar a obra E2E", () => {
     expect(avisos.some((a) => a.includes("pé-direito 3 m, e o .COL dá 2,5 m"))).toBe(true);
     expect(obra.parametrosPilar?.ini).toEqual({ fck: 25, fyk: 420 });
     idaEVolta(obra);
+  });
+});
+
+// ---------------------------------------------------------------- .RLP e transição (rodada 2)
+
+const RLP_E2E = `${ORACULO}/casos/caso_c_pilaredi.dados/E2E.RLP`;
+
+describe(".RLP", () => {
+  it.skipIf(!existsSync(RLP_E2E))("lê o E2E.RLP: 9 pilares com 0,000 t e as inclinações", () => {
+    const rlp = valor(lerRlp(le(RLP_E2E)));
+    // linhas 8-9: "P1                   0.000" e "V3[0] >V4[90] >"; linhas 20-21: P7
+    expect(rlp).toHaveLength(9);
+    expect(rlp[0]).toEqual({ pilar: "P1", normal: 0, inclinacoes: "V3[0] >V4[90] >" });
+    expect(rlp.find((p) => p.pilar === "P7")?.inclinacoes).toBe("V1[0] >V4[270] >");
+    expect(rlp.find((p) => p.pilar === "P5")?.inclinacoes).toBe("");
+  });
+
+  it.skipIf(!existsSync(RLP_E2E) || !existsSync(COL_NOVE) || !existsSync(REP_E2E))(
+    ".REP com o .RLP: a inclinação de cada momento vem do .RLP (PILGEEDI.BAS:1021-1023)",
+    () => {
+      const { obra } = importa({
+        col: le(COL_NOVE),
+        reps: [{ texto: le(REP_E2E), nivelInicial: 2, nivelFinal: 2, rlp: le(RLP_E2E) }],
+      });
+      // P7: ">-.64@1 [4]  (V1) > -1.22@2 [5]  (V4) >" e "V1[0] >V4[270] >"
+      expect(pilar(obra, "P7@pav2").cargaTopo?.momentos.map((m) => m.inclinacao)).toEqual([0, 270]);
+      // P1: "V3[0] >V4[90] >"
+      expect(pilar(obra, "P1@pav2").cargaTopo?.momentos.map((m) => m.inclinacao)).toEqual([0, 90]);
+      idaEVolta(obra);
+    },
+  );
+
+  it(".RLP com carga de laje no pilar: soma na normal depois da do .REP (PILGEEDI.BAS:1017)", () => {
+    const rep = [
+      "SISTRUT Software e Tecnologia s/c Ltda",
+      "Versao 4.0    Abril 1990",
+      "",
+      " SOMATORIA DE REACOES EM PILARES",
+      " OBRA X",
+      " GERADO EM 10-14-2026   21:15",
+      " REGISTROS 1 A 1",
+      " Cargas Totais  Reacoes Estaticas",
+      "",
+      "P   1        10.00",
+      "*10.00 (V1) + ",
+      ">",
+      "",
+    ].join("\r\n");
+    // montado pelo PRINT # do LAJEMONT (LAJEMONT.BAS:600-625): "P1", TAB(16), #######.###
+    const rlp = [
+      "SISTRUT Software e Tecnologia s/c Ltda",
+      "Versao 4.0    Abril 1991",
+      "",
+      " SOMATORIA DE REACOES EM PILARES E INCLINACOES GERADAS PELAS LAJES",
+      " OBRA X",
+      " GERADO EM 10-14-2026   21:14",
+      "",
+      "P1                   2.500",
+      "",
+      "FIM",
+      "",
+    ].join("\r\n");
+    const col = [
+      "SISTRUT Software e Tecnologia s/c Ltda",
+      "Obra - X",
+      "Arquivo com dados de PILARES inicializado em 10-14-2026 12:00:00",
+      " 2 =NUMERO DE NIVEIS",
+      " 1 =NUMERO DE COLUNAS",
+      " 2 ,",
+      " 0 ,FUND",
+      " 3 ,PAV1",
+      "P   1,N ( 1 ) FUND,N ( 2 ) PAV1",
+      " 0 , 0 , 0 , 0 , 0 , 0 ",
+      " 0 [1] 3 [2] 4 [3] 40 [4] 0 [5] 0 [6] .15 [7] 5 [8]B[9]t/cm2[10] 2 [11]{SISTRUT}[12] 1 ",
+      " 0 ",
+      " 0 ",
+      " 0 ",
+      " 0 ",
+      "FIM",
+      "",
+    ].join("\r\n");
+    const { obra } = importa({ col, reps: [{ texto: rep, nivelInicial: 2, nivelFinal: 2, rlp }] });
+    expect(pilar(obra, "P1@pav2").cargaTopo?.normal).toBeCloseTo(12.5 * KN, 6);
   });
 });
