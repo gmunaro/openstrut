@@ -1,7 +1,7 @@
 // Traduz o modelo BIM (modelo.ts) para um arquivo IFC4 (STEP). Estrutura espacial:
 // IfcProject → IfcSite → IfcBuilding → um IfcBuildingStorey por nível. Pilares, vigas e
 // lajes são IfcColumn, IfcBeam e IfcSlab com sólido extrudado (SweptSolid), material
-// "Concreto C{fck}" e os Psets OpenStrut e Pset_*Common. A armadura sai como
+// "Concreto C{fck}" e os Psets OpenStrut_Dados e Pset_*Common. A armadura sai como
 // IfcReinforcingBar agregada ao elemento (IfcRelAggregates), uma por posição, com a
 // barra mapeada (IfcMappedItem) em cada cópia. Unidades: metro, m², m³ e radiano; a
 // origem é a da planta. A ordem dos atributos é a do EXPRESS do IFC4 ADD2 TC1.
@@ -26,7 +26,7 @@ export interface OpcoesEscrita {
 
 const APLICACAO = "OpenStrut V2";
 /** Pset próprio: o prefixo "Pset_" é reservado aos conjuntos padrão do IFC. */
-const PSET = "OpenStrut";
+const PSET = "OpenStrut_Dados";
 
 /** Tipo IFC da barra pela função dela. */
 const TIPO_BARRA: Record<PosicaoIfc["tipo"], string> = {
@@ -262,6 +262,17 @@ export function escreverIfc(modelo: ModeloIfc, opcoes: OpcoesEscrita = {}): stri
     Conferencia: "Os resultados exigem conferência de engenheiro responsável.",
     ...(modelo.avisos.length > 0 ? { AvisosExportacao: modelo.avisos.join(" | ") } : {}),
   });
+  // storey: a placement Z e o Elevation são a cota do topo da laje (o piso de onde nascem
+  // os pilares do storey); o Revit cria o Level pela placement. ElevationOfSSLRelative é
+  // a propriedade do IFC4.3 (Pset_BuildingStoreyCommon); o IFC4 não a tem, então vai no
+  // Pset próprio, com o mesmo nome
+  for (const [n, { ref }] of pavimentos)
+    psetOpenStrut(`nivel|${n.chave}`, ref, {
+      ...(n.pavimento ? { Pavimento: n.pavimento.nome } : {}),
+      ...(n.pavimento && !n.cotaIncerta ? { PeDireito_m: n.pavimento.peDireito } : {}),
+      ...(n.cotaIncerta ? {} : { ElevationOfSSLRelative: n.elevacao }),
+      CotaIncerta: n.cotaIncerta === true,
+    });
 
   /** Perfil IFC; `centro` desloca o perfil no plano dele (o topo da viga em y = 0). */
   const perfil = (p: PerfilIfc, nome: string, centro = { x: 0, y: 0 }) => {

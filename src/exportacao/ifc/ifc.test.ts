@@ -89,11 +89,19 @@ describe("modelo da obra de 3 pavimentos", () => {
     expect(semCalculo.elementos.every((e) => e.armadura.length === 0)).toBe(true);
   });
 
-  it("pilar: o lance abaixo do nível, com a seção do pavimento", () => {
-    const p = porTipo("pilar").find((e) => e.nivel.nome === "Tipo (1/2)") as PilarIfc;
-    expect(p.base).toBeCloseTo(-2.8, 9);
+  it("pilar: o lance abaixo do nível, no storey da base, que sobe o pé-direito", () => {
+    // pilar do Tipo (1/2) (nível em 8,8 m, pé-direito 2,8): base no Tipo (2/2), em 6,0 m
+    const p = porTipo("pilar").find((e) => e.propriedades.NivelTopo === "Tipo (1/2)") as PilarIfc;
+    expect(p.nivel.nome).toBe("Tipo (2/2)");
+    expect(p.nivel.elevacao).toBeCloseTo(6.0, 9);
+    expect(p.base).toBe(0);
     expect(p.altura).toBeCloseTo(2.8, 9);
+    expect(p.propriedades).toMatchObject({ Pavimento: "Tipo", NivelBase: "Tipo (2/2)" });
     expect(p.perfil).toEqual({ tipo: "retangulo", largura: 0.2, altura: 0.2 });
+    // os do Térreo nascem na fundação; vigas e lajes ficam no nível do pavimento
+    const doTerreo = porTipo("pilar").filter((e) => e.propriedades.Pavimento === "Térreo");
+    expect(doTerreo.every((e) => e.nivel.nome === "Fundação")).toBe(true);
+    expect(porTipo("viga").every((e) => e.nivel.nome !== "Fundação")).toBe(true);
   });
 
   it("viga: eixo da planta e seção bw × h; laje: polígono com h", () => {
@@ -116,7 +124,7 @@ describe("modelo da obra de 3 pavimentos", () => {
 
   it("com cálculo: resultados no Pset e barras em vigas e pilares", () => {
     const m = modeloIfc(obra, calculado(obra));
-    const p = m.elementos.find((e) => e.tipo === "pilar" && e.nivel.nome === "Térreo")!;
+    const p = m.elementos.find((e) => e.tipo === "pilar" && e.propriedades.NivelTopo === "Térreo")!;
     expect(p.propriedades.Nk_kN).toBeGreaterThan(0);
     expect(p.propriedades.Armadura).toMatch(/^\d+ φ/);
     expect(p.armadura.map((x) => x.nome)).toEqual(["Longitudinal", "Estribo"]);
@@ -133,7 +141,7 @@ describe("modelo da obra de 3 pavimentos", () => {
 
   it("barras do pilar 20 × 20: na face menos cobrimento, estribo e φ/2", () => {
     const m = modeloIfc(obra, calculado(obra));
-    const p = m.elementos.find((e) => e.tipo === "pilar" && e.nivel.nome === "Térreo")!;
+    const p = m.elementos.find((e) => e.tipo === "pilar" && e.propriedades.NivelTopo === "Térreo")!;
     const longitudinal = p.armadura[0]!;
     // 0,10 − 0,03 (cobrimento) − φt − φ/2
     const phiT = p.armadura[1]!.phi / 1000;
@@ -188,7 +196,10 @@ describe("perfis de pilar", () => {
     const pav = obra.pavimentos[0]!;
     pav.pilares[0] = { ...pav.pilares[0]!, rotacao: 30 };
     const p = modeloIfc(obra, null).elementos.find(
-      (e) => e.tipo === "pilar" && e.nivel.nome === "Cobertura" && e.nome === pav.pilares[0]!.nome,
+      (e) =>
+        e.tipo === "pilar" &&
+        e.propriedades.NivelTopo === "Cobertura" &&
+        e.nome === pav.pilares[0]!.nome,
     ) as PilarIfc;
     expect(p.rotacao).toBeCloseTo(Math.PI / 6, 12);
     expect(p.propriedades.Rotacao_graus).toBe(30);
@@ -360,7 +371,10 @@ describe("resultados sem solução e seção 0 do .SEC", () => {
     };
     const calc = calculado(obra);
     const p = modeloIfc(obra, calc).elementos.find(
-      (e) => e.tipo === "pilar" && e.nivel.nome === "Cobertura" && e.nome === cob.pilares[0]!.nome,
+      (e) =>
+        e.tipo === "pilar" &&
+        e.propriedades.NivelTopo === "Cobertura" &&
+        e.nome === cob.pilares[0]!.nome,
     )!;
     expect(p.propriedades.Armadura).toBe("sem solução");
     expect(p.propriedades).not.toHaveProperty("Taxa_pct");
@@ -424,12 +438,19 @@ describe("arquivo IFC", () => {
     expect(contar("IFCSLAB")).toBe(8);
     expect(contar("IFCREINFORCINGBAR")).toBeGreaterThan(0);
     expect(conteudo).toContain("IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.)");
+    // storey do Térreo: placement e Elevation em 3,2 (topo da laje) e a SSL no Pset próprio
+    expect(conteudo).toMatch(
+      /=IFCBUILDINGSTOREY\('[^']+',#\d+,'T\\X2\\00E9\\X0\\rreo',\$,\$,#\d+,\$,\$,\.ELEMENT\.,3\.2\);/,
+    );
+    expect(conteudo).toContain("IFCPROPERTYSINGLEVALUE('ElevationOfSSLRelative',$,IFCREAL(3.2),$)");
     expect(conteudo).toContain(`IFCMATERIAL('Concreto C${obra.materiais.fck}',$,'concrete')`);
   });
 
   it("mesma obra, mesmo arquivo; GlobalIds únicos", () => {
     expect(gerarIfc(obra, calc, { data: DATA }).conteudo).toBe(conteudo);
-    const ids = [...conteudo.matchAll(/=IFC[A-Z]+\('([0-9A-Za-z_$]{22})'/g)].map((x) => x[1]);
+    // GlobalId das IfcRoot (seguido da referência ao OwnerHistory): um nome de propriedade
+    // de 22 letras, como 'ElevationOfSSLRelative', não conta
+    const ids = [...conteudo.matchAll(/=IFC[A-Z]+\('([0-9A-Za-z_$]{22})',#\d+,/g)].map((x) => x[1]);
     expect(ids.length).toBeGreaterThan(100);
     expect(new Set(ids).size).toBe(ids.length);
   });

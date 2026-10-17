@@ -15,6 +15,7 @@ import sys
 import ifcopenshell
 import ifcopenshell.geom
 import ifcopenshell.util.element
+import ifcopenshell.util.placement
 import ifcopenshell.validate
 
 
@@ -42,9 +43,14 @@ def main(caminho):
     ]
     contagem = {t: len(f.by_type(t)) for t in tipos}
 
+    # z da placement do storey no mundo (é por ela que o Revit cria o Level) e o atributo
+    # Elevation, que deve ser igual
     niveis = [
         {"nome": s.Name, "elevacao": s.Elevation,
-         "elementos": sum(len(r.RelatedElements) for r in s.ContainsElements)}
+         "z": float(ifcopenshell.util.placement.get_local_placement(s.ObjectPlacement)[2][3]),
+         "elementos": sum(len(r.RelatedElements) for r in s.ContainsElements),
+         "psets": {k: {p: val for p, val in d.items() if p != "id"}
+                   for k, d in ifcopenshell.util.element.get_psets(s).items()}}
         for s in f.by_type("IfcBuildingStorey")
     ]
 

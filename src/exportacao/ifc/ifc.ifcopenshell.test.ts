@@ -21,7 +21,13 @@ interface Conferencia {
   esquema: string;
   erros: string[];
   contagem: Record<string, number>;
-  niveis: { nome: string; elevacao: number; elementos: number }[];
+  niveis: {
+    nome: string;
+    elevacao: number;
+    z: number;
+    elementos: number;
+    psets: Record<string, Record<string, number | string | boolean>>;
+  }[];
   elementos: {
     tipo: string;
     nome: string;
@@ -64,6 +70,29 @@ const caixa = (r: Conferencia, tipo: string, nome: string, nivel: string) => {
   return e;
 };
 
+/** Nada deslocado do próprio nível, lendo o z de cada elemento no IfcOpenShell:
+ *  - a placement do storey (por ela o Revit cria o Level) está na Elevation, que é a
+ *    ElevationOfSSLRelative do Pset (o prédio está em 0);
+ *  - o pilar nasce na placement do storey que o contém (o nível de base) e sobe;
+ *  - viga (fora a escada, inclinada) e laje têm o topo na placement do storey delas. */
+const basesNoNivel = (r: Conferencia) => {
+  const z = (nome: string | null) => {
+    const n = r.niveis.find((x) => x.nome === nome);
+    if (!n) throw new Error(`storey ${nome} não encontrado`);
+    return n.z;
+  };
+  for (const n of r.niveis) {
+    expect(n.z).toBeCloseTo(n.elevacao, 9);
+    expect(n.psets.OpenStrut_Dados?.ElevationOfSSLRelative ?? n.z).toBeCloseTo(n.z, 9);
+  }
+  const pilares = r.elementos.filter((x) => x.tipo === "IfcColumn");
+  expect(pilares.length).toBeGreaterThan(0);
+  for (const p of pilares) expect(p.caixa[2]).toBeCloseTo(z(p.nivel), 6);
+  for (const e of r.elementos)
+    if (e.tipo === "IfcSlab" || (e.tipo === "IfcBeam" && !e.psets.OpenStrut_Dados?.Escada))
+      expect(e.caixa[5]).toBeCloseTo(z(e.nivel), 6);
+};
+
 describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", () => {
   it("obra de 3 pavimentos: válida, níveis, contagens e dimensões", () => {
     const r = conferir("tres", obraTresPavimentos());
@@ -71,11 +100,12 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     expect(r.erros).toEqual([]);
     expect(r.falhasGeometria).toEqual([]);
     expect(r.niveis.map((n) => [n.nome, n.elevacao, n.elementos])).toEqual([
-      ["Fundação", 0, 0],
+      // pilares no storey da base (6 por pavimento); 2 lajes e 5 vigas no do nível
+      ["Fundação", 0, 6],
       ["Térreo", 3.2, 13],
       ["Tipo (2/2)", 6, 13],
       ["Tipo (1/2)", 8.8, 13],
-      ["Cobertura", 11.8, 13],
+      ["Cobertura", 11.8, 7],
     ]);
     expect(r.contagem).toMatchObject({
       IfcProject: 1,
@@ -88,8 +118,9 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     });
     expect(r.contagem.IfcReinforcingBar).toBeGreaterThan(0);
 
-    // P1 da cobertura: 20 × 20 cm, de 8,8 a 11,8 m
-    const p1 = caixa(r, "IfcColumn", "P1", "Cobertura");
+    // P1 da cobertura: 20 × 20 cm, de 8,8 a 11,8 m, no storey da base (Tipo (1/2)): a
+    // caixa começa na elevação do storey que o contém, como o Revit espera
+    const p1 = caixa(r, "IfcColumn", "P1", "Tipo (1/2)");
     const [x0, y0, z0, x1, y1, z1] = p1.caixa;
     expect(x1 - x0).toBeCloseTo(0.2, 6);
     expect(y1 - y0).toBeCloseTo(0.2, 6);
@@ -97,7 +128,7 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     expect(z1).toBeCloseTo(11.8, 6);
     expect(p1.material).toEqual(["Concreto C25"]);
     expect(p1.psets.Pset_ColumnCommon).toMatchObject({ Reference: "P1", LoadBearing: true });
-    expect(p1.psets.OpenStrut).toMatchObject({ Nome: "P1", fck_MPa: 25, Calculado: true });
+    expect(p1.psets.OpenStrut_Dados).toMatchObject({ Nome: "P1", fck_MPa: 25, Calculado: true });
 
     // laje L1 do térreo: 4 × 5 m, h = 12 cm, topo em 3,2 m
     const l1 = caixa(r, "IfcSlab", "L1", "Térreo").caixa;
@@ -106,6 +137,7 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     // vigas com o topo no nível
     for (const v of r.elementos.filter((x) => x.tipo === "IfcBeam"))
       expect(v.caixa[5]).toBeCloseTo(r.niveis.find((n) => n.nome === v.nivel)!.elevacao, 6);
+    basesNoNivel(r);
   }, 600_000);
 
   it("obra E2E do oráculo: válida, viga 12 × 40 do .SEC e barras dentro da viga", () => {
@@ -119,6 +151,7 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
       ["E2E", 3],
     ]);
     expect(r.contagem).toMatchObject({ IfcColumn: 9, IfcBeam: 6, IfcSlab: 4 });
+    basesNoNivel(r);
     const v1 = caixa(r, "IfcBeam", "V1", "E2E").caixa;
     expect(v1.map((v) => Number(v.toFixed(6)))).toEqual([0, 9.94, 2.6, 8, 10.06, 3]);
     // estribos de V1 dentro da seção (cobrimento 2 cm do .DSP do oráculo ou o da obra)
@@ -145,6 +178,7 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     expect(x1).toBeGreaterThanOrEqual(Math.max(apoio0.x, apoio1.x) - 1e-6);
     expect(y0).toBeLessThanOrEqual(Math.min(apoio0.y, apoio1.y) + 1e-6);
     expect(y1).toBeGreaterThanOrEqual(Math.max(apoio0.y, apoio1.y) - 1e-6);
-    expect(e1.psets.OpenStrut).toMatchObject({ Escada: true, CotaIncerta: false });
+    expect(e1.psets.OpenStrut_Dados).toMatchObject({ Escada: true, CotaIncerta: false });
+    basesNoNivel(r);
   }, 600_000);
 });

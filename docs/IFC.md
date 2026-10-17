@@ -17,7 +17,7 @@ Código: `src/exportacao/ifc/`.
 
 IFC4 (ADD2 TC1) é o esquema que Revit, ArchiCAD, Tekla e BIMcollab importam hoje, e ele tem `IfcReinforcingBar` com `PredefinedType` e `BarSurface`. Não há nada na exportação que exija IFC2x3.
 
-O STEP sai de um escritor próprio (`step.ts`, 182 linhas). O web-ifc, a biblioteca mais usada para IFC no navegador, tem 1,6 MB só de `.wasm` (versão 0.0.78). O `@thatopen/components` tem 476 KB minificado. Não existe no npm um escritor IFC4 pequeno (`ifc-writer` não existe). O chunk da exportação tem 24,6 KB (9,9 KB gzip) e só é baixado no primeiro clique em "Exportar IFC". A tela da obra ganhou cerca de 0,7 KB com o botão.
+O STEP sai de um escritor próprio (`step.ts`, 182 linhas). O web-ifc, a biblioteca mais usada para IFC no navegador, tem 1,6 MB só de `.wasm` (versão 0.0.78). O `@thatopen/components` tem 476 KB minificado. Não existe no npm um escritor IFC4 pequeno (`ifc-writer` não existe). O chunk da exportação tem 25,0 KB (10,0 KB gzip) e só é baixado no primeiro clique em "Exportar IFC". A tela da obra ganhou cerca de 0,7 KB com o botão.
 
 A ordem dos atributos de cada entidade segue o EXPRESS oficial `IFC4_ADD2_TC1.exp` (buildingSMART, espelho em `github.com/buildingSMART/IFC4.x-development`, `reference_schemas/`).
 
@@ -30,9 +30,33 @@ Estrutura espacial: `IfcProject` → `IfcSite` → `IfcBuilding` → `IfcBuildin
 - O pavimento-tipo vira um nível por repetição, "Tipo (k/n)". A repetição 1 é a de cima, como no cálculo dos pilares (`calculo/pilares/acumulacao.ts`).
 - O pavimento de vigas avulsas (a escada do SISTRUT, abaixo) não entra na pilha.
 
+### Em que storey fica cada elemento
+
+No modelo da obra e no SISTRUT, o pavimento é a laje que ele sustenta, e o pilar do pavimento é o lance de baixo, que chega a ela. No BIM, o storey que contém o pilar é o nível de base dele. O IFC segue a convenção do BIM:
+
+- a placement do storey e o atributo `Elevation` ficam na cota do topo da laje do pavimento, que é o piso de onde nascem os pilares do storey;
+- vigas e lajes ficam no storey do nível do pavimento, com o topo na elevação dele;
+- o pilar fica no storey de baixo (a "Fundação", no pavimento mais baixo) e sobe dali o pé-direito do pavimento. A geometria no mundo é a mesma da convenção estrutural; só muda o storey que contém o pilar.
+
+O motivo é como as ferramentas leem o arquivo:
+
+- O Revit exporta a coluna no storey do "Base Level" dela ([ajuda da Autodesk, Revit 2024](https://help.autodesk.com/cloudhelp/2024/ENU/Revit-DocumentPresent/files/GUID-E029E3AD-1639-4446-A935-C9796BC34C95.htm); no código do [revit-ifc](https://github.com/Autodesk/revit-ifc), `PlacementSetter.cs` usa o storey do z mínimo da base).
+- Na importação, o revit-ifc cria o Level pela Z da placement do storey (`IFCBuildingStorey.cs`). O `Elevation` diferente só gera aviso, e o `IfcRelReferencedInSpatialStructure` é ignorado. Por isso a placement e o `Elevation` são iguais, e a base de cada pilar coincide com a Z do storey que o contém.
+- O IFC4 contém um elemento que atravessa níveis num storey só; os exemplos da especificação (espaço de vários andares, poço de elevador) usam o storey da base.
+- Um pilar contido no storey do topo, com a geometria 3 m abaixo da elevação dele, ficaria com o nível de base trocado no Revit e no ArchiCAD.
+- Não achamos documentação de como o TQS e o Eberick escolhem o storey do pilar na exportação IFC.
+
+O IFC4.3 mede o nível por `Pset_BuildingStoreyCommon.ElevationOfSSLRelative` (topo da laje estrutural). O `Pset_BuildingStoreyCommon` do IFC4 ADD2 não tem essa propriedade, e gravá-la ali seria propriedade fora do padrão. Ela vai no `OpenStrut_Dados` do storey, com o mesmo nome, junto com o `Pavimento`, o `PeDireito_m` e `CotaIncerta`.
+
+O `OpenStrut_Dados` do pilar guarda a leitura estrutural: `Pavimento` (o que ele sustenta), `NivelBase` e `NivelTopo`.
+
+O teste de roundtrip abre o IFC no IfcOpenShell e lê a Z de cada elemento. A placement de todo storey está no `Elevation` e na `ElevationOfSSLRelative`. Todo pilar começa na Z do storey que o contém. Toda laje e toda viga (fora a escada, inclinada) têm o topo nela.
+
+O "Abrir IFC" do Revit lista IFC2x3; o IFC4 entra por "Vincular IFC" ([ajuda da Autodesk, Revit 2026](https://help.autodesk.com/cloudhelp/2026/ENU/Revit-DocumentPresent/files/GUID-6708CFD6-0AD7-461F-ADE8-6527423EC895.htm)). Não abrimos o arquivo no Revit; a conferência é pelo IfcOpenShell, pelo web-ifc e pelo `@ifc-lite/parser`.
+
 | Elemento | Entidade | Geometria |
 |---|---|---|
-| Pilar | `IfcColumn` (`COLUMN`) | Lance do nível de baixo até o do pavimento, como no modelo da obra. Seção retangular b × h girada de `rotacao` em torno do centro, circular (`IfcCircleHollowProfileDef` se vazada) ou poligonal centrada pela caixa |
+| Pilar | `IfcColumn` (`COLUMN`) | Lance do nível de baixo até o do pavimento, no storey da base. Seção retangular b × h girada de `rotacao` em torno do centro, circular (`IfcCircleHollowProfileDef` se vazada) ou poligonal centrada pela caixa |
 | Viga | `IfcBeam` (`BEAM`) | Extrudada ao longo do eixo, com o topo no nível. Um sólido por tramo com a seção do DESENHO (`Viga.secoes.trechos`, T com `IfcTShapeProfileDef` quando a mesa é mais larga que a alma); sem ela, bw × h na viga inteira. Trecho com seção 0 no `.SEC`: o balanço herda a do apoio vizinho, como o DESDIM, e o tramo usa bw × h |
 | Laje | `IfcSlab` (`FLOOR`) | Polígono da laje (ou o retângulo) extrudado para baixo com a espessura h, a partir do nível. Sem furos |
 | Barra | `IfcReinforcingBar` | Uma por posição (N1, N2…), agregada ao elemento por `IfcRelAggregates`. A barra modelo é um `IfcSweptDiskSolid` sobre uma polilinha, repetida com `IfcMappedItem` em cada cópia |
@@ -54,12 +78,12 @@ Psets:
 
 - `Pset_ColumnCommon`, `Pset_BeamCommon` e `Pset_SlabCommon` levam `Reference` (o nome, P3, V1) e `LoadBearing`. A viga leva também o `Span`.
 - `Pset_ReinforcingBarCommon` leva `Reference` (a posição).
-- `OpenStrut` em cada elemento (o prefixo `Pset_` é reservado aos conjuntos padrão do IFC, e o validador da buildingSMART acusa conjunto próprio com ele): nome original, pavimento e nível, seção, `Concreto`, `fck_MPa`, `Aco`, `AcoEstribo`, `Cobrimento_cm`, `Norma`, `ModoCalculo` (NB-1/78) e `Calculado`. Com cálculo, entram também os resultados principais:
+- `OpenStrut_Dados` em cada elemento. O nome segue o padrão de Pset próprio, com o prefixo de quem cria; `Pset_` é reservado aos conjuntos padrão da buildingSMART, e o validador dela acusa conjunto próprio com esse prefixo. O Pset traz: nome original, pavimento e nível (no pilar, `NivelBase` e `NivelTopo`), seção, `Concreto`, `fck_MPa`, `Aco`, `AcoEstribo`, `Cobrimento_cm`, `Norma`, `ModoCalculo` (NB-1/78) e `Calculado`. Com cálculo, entram também os resultados principais:
   - pilar: `Nk_kN`, `Nd_kN`, `MdX_kNm`, `MdY_kNm`, `LambdaX`, `LambdaY`, `AsNecessaria_cm2`, `AsAdotada_cm2`, `Armadura`, `Estribos`, `Taxa_pct`. O lance sem solução leva só `Nk_kN` e `Armadura = "sem solução"`;
   - viga: `MkPositivo_kNm`, `MkNegativo_kNm` e `Vk_kN` da envoltória, e `MdPositivo_kNm`, `MdNegativo_kNm` e `Vd_kN` só pela NBR 6118 (γf = máx(γg, γq), o do dimensionamento; pela NB-1/78 o DESDIM usa o γf do `.DSP`), As positiva e negativa, armadura e estribos por tramo;
   - laje: momentos, Asx e Asy, barras, e `Flecha_cm` e `FlechaLimite_cm` pela NBR 6118 (o caminho do SISTRUT não calcula flecha, e a propriedade não sai);
   - todos: o número de avisos e o texto deles.
-- `OpenStrut` do projeto: norma, materiais, número de pavimentos, a frase de conferência por engenheiro responsável e os avisos da exportação.
+- `OpenStrut_Dados` do projeto: norma, materiais, número de pavimentos, a frase de conferência por engenheiro responsável e os avisos da exportação.
 
 As grandezas vão como `IfcReal` com a unidade no nome da propriedade (`Nk_kN`), para não depender da unidade de força do arquivo. Um valor que o cálculo não conseguiu dar (NaN numa seção sem solução) sai como o texto "sem solução", nunca como número.
 

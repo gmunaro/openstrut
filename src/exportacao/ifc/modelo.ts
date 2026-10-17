@@ -7,7 +7,9 @@
 // Convenções (docs/IFC.md):
 // - z = 0 do pavimento é o nível dele (topo da laje); a elevação do nível é a soma dos
 //   pés-direitos da base até ele. O pilar do pavimento é o lance que vai do nível de
-//   baixo até o dele, como no motor (dominio/obra.ts, Pilar).
+//   baixo até o dele, como no motor (dominio/obra.ts, Pilar). No IFC ele fica no storey
+//   da base (o nível de baixo; a fundação no primeiro), de z = 0 ao pé-direito: Revit e
+//   ArchiCAD tomam o storey que contém o pilar como o nível de base dele.
 // - Pavimento-tipo: um nível por repetição; a repetição 1 é a de cima, como em
 //   calculo/pilares/acumulacao.ts.
 // - Viga: topo no nível, extrudada ao longo do eixo; sistema local com x no eixo (do
@@ -47,6 +49,8 @@ export interface NivelIfc {
   pavimento?: Pavimento;
   /** 1 = a repetição de cima. */
   repeticao?: number;
+  /** Nível da escada sem cota deduzível (em 0, fora da planta). */
+  cotaIncerta?: boolean;
 }
 
 /** Perfil 2D centrado na origem do perfil, m. */
@@ -80,7 +84,7 @@ interface ElementoBase {
   nome: string;
   nivel: NivelIfc;
   descricao?: string;
-  /** OpenStrut. */
+  /** Pset OpenStrut_Dados. */
   propriedades: Propriedades;
   armadura: PosicaoIfc[];
 }
@@ -91,7 +95,7 @@ export interface PilarIfc extends ElementoBase {
   x: number;
   y: number;
   rotacao: number;
-  /** Base do lance relativa ao nível (−pé-direito) e altura, m. */
+  /** Base do lance relativa ao nível dele (o de baixo do pavimento: 0) e altura, m. */
   base: number;
   altura: number;
   perfil: PerfilIfc;
@@ -131,7 +135,7 @@ export interface ModeloIfc {
   elementos: ElementoIfc[];
   /** "Concreto C25". */
   concreto: string;
-  /** OpenStrut do projeto: norma, materiais e se a obra foi calculada. */
+  /** OpenStrut_Dados do projeto: norma, materiais e se a obra foi calculada. */
   propriedades: Propriedades;
   /** Avisos do exportador (o que não entrou ou foi aproximado). */
   avisos: string[];
@@ -710,7 +714,7 @@ function larguraPrimeiroApoio(rv: ResultadoViga, pav: Pavimento, v: Viga) {
   return p ? (rv.viga.eixo.horizontal ? p.b : p.h) / 100 : 0;
 }
 
-/** Modelo BIM da obra. Com `calculo`, os resultados entram no OpenStrut e, com
+/** Modelo BIM da obra. Com `calculo`, os resultados entram no Pset OpenStrut_Dados e, com
  *  `opcoes.armadura` (padrão), as barras detalhadas das vigas e dos pilares. */
 export function modeloIfc(
   obra: Obra,
@@ -820,10 +824,14 @@ export function modeloIfc(
     };
   };
 
+  // nível de baixo do pavimento atual: a base dos pilares dele
+  let abaixo = niveis[0]!;
   for (const nivel of niveis) {
     const pav = nivel.pavimento;
     if (!pav) continue;
     const rp = resultado?.pavimentos.find((x) => x.pavimento.id === pav.id);
+    const base = abaixo;
+    abaixo = nivel;
 
     // lajes: polígono com a espessura, topo no nível
     for (const l of pav.lajes) {
@@ -855,7 +863,7 @@ export function modeloIfc(
       if (e) elementos.push(e);
     }
 
-    // pilares: o lance abaixo do nível
+    // pilares: o lance abaixo do nível, no storey da base
     for (const p of pav.pilares) {
       const perfil = perfilPilar(p);
       const rpil = resultado?.pilares.find(
@@ -877,16 +885,18 @@ export function modeloIfc(
         tipo: "pilar",
         chave: `${nivel.chave}|pilar|${p.id}`,
         nome: p.nome,
-        nivel,
+        nivel: base,
         x: p.x,
         y: p.y,
         rotacao: p.secao ? 0 : ((p.rotacao ?? 0) * Math.PI) / 180,
-        base: -pav.peDireito,
+        base: 0,
         altura: pav.peDireito,
         perfil,
         propriedades: semNaN({
           Nome: p.nome,
-          ...doNivel(pav, nivel),
+          Pavimento: pav.nome,
+          NivelBase: base.nome,
+          NivelTopo: nivel.nome,
           Secao: rotuloSecaoPilar(p),
           ...(p.rotacao && !p.secao ? { Rotacao_graus: p.rotacao } : {}),
           PeDireito_m: pav.peDireito,
@@ -942,6 +952,7 @@ export function modeloIfc(
             descricao:
               "Vigas avulsas importadas do SISTRUT (.VIG sem .LAJ, como uma escada) cuja posição as cargas do prédio não permitem deduzir; ficam na posição da importação, fora da planta",
             pavimento: pav,
+            cotaIncerta: true,
           };
           niveis.splice(1, 0, semCota);
           avisos.push(
