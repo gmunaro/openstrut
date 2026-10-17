@@ -36,20 +36,18 @@ export function Sobreposicao({
         <span>Escala</span>
         <div role="group" aria-label="Escala" className="flex gap-1">
           {ESCALAS.map((e) => (
-            <Button
+            // botão nativo: as cores fixas (branco sobre a câmera) não passam pelo tema
+            <button
               key={e.id}
-              size="sm"
-              variant="ghost"
+              type="button"
               aria-pressed={e.id === escala}
-              className={
-                e.id === escala
-                  ? "h-10 bg-white px-2 text-black hover:bg-white hover:text-black"
-                  : "h-10 px-2 text-white hover:bg-white/20 hover:text-white"
-              }
+              className={`h-10 rounded-md px-2 font-medium outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                e.id === escala ? "bg-white text-black" : "text-white"
+              }`}
               onClick={() => aoEscala(e.id)}
             >
               {e.id}
-            </Button>
+            </button>
           ))}
         </div>
         <Button size="sm" variant="destructive" className="ml-auto h-10" onClick={aoSair}>

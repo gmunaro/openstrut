@@ -462,7 +462,10 @@ for (const tela of TELAS)
       expect(m[0]).toBeCloseTo(0.02, 6);
       const t1 = [m[12]!, m[13]!, m[14]!];
       expect(await quadro(mesa)).toBe(true);
-      await page.screenshot({ path: path.join(PRINTS, `posicionado-${tela.nome}.png`) });
+      await page.screenshot({
+        path: path.join(PRINTS, `posicionado-${tela.nome}.png`),
+        animations: "disabled",
+      });
 
       // dois dedos: o segundo gira 90° no sentido horário da tela em volta do primeiro →
       // −90° em Y: coluna X da matriz = (cos, 0, −sen) × 0,02 = (0; 0; 0,02)
