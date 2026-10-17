@@ -109,11 +109,11 @@ export function NomeComMarca({ nome, local }: { nome: string; local: string }) {
 /** Uma parte da explicação: rótulo e texto. */
 function Parte({ n, rotulo, children }: { n: number; rotulo: string; children: ReactNode }) {
   return (
-    <div className="grid gap-0.5">
+    <div className="grid min-w-0 grid-cols-1 gap-0.5">
       <dt className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
         {n}. {rotulo}
       </dt>
-      <dd className="text-sm">{children}</dd>
+      <dd className="min-w-0 text-sm">{children}</dd>
     </div>
   );
 }
@@ -153,7 +153,7 @@ function CartaoErro({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" |
     <article
       id={ancoraErro(erro.id)}
       aria-labelledby={`${ancoraErro(erro.id)}-titulo`}
-      className="bg-background scroll-mt-4 rounded-md border p-3 break-inside-avoid"
+      className="bg-background min-w-0 scroll-mt-4 rounded-md border p-3 break-inside-avoid"
     >
       <h3
         id={`${ancoraErro(erro.id)}-titulo`}
@@ -167,7 +167,7 @@ function CartaoErro({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" |
           {sentido.rotulo}
         </Badge>
       </h3>
-      <dl className="mt-2 grid gap-2">
+      <dl className="mt-2 grid min-w-0 grid-cols-1 gap-2">
         <Parte n={1} rotulo="O que acontecia no SISTRUT">
           {erro.mecanismo}
         </Parte>
@@ -211,7 +211,7 @@ export function BlocoErrosOriginal({
   return (
     <section
       aria-labelledby="erros-original"
-      className="border-primary/50 bg-primary/5 mt-4 mb-3 rounded-md border-2 p-3"
+      className="border-primary/50 bg-primary/5 mt-4 mb-3 min-w-0 rounded-md border-2 p-3"
     >
       <h2 id="erros-original" className="flex items-center gap-2 text-sm font-semibold">
         <Bug className="text-primary size-4" aria-hidden />
@@ -224,7 +224,7 @@ export function BlocoErrosOriginal({
         outro modo ao lado, e o que fazer. São separados das verificações da própria V2.
       </p>
       {erros.length > 0 && (
-        <div className="mt-3 grid gap-3">
+        <div className="mt-3 grid min-w-0 grid-cols-1 gap-3">
           {erros.map((e) => (
             <CartaoErro key={e.id} erro={e} ativo={ativo} />
           ))}

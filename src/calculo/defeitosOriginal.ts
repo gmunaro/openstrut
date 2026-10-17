@@ -132,7 +132,8 @@ function transicao(o: ResultadoSistrut, c: ResultadoSistrut | undefined, ativo: 
     sentido: "a favor",
     sentidoTexto:
       "A favor da segurança: a fundação e os lances do pilar de baixo saem dimensionados para mais carga do que recebem. A viga de transição recebe a carga uma vez só.",
-    grandeza: "carga que chega à fundação, sem o peso próprio do pilar, t",
+    grandeza:
+      "carga que chega à fundação, sem o peso próprio do pilar, t; linhas da maior dupla contagem para a menor",
     linhas,
     v2Faz:
       ativo === "original"
@@ -198,7 +199,8 @@ function reacoesTruncadas(
     impacto: `${plural(n, "parcela cortada", "parcelas cortadas")} em ${plural(perdas.length, "linha", "linhas")} do .REP, ${tr(soma)} a menos no total da obra. Cada parcela perde menos de 0,01 t; o pilar perde até 0,01 t por viga que descarrega nele. Maior perda relativa: ${maior.pilar} no ${maior.pav}, ${tr(maior.perda)} em ${tr(maior.semCorte)} (${fr}).`,
     sentido: "contra",
     sentidoTexto: "Contra a segurança, mas pequeno: a carga do pilar sai sempre um pouco menor.",
-    grandeza: "soma das reações das vigas no pilar, no .REP, t",
+    grandeza:
+      "soma das reações das vigas no pilar, no .REP, t; linhas da maior perda relativa para a menor",
     linhas: perdas.map((x) => ({
       local: x.pav,
       elemento: x.pilar,
