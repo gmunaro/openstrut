@@ -47,36 +47,51 @@ export const useObra = create<EstadoObra>()((set, get) => ({
     if (!obra) return;
     const nova = f(obra);
     if (nova === obra) return;
-    const pavs = nova.pavimentos;
     set({
       obra: nova,
       passado: [...passado, obra].slice(-LIMITE_HISTORICO),
       futuro: [],
-      // o pavimento ativo pode ter sido apagado
-      pavimentoId: pavs.some((p) => p.id === pavimentoId) ? pavimentoId : (pavs[0]?.id ?? null),
-      selecao: existe(nova, pavimentoId, selecao) ? selecao : null,
+      ...ativoValido(nova, pavimentoId, selecao),
     });
   },
+  // desfazer e refazer podem tirar ou trazer de volta o pavimento ativo e o elemento
+  // selecionado: os dois só continuam se existem na obra restaurada
   desfazer: () => {
-    const { obra, passado, futuro } = get();
+    const { obra, passado, futuro, pavimentoId, selecao } = get();
     const anterior = passado.at(-1);
     if (!obra || !anterior) return;
     set({
       obra: anterior,
       passado: passado.slice(0, -1),
       futuro: [obra, ...futuro],
-      selecao: null,
+      ...ativoValido(anterior, pavimentoId, selecao),
     });
   },
   refazer: () => {
-    const { obra, passado, futuro } = get();
+    const { obra, passado, futuro, pavimentoId, selecao } = get();
     const proximo = futuro[0];
     if (!obra || !proximo) return;
-    set({ obra: proximo, passado: [...passado, obra], futuro: futuro.slice(1), selecao: null });
+    set({
+      obra: proximo,
+      passado: [...passado, obra],
+      futuro: futuro.slice(1),
+      ...ativoValido(proximo, pavimentoId, selecao),
+    });
   },
   selecionarPavimento: (id) => set({ pavimentoId: id, selecao: null }),
   selecionar: (selecao) => set({ selecao }),
 }));
+
+/** Pavimento ativo e seleção ajustados à obra `obra`: o pavimento que sumiu dá lugar ao
+ *  primeiro, e a seleção de um elemento que não existe mais cai. */
+function ativoValido(obra: Obra, pavimentoId: string | null, selecao: Selecao) {
+  const pavs = obra.pavimentos;
+  const id = pavs.some((p) => p.id === pavimentoId) ? pavimentoId : (pavs[0]?.id ?? null);
+  return {
+    pavimentoId: id,
+    selecao: id === pavimentoId && existe(obra, id, selecao) ? selecao : null,
+  };
+}
 
 function existe(obra: Obra, pavimentoId: string | null, s: Selecao) {
   if (!s) return true;
