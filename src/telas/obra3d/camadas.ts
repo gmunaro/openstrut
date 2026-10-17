@@ -281,4 +281,10 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
       "Calcula a obra no outro modo da NB-1/78 e pinta as peças em que o SISTRUT original difere do corrigido.",
     carregar: () => import("./comparar/camada").then((m) => m.camada),
   },
+  {
+    id: "ar",
+    nome: "Realidade aumentada",
+    descricao: "Põe o prédio na mesa, como maquete, ou no terreno pela câmera do celular.",
+    carregar: () => import("./ar/camada").then((m) => m.camada),
+  },
 ];
