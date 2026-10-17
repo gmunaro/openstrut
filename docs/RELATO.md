@@ -57,14 +57,13 @@ O Vite lê variáveis `VITE_*` do ambiente do `bun run build:pages`.
 |---|---|
 | `VITE_RELATO_URL` | URL do Worker com `/relato`, ex.: `https://openstrut-relato.<subdomínio>.workers.dev/relato`. Ausente: caminho sem relay. |
 | `VITE_TURNSTILE_SITEKEY` | Chave pública do Turnstile, só quando o Worker exige (`TURNSTILE_SECRET`). |
-| `VITE_COMMIT` | Commit do build no diagnóstico. Sem ela, o diagnóstico diz "não informado no build" e mostra só o nome do bundle. |
+| `VITE_COMMIT` | Commit do build no diagnóstico. O `pages.yml` já passa `${{ github.sha }}`. Sem ela, o diagnóstico diz "não informado no build", e o marcador da triagem usa o nome do arquivo do bundle. |
 
-Para ligar no GitHub Pages, acrescente ao passo de build em `.github/workflows/pages.yml`:
+O `pages.yml` já passa `VITE_COMMIT`, e `src/components/relato/build.test.ts` confere isso. Para ligar o relay no GitHub Pages, acrescente ao `env:` que já existe nesse passo de build:
 
 ```yaml
       - run: bun run build:pages
         env:
-          VITE_COMMIT: ${{ github.sha }}
           VITE_RELATO_URL: ${{ vars.RELATO_URL }}            # vazio = sem relay
           VITE_TURNSTILE_SITEKEY: ${{ vars.TURNSTILE_SITEKEY }}
 ```
