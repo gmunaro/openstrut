@@ -19,6 +19,14 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      // a vista 3D (three.js, pedaços "3d-*") não entra no precache: baixa ao abrir a aba
+      // 3D e fica no cache a partir daí (docs/VISTA-3D.md)
+      workbox: {
+        globIgnores: ["**/3d-*.js"],
+        runtimeCaching: [
+          { urlPattern: /\/assets\/3d-[^/]+\.js$/, handler: "CacheFirst", options: { cacheName: "vista-3d", expiration: { maxEntries: 10 } } },
+        ],
+      },
       includeAssets: ["favicon.svg", "apple-touch-icon-180x180.png"],
       manifest: {
         name: "OpenStrut V2",
@@ -44,6 +52,29 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        // pedaços que só a vista 3D carrega (entrada em src/telas/obra3d ou no three.js)
+        // levam o prefixo "3d-"
+        chunkFileNames: (c) => {
+          const id = c.facadeModuleId ?? "";
+          // camada numa pasta própria (obra3d/<pasta>/camada.tsx): 3d-<pasta>-camada-<hash>
+          const pasta = /[\/]telas[\/]obra3d[\/]([^\/]+)[\/][^\/]+$/.exec(id)?.[1];
+          if (pasta) return `assets/3d-${pasta}-[name]-[hash].js`;
+          // pedaço só da vista 3D: a entrada (ou, num pedaço compartilhado sem entrada, todos
+          // os módulos) em obra3d, no three ou nas libs de path tracing
+          const ids = c.facadeModuleId ? [c.facadeModuleId] : c.moduleIds;
+          const da3d =
+            ids.length > 0 &&
+            ids.every((m) =>
+              /[\/](telas[\/]obra3d|node_modules[\/](three|three-gpu-pathtracer|three-mesh-bvh))[\/]/.test(m),
+            );
+          return da3d ? "assets/3d-[name]-[hash].js" : "assets/[name]-[hash].js";
+        },
+      },
+    },
+  },
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   test: {
     projects: [
