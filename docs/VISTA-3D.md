@@ -155,6 +155,10 @@ Toda peça de `ctx.modelo.elementos` tem uma entrada em `ctx.dados` (sem cálcul
 
 `api.ts` também exporta as cores da vista: `COR_ESTADO` (`ok`, `aviso` e `falha`, as cores da planta), `COR_DEFEITO` (a marca "!"), `NEUTRO` (o cinza de cada tipo sem cálculo) e `RAMPA` (os 7 passos da rampa azul). Uma marca de falha feita por uma camada deve usar `COR_ESTADO.falha`.
 
+### TypeScript do repositório
+
+O `tsconfig.json` liga `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` e `noImplicitOverride`. Acesso por índice (`lista[0]`, `modelo.niveis[i]`) tem tipo `T | undefined` e precisa de checagem ou de `!` quando o índice é garantido; um campo opcional não aceita `undefined` explícito (use o spread condicional, `...(x ? { campo: x } : {})`). `bun run typecheck` confere a camada junto com o resto, e `bun run lint` (oxlint) e `bun run fmt` (oxfmt) seguem o padrão do repositório.
+
 ### three.js
 
 Importe as classes do pacote `three` (`import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3 } from "three";`) e os complementos de `three/addons/...` (por exemplo `three/addons/exporters/GLTFExporter.js`). É o mesmo three 0.186 da vista, sem cópia: qualquer classe vale. O que a camada importa vai para o pedaço `3d-` dela.
