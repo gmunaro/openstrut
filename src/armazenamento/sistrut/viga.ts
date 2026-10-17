@@ -26,7 +26,7 @@
 // marca no J (1 + número/100000, a regra do VIGA opção 7, VIGA.BAS:2140-2160); 471 é o
 // apoio desconsiderado. Ao completar, as vigas casam pelo nome e só entra o que difere do
 // que a própria obra grava pela montagem.
-import { calcularObraSistrut } from "../../calculo/sistrut/obra";
+import { calcularObraSistrut, type ResultadoSistrut } from "../../calculo/sistrut/obra";
 import { qbCint, sng } from "../../calculo/sistrut/base/f32";
 import { PARAMETROS_DSP, PARAMETROS_VIGA } from "../../calculo/sistrut/base/parametros";
 import { numeroDoPilar } from "../../calculo/sistrut/montagem/vigas";
@@ -771,17 +771,23 @@ const extensao = (nome: string) => nome.slice(nome.lastIndexOf(".")).toUpperCase
 const base = (nome: string) => nome.slice(0, nome.lastIndexOf(".")).replace(/^.*[\\/]/, "");
 const texto = (b: Uint8Array) => new TextDecoder("latin1").decode(b);
 
+/** As vigas que a montagem da obra grava num pavimento (o .VIG da planta). */
+export type MontagemVigas = ResultadoSistrut["pavimentos"][number]["montagem"]["vigas"];
+
 /** Distância entre as linhas das vigas na planta gerada, m. */
 const ENTRE_VIGAS = 5;
 /** Largura do pilar quando o .FOR não a dá, cm. */
 const LARGURA_PILAR = 20;
 
 /** Importa o .VIG (obrigatório), o .SEC, o .FOR e o .DSP. Sem `obra`, gera uma obra nova
- *  só com as vigas; com ela, completa o pavimento `pavimentoId` (o primeiro, se ausente). */
+ *  só com as vigas; com ela, completa o pavimento `pavimentoId` (o primeiro, se ausente).
+ *  `montagem`: as vigas que a montagem da obra grava nesse pavimento, se já calculadas
+ *  (quem completa vários pavimentos calcula a obra uma vez só). */
 export function importarVigasSistrut(
   arquivos: readonly ArquivoSistrut[],
   obra?: Obra,
   pavimentoId?: string,
+  montagem?: MontagemVigas,
 ): ImportacaoVigas {
   try {
     const avisos: string[] = [];
@@ -843,7 +849,7 @@ export function importarVigasSistrut(
     const desenho = desenhoIni ? lerDesenhoIni(texto(desenhoIni.dados)) : undefined;
 
     const nova = obra
-      ? completar(obra, pavimentoId, registros, nomes, secoes, formas, avisos)
+      ? completar(obra, pavimentoId, registros, nomes, secoes, formas, avisos, montagem)
       : gerar(nomeObra, registros, nomes, secoes, formas, dsp, avisos);
     if (parametrosDsp && Object.keys(parametrosDsp).length > 0)
       nova.parametrosViga = {
@@ -851,9 +857,11 @@ export function importarVigasSistrut(
         dsp: { ...nova.parametrosViga?.dsp, ...parametrosDsp },
       };
     // repetições da viga no DESENHO: o rept do .TAB (DESINIT.BAS:764), registro r = viga r
+    // só no pavimento deste .VIG: outro pavimento pode ter vigas com os mesmos nomes
+    const doVig = nova.pavimentos.find((p) => p.id === pavimentoId) ?? nova.pavimentos[0];
     for (const [i, reg] of registros.entries()) {
       const t = tab[i];
-      const v = nova.pavimentos.flatMap((p) => p.vigas).find((x) => x.nome === reg.nome);
+      const v = doVig?.vigas.find((x) => x.nome === reg.nome);
       if (t && v && t.nome === reg.nome) v.repeticoes = t.repeticoes;
     }
     if (desenho) {
@@ -998,16 +1006,26 @@ function completar(
   secoes: readonly ReturnType<typeof lerSec>[],
   formas: readonly ReturnType<typeof lerFor>[],
   avisos: string[],
+  montagemDada: MontagemVigas | undefined,
 ): Obra {
   const nova = structuredClone(obra);
   const ip = pavimentoId ? nova.pavimentos.findIndex((p) => p.id === pavimentoId) : 0;
   const pav = nova.pavimentos[ip];
   if (!pav) throw new ErroImportacao(`Pavimento ${pavimentoId ?? ""} não existe na obra.`);
   // reimportação: a entrada de viga de antes sai, e a montagem é a da planta
+  let limpou = false;
   for (const v of pav.vigas)
     if (registros.some((r) => r.nome === v.nome))
-      for (const campo of CAMPOS_DA_IMPORTACAO) delete v[campo];
-  const montagem = calcularObraSistrut(nova, { modo: "original" }).pavimentos[ip]!.montagem.vigas;
+      for (const campo of CAMPOS_DA_IMPORTACAO)
+        if (v[campo] !== undefined) {
+          delete v[campo];
+          limpou = true;
+        }
+  // a montagem dada vale se a planta é a mesma (nada da importação anterior saiu)
+  const montagem =
+    montagemDada && !limpou
+      ? montagemDada
+      : calcularObraSistrut(nova, { modo: "original" }).pavimentos[ip]!.montagem.vigas;
   // a montagem da V2 e o LAJEMONT diferem em poucos ulps do SINGLE em algumas divisões
   // (E2E V3/V6, VBX V2): isso não é edição do usuário
   const igual = (a: number, b: number) =>

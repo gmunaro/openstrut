@@ -797,7 +797,9 @@ describe(".REP", () => {
         { m: 1.22 * KN, inclinacao: 0, vao: 5, rigidez: 0 },
       ],
     });
-    expect(avisos).toContain("As cargas gravadas no .COL foram trocadas pelas dos .REP.");
+    expect(avisos).toContain(
+      "As cargas gravadas no .COL no nível 2 foram trocadas pelas dos .REP.",
+    );
     idaEVolta(obra);
   });
 

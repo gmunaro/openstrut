@@ -2,6 +2,11 @@
 // inteira da obra ou arrastados (arquivos ou pastas). Antes de abrir, um diálogo mostra
 // o que foi reconhecido: os pavimentos na ordem, os arquivos lidos e os ignorados com o
 // motivo, e os avisos. A leitura é `importarObraSistrut` (InicioSistrut.ts).
+//
+// Cada arquivo leva o caminho dentro do que foi escolhido. Com arquivos do SISTRUT em
+// mais de uma pasta (uma pasta de obras, por exemplo), a tela pergunta qual obra
+// importar: juntar pastas misturaria obras, e nomes iguais em pastas diferentes não têm
+// como ser escolhidos sozinhos. Só os arquivos que a importação lê vão para a memória.
 import { FolderInput, Import } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,36 +20,78 @@ import {
 } from "@/components/ui/dialog";
 import type { Obra } from "../dominio/obra";
 import {
+  extensaoDoSistrut,
+  extensaoLida,
   importarObraSistrut,
   type ArquivoEntrada,
   type ResultadoImportacaoSistrut,
 } from "./InicioSistrut";
 
-/** Arquivos de uma entrada arrastada: o arquivo ou, numa pasta, todos os de dentro. */
-async function arquivosDaEntrada(entrada: FileSystemEntry): Promise<File[]> {
-  if (entrada.isFile)
-    return [
-      await new Promise<File>((ok, falha) => (entrada as FileSystemFileEntry).file(ok, falha)),
-    ];
-  if (!entrada.isDirectory) return [];
-  const leitor = (entrada as FileSystemDirectoryEntry).createReader();
-  const filhos: FileSystemEntry[] = [];
-  // readEntries devolve aos poucos: lê até vir vazio
-  for (;;) {
-    const lote = await new Promise<FileSystemEntry[]>((ok, falha) => leitor.readEntries(ok, falha));
-    if (lote.length === 0) break;
-    filhos.push(...lote);
+/** Um arquivo escolhido, com o caminho dentro da seleção ("OBRA/COB.LAJ"). */
+interface Escolhido {
+  arquivo: File;
+  caminho: string;
+}
+
+/** Arquivos de uma entrada arrastada: o arquivo ou, numa pasta, todos os de dentro. Uma
+ *  entrada que não abre vai para `falhas` e não derruba as outras. */
+async function arquivosDaEntrada(entrada: FileSystemEntry, falhas: string[]): Promise<Escolhido[]> {
+  const caminho = entrada.fullPath.replace(/^\//, "") || entrada.name;
+  try {
+    if (entrada.isFile) {
+      const arquivo = await new Promise<File>((ok, falha) =>
+        (entrada as FileSystemFileEntry).file(ok, falha),
+      );
+      return [{ arquivo, caminho }];
+    }
+    if (!entrada.isDirectory) return [];
+    const leitor = (entrada as FileSystemDirectoryEntry).createReader();
+    const filhos: FileSystemEntry[] = [];
+    // readEntries devolve aos poucos: lê até vir vazio
+    for (;;) {
+      const lote = await new Promise<FileSystemEntry[]>((ok, falha) =>
+        leitor.readEntries(ok, falha),
+      );
+      if (lote.length === 0) break;
+      filhos.push(...lote);
+    }
+    return (await Promise.all(filhos.map((f) => arquivosDaEntrada(f, falhas)))).flat();
+  } catch (erro) {
+    falhas.push(`${caminho}: não foi possível ler (${String(erro)}).`);
+    return [];
   }
-  return (await Promise.all(filhos.map(arquivosDaEntrada))).flat();
 }
 
 /** Arquivos soltos na área: pelas entradas (pastas inteiras) ou pela lista de arquivos. */
-async function arquivosSoltos(e: DragEvent): Promise<File[]> {
-  const entradas = Array.from(e.dataTransfer.items)
+async function arquivosSoltos(e: DragEvent, falhas: string[]): Promise<Escolhido[]> {
+  const entradas = Array.from(e.dataTransfer.items ?? [])
     .map((i) => i.webkitGetAsEntry?.())
     .filter((x): x is FileSystemEntry => !!x);
-  if (entradas.length === 0) return Array.from(e.dataTransfer.files);
-  return (await Promise.all(entradas.map(arquivosDaEntrada))).flat();
+  if (entradas.length === 0)
+    return Array.from(e.dataTransfer.files).map((arquivo) => ({ arquivo, caminho: arquivo.name }));
+  return (await Promise.all(entradas.map((x) => arquivosDaEntrada(x, falhas)))).flat();
+}
+
+const pastaDe = (caminho: string) => {
+  const i = caminho.lastIndexOf("/");
+  return i < 0 ? "" : caminho.slice(0, i);
+};
+
+/** As pastas com arquivos do SISTRUT, cada uma com os arquivos dela (sem subpastas). */
+function porPasta(escolhidos: readonly Escolhido[]) {
+  const pastas = new Map<string, Escolhido[]>();
+  for (const e of escolhidos) {
+    const p = pastaDe(e.caminho);
+    pastas.set(p, [...(pastas.get(p) ?? []), e]);
+  }
+  return [...pastas]
+    .map(([pasta, arquivos]) => ({
+      pasta,
+      arquivos,
+      doSistrut: arquivos.filter((a) => extensaoDoSistrut(a.arquivo.name)).length,
+    }))
+    .filter((p) => p.doSistrut > 0)
+    .sort((a, b) => (a.pasta < b.pasta ? -1 : a.pasta > b.pasta ? 1 : 0));
 }
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
@@ -55,46 +102,85 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
   const entradaArquivos = useRef<HTMLInputElement>(null);
   const entradaPasta = useRef<HTMLInputElement>(null);
   const [resultado, setResultado] = useState<ResultadoImportacaoSistrut | null>(null);
-  const [falhaLeitura, setFalhaLeitura] = useState<string | null>(null);
+  const [falhas, setFalhas] = useState<string[]>([]);
+  const [escolha, setEscolha] = useState<ReturnType<typeof porPasta> | null>(null);
   const [lendo, setLendo] = useState(false);
   const [sobre, setSobre] = useState(false);
+  /** A leitura mais recente: o resultado de uma anterior que termina depois é descartado. */
+  const leitura = useRef(0);
 
-  const importar = async (arquivos: readonly File[]) => {
+  /** Lê os arquivos de uma pasta e importa. */
+  const importar = async (escolhidos: readonly Escolhido[], falhasAntes: string[]) => {
+    const minha = ++leitura.current;
     setResultado(null);
-    setFalhaLeitura(null);
-    if (arquivos.length === 0) return;
+    setEscolha(null);
+    setFalhas(falhasAntes);
     setLendo(true);
+    const falhasLeitura = [...falhasAntes];
     try {
       const lidos: ArquivoEntrada[] = await Promise.all(
-        arquivos.map(async (f) => ({ nome: f.name, dados: new Uint8Array(await f.arrayBuffer()) })),
-      );
+        escolhidos.map(async ({ arquivo, caminho }) => {
+          // o que a importação não lê só entra no resumo: não carrega o conteúdo
+          if (!extensaoLida(arquivo.name))
+            return { nome: arquivo.name, caminho, dados: new Uint8Array() };
+          try {
+            return {
+              nome: arquivo.name,
+              caminho,
+              dados: new Uint8Array(await arquivo.arrayBuffer()),
+            };
+          } catch (erro) {
+            falhasLeitura.push(`${caminho}: não foi possível ler (${String(erro)}).`);
+            return undefined;
+          }
+        }),
+      ).then((x) => x.filter((a) => a !== undefined));
+      if (minha !== leitura.current) return;
+      setFalhas(falhasLeitura);
       setResultado(importarObraSistrut(lidos));
-    } catch (erro) {
-      setFalhaLeitura(`Não foi possível ler os arquivos (${String(erro)}).`);
     } finally {
-      setLendo(false);
+      if (minha === leitura.current) setLendo(false);
     }
   };
 
+  /** Com uma pasta só (ou nenhuma do SISTRUT), importa; com várias, pergunta qual. */
+  const separar = (escolhidos: readonly Escolhido[], falhasAntes: string[]) => {
+    if (escolhidos.length === 0 && falhasAntes.length === 0) return;
+    const pastas = porPasta(escolhidos);
+    if (pastas.length > 1) {
+      setResultado(null);
+      setFalhas(falhasAntes);
+      setEscolha(pastas);
+      return;
+    }
+    void importar(pastas[0]?.arquivos ?? escolhidos, falhasAntes);
+  };
+
   const escolhidos = (e: ChangeEvent<HTMLInputElement>) => {
-    const arquivos = Array.from(e.target.files ?? []);
+    const arquivos = Array.from(e.target.files ?? []).map((arquivo) => ({
+      arquivo,
+      caminho: arquivo.webkitRelativePath || arquivo.name,
+    }));
     e.target.value = ""; // permite escolher os mesmos arquivos de novo
-    void importar(arquivos);
+    separar(arquivos, []);
   };
 
   const soltar = (e: DragEvent) => {
     e.preventDefault();
     setSobre(false);
-    void arquivosSoltos(e).then(importar, (erro: unknown) =>
-      setFalhaLeitura(`Não foi possível ler os arquivos soltos (${String(erro)}).`),
-    );
+    if (lendo) return; // uma leitura de cada vez
+    const falhasSoltos: string[] = [];
+    void arquivosSoltos(e, falhasSoltos).then((x) => separar(x, falhasSoltos));
   };
 
   const fechar = () => {
+    leitura.current++;
+    setLendo(false);
     setResultado(null);
-    setFalhaLeitura(null);
+    setFalhas([]);
+    setEscolha(null);
   };
-  const aberto = resultado !== null || falhaLeitura !== null;
+  const aberto = resultado !== null || escolha !== null || (!lendo && falhas.length > 0);
 
   return (
     <>
@@ -136,9 +222,11 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       <div
         role="region"
         aria-label="Soltar arquivos do SISTRUT"
+        aria-busy={lendo}
         onDragOver={(e) => {
           e.preventDefault();
-          setSobre(true);
+          e.dataTransfer.dropEffect = lendo ? "none" : "copy";
+          setSobre(!lendo);
         }}
         onDragLeave={() => setSobre(false)}
         onDrop={soltar}
@@ -151,7 +239,33 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
 
       <Dialog open={aberto} onOpenChange={(a) => !a && fechar()}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
-          {resultado?.ok ? (
+          {escolha ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Qual obra importar?</DialogTitle>
+                <DialogDescription>
+                  Há arquivos do SISTRUT em {escolha.length} pastas. Cada obra fica numa pasta:
+                  escolha uma. As subpastas dela não entram.
+                </DialogDescription>
+              </DialogHeader>
+              <ul aria-label="Pastas com arquivos do SISTRUT" className="grid gap-2">
+                {escolha.map((p) => (
+                  <li key={p.pasta}>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => void importar(p.arquivos, falhas)}
+                    >
+                      <span>{p.pasta || "(arquivos soltos)"}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {plural(p.doSistrut, "arquivo do SISTRUT", "arquivos do SISTRUT")}
+                      </span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : resultado?.ok ? (
             <ResumoObra resultado={resultado} />
           ) : (
             <DialogHeader>
@@ -159,14 +273,19 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               <DialogDescription>Nada foi aberto. Veja o motivo abaixo.</DialogDescription>
             </DialogHeader>
           )}
-          {(falhaLeitura || (resultado && !resultado.ok)) && (
-            <ul role="alert" className="text-destructive list-disc pl-5 text-sm">
-              {falhaLeitura && <li>{falhaLeitura}</li>}
+          {!escolha && (falhas.length > 0 || (resultado && !resultado.ok)) && (
+            <ul
+              role="alert"
+              className={`list-disc pl-5 text-sm ${resultado?.ok ? "text-aviso" : "text-destructive"}`}
+            >
+              {falhas.map((f, i) => (
+                <li key={`f${i}`}>{f}</li>
+              ))}
               {resultado && !resultado.ok && resultado.erros.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
           )}
           <DialogFooter>
-            {resultado?.ok && (
+            {resultado?.ok && !escolha && (
               <Button
                 onClick={() => {
                   const { obra } = resultado;
@@ -178,7 +297,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               </Button>
             )}
             <Button variant="ghost" onClick={fechar}>
-              {resultado?.ok ? "Cancelar" : "Voltar"}
+              {resultado?.ok && !escolha ? "Cancelar" : "Voltar"}
             </Button>
           </DialogFooter>
         </DialogContent>

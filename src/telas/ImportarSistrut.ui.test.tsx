@@ -82,3 +82,100 @@ describe("importar obra do SISTRUT", () => {
     expect(pasta.hasAttribute("webkitdirectory")).toBe(true);
   });
 });
+
+describe("importar obra do SISTRUT: pastas, leitura e arquivos repetidos", () => {
+  /** File com o caminho relativo que o seletor de pasta dá (webkitRelativePath). */
+  const naPasta = (pasta: string, a: ArquivoEntrada) => {
+    const f = comoFile(a);
+    Object.defineProperty(f, "webkitRelativePath", { value: `${pasta}/${a.nome}` });
+    return f;
+  };
+
+  it("pasta com duas obras em subpastas: pergunta qual, e só os arquivos dela entram", async () => {
+    const { user } = renderizarApp("/");
+    const pasta = await screen.findByLabelText("Pasta da obra do SISTRUT");
+    await user.upload(pasta, [
+      ...PREDIO.map((a) => naPasta("OBRAS/PREDIO", a)),
+      naPasta("OBRAS/E2E", arquivo("E2E.LAJ")),
+      naPasta("OBRAS/E2E", arquivo("E2E.VIG")),
+    ]);
+    const escolha = await screen.findByRole("dialog", { name: "Qual obra importar?" });
+    const pastas = within(escolha).getByRole("list", { name: "Pastas com arquivos do SISTRUT" });
+    expect(
+      within(pastas)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["OBRAS/E2E2 arquivos do SISTRUT", "OBRAS/PREDIO11 arquivos do SISTRUT"]);
+    await user.click(within(pastas).getByRole("button", { name: /OBRAS\/E2E/ }));
+    const resumo = await screen.findByRole("dialog", { name: "Obra E2E lida do SISTRUT" });
+    expect(
+      within(within(resumo).getByRole("region", { name: "Arquivos lidos" })).getByText(
+        "E2E.LAJ, E2E.VIG",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("o que a importação não lê (desenho, plotagem) não vai para a memória", async () => {
+    const { user } = renderizarApp("/");
+    const dxf = comoFile({ nome: "R1__E2E.DXF", dados: new Uint8Array([1, 2, 3]) });
+    let lido = false;
+    Object.defineProperty(dxf, "arrayBuffer", {
+      value: () => {
+        lido = true;
+        return Promise.resolve(new ArrayBuffer(0));
+      },
+    });
+    const entrada = await screen.findByLabelText("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)");
+    await user.upload(entrada, [comoFile(arquivo("E2E.LAJ")), dxf]);
+    const resumo = await screen.findByRole("dialog", { name: "Obra E2E lida do SISTRUT" });
+    expect(within(resumo).getByText("R1__E2E.DXF")).toBeTruthy();
+    expect(lido).toBe(false);
+  });
+
+  it("uma entrada arrastada que não abre vira aviso, e o resto do lote entra", async () => {
+    renderizarApp("/");
+    const entrada = (a: ArquivoEntrada, falha = false) => ({
+      isFile: true,
+      isDirectory: false,
+      name: a.nome,
+      fullPath: `/OBRA/${a.nome}`,
+      file: (ok: (f: File) => void, erro: (e: Error) => void) =>
+        falha ? erro(new Error("sem permissão")) : ok(comoFile(a)),
+    });
+    const itens = [
+      entrada(arquivo("E2E.LAJ")),
+      entrada(arquivo("E2E.VIG")),
+      entrada(arquivo("E2E.SEC"), true),
+    ].map((e) => ({ webkitGetAsEntry: () => e }));
+    const area = await screen.findByRole("region", { name: "Soltar arquivos do SISTRUT" });
+    fireEvent.drop(area, { dataTransfer: { items: itens, files: [] } });
+    const resumo = await screen.findByRole("dialog", { name: "Obra E2E lida do SISTRUT" });
+    expect(
+      within(resumo).getByText("OBRA/E2E.SEC: não foi possível ler (Error: sem permissão)."),
+    ).toBeTruthy();
+  });
+
+  it("dois arquivos com o mesmo nome: recusa e diz de onde vêm", async () => {
+    renderizarApp("/");
+    const entrada = (pasta: string, a: ArquivoEntrada) => ({
+      isFile: true,
+      isDirectory: false,
+      name: a.nome,
+      fullPath: `/${pasta}/${a.nome}`,
+      file: (ok: (f: File) => void) => ok(comoFile(a)),
+    });
+    // soltas como arquivos da mesma pasta (a raiz), com caixas diferentes no nome
+    const itens = [
+      entrada("", arquivo("E2E.LAJ")),
+      entrada("", { ...arquivo("E2E.LAJ"), nome: "e2e.laj" }),
+    ].map((e) => ({ webkitGetAsEntry: () => e }));
+    const area = await screen.findByRole("region", { name: "Soltar arquivos do SISTRUT" });
+    fireEvent.drop(area, { dataTransfer: { items: itens, files: [] } });
+    const dialogo = await screen.findByRole("dialog", {
+      name: "Não foi possível importar a obra do SISTRUT",
+    });
+    expect(within(dialogo).getByRole("alert").textContent).toMatch(
+      /^Arquivos com o mesmo nome: .*E2E\.LAJ e .*e2e\.laj\. Eles vêm de obras diferentes\?/,
+    );
+  });
+});

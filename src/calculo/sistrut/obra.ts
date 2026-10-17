@@ -1249,26 +1249,65 @@ function calcularPilaresSistrut(
   // seção, como no térreo de uma obra importada): o trecho que começa num nível
   // continua o que termina logo abaixo se o pilar tem o mesmo nome e as seções se
   // sobrepõem na planta, com um par só de cada lado. O PILGEEDI liga os lances pela
-  // coluna do .COL, não pela posição (PIGRAEDI.BAS:466-583 não grava posição).
-  const sobrepoe = (a: Pilar, b: Pilar) =>
-    Math.abs(a.x - b.x) < (a.b + b.b) / 200 && Math.abs(a.y - b.y) < (a.h + b.h) / 200;
-  const continua = (de: (typeof trechos)[number], t: (typeof trechos)[number]) => {
-    const fim = de.at(-1)!;
-    const ini = t[0]!;
-    return (
-      fim.nivel === ini.nivel - 1 &&
-      fim.pilar.nome === ini.pilar.nome &&
-      sobrepoe(fim.pilar, ini.pilar)
-    );
+  // coluna do .COL, não pela posição (PIGRAEDI.BAS:466-583 não grava posição). O pilar
+  // marcado "nasce sobre viga de transição" não continua nada. O deslocamento não entra
+  // no cálculo (o original não o conhece) e vira aviso no lance de cima.
+  /** Meias-larguras da caixa da seção em x e em y, m, com a rotação. */
+  const meias = (p: Pilar) => {
+    const r = ((p.rotacao ?? 0) * Math.PI) / 180;
+    const [c, sn] = [Math.abs(Math.cos(r)), Math.abs(Math.sin(r))];
+    return { x: (p.b * c + p.h * sn) / 200, y: (p.b * sn + p.h * c) / 200 };
   };
-  for (let i = 0; i < trechos.length; i++) {
-    const t = trechos[i]!;
-    const de = trechos.filter((u) => u !== t && continua(u, t));
-    if (de.length !== 1 || trechos.filter((u) => continua(de[0]!, u)).length !== 1) continue;
-    de[0]!.push(...t);
-    trechos.splice(i, 1);
-    i = -1;
+  const sobrepoe = (a: Pilar, b: Pilar) => {
+    const [ma, mb] = [meias(a), meias(b)];
+    return Math.abs(a.x - b.x) < ma.x + mb.x && Math.abs(a.y - b.y) < ma.y + mb.y;
+  };
+  type Trecho = (typeof trechos)[number];
+  const chave = (nivel: number, nome: string) => `${nivel}|${nome}`;
+  /** Trechos por (nível, nome) da ponta de cima e da de baixo. */
+  const porFim = new Map<string, Trecho[]>();
+  const porInicio = new Map<string, Trecho[]>();
+  const indexa = (m: Map<string, Trecho[]>, k: string, t: Trecho) =>
+    m.set(k, [...(m.get(k) ?? []), t]);
+  for (const t of trechos) {
+    indexa(porFim, chave(t.at(-1)!.nivel, t.at(-1)!.pilar.nome), t);
+    indexa(porInicio, chave(t[0]!.nivel, t[0]!.pilar.nome), t);
   }
+  const avisosDeFusao = new Map<string, string>();
+  const fundidos = new Set<Trecho>();
+  // de baixo para cima, para uma coluna crescer lance a lance
+  for (const t of [...trechos].sort((a, b) => a[0]!.nivel - b[0]!.nivel)) {
+    const ini = t[0]!;
+    if (ini.nivel === 0 || ini.pilar.transicao) continue;
+    const de = (porFim.get(chave(ini.nivel - 1, ini.pilar.nome)) ?? []).filter((u) =>
+      sobrepoe(u.at(-1)!.pilar, ini.pilar),
+    );
+    if (de.length !== 1) continue;
+    const u = de[0]!;
+    const fim = u.at(-1)!;
+    const rivais = (porInicio.get(chave(ini.nivel, ini.pilar.nome)) ?? []).filter(
+      (v) => !v[0]!.pilar.transicao && sobrepoe(fim.pilar, v[0]!.pilar),
+    );
+    if (rivais.length !== 1) continue;
+    const cm =
+      Math.round(Math.hypot(ini.pilar.x - fim.pilar.x, ini.pilar.y - fim.pilar.y) * 1000) / 10;
+    avisosDeFusao.set(
+      ini.pilar.id,
+      `${ini.pilar.nome}: lance deslocado ${numAte(cm, 1)} cm do de baixo na planta; tratado como a mesma coluna, como no .COL do original, e o deslocamento não entra no cálculo (sem excentricidade).`,
+    );
+    porFim.set(
+      chave(fim.nivel, fim.pilar.nome),
+      porFim.get(chave(fim.nivel, fim.pilar.nome))!.filter((x) => x !== u),
+    );
+    const fimT = t.at(-1)!;
+    porFim.set(
+      chave(fimT.nivel, fimT.pilar.nome),
+      porFim.get(chave(fimT.nivel, fimT.pilar.nome))!.map((x) => (x === t ? u : x)),
+    );
+    u.push(...t);
+    fundidos.add(t);
+  }
+  for (let i = trechos.length - 1; i >= 0; i--) if (fundidos.has(trechos[i]!)) trechos.splice(i, 1);
   const colunas: ColunaEdificio[] = [];
   /** Lances de cada coluna (mesmo índice de `colunas`): pilar e nível do edifício. */
   const lancesDasColunas: { pilar: Pilar; nivel: number }[][] = [];
@@ -1470,6 +1509,9 @@ function calcularPilaresSistrut(
           l.avisos.push(
             `${lance.pilar.nome}: dimensionado com a seção do predimensionamento, ${predim.resultado.b} × ${predim.resultado.h} cm, no lugar da seção da obra.`,
           );
+        const fusao = avisosDeFusao.get(lance.pilar.id);
+        if (fusao && k === lancesCol.findIndex((x) => x.pilar.id === lance.pilar.id))
+          l.avisos.push(fusao);
         lances.push(l);
       }
     });

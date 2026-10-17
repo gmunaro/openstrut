@@ -540,10 +540,28 @@ describe("editaVig: carga lida de um .VIG na ponta do balanço", () => {
     return { divisoes: r.balancoDireito!.divisoes, avisos };
   };
 
-  it("D da última divisão até 5 mm além do vão (a tolerância de comprimento): a carga vai para a ponta", () => {
+  it("D da última divisão até 5 mm além do vão (a tolerância de comprimento): a carga vai para a ponta, com aviso", () => {
     const { divisoes, avisos } = naPonta(0.44500065);
-    expect(avisos).toEqual([]);
+    expect(avisos).toEqual([
+      "Viga V1: ponta da carga distribuída a 0,445 m do trecho 1, 0,001 mm além da ponta (0,445 m): levada para a ponta.",
+      "Viga V1: carga concentrada a 0,445 m do trecho 1, 0,001 mm além da ponta (0,445 m): levada para a ponta.",
+    ]);
     expect(divisoes).toEqual([div(5 / g, vao, 3 / g)]);
+  });
+
+  it("distribuída inteira além da ponta, dentro dos 5 mm: sem comprimento no trecho, ignorada com aviso", () => {
+    const avisos: string[] = [];
+    const r = editaVig(
+      dados(),
+      viga({ cargas: [{ tipo: "distribuida", trecho: 1, inicio: 0.4451, fim: 0.4452, total: 5 }] }),
+      par,
+      "corrigido",
+      avisos,
+    );
+    expect(avisos).toEqual([
+      expect.stringMatching(/carga distribuída fora do trecho 1 .*: ignorada.$/),
+    ]);
+    expect(r.balancoDireito!.divisoes).toEqual([div(0, vao)]);
   });
 
   it("mais de 5 mm além do vão: fora do trecho, ignorada com aviso", () => {

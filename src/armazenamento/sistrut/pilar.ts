@@ -743,7 +743,12 @@ export function lerRlp(texto: string): Lido<PilarRlp[]> {
 }
 
 export interface RepPilarSistrut {
-  texto: string;
+  /** O texto do .REP ou, no lugar dele, as linhas já lidas (o .REP que o motor monta
+   *  pelas vigas de um .VIG, numa obra só de vigas). */
+  texto?: string;
+  linhas?: readonly LinhaRep[];
+  /** Nome para as mensagens (padrão ".REP n"). */
+  nome?: string;
   /** Faixa de níveis do PILGEEDI, 1-based (PILGEEDI.BAS:557). */
   nivelInicial: number;
   nivelFinal: number;
@@ -775,6 +780,10 @@ export interface OpcoesImportacaoPilar {
    *  lance; numa repetição, o da primeira). Pavimento fora do mapa fica com os pilares
    *  como estão. Ausente = de baixo para cima, o k-ésimo nível da obra é o lance k → k + 1. */
   niveis?: Record<string, number>;
+  /** Ao completar: níveis (1-based) cujas cargas do .COL ou do .REP entram nos pilares,
+   *  além de todos com `cargas`. É o nível sem planta, em que nenhuma viga leva carga ao
+   *  pilar; o nível 1 dá a carga na base (`cargaBase`). */
+  niveisComCarga?: readonly number[];
 }
 
 /** Normal e momentos de viga de um nível, como em A_1280 (t, tm). */
@@ -963,9 +972,12 @@ function cargasDasColunas(
       erros.push(
         `.REP ${i + 1}: faixa de níveis ${rep.nivelInicial} a ${rep.nivelFinal} fora de 1..${n}.`,
       );
-    const lido = lerRep(rep.texto);
+    const lido: Lido<LinhaRep[]> = rep.linhas
+      ? { ok: true, valor: [...rep.linhas], avisos: [] }
+      : lerRep(rep.texto ?? "");
+    const nomeRep = rep.nome ?? `.REP ${i + 1}`;
     if (!lido.ok) {
-      erros.push(...lido.erros.map((e) => `.REP ${i + 1}: ${e}`));
+      erros.push(...lido.erros.map((e) => `${nomeRep}: ${e}`));
       return;
     }
     avisos.push(...lido.avisos);
@@ -979,7 +991,7 @@ function cargasDasColunas(
           )
         )
           avisos.push(
-            `.REP ${i + 1}: o pilar ${semEspacos(linha.pilar)} não casa com nenhuma coluna do .COL que cubra o nível ${nivel}; carga ignorada nesse nível, como no PILGEEDI.`,
+            `${nomeRep}: o pilar ${semEspacos(linha.pilar)} não casa com nenhuma coluna do .COL que cubra o nível ${nivel}; carga ignorada nesse nível, como no PILGEEDI.`,
           );
     }
     const rlp = rep.rlp === undefined ? undefined : lerRlp(rep.rlp);
@@ -997,11 +1009,22 @@ function cargasDasColunas(
     });
   });
   if (erros.length > 0) return { ok: false, erros };
-  if (
-    col.temCargas &&
-    col.colunas.some((c) => c.niveis.some((nv) => nv.carga && nv.carga.normal !== 0))
-  )
-    avisos.push("As cargas gravadas no .COL foram trocadas pelas dos .REP.");
+  // cada leitura de .REP refaz só os níveis dela (PILGEEDI.BAS:530-560, "substitui"); nos
+  // outros ficam as cargas que o .COL guarda (A_1280)
+  const lidosDoRep = new Set(
+    reps.flatMap((r) =>
+      Array.from({ length: r.nivelFinal - r.nivelInicial + 1 }, (_, k) => r.nivelInicial + k),
+    ),
+  );
+  const trocados = [...lidosDoRep].filter((nivel) =>
+    col.colunas.some((c) =>
+      c.niveis.some((nv) => nv.nivel === nivel && (nv.carga?.normal ?? 0) !== 0),
+    ),
+  );
+  if (col.temCargas && trocados.length > 0)
+    avisos.push(
+      `As cargas gravadas no .COL ${trocados.length === 1 ? "no nível" : "nos níveis"} ${trocados.sort((a, b) => a - b).join(", ")} foram trocadas pelas dos .REP.`,
+    );
   const nivelVazio: NivelColuna = {
     cota: 0,
     secao: { tipo: "retangular", b: 1, h: 1, barras: [] },
@@ -1025,6 +1048,7 @@ function cargasDasColunas(
     avisos: [],
     valor: col.colunas.map((c, ci) =>
       Array.from({ length: n }, (_, i) => {
+        if (!lidosDoRep.has(i + 1)) return c.niveis.find((nv) => nv.nivel === i + 1)?.carga;
         const normal = lidas[ci]!.normal[i] ?? 0;
         const momentos = (lidas[ci]!.slots[i] ?? []).filter((s) => s.m !== 0);
         if (normal === 0 && momentos.length === 0) return undefined;
@@ -1083,10 +1107,12 @@ function pipDaObra(
   return lido;
 }
 
-const aplicaLance = (p: Pilar, l: Lance, cargas: boolean): Pilar => {
+/** O lance do .COL no pilar. `cargas`: grava a carga do topo (A_1280 do nível do topo) e
+ *  `cargaBase` a do nível da base (só no lance de baixo); sem eles, ficam as do pilar. */
+const aplicaLance = (p: Pilar, l: Lance, cargas: boolean, cargaBaseDoCol = cargas): Pilar => {
   const geo = l.geometria ?? { b: p.b, h: p.h, ...(p.secao ? { secao: p.secao } : {}) };
   const carga = cargas ? l.cargaTopo : p.cargaTopo;
-  const cargaBase = cargas ? l.cargaBase : p.cargaBase;
+  const cargaBase = cargaBaseDoCol ? l.cargaBase : p.cargaBase;
   const armadura = l.barras
     ? { barras: l.barras, ...(l.estribo ? { estribo: l.estribo } : {}) }
     : p.armadura;
@@ -1249,6 +1275,7 @@ function completarObra(
   base: Obra,
   cargas: boolean,
   niveis: Record<string, number> | undefined,
+  niveisComCarga: readonly number[] = [],
 ): Obra {
   const { col, avisos, materiais: mat } = ctx;
   const obra = structuredClone(base);
@@ -1304,7 +1331,13 @@ function completarObra(
             `Pilar ${p.nome} do pavimento ${pav.nome} (${pav.repeticoes} repetições): o lance ${j0 + r}→${j0 + r + 1} do .COL difere do ${j0}→${j0 + 1}; ficou o de baixo.`,
           );
       }
-      return aplicaLance(p, l, cargas);
+      // a carga do topo é a do nível do pavimento (j0 + 1); a da base, a do nível j0
+      return aplicaLance(
+        p,
+        l,
+        cargas || niveisComCarga.includes(j0 + 1),
+        cargas || niveisComCarga.includes(j0),
+      );
     });
     t0 += pav.repeticoes;
   }
@@ -1389,7 +1422,13 @@ export function importarPilaresSistrut(
   };
   if (opcoes.base)
     return {
-      obra: completarObra(ctx, opcoes.base, opcoes.cargas ?? false, opcoes.niveis),
+      obra: completarObra(
+        ctx,
+        opcoes.base,
+        opcoes.cargas ?? false,
+        opcoes.niveis,
+        opcoes.niveisComCarga,
+      ),
       avisos,
     };
   const obra = gerarObra(ctx, opcoes.nome);
