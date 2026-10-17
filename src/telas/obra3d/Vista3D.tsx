@@ -94,6 +94,9 @@ export default function Vista3D({
   const [selecao, setSelecao] = useState<string | null>(null);
   const [painel, setPainel] = useState(true);
 
+  // camadas ligadas: limpas antes de a cena ser destruída (no desmonte, abaixo)
+  const ativas = useRef(new Map<string, { camada: Camada; limpar: (() => void) | void }>());
+
   // cria a cena uma vez; o modelo e os dados novos vão por `atualizar`
   useEffect(() => {
     if (!caixa.current) return;
@@ -111,8 +114,11 @@ export default function Vista3D({
     const parar = c.aoMudar("selecao", () => setSelecao(c.selecao));
     // e2e e depuração: a cena viva, só para leitura
     (window as { __vista3d?: Cena3D }).__vista3d = c;
+    const camadas = ativas.current;
     return () => {
       parar();
+      for (const a of camadas.values()) a.limpar?.();
+      camadas.clear();
       delete (window as { __vista3d?: Cena3D }).__vista3d;
       c.destruir();
       cenaRef.current = null;
@@ -159,7 +165,6 @@ export default function Vista3D({
   }, [cena, pedido, irPara]);
 
   // ---- camadas -----------------------------------------------------------------------
-  const ativas = useRef(new Map<string, { camada: Camada; limpar: (() => void) | void }>());
   const [camadasLigadas, setCamadasLigadas] = useState<string[]>([]);
   const [carregando, setCarregando] = useState<string | null>(null);
   const ctx = useMemo<ContextoVista | null>(() => cena, [cena]);
@@ -178,6 +183,8 @@ export default function Vista3D({
     setCarregando(id);
     try {
       const camada = await def.carregar();
+      // a vista pode ter fechado enquanto o código da camada baixava
+      if (cenaRef.current !== ctx) return;
       ativas.current.set(id, { camada, limpar: camada.ativar(ctx) });
       setCamadasLigadas((l) => [...l, id]);
       ctx.pedirRender();
@@ -189,13 +196,6 @@ export default function Vista3D({
       setCarregando(null);
     }
   };
-  useEffect(
-    () => () => {
-      for (const a of ativas.current.values()) a.limpar?.();
-      ativas.current.clear();
-    },
-    [],
-  );
 
   // ---- derivados para a tela -----------------------------------------------------------
   const sel = selecao ? modelo.elementos.find((e) => e.chave === selecao) : undefined;

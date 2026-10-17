@@ -38,7 +38,7 @@ As fotos são de uma obra do oráculo de vários pavimentos: os arquivos da obra
 
 ### Escada
 
-O importador do SISTRUT põe as vigas de um `.VIG` sem `.LAJ` (a escada calculada à parte no VIGA) num pavimento só delas. Esse pavimento não tem lajes, todos os apoios das vigas estão desconsiderados e todos os pilares estão marcados como transição (`InicioSistrut.ts`, `pavimentoDeVigasAvulsas`). Ele também vem deslocado na planta. `pavimentoAvulso` reconhece esse pavimento pela marca, e a vista não o empilha.
+O importador do SISTRUT põe as vigas de um `.VIG` sem `.LAJ` (a escada calculada à parte no VIGA) num pavimento só delas. Esse pavimento não tem lajes, todos os apoios das vigas estão desconsiderados e todos os pilares estão marcados como transição (`InicioSistrut.ts`, `pavimentoDeVigasAvulsas`). Ele também vem deslocado na planta. `pavimentoAvulso` reconhece esse pavimento por essas marcas juntas (sem lajes, com vigas, todos os pilares de transição e todos os apoios desconsiderados), e a vista não o empilha.
 
 A posição sai das cargas. O usuário do original lança a reação de cada apoio da escada como carga concentrada nas vigas que a recebem. Para cada viga da escada, `escada.ts` faz o seguinte:
 
@@ -75,7 +75,7 @@ Para ligar o botão "Ver em 3D" no painel de propriedades da planta ou numa linh
 
 ## Cores e marcas
 
-**Situação.** As cores são as da planta (`COR_SITUACAO`): verde sem avisos, âmbar com avisos e vermelho com falha, pela mesma regra (`planta/situacao.ts`). Sem cálculo, cada tipo fica num cinza próprio. A legenda conta lajes, vigas e pilares por situação, e o painel lista as peças com falha. As vigas da escada recebem a situação do cálculo delas.
+**Situação.** As cores são as da planta (`COR_SITUACAO` em `planta/Desenho.tsx`): verde sem avisos, âmbar com avisos e vermelho com falha. A regra que decide a situação também é a da planta (`planta/situacao.ts`). Sem cálculo, cada tipo fica num cinza próprio. A legenda conta lajes, vigas e pilares por situação, e o painel lista as peças com falha. As vigas da escada recebem a situação do cálculo delas.
 
 **Grandeza.** O mapa de cor opcional pinta um tipo numa rampa azul de um só matiz, do claro (menor) ao escuro (maior), e deixa os outros tipos transparentes. As grandezas são o Nk de cada lance de pilar (na base do lance), a taxa de armadura das vigas (As máximo / bw·h do primeiro trecho) e o maior momento positivo das lajes. A legenda mostra a unidade e os extremos, já convertidos para tf quando a obra está em tf.
 
@@ -106,7 +106,7 @@ O cartão do elemento repete o texto do defeito, e o painel lista as peças marc
 
 ## Desempenho
 
-A cena mescla a geometria por nível e por tipo. Cada grupo tem uma malha sólida, uma transparente e as arestas, com a cor por vértice. A seleção acha a peça pelo índice do triângulo. O LOD é simples: as arestas somem nos níveis a mais de 60 m da câmera, e os pilares circulares têm menos lados em obra grande. A vista só desenha quando algo muda.
+A cena mescla a geometria por nível e por tipo. Cada grupo tem uma malha sólida, uma transparente e as arestas, com a cor por vértice. A seleção acha a peça pelo índice do triângulo. O LOD é simples: na perspectiva, as arestas somem nos níveis a mais de 60 m da câmera; na ortográfica, quando a vista mostra mais de 60 m de altura. Os pilares circulares têm menos lados em obra grande. A vista só desenha quando algo muda.
 
 O e2e mede uma obra de 20 níveis (cobertura, tipo × 18 e primeiro) com 50 pilares por planta, com a CPU 4 vezes mais lenta pelo DevTools e WebGL por software (SwiftShader). A máquina estava com a CPU a 100 % por outros trabalhos, então os tempos variaram bastante entre rodadas:
 
@@ -116,6 +116,7 @@ O e2e mede uma obra de 20 níveis (cobertura, tipo × 18 e primeiro) com 50 pila
 | chamadas de desenho | 81 |
 | triângulos | 24 880 |
 | reconstruir a geometria (foco, cor, visibilidade) | 159 a 405 ms |
+| aplicar um filtro de camada (`definirFiltro`) | 1,2 ms |
 | desenhar um quadro (CPU, SwiftShader) | 1,9 a 18 ms |
 | abrir a aba (baixar o pedaço, montar, primeiro quadro) | 3,0 a 15,3 s |
 
@@ -125,92 +126,181 @@ Num celular com GPU, o quadro não passa pela rasterização em software. As 81 
 
 A aba carrega `Vista3D` por `import()` dinâmico. O three.js e o código da vista vão para pedaços com o prefixo `3d-` (`vite.config.ts`, `chunkFileNames`), que ficam fora do precache do service worker. Eles entram no cache "vista-3d" na primeira vez que a aba abre e funcionam offline daí em diante. Antes disso, a aba 3D precisa de rede.
 
-| Pedaço | Tamanho | gzip | Quando baixa |
+| Pedaço | Tamanho | gzip (relatório do Vite) | Quando baixa |
 |---|---|---|---|
-| `3d-Vista3D` (vista + three.js) | 624,3 kB | 160,1 kB | ao abrir a aba 3D |
+| `3d-Vista3D` (vista + three.js) | 626,6 kB | 160,6 kB | ao abrir a aba 3D |
 | `3d-GLTFExporter` | 36,8 kB | 10,7 kB | ao exportar glTF |
-| `3d-corte` | 1,4 kB | 0,7 kB | ao ligar a camada de corte |
-| carregamento inicial (`index`) | +0,4 kB | +0,03 kB | sempre |
+| `3d-corte` | 1,5 kB | 0,8 kB | ao ligar a camada de corte |
+| carregamento inicial (`index`) | +0,4 kB | +0,04 kB | sempre |
 | tela da obra (`obra`) | +2,1 kB | +1,0 kB | ao abrir uma obra |
-| CSS | +2,0 kB | +0,3 kB | sempre |
+| CSS | +1,7 kB | +0,3 kB | sempre |
 
-O precache do PWA ficou com 1539,8 KiB, contra 1535,6 KiB na `main` (912bd50). Sem a regra do prefixo, os pedaços da 3D somariam 2186,8 KiB.
+Pelo relatório do vite-plugin-pwa, o precache ficou com 1539,5 KiB, contra 1535,6 KiB na `main` (912bd50). Sem a regra do prefixo, ele iria a 2186,8 KiB.
 
 ## Ponto de extensão: camadas
 
-Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original × Corrigido, sequência construtiva, realidade aumentada) entram como camadas, sem editar o núcleo (`cena.ts`, `Vista3D.tsx`). Uma camada é carregada sob demanda quando o usuário a liga na seção "Camadas" do painel. O contrato está em `camadas.ts`.
+Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original × Corrigido, sequência construtiva 4D, realidade aumentada) entram como camadas, sem editar o núcleo (`cena.ts`, `Vista3D.tsx`). Cada recurso fica na pasta dele (`obra3d/armadura/`, `obra3d/render/`, `obra3d/tour/`, `obra3d/comparar/`, `obra3d/sequencia/`, `obra3d/ar/`) e acrescenta uma linha a `CAMADAS` em `camadas.ts`. O botão da camada aparece na seção "Camadas" do painel. O código dela só é baixado quando o usuário liga o botão, num pedaço `3d-` fora do precache.
+
+### Contrato
 
 ```ts
+// camadas.ts
 export interface Camada {
   /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
   ativar(ctx: ContextoVista): (() => void) | void;
   /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
   Painel?: ComponentType<{ ctx: ContextoVista }>;
 }
+
+export interface DefinicaoCamada {
+  id: string;
+  nome: string; // texto do botão
+  descricao: string; // dica do botão
+  carregar: () => Promise<Camada>; // () => import("./pasta/arquivo").then((m) => m.camada)
+}
 ```
 
-O `ContextoVista` dá acesso a:
+`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum. Ele recebe o mesmo `ctx` e some quando a camada desliga. Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
 
-| Membro | Para quê |
+### Coordenadas
+
+- A cena tem Y para cima, em metros: X = x da planta, Y = cota (z), Z = −y da planta. `ctx.paraCena(x, y, z)` faz a conversão.
+- `ctx.modelo.niveis` vem de baixo para cima, e `niveis[i].indice === i`. `cota` é a face de cima da laje do nível e `cotaPiso` é a do nível de baixo, as duas em metros a partir da fundação (cota 0).
+- `Elemento3D.nivel` é esse índice. A fundação fica no nível 0. A escada fica no nível de baixo dela, e a escada sem posição no nível 0.
+- Os sólidos de `Elemento3D.solidos` estão em coordenadas da planta: prisma (polígono anti-horário de z0 a z1) ou barra (eixo da face de cima de `a` a `b`, com `largura` e `altura` para baixo).
+- O explodido desloca o grupo de cada nível para cima. Para pôr algo junto de um nível, acrescente o objeto ao `ctx.grupoDoNivel(i)` (ele anda junto, mas o grupo é recriado a cada evento "cena") ou calcule a altura com `ctx.alturaNaCena(i, cota)` a cada evento "explodido".
+
+### O que o contexto oferece
+
+| Membro | Uso |
 |---|---|
-| `cena`, `renderer`, `camera`, `controles` | os objetos vivos do three.js (`renderer.xr` para a realidade aumentada) |
-| `modelo`, `obra`, `calculo`, `dados` | o modelo 3D, a obra, o cálculo e os dados por chave de elemento |
-| `elemento(chave)`, `grupoDoNivel(i)` | o elemento do modelo e o grupo do nível (filhos andam com o explodido) |
-| `alturaNaCena(nivel, cota)` | a altura Y de uma cota, com o deslocamento do explodido |
-| `selecao`, `selecionar(chave)` | a seleção atual |
-| `aoMudar("selecao" \| "cena" \| "camera", f)` | eventos da vista |
-| `aoQuadro(f)` | callback a cada quadro, para animação e path tracing; enquanto houver algum, a vista desenha todo quadro |
-| `pedirRender()` | redesenhar no próximo quadro |
-| `moverCamera(posicao, alvo, animar?)`, `travarControles(sim)` | a câmera controlada por fora (tour, 4D) |
-| `definirMateriais(fabrica)` | trocar os materiais "solido", "fantasma", "arestas" e "destaque" (PBR); `null` volta aos padrão |
-| `definirPlanosCorte(id, planos)` | planos de corte de uma fonte; a vista junta os de todas |
-| `definirFiltro(id, f)` | esconder elementos (4D, comparação); a cena é refeita |
+| `cena`, `renderer`, `camera`, `controles` | os objetos vivos do three.js. `camera` troca entre perspectiva e ortográfica pelos botões de vista; leia `ctx.camera` na hora, sem guardar. `renderer.xr` serve à realidade aumentada |
+| `modelo`, `obra`, `calculo`, `dados` | o modelo 3D, a obra, o cálculo (`calculo.tipo === "ok"` traz `calculo.resultado`) e os dados por chave de elemento (`estado`, `principal`, `grandeza`, `defeitos`) |
+| `elemento(chave)`, `grupoDoNivel(i)` | o elemento do modelo e o grupo do nível |
+| `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()` | conversão da planta, caixa do modelo inteiro (sem o explodido) e esfera das peças visíveis (com o explodido) |
+| `alturaNaCena(nivel, cota)` | a altura Y de uma cota, com o deslocamento do explodido como está desenhado agora |
+| `selecao`, `selecionar(chave)` | a seleção atual (chave de `Elemento3D`) |
+| `aoMudar(evento, f)` | eventos, ver abaixo. Devolve o cancelamento |
+| `aoQuadro(f)` | `f(dt)` a cada quadro, com `dt` em segundos. Enquanto houver algum registrado, a vista desenha todo quadro; sem nenhum, só desenha quando algo muda. Devolve o cancelamento |
+| `pedirRender()` | redesenhar no próximo quadro, depois de mexer em objetos fora de um `aoQuadro` |
+| `moverCamera(posicao, alvo, animar?)` | leva a câmera em 0,45 s (sem animação com `prefers-reduced-motion` ou `animar` false). Uma chamada nova cancela a anterior, cuja Promise resolve `"cancelada"`; a que termina resolve `"concluida"` |
+| `travarControles(sim)` | trava só a órbita, o zoom e o pan do mouse e do toque. Os botões de vista do usuário e `moverCamera` continuam valendo |
+| `definirMateriais(fabrica)` | troca os materiais dos papéis `"solido"`, `"fantasma"`, `"arestas"` e `"destaque"` (PBR). `null` volta aos padrão. Refaz a geometria |
+| `definirPlanosCorte(id, planos)` | planos de corte desta fonte. A vista junta os de todas as fontes e mantém o lado positivo de todos. Lista vazia remove |
+| `definirFiltro(id, f)` | esconde as peças para as quais `f` devolve `false`; `null` remove o filtro desta fonte. Vários filtros valem juntos: a peça aparece só se todos devolvem `true` |
 
-As malhas sólidas e transparentes têm o atributo `color` por vértice. Um material trocado por `definirMateriais` precisa de `vertexColors: true` para manter as cores de situação.
+**Eventos.** `"selecao"` dispara quando a seleção muda. `"cena"` dispara quando a geometria foi refeita: obra editada (modelo novo), foco, cores, tipos ou pavimentos ocultos, materiais. `"explodido"` dispara a cada quadro da animação do explodido e no fim dela. `"camera"` dispara quando a câmera mexe.
 
-Para registrar uma camada, acrescente uma linha a `CAMADAS` em `camadas.ts`. O import dinâmico faz o pedaço dela sair com o prefixo `3d-`, fora do precache. Cada recurso fica na pasta dele (`obra3d/armadura/`, `obra3d/render/`, `obra3d/tour/`, `obra3d/comparar/`, `obra3d/sequencia/`, `obra3d/ar/`).
+**Filtro.** `definirFiltro` não refaz a geometria e não emite `"cena"`. Ele só zera os vértices das peças escondidas, o que custa cerca de 1 ms na obra de 20 pavimentos. Dá para chamar a cada quadro de uma animação. Peça filtrada não aparece, não é selecionável e perde a seleção. O filtro continua valendo depois que a obra é editada e o modelo muda. Por isso ele deve tolerar níveis e chaves que deixaram de existir (compare o índice com `ctx.modelo.niveis.length`).
 
-### Exemplo mínimo
+**Materiais.** As malhas `"solido"` e `"fantasma"` têm o atributo `color` por vértice com a cor da situação ou da grandeza. Um material trocado precisa de `vertexColors: true` para mantê-la. `"fantasma"` é a peça de contexto transparente. `"destaque"` é a seleção, desenhada sem teste de profundidade.
 
-Uma camada que gira a câmera em volta do prédio enquanto está ligada:
+**Câmera.** Uma camada que anima a câmera (tour, 4D) deve chamar `travarControles(true)` ao ligar e `travarControles(false)` na limpeza. Para animar continuamente, use `aoQuadro` e mexa em `ctx.camera.position` e `ctx.controles.target`. Para ir a um ponto, use `moverCamera`.
 
-```ts
-// src/telas/obra3d/tour/giro.ts
-import { Vector3 } from "three";
-import type { Camada } from "../camadas";
+### Exemplo: sequência construtiva 4D mínima
+
+A camada abaixo mostra o prédio sendo construído nível por nível, com um controle deslizante de etapa e um botão de reprodução. A fundação aparece na etapa 0. A escada aparece junto com o nível de cima dela.
+
+```tsx
+// src/telas/obra3d/sequencia/camada.tsx
+import { useEffect, useState } from "react";
+import type { Camada, ContextoVista } from "../camadas";
+
+/** Etapa atual: os níveis 0..etapa aparecem. Fica no módulo entre ligar e desligar. */
+const estado = { etapa: Number.POSITIVE_INFINITY, tocando: false };
+const ouvintes = new Set<() => void>();
+const avisar = () => ouvintes.forEach((f) => f());
+
+function aplicar(ctx: ContextoVista) {
+  const ultimo = ctx.modelo.niveis.length - 1;
+  const etapa = Math.min(estado.etapa, ultimo);
+  ctx.definirFiltro("sequencia", (e) =>
+    e.tipo === "escada" ? e.nivel + 1 <= etapa : e.nivel <= etapa,
+  );
+}
+
+function Painel({ ctx }: { ctx: ContextoVista }) {
+  const [, redesenhar] = useState(0);
+  useEffect(() => {
+    const f = () => redesenhar((n) => n + 1);
+    ouvintes.add(f);
+    return () => void ouvintes.delete(f);
+  }, []);
+  const ultimo = ctx.modelo.niveis.length - 1;
+  const etapa = Math.min(estado.etapa, ultimo);
+  return (
+    <div className="grid gap-2 text-xs">
+      <label className="grid gap-1">
+        <span>Etapa: {ctx.modelo.niveis[etapa]?.nome ?? "—"}</span>
+        <input
+          type="range"
+          min={0}
+          max={ultimo}
+          value={etapa}
+          onChange={(e) => {
+            estado.etapa = Number(e.target.value);
+            estado.tocando = false;
+            aplicar(ctx);
+            avisar();
+          }}
+        />
+      </label>
+      <button
+        type="button"
+        className="rounded border px-2 py-1"
+        onClick={() => {
+          estado.tocando = !estado.tocando;
+          if (estado.tocando && estado.etapa >= ultimo) estado.etapa = 0;
+          avisar();
+        }}
+      >
+        {estado.tocando ? "Pausar" : "Reproduzir"}
+      </button>
+    </div>
+  );
+}
 
 export const camada: Camada = {
   ativar(ctx) {
-    ctx.travarControles(true);
-    const alvo = ctx.controles.target.clone();
-    const raio = ctx.camera.position.distanceTo(alvo);
-    const altura = ctx.camera.position.y;
-    let angulo = 0;
-    const parar = ctx.aoQuadro((dt) => {
-      angulo += dt * 0.3;
-      ctx.camera.position.set(alvo.x + raio * Math.cos(angulo), altura, alvo.z + raio * Math.sin(angulo));
-      ctx.camera.lookAt(alvo);
+    aplicar(ctx);
+    let acumulado = 0;
+    const pararQuadro = ctx.aoQuadro((dt) => {
+      if (!estado.tocando) return;
+      acumulado += dt;
+      if (acumulado < 0.8) return; // um nível a cada 0,8 s
+      acumulado = 0;
+      const ultimo = ctx.modelo.niveis.length - 1;
+      estado.etapa = Math.min(estado.etapa + 1, ultimo);
+      if (estado.etapa >= ultimo) estado.tocando = false;
+      aplicar(ctx);
+      avisar();
     });
+    // obra editada: o filtro continua, mas a etapa é limitada ao modelo novo
+    const pararCena = ctx.aoMudar("cena", () => aplicar(ctx));
     return () => {
-      parar();
-      ctx.travarControles(false);
-      void ctx.moverCamera(new Vector3(alvo.x + raio, altura, alvo.z), alvo, false);
+      pararQuadro();
+      pararCena();
+      estado.tocando = false;
+      ctx.definirFiltro("sequencia", null);
     };
   },
+  Painel,
 };
 ```
 
 ```ts
 // em CAMADAS (camadas.ts)
 {
-  id: "giro",
-  nome: "Girar o prédio",
-  descricao: "Gira a câmera em volta do prédio.",
-  carregar: () => import("./tour/giro").then((m) => m.camada),
+  id: "sequencia",
+  nome: "Sequência construtiva",
+  descricao: "Mostra o prédio sendo construído, nível por nível.",
+  carregar: () => import("./sequencia/camada").then((m) => m.camada),
 },
 ```
 
-O corte por pavimento (`camadas/corte.tsx`) é uma camada real, que usa `definirPlanosCorte`, `alturaNaCena`, `aoMudar("cena")` e um `Painel`.
+O `aoQuadro` dessa camada mantém a vista desenhando todo quadro enquanto ela está ligada. Uma camada que anima só às vezes pode registrar o `aoQuadro` ao começar e cancelar ao parar.
+
+O corte por pavimento (`camadas/corte.tsx`) é uma camada real e mais curta. Ela usa `definirPlanosCorte`, `alturaNaCena`, os eventos `"cena"` e `"explodido"` e um `Painel`.
 
 ## Testes
 

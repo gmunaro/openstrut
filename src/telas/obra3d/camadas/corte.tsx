@@ -65,9 +65,12 @@ export const camada: Camada = {
     const niveis = ctx.modelo.niveis.length;
     if (corte.nivel < 0 || corte.nivel >= niveis) corte.nivel = Math.max(0, niveis - 2);
     aplicar(ctx);
-    const parar = ctx.aoMudar("cena", () => aplicar(ctx));
+    // a altura acompanha o explodido (a cada quadro da animação) e o modelo novo
+    const pararCena = ctx.aoMudar("cena", () => aplicar(ctx));
+    const pararExplodido = ctx.aoMudar("explodido", () => aplicar(ctx));
     return () => {
-      parar();
+      pararCena();
+      pararExplodido();
       ctx.definirPlanosCorte("corte", []);
     };
   },

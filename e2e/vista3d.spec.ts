@@ -194,6 +194,28 @@ test("obra de 3 pavimentos: gira, seleciona, oculta e explode, sem erro no conso
   await expect(cartao).toContainText(/mx = .* kN·m\/m/);
   await page.screenshot({ path: path.join(PRINTS, "3pav-selecao-1366.png") });
 
+  // filtro de camada (ponto de extensão): esconde a cobertura sem refazer a geometria; a
+  // laje filtrada perde a seleção e não é mais selecionável no lugar dela
+  await page.evaluate(() =>
+    (
+      window as unknown as {
+        __vista3d: { definirFiltro: (id: string, f: ((e: { nivel: number }) => boolean) | null) => void };
+      }
+    ).__vista3d.definirFiltro("teste", (e) => e.nivel < 2),
+  );
+  await expect(cartao).toHaveCount(0);
+  await quadros(page);
+  await clicarElemento(page, laje!.chave);
+  expect(await cena(page, (c) => c.selecao)).not.toBe(laje!.chave);
+  await page.evaluate(() =>
+    (
+      window as unknown as { __vista3d: { definirFiltro: (id: string, f: null) => void } }
+    ).__vista3d.definirFiltro("teste", null),
+  );
+  await quadros(page);
+  await clicarElemento(page, laje!.chave);
+  await expect(cartao.getByRole("heading", { name: "Laje L4" })).toBeVisible();
+
   // ocultar as lajes: a malha sólida das lajes some
   await page.getByRole("button", { name: "Lajes", exact: true }).click();
   await expect(page.getByRole("button", { name: "Lajes", exact: true })).toHaveAttribute("aria-pressed", "false");
@@ -386,6 +408,7 @@ test("desempenho: 20 pavimentos × 50 pilares com a CPU 4× mais lenta", async (
       modelo: { niveis: unknown[]; elementos: { tipo: string }[] };
       renderer: { info: { render: { calls: number; triangles: number } } };
       definirEstado: (p: object) => void;
+      definirFiltro: (id: string, f: ((e: { nivel: number }) => boolean) | null) => void;
       desenhar: () => void;
     } }).__vista3d;
     const pilares = c.modelo.elementos.filter((e) => e.tipo === "pilar").length;
@@ -396,10 +419,15 @@ test("desempenho: 20 pavimentos × 50 pilares com a CPU 4× mais lenta", async (
     c.definirEstado({ marcas: false });
     const reconstruir = performance.now() - t;
     c.definirEstado({ explodido: true });
+    // filtro de camada (4D): só visibilidade, sem refazer a geometria
+    const tf = performance.now();
+    c.definirFiltro("teste", (e) => e.nivel < 10);
+    const filtro = performance.now() - tf;
+    c.definirFiltro("teste", null);
     const q = performance.now();
     for (let i = 0; i < 10; i++) c.desenhar();
     const quadro = (performance.now() - q) / 10;
-    return { niveis: c.modelo.niveis.length, pilares, calls, triangles, reconstruir, quadro };
+    return { niveis: c.modelo.niveis.length, pilares, calls, triangles, reconstruir, filtro, quadro };
   });
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
   test.info().annotations.push({
@@ -411,6 +439,8 @@ test("desempenho: 20 pavimentos × 50 pilares com a CPU 4× mais lenta", async (
   expect(medida.pilares).toBe(1000);
   // geometria mesclada: no máximo 3 malhas por tipo e nível, mais rótulos e placas
   expect(medida.calls).toBeLessThan(20 * 5 * 3 + 40);
+  // o filtro (4D, comparação) fica bem abaixo de uma reconstrução
+  expect(medida.filtro).toBeLessThan(medida.reconstruir);
   await page.screenshot({ path: path.join(PRINTS, "20pav-explodido-1366.png") });
   expect(erros).toEqual([]);
 });

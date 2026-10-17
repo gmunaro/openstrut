@@ -4,12 +4,14 @@
 // é uma camada (camadas/corte.tsx). Contrato e exemplo em docs/VISTA-3D.md.
 import type { ComponentType } from "react";
 import type {
+  Box3,
   Material,
   Object3D,
   OrthographicCamera,
   PerspectiveCamera,
   Plane,
   Scene,
+  Sphere,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -27,19 +29,28 @@ export type FabricaMateriais = (papel: PapelMaterial) => Material;
 export type EventoVista =
   /** Seleção mudou (ctx.selecao). */
   | "selecao"
-  /** Modelo, cores, foco, explodido ou visibilidade mudaram: a cena foi refeita ou movida. */
+  /** A geometria foi refeita (modelo, cores, foco, tipos ou pavimentos ocultos, materiais).
+   *  Os filtros (`definirFiltro`) não refazem a geometria nem emitem este evento. */
   | "cena"
   /** A câmera mexeu (órbita, vista, animação). */
-  | "camera";
+  | "camera"
+  /** Os níveis se moveram no explodido: a cada quadro da animação e no fim. */
+  | "explodido";
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
  *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`). */
+/** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
+ *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`).
+ *  A cena tem Y para cima: X = x da planta, Y = z (cota), Z = −y da planta, em metros. */
 export interface ContextoVista {
   readonly cena: Scene;
   readonly renderer: WebGLRenderer;
   /** A câmera atual (perspectiva ou ortográfica, conforme a vista). */
   readonly camera: PerspectiveCamera | OrthographicCamera;
   readonly controles: OrbitControls;
+  /** Níveis de baixo para cima (`modelo.niveis[i].indice === i`), elementos, colunas e
+   *  eixos. `Elemento3D.nivel` é o índice do nível; fundação e escada sem posição ficam
+   *  no nível 0. Troca quando a obra muda (evento "cena"). */
   readonly modelo: Modelo3D;
   readonly obra: Obra;
   readonly calculo: Calculo;
@@ -49,29 +60,47 @@ export interface ContextoVista {
   readonly selecao: string | null;
   selecionar(chave: string | null): void;
   elemento(chave: string): Elemento3D | undefined;
-  /** O grupo do nível (filhos dele andam com o explodido). Índice de modelo.niveis. */
+  /** O grupo do nível (filhos dele andam com o explodido). Índice de modelo.niveis. Os
+   *  grupos são recriados a cada evento "cena": guarde o índice, não o objeto. */
   grupoDoNivel(indice: number): Object3D | undefined;
-  /** Altura na cena (Y) de uma cota do nível, já com o deslocamento do explodido. */
+  /** Altura na cena (Y) de uma cota do nível, com o deslocamento do explodido como está
+   *  desenhado agora (durante a animação, "explodido" avisa a cada quadro). */
   alturaNaCena(indiceNivel: number, cota: number): number;
+  /** Ponto da planta (x, y em m; z = cota) na cena, sem o explodido. */
+  paraCena(x: number, y: number, z: number): Vector3;
+  /** Caixa do modelo inteiro na cena, sem o explodido. */
+  caixaNaCena(): Box3;
+  /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
+  esferaVisivel(): Sphere;
   /** Redesenha no próximo quadro (a vista só desenha quando algo muda). */
   pedirRender(): void;
-  /** Chamado a cada quadro enquanto registrado (animação, path tracing); devolve o
-   *  cancelamento. Enquanto houver algum, a vista desenha todo quadro. */
+  /** Chamado a cada quadro enquanto registrado, com o tempo desde o quadro anterior em
+   *  segundos (animação, path tracing); devolve o cancelamento. Enquanto houver algum, a
+   *  vista desenha todo quadro. */
   aoQuadro(f: (dtSegundos: number) => void): () => void;
   /** Avisa nos eventos da vista; devolve o cancelamento. */
   aoMudar(evento: EventoVista, f: () => void): () => void;
-  /** Leva a câmera a `posicao` olhando para `alvo` (coordenadas da cena). Anima, salvo
-   *  com prefers-reduced-motion ou `animar` false. */
-  moverCamera(posicao: Vector3, alvo: Vector3, animar?: boolean): Promise<void>;
-  /** Liga ou desliga a órbita/zoom/pan do usuário (o tour e o 4D animam a câmera). */
+  /** Leva a câmera a `posicao` olhando para `alvo` (coordenadas da cena). Anima em 0,45 s,
+   *  salvo com prefers-reduced-motion ou `animar` false. Uma chamada nova cancela a em
+   *  curso, cuja Promise resolve "cancelada". */
+  moverCamera(
+    posicao: Vector3,
+    alvo: Vector3,
+    animar?: boolean,
+  ): Promise<"concluida" | "cancelada">;
+  /** Liga ou desliga a órbita, o zoom e o pan do usuário (o tour e o 4D animam a câmera).
+   *  Não trava os botões de vista nem `moverCamera`. */
   travarControles(travar: boolean): void;
-  /** Troca os materiais do núcleo (null volta aos padrão). */
+  /** Troca os materiais do núcleo (null volta aos padrão); refaz a geometria. */
   definirMateriais(f: FabricaMateriais | null): void;
   /** Planos de corte desta fonte (`id`); a vista junta os de todas as fontes no renderer.
    *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. */
   definirPlanosCorte(id: string, planos: Plane[]): void;
-  /** Esconde os elementos para os quais `f` devolve false (null remove); a cena é refeita.
-   *  Vários filtros (por `id`) valem juntos. */
+  /** Filtro de visibilidade desta fonte (`id`): a peça aparece só se todos os filtros
+   *  devolvem true (interseção); `null` remove o filtro. Não refaz a geometria nem emite
+   *  "cena" (custo linear nos vértices, alguns ms): dá para chamar a cada quadro. Peça
+   *  filtrada não aparece, não é selecionável e perde a seleção. O filtro vale também
+   *  para o modelo novo depois de editar a obra: confira índices contra `modelo.niveis`. */
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
 }
 

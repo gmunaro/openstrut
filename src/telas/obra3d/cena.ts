@@ -5,6 +5,7 @@
 // com vistas prontas e o contexto das camadas (camadas.ts). Desenha só quando algo muda.
 import {
   AmbientLight,
+  Box3,
   BufferGeometry,
   CanvasTexture,
   Color,
@@ -53,6 +54,17 @@ const COR_SELECAO = "#38bdf8";
 
 type Exibicao = "solido" | "fantasma" | "oculto";
 
+/** Onde uma peça está nos buffers do grupo: início e tamanho, em números (x, y, z). */
+interface Faixa {
+  chave: string;
+  malha: "solido" | "fantasma";
+  ini: number;
+  n: number;
+  /** Faixa nas arestas (só a sólida tem arestas). */
+  aIni: number;
+  aN: number;
+}
+
 interface GrupoTipo {
   solido: Mesh;
   fantasma: Mesh;
@@ -60,6 +72,9 @@ interface GrupoTipo {
   /** Chaves das peças na malha sólida e o primeiro triângulo de cada (+ o total). */
   chaves: string[];
   inicios: number[];
+  faixas: Faixa[];
+  /** Posições como montadas, para o filtro voltar a mostrar uma peça. */
+  original: { solido: Float32Array; fantasma: Float32Array; arestas: Float32Array };
 }
 
 interface GrupoNivel {
@@ -68,6 +83,8 @@ interface GrupoNivel {
   marcas: Group;
   rotulo: Sprite | undefined;
 }
+
+export type FimCamera = "concluida" | "cancelada";
 
 export interface EstadoVisual {
   foco: Foco;
@@ -361,7 +378,7 @@ export class Cena3D implements ContextoVista {
       this.definirDeslocamentos();
       if (movimentoReduzido()) this.aplicarDeslocamentos();
       this.sujo = true;
-      this.emitir("cena");
+      this.emitir("explodido");
       return;
     }
     this.reconstruir();
@@ -410,8 +427,7 @@ export class Cena3D implements ContextoVista {
       // no mapa de uma grandeza, os outros tipos ficam transparentes (contexto)
       const modo = this.estado.modoCor;
       if (x === "solido" && modo !== "estado" && GRANDEZAS[modo].tipo !== e.tipo) x = "fantasma";
-      const filtrado = [...this.filtros.values()].some((f) => !f(e));
-      if (tiposOcultos.has(e.tipo) || niveisOcultos.has(e.nivel) || filtrado) x = "oculto";
+      if (tiposOcultos.has(e.tipo) || niveisOcultos.has(e.nivel)) x = "oculto";
       mapa.set(e.chave, x);
     }
     return mapa;
@@ -465,6 +481,15 @@ export class Cena3D implements ContextoVista {
     const eixo =
       foco.tipo === "eixo" ? this.modelo.eixos.find((x) => x.chave === foco.chave) : undefined;
 
+    // peças por nível e tipo, agrupadas uma vez (não filtrar a lista inteira por grupo)
+    const porGrupo = new Map<string, Elemento3D[]>();
+    for (const e of this.modelo.elementos) {
+      const k = `${e.nivel}|${e.tipo}`;
+      const lista = porGrupo.get(k);
+      if (lista) lista.push(e);
+      else porGrupo.set(k, [e]);
+    }
+
     for (let i = 0; i < n; i++) {
       const grupo = new Group();
       grupo.name = this.modelo.niveis[i]!.nome;
@@ -472,17 +497,26 @@ export class Cena3D implements ContextoVista {
       const tipos = new Map<TipoElemento, GrupoTipo>();
       const marcas = new Group();
       for (const tipo of TIPOS) {
-        const doGrupo = this.modelo.elementos.filter((e) => e.nivel === i && e.tipo === tipo);
+        const doGrupo = porGrupo.get(`${i}|${tipo}`) ?? [];
         const sol = { p: [] as number[], n: [] as number[], c: [] as number[], a: [] as number[] };
         const fan = { p: [] as number[], n: [] as number[], c: [] as number[] };
         const chaves: string[] = [];
         const inicios: number[] = [];
+        const faixas: Faixa[] = [];
         for (const e of doGrupo) {
           const x = exib.get(e.chave);
           if (x === "oculto") continue;
           const m = this.malhaDe(e.chave);
           cor.set(this.corDe(e));
           const alvo = x === "solido" ? sol : fan;
+          faixas.push({
+            chave: e.chave,
+            malha: x === "solido" ? "solido" : "fantasma",
+            ini: alvo.p.length,
+            n: m.posicoes.length,
+            aIni: sol.a.length,
+            aN: x === "solido" ? m.arestas.length : 0,
+          });
           if (x === "solido") {
             chaves.push(e.chave);
             inicios.push(sol.p.length / 9);
@@ -511,7 +545,19 @@ export class Cena3D implements ContextoVista {
         solido.visible = sol.p.length > 0;
         fantasma.visible = fan.p.length > 0;
         grupo.add(solido, fantasma, arestas);
-        tipos.set(tipo, { solido, fantasma, arestas, chaves, inicios });
+        tipos.set(tipo, {
+          solido,
+          fantasma,
+          arestas,
+          chaves,
+          inicios,
+          faixas,
+          original: {
+            solido: Float32Array.from(sol.p),
+            fantasma: Float32Array.from(fan.p),
+            arestas: Float32Array.from(sol.a),
+          },
+        });
       }
       grupo.add(marcas);
       let rotulo: Sprite | undefined;
@@ -542,9 +588,52 @@ export class Cena3D implements ContextoVista {
     else this.planos.delete("eixo");
     // a seleção que saiu do foco (oculta) deixa de valer
     if (this._selecao && exib.get(this._selecao) === "oculto") this.selecionar(null);
+    this.aplicarFiltros();
     this.atualizarDestaque();
     this.sujo = true;
     this.emitir("cena");
+  }
+
+  /** A peça passa em todos os filtros das camadas. */
+  private passaFiltros(e: Elemento3D | undefined) {
+    if (!e) return false;
+    for (const f of this.filtros.values()) if (!f(e)) return false;
+    return true;
+  }
+
+  /** Esconde as peças filtradas sem refazer a geometria: os vértices delas viram um ponto
+   *  só (triângulos sem área, que não desenham nem são selecionados) e as marcas somem.
+   *  Mostrar de novo copia as posições originais. Custo linear no número de vértices. */
+  private aplicarFiltros() {
+    for (const nivel of this.niveis) {
+      for (const t of nivel.tipos.values()) {
+        const pos = {
+          solido: t.solido.geometry.getAttribute("position").array as Float32Array,
+          fantasma: t.fantasma.geometry.getAttribute("position").array as Float32Array,
+        };
+        const ar = t.arestas.geometry.getAttribute("position").array as Float32Array;
+        for (const f of t.faixas) {
+          const mostra = this.passaFiltros(this.porChave.get(f.chave));
+          const alvo = pos[f.malha];
+          if (mostra) alvo.set(t.original[f.malha].subarray(f.ini, f.ini + f.n), f.ini);
+          else alvo.fill(0, f.ini, f.ini + f.n);
+          if (f.aN > 0) {
+            if (mostra) ar.set(t.original.arestas.subarray(f.aIni, f.aIni + f.aN), f.aIni);
+            else ar.fill(0, f.aIni, f.aIni + f.aN);
+          }
+        }
+        t.solido.geometry.getAttribute("position").needsUpdate = true;
+        t.fantasma.geometry.getAttribute("position").needsUpdate = true;
+        t.arestas.geometry.getAttribute("position").needsUpdate = true;
+      }
+      for (const o of nivel.marcas.children) {
+        const chave = (o.userData as { chave?: string }).chave;
+        if (chave) o.visible = this.passaFiltros(this.porChave.get(chave));
+      }
+    }
+    if (this._selecao && !this.passaFiltros(this.porChave.get(this._selecao)))
+      this.selecionar(null);
+    this.sujo = true;
   }
 
   private vaoExplodido() {
@@ -564,11 +653,24 @@ export class Cena3D implements ContextoVista {
     if (!mexeu) return;
     this.aplicarDeslocamentos();
     this.sujo = true;
-    this.emitir("cena");
+    this.emitir("explodido");
   }
 
+  /** Altura Y de uma cota do nível, com o deslocamento do explodido já desenhado
+   *  (o valor animado: durante a animação, o evento "explodido" avisa a cada quadro). */
   alturaNaCena = (indiceNivel: number, cota: number) =>
-    cota + (this.deslocamentosAlvo[indiceNivel] ?? 0);
+    cota + (this.deslocamentos[indiceNivel] ?? 0);
+
+  /** Ponto da planta (x, y, z para cima, m) na cena, sem o explodido. */
+  paraCena(x: number, y: number, z: number) {
+    return new Vector3(...paraCena(x, y, z));
+  }
+
+  /** Caixa do modelo inteiro na cena (sem o explodido). */
+  caixaNaCena() {
+    const { min, max } = this.modelo.caixa;
+    return new Box3(new Vector3(min.x, min.z, -max.y), new Vector3(max.x, max.z, -min.y));
+  }
 
   /** Rótulo de uma peça (escada), em cima dela. */
   private rotuloDe(e: Elemento3D, texto: string) {
@@ -579,6 +681,7 @@ export class Cena3D implements ContextoVista {
     for (let k = 1; k < m.posicoes.length; k += 3) topo = Math.max(topo, m.posicoes[k]!);
     s.position.set(x, topo + 0.2, z);
     s.center.set(0.5, 0);
+    s.userData = { ...s.userData, chave: e.chave };
     return s;
   }
 
@@ -723,7 +826,7 @@ export class Cena3D implements ContextoVista {
       if (!t || hit.faceIndex === undefined || hit.faceIndex === null) continue;
       const i = ultimoMenorOuIgual(t.inicios, hit.faceIndex);
       const chave = t.chaves[i];
-      if (chave) return chave;
+      if (chave && this.passaFiltros(this.porChave.get(chave))) return chave;
     }
     return null;
   }
@@ -742,14 +845,14 @@ export class Cena3D implements ContextoVista {
 
   // ---- câmera -------------------------------------------------------------------------------
 
-  /** Esfera que envolve o que está visível (sólidos), na cena. */
-  private esferaVisivel(): Sphere {
+  /** Esfera que envolve as peças sólidas visíveis (foco e filtros), na cena. */
+  esferaVisivel(): Sphere {
     const exib = this.exibicoes();
     const min = new Vector3(Infinity, Infinity, Infinity);
     const max = new Vector3(-Infinity, -Infinity, -Infinity);
     const p = new Vector3();
     for (const e of this.modelo.elementos) {
-      if (exib.get(e.chave) !== "solido") continue;
+      if (exib.get(e.chave) !== "solido" || !this.passaFiltros(e)) continue;
       const dy = this.deslocamentosAlvo[e.nivel] ?? 0;
       const pos = this.malhaDe(e.chave).posicoes;
       for (let k = 0; k < pos.length; k += 3) {
@@ -818,29 +921,45 @@ export class Cena3D implements ContextoVista {
     return this.moverCamera(pos, esfera.center, animar);
   }
 
-  moverCamera(posicao: Vector3, alvo: Vector3, animar = true): Promise<void> {
+  private animacaoCamera: { passo: (dt: number) => void; fim: (r: FimCamera) => void } | null =
+    null;
+
+  /** Leva a câmera a `posicao` olhando para `alvo`. Uma chamada nova cancela a animação em
+   *  curso, cuja Promise resolve com "cancelada". */
+  moverCamera(posicao: Vector3, alvo: Vector3, animar = true): Promise<FimCamera> {
+    const anterior = this.animacaoCamera;
+    if (anterior) {
+      this.quadros.delete(anterior.passo);
+      this.animacaoCamera = null;
+      anterior.fim("cancelada");
+    }
     const de = this.camera.position.clone();
     const alvoDe = this.controles.target.clone();
+    const destino = posicao.clone();
+    const alvoFinal = alvo.clone();
     if (!animar || movimentoReduzido() || de.lengthSq() === 0) {
-      this.camera.position.copy(posicao);
-      this.controles.target.copy(alvo);
+      this.camera.position.copy(destino);
+      this.controles.target.copy(alvoFinal);
       this.controles.update();
       this.sujo = true;
-      return Promise.resolve();
+      this.emitir("camera");
+      return Promise.resolve("concluida");
     }
     return new Promise((fim) => {
       let t = 0;
       const passo = (dt: number) => {
         t = Math.min(1, t + dt / 0.45);
         const s = t * t * (3 - 2 * t);
-        this.camera.position.lerpVectors(de, posicao, s);
-        this.controles.target.lerpVectors(alvoDe, alvo, s);
+        this.camera.position.lerpVectors(de, destino, s);
+        this.controles.target.lerpVectors(alvoDe, alvoFinal, s);
         this.controles.update();
         if (t >= 1) {
           this.quadros.delete(passo);
-          fim();
+          this.animacaoCamera = null;
+          fim("concluida");
         }
       };
+      this.animacaoCamera = { passo, fim };
       this.quadros.add(passo);
     });
   }
@@ -887,7 +1006,7 @@ export class Cena3D implements ContextoVista {
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null) {
     if (f) this.filtros.set(id, f);
     else this.filtros.delete(id);
-    this.reconstruir();
+    this.aplicarFiltros();
   }
 
   elemento(chave: string) {
