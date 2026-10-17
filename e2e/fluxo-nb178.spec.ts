@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { selecionarLaje } from "./planta";
 
 // Fluxo NB-1/78 de ponta a ponta: materiais, planta, resultados, relatório e DXF.
 // Os prints saem em e2e/prints/nb178, numerados na ordem dos passos.
@@ -97,14 +98,10 @@ test("fluxo NB-1/78 completo", async ({ page }) => {
 
   // Medidas para conta à mão: h = 10 cm, revestimento 1 kN/m², lx = 4 m, ly = 5 m.
   // L1 em (0, 0); L2 em (5, 0). Bordo direito de L2 livre: a viga sobre ele não existe.
-  const caixa = await page.getByRole("application", { name: "Planta do pavimento" }).boundingBox();
-  if (!caixa) throw new Error("planta sem área na tela");
-
-  // Com a ferramenta Laje ativa, clique não seleciona laje existente: volta para Selecionar.
-  await page.getByRole("button", { name: "Selecionar", exact: true }).click();
-  await page.mouse.click(caixa.x + caixa.width * 0.25, caixa.y + caixa.height * 0.35);
+  // Com a ferramenta Laje ativa, clique não seleciona laje existente: selecionarLaje volta
+  // para Selecionar.
+  await selecionarLaje(page, "L1");
   await expect(page.getByRole("heading", { name: "Laje", exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary").getByLabel("Nome", { exact: true })).toHaveValue("L1");
   await preencher(page, "x (m)", "0");
   await preencher(page, "y (m)", "0");
   await preencher(page, "lx (m)", "4");
@@ -114,10 +111,8 @@ test("fluxo NB-1/78 completo", async ({ page }) => {
   await preencher(page, /^μ/, "0,8");
   await foto(page, "laje-L1-propriedades");
 
-  await page.getByRole("button", { name: "Selecionar", exact: true }).click();
-  await page.mouse.click(caixa.x + caixa.width * 0.7, caixa.y + caixa.height * 0.35);
+  await selecionarLaje(page, "L2");
   await expect(page.getByRole("heading", { name: "Laje", exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary").getByLabel("Nome", { exact: true })).toHaveValue("L2");
   await preencher(page, "x (m)", "5");
   await preencher(page, "y (m)", "0");
   await preencher(page, "lx (m)", "4");

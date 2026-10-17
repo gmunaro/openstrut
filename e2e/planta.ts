@@ -2,7 +2,7 @@
 // muda quando a planta reenquadra (ao criar um elemento fora da tela, ao abrir a obra),
 // e o rodapé mostra o ponto já com snap à grade. Calibrar uma vez e clicar pela conta
 // erra o alvo por um passo de grade; irPara corrige pelo rodapé até ele mostrar o alvo.
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export type Ponto = { x: number; y: number };
 
@@ -71,4 +71,24 @@ export async function arrastar(page: Page, svg: Locator, a: Ponto, b: Ponto) {
   const tb = await irPara(page, svg, b);
   await page.mouse.up();
   return tb;
+}
+
+/**
+ * Seleciona a laje `nome` clicando no centro do rótulo dela na planta (ferramenta Selecionar)
+ * e confere pelo painel. O rótulo fica no meio da laje, longe das vigas dos bordos e dos
+ * pilares dos cantos, e o ponto sai do próprio SVG: não depende do tamanho da planta na tela.
+ */
+export async function selecionarLaje(page: Page, nome: string) {
+  const svg = page.getByRole("application", { name: "Planta do pavimento" });
+  // o <title> da laje começa por "L1: …" e o <text> do nome é irmão dele no <g> da laje
+  const rotulo = svg
+    .locator("title", { hasText: new RegExp(`^${nome}:`) })
+    .locator("xpath=../*[local-name()='text'][1]");
+  await page.getByRole("button", { name: "Selecionar", exact: true }).click();
+  const b = await rotulo.boundingBox();
+  if (!b) throw new Error(`rótulo da laje ${nome} sem caixa na tela`);
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+  await expect(page.getByRole("complementary").getByLabel("Nome", { exact: true })).toHaveValue(
+    nome,
+  );
 }

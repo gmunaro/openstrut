@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { selecionarLaje } from "./planta";
 
 // Arquivos e rascunhos: salvar e reabrir .openstrut.json (e o .sistrut.json antigo),
 // importar a V1 (FLUXO), rejeitar arquivo inválido ou de versão futura, e manter o
@@ -34,15 +35,6 @@ async function desenharRetangulo(page: Page, x1: number, y1: number, x2: number,
   await page.mouse.down();
   await page.mouse.move(px(x2), py(y2), { steps: 8 });
   await page.mouse.up();
-}
-
-/** Seleciona a laje pelo clique (volta para a ferramenta Selecionar antes) e confere o nome. */
-async function selecionarLaje(page: Page, fx: number, fy: number, nome: string) {
-  const caixa = await page.getByRole("application", { name: "Planta do pavimento" }).boundingBox();
-  if (!caixa) throw new Error("planta sem área na tela");
-  await page.getByRole("button", { name: "Selecionar", exact: true }).click();
-  await page.mouse.click(caixa.x + caixa.width * fx, caixa.y + caixa.height * fy);
-  await expect(page.getByRole("complementary").getByLabel("Nome", { exact: true })).toHaveValue(nome);
 }
 
 // Campo do painel: o rótulo traz a unidade, p.ex. "x (m)" ou "Espessura h (cm)".
@@ -80,7 +72,7 @@ test("salva .openstrut.json e reabre com os mesmos dados", async ({ page }) => {
   await page.getByRole("tab", { name: "Planta" }).click();
   await page.getByRole("button", { name: /^Laje/ }).click();
   await desenharRetangulo(page, 0.12, 0.2, 0.4, 0.5);
-  await selecionarLaje(page, 0.25, 0.35, "L1");
+  await selecionarLaje(page, "L1");
   await preencher(page, /^Espessura h/, "12");
   await foto(page, "01-obra-com-laje-h12");
 
@@ -110,7 +102,7 @@ test("salva .openstrut.json e reabre com os mesmos dados", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Arquivo Teste" })).toBeVisible();
   await foto(page, "03-reaberto");
 
-  await selecionarLaje(page, 0.25, 0.35, "L1");
+  await selecionarLaje(page, "L1");
   await expect(page.getByLabel(/^Espessura h/)).toHaveValue(/^12([,.]0+)?$/);
   await foto(page, "04-reaberto-laje-h12");
 
@@ -148,7 +140,7 @@ test("importa a obra FLUXO da V1 com avisos", async ({ page }) => {
   await foto(page, "06-fluxo-aberta");
 
   // L1 do .LAJ: x = 0, y = 0, lx = 4, ly = 5, h = 10 cm
-  await selecionarLaje(page, 0.25, 0.35, "L1");
+  await selecionarLaje(page, "L1");
   await expect(page.getByLabel("lx (m)", { exact: true })).toHaveValue(/^4([,.]0+)?$/);
   await expect(page.getByLabel("ly (m)", { exact: true })).toHaveValue(/^5([,.]0+)?$/);
   await expect(page.getByLabel(/^Espessura h/)).toHaveValue(/^10([,.]0+)?$/);
@@ -195,7 +187,7 @@ test("rascunho sobrevive a recarregar a página", async ({ page }) => {
   await page.getByRole("tab", { name: "Planta" }).click();
   await page.getByRole("button", { name: /^Laje/ }).click();
   await desenharRetangulo(page, 0.12, 0.2, 0.4, 0.5);
-  await selecionarLaje(page, 0.25, 0.35, "L1");
+  await selecionarLaje(page, "L1");
   await preencher(page, /^Espessura h/, "14");
   // Salvamento com debounce de 800 ms; a espera garante que o rascunho foi gravado.
   await page.waitForTimeout(1500);
@@ -211,7 +203,7 @@ test("rascunho sobrevive a recarregar a página", async ({ page }) => {
 
   await recente.click();
   await expect(page.getByRole("heading", { name: "Rascunho Teste" })).toBeVisible();
-  await selecionarLaje(page, 0.25, 0.35, "L1");
+  await selecionarLaje(page, "L1");
   await expect(page.getByLabel(/^Espessura h/)).toHaveValue(/^14([,.]0+)?$/);
   await foto(page, "12-rascunho-reaberto-h14");
 });
