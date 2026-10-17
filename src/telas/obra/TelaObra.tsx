@@ -3,7 +3,7 @@
 // No celular (useCompacto) o cabeçalho fica numa linha e as outras ações vão para
 // a folha "Mais ações"; deitado, as abas sobem para o cabeçalho.
 // Salva o rascunho no navegador a cada edição (com debounce).
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   EllipsisVertical,
   FileDown,
@@ -45,6 +45,8 @@ import { Erros } from "../Erros";
 import { Relatorio } from "../relatorio/Relatorio";
 import { Resultados } from "../resultados/Resultados";
 import { useSessao } from "../sessao";
+import { AbaVista3D } from "../obra3d/AbaVista3D";
+import { lerVer3d, PARAM_VER3D, type Ver3d, useVer3d } from "../obra3d/link";
 import { useCompacto, usePaisagem } from "../tela";
 import { BarraPavimentos } from "./BarraPavimentos";
 import { DialogoMateriais } from "./DialogoMateriais";
@@ -168,6 +170,19 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const botaoAbrir = useRef<HTMLButtonElement>(null);
   const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao(botaoAbrir);
   const [aba, setAba] = useState("planta");
+  // "ver em 3D": pedido da planta/resultados (useVer3d) ou ?ver3d= na URL abre a aba 3D focada
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const pedido3d = useVer3d((s) => s.pedido);
+  const [foco3d, setFoco3d] = useState<Ver3d | null>(null);
+  useEffect(() => {
+    const v = pedido3d ?? lerVer3d(new URLSearchParams(searchStr).get(PARAM_VER3D));
+    if (!v) return;
+    setFoco3d(v);
+    setAba("3d");
+    useVer3d.getState().limpar();
+  }, [pedido3d, searchStr]);
+  const selecionarPavimento = useObra((e) => e.selecionarPavimento);
+  const selecionar = useObra((e) => e.selecionar);
   const compacto = useCompacto();
   const paisagem = usePaisagem() && compacto;
   // celular: "Mais ações" abre a folha com o resto do cabeçalho e recebe o foco dos diálogos
@@ -230,6 +245,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
       <TabsTrigger value="planta">Planta</TabsTrigger>
       <TabsTrigger value="resultados">Resultados</TabsTrigger>
       <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+      <TabsTrigger value="3d">3D</TabsTrigger>
     </TabsList>
   );
   /** Fecha a folha de ações e faz a ação escolhida. */
@@ -530,6 +546,22 @@ function ObraAberta({ obra }: { obra: Obra }) {
         <DetalhamentoContexto value={detalhamento}>
           <Relatorio obra={obra} calculo={calculo} />
         </DetalhamentoContexto>
+      </TabsContent>
+      <TabsContent value="3d" className="flex min-h-0 flex-1 print:hidden">
+        <AbaVista3D
+          obra={obra}
+          calculo={calculo}
+          foco={foco3d}
+          aoVerNaPlanta={(v) => {
+            selecionarPavimento(v.pavimentoId);
+            selecionar({ tipo: v.tipo, id: v.id });
+            setAba("planta");
+          }}
+          aoVerNosResultados={(v) => {
+            selecionarPavimento(v.pavimentoId);
+            setAba("resultados");
+          }}
+        />
       </TabsContent>
 
       <DialogoMateriais

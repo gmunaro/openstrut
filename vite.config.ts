@@ -19,6 +19,14 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      // a vista 3D (three.js, pedaços "3d-*") não entra no precache: baixa ao abrir a aba
+      // 3D e fica no cache a partir daí (docs/VISTA-3D.md)
+      workbox: {
+        globIgnores: ["**/3d-*.js"],
+        runtimeCaching: [
+          { urlPattern: /\/assets\/3d-[^/]+\.js$/, handler: "CacheFirst", options: { cacheName: "vista-3d" } },
+        ],
+      },
       includeAssets: ["favicon.svg", "apple-touch-icon-180x180.png"],
       manifest: {
         name: "OpenStrut V2",
@@ -44,6 +52,18 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        // pedaços que só a vista 3D carrega (entrada em src/telas/obra3d ou no three.js)
+        // levam o prefixo "3d-"
+        chunkFileNames: (c) =>
+          /[\/](telas[\/]obra3d|node_modules[\/]three)[\/]/.test(c.facadeModuleId ?? "")
+            ? "assets/3d-[name]-[hash].js"
+            : "assets/[name]-[hash].js",
+      },
+    },
+  },
   resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
   test: {
     projects: [
