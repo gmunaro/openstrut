@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { SistemaUnidades } from "../formato";
 import { useSessao } from "../sessao";
+import { SeletorTema } from "../SeletorTema";
 
 const OPCOES: { valor: SistemaUnidades; titulo: string; exemplo: string }[] = [
   { valor: "si", titulo: "SI", exemplo: "kN, kN/m, kN·m, kN/m², MPa" },
@@ -63,8 +64,8 @@ export function DialogoUnidades({
         <DialogHeader>
           <DialogTitle>Unidades</DialogTitle>
           <DialogDescription>
-            Só a exibição muda; o cálculo é sempre em SI. 1 tf = 9,80665 kN. Comprimentos (m, cm) e
-            armaduras (cm²) não mudam.
+            Só a exibição muda; o cálculo é sempre em SI. 1 tf (tonelada-força) = 9,80665 kN.
+            Comprimentos (m, cm) e armaduras (cm²) não mudam.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -91,6 +92,14 @@ export function DialogoUnidades({
               <span className="text-muted-foreground text-xs">{o.exemplo}</span>
             </button>
           ))}
+        </div>
+        <div className="grid gap-1.5 border-t pt-3">
+          <p className="text-sm font-medium">Tema da tela</p>
+          <SeletorTema />
+          <p className="text-muted-foreground text-xs">
+            A área de desenho da planta fica escura nos dois temas; o relatório impresso sai em
+            papel branco.
+          </p>
         </div>
         <DialogFooter>
           <Button onClick={() => aoMudarAberto(false)}>Fechar</Button>

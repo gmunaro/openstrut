@@ -5,9 +5,10 @@ import "./index.css";
 import { routeTree } from "./routeTree.gen";
 import { ouvirInstalacao } from "./telas/instalar";
 import { manterCampoVisivel } from "./telas/tela";
+import { iniciarTema } from "./telas/tema";
 
-// tema escuro do shadcn/ui (index.css); a impressão volta para papel branco
-document.documentElement.classList.add("dark");
+// tema escolhido (escuro por padrão; index.css); a impressão volta para papel branco
+iniciarTema();
 
 // o pedido de instalação (Chrome, Edge) pode chegar antes da tela inicial montar
 ouvirInstalacao();

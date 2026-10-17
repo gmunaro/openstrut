@@ -44,6 +44,7 @@ import {
   useInstalacao,
 } from "./instalar";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "./marca";
+import { SeletorTema } from "./SeletorTema";
 import { useConfirmacao } from "./useConfirmacao";
 
 // A tela inicial não importa o motor de cálculo nem os importadores (telas/calculo.ts,
@@ -145,11 +146,15 @@ export function Inicio() {
 
   return (
     <main className="compacto:gap-6 compacto:p-4 mx-auto grid w-full max-w-4xl gap-8 p-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{NOME_APP}</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Cálculo de estruturas de concreto armado: lajes, vigas e pilares, pavimento por pavimento.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{NOME_APP}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Cálculo de estruturas de concreto armado: lajes, vigas e pilares, pavimento por
+            pavimento.
+          </p>
+        </div>
+        <SeletorTema compacto />
       </header>
 
       <DicaUso id="inicio" titulo="Primeira vez no OpenStrut?">

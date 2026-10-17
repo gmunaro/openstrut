@@ -77,7 +77,7 @@ export function PainelPropriedades({
       <button
         type="button"
         onClick={apagar}
-        className="w-full rounded border border-red-800 px-2 py-1 text-red-300 hover:bg-red-950"
+        className="w-full rounded border border-destructive/50 px-2 py-1 text-destructive hover:bg-destructive/10"
       >
         {toque ? "Apagar" : "Apagar (Delete)"}
       </button>
@@ -89,7 +89,7 @@ function SemSelecao({ pav, toque }: { pav: Pavimento; toque: boolean }) {
   // cargas de ocupação, alvenarias, pilares-parede e continuidades: só o SISTRUT (NB-1/78)
   const nb178 = useObra((s) => s.obra?.norma === "nb1-78");
   return (
-    <div className={`space-y-3 p-3 text-sm text-slate-400 ${ALVO_TOQUE}`}>
+    <div className={`space-y-3 p-3 text-sm text-muted-foreground ${ALVO_TOQUE}`}>
       <p>
         {pav.nome}: {pav.lajes.length} lajes, {pav.vigas.length} vigas, {pav.pilares.length}{" "}
         pilares.
@@ -112,9 +112,9 @@ function SemSelecao({ pav, toque }: { pav: Pavimento; toque: boolean }) {
         </li>
       </ul>
       {nb178 && (
-        <div className="space-y-1 border-t border-slate-700 pt-2 text-slate-300">
+        <div className="space-y-1 border-t border-border pt-2 text-foreground">
           <EditorPavimento pav={pav} />
-          <p className="text-xs text-slate-400">{resumoPavimento(pav)}</p>
+          <p className="text-xs text-muted-foreground">{resumoPavimento(pav)}</p>
         </div>
       )}
     </div>
@@ -122,14 +122,14 @@ function SemSelecao({ pav, toque }: { pav: Pavimento; toque: boolean }) {
 }
 
 const Tecla = ({ children }: { children: string }) => (
-  <kbd className="rounded border border-slate-600 px-1 font-mono text-[11px] text-slate-300">
+  <kbd className="rounded border border-border px-1 font-mono text-[11px] text-foreground">
     {children}
   </kbd>
 );
 
 function Situacao({ d }: { d: Diagnostico }) {
   return (
-    <div className="rounded border border-slate-700 p-2 text-xs">
+    <div className="rounded border border-border p-2 text-xs">
       <p className="flex items-center gap-2 font-medium">
         <span
           className="inline-block size-2.5 rounded-full"
@@ -138,7 +138,7 @@ function Situacao({ d }: { d: Diagnostico }) {
         Cálculo: {ROTULO_SITUACAO[d.situacao]}
       </p>
       {d.mensagens.length > 0 && (
-        <ul className="mt-1 list-disc space-y-0.5 pl-4 text-slate-300">
+        <ul className="mt-1 list-disc space-y-0.5 pl-4 text-foreground">
           {d.mensagens.map((m) => (
             <li key={m}>{m}</li>
           ))}
@@ -150,7 +150,9 @@ function Situacao({ d }: { d: Diagnostico }) {
 
 function Titulo({ children }: { children: string }) {
   return (
-    <h2 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">{children}</h2>
+    <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </h2>
   );
 }
 
@@ -209,14 +211,14 @@ function PropriedadesLaje({
       {num("revestimento", "Revestimento", "kN/m²")}
       {num("sobrecarga", "Sobrecarga", "kN/m²")}
       <label className="block">
-        <span className="text-xs text-slate-400">Sobrecarga pela NBR 6120</span>
+        <span className="text-xs text-muted-foreground">Sobrecarga pela NBR 6120</span>
         <select
           value=""
           onChange={(e) => {
             const p = PRESETS_SOBRECARGA[Number(e.target.value)];
             if (p) setErro(muda({ sobrecarga: p.valor }));
           }}
-          className="mt-0.5 w-full rounded border border-slate-700 bg-slate-900 px-1 py-1 text-xs"
+          className="mt-0.5 w-full rounded border border-input bg-background px-1 py-1 text-xs"
         >
           <option value="">Escolher uso…</option>
           {PRESETS_SOBRECARGA.map((p, i) => (
@@ -228,14 +230,14 @@ function PropriedadesLaje({
       </label>
       {nb178 && num("mu", "μ", "relação my/mx")}
       <fieldset className="space-y-1">
-        <legend className="text-xs text-slate-400">Vínculo dos bordos</legend>
+        <legend className="text-xs text-muted-foreground">Vínculo dos bordos</legend>
         {BORDOS.map((b) => (
           <label key={b} className="flex items-center justify-between gap-2">
             <span>{ROTULO_BORDO[b]}</span>
             <select
               value={l.vinculos[b] ?? "auto"}
               onChange={(e) => mudaVinculo(b, e.target.value)}
-              className="w-36 rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-xs"
+              className="w-36 rounded border border-input bg-background px-1 py-0.5 text-xs"
             >
               <option value="auto">
                 auto{!l.vinculos[b] && detectado ? ` (${detectado[b]})` : ""}
@@ -247,11 +249,11 @@ function PropriedadesLaje({
           </label>
         ))}
       </fieldset>
-      {erro && <p className="text-xs text-red-400">{erro}</p>}
+      {erro && <p className="text-xs text-destructive">{erro}</p>}
       {nb178 && (
-        <div className="space-y-1 border-t border-slate-700 pt-2">
+        <div className="space-y-1 border-t border-border pt-2">
           <EditorLaje pav={pav} laje={l} />
-          <p className="text-xs text-slate-400">{resumoLaje(l)}</p>
+          <p className="text-xs text-muted-foreground">{resumoLaje(l)}</p>
         </div>
       )}
     </div>
@@ -288,7 +290,7 @@ function PropriedadesViga({
         valor={v.nome}
         confirmar={(nome) => muda({ nome })}
       />
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted-foreground">
         Comprimento {fmt(Math.hypot(v.x2 - v.x1, v.y2 - v.y1))} m
       </p>
       <div className="grid grid-cols-2 gap-2">
@@ -297,9 +299,9 @@ function PropriedadesViga({
       </div>
       {num("cargaLinear", "Carga linear (parede)", "kN/m")}
       {nb178 && (
-        <div className="space-y-1 border-t border-slate-700 pt-2">
+        <div className="space-y-1 border-t border-border pt-2">
           <EditorViga pav={pav} viga={v} />
-          <p className="text-xs text-slate-400">{resumoViga(v)}</p>
+          <p className="text-xs text-muted-foreground">{resumoViga(v)}</p>
         </div>
       )}
     </div>
@@ -336,7 +338,7 @@ function PropriedadesPilar({
         valor={p.nome}
         confirmar={(nome) => muda({ nome })}
       />
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted-foreground">
         Centro ({fmt(p.x)}; {fmt(p.y)}) m
       </p>
       <div className="grid grid-cols-2 gap-2">
@@ -344,9 +346,9 @@ function PropriedadesPilar({
         {num("h", "h (em y)")}
       </div>
       {nb178 && (
-        <div className="space-y-1 border-t border-slate-700 pt-2">
+        <div className="space-y-1 border-t border-border pt-2">
           <EditorPilar pav={pav} pilar={p} />
-          <p className="text-xs text-slate-400">{resumoPilar(p)}</p>
+          <p className="text-xs text-muted-foreground">{resumoPilar(p)}</p>
         </div>
       )}
     </div>
@@ -377,9 +379,9 @@ function Campo({
   return (
     <div className="block">
       <label className="block">
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-muted-foreground">
           {rotulo}
-          {unidade && <span className="text-slate-500"> ({unidade})</span>}
+          {unidade && <span className="text-muted-foreground"> ({unidade})</span>}
         </span>
         <input
           value={texto}
@@ -395,13 +397,13 @@ function Campo({
           }}
           aria-invalid={erro !== undefined}
           aria-describedby={erro !== undefined ? idErro : undefined}
-          className={`mt-0.5 w-full rounded border bg-slate-900 px-1.5 py-0.5 text-right font-mono tabular-nums ${
-            erro ? "border-red-500" : "border-slate-700"
+          className={`mt-0.5 w-full rounded border bg-background px-1.5 py-0.5 text-right font-mono tabular-nums ${
+            erro ? "border-destructive" : "border-input"
           }`}
         />
       </label>
       {erro && (
-        <span id={idErro} className="mt-0.5 block text-xs text-red-400">
+        <span id={idErro} className="mt-0.5 block text-xs text-destructive">
           {erro}
         </span>
       )}

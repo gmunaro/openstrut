@@ -59,7 +59,7 @@ export function EditorPavimento({ pav }: { pav: Pavimento }) {
       gatilho={
         <button
           type="button"
-          className="w-full rounded border border-slate-600 px-2 py-1 text-xs hover:bg-slate-800"
+          className="w-full rounded border border-border px-2 py-1 text-xs hover:bg-accent"
         >
           Cargas e continuidades do pavimento…
         </button>

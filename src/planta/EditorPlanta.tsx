@@ -115,7 +115,8 @@ export function EditorPlanta(props: {
   pilares?: ResultadoPilar[];
 }) {
   const pav = usePavimentoAtivo();
-  if (!pav) return <div className="p-4 text-sm text-slate-400">Nenhum pavimento aberto.</div>;
+  if (!pav)
+    return <div className="p-4 text-sm text-muted-foreground">Nenhum pavimento aberto.</div>;
   return <Editor pav={pav} resultado={props.resultado} pilares={props.pilares} />;
 }
 
@@ -543,7 +544,7 @@ function Editor({
     <select
       value={grade}
       onChange={(e) => setGrade(Number(e.target.value))}
-      className="rounded border border-slate-700 bg-slate-900 px-1 py-0.5 text-slate-100"
+      className="rounded border border-input bg-background px-1 py-0.5 text-foreground"
     >
       {GRADES.map((g) => (
         <option key={g} value={g}>
@@ -601,7 +602,7 @@ function Editor({
       <BotaoCompacto icone={PanelBottomOpen} ativo={folha} onClick={() => setFolha((f) => !f)}>
         Propriedades
       </BotaoCompacto>
-      <label className="flex min-h-11 shrink-0 flex-col items-center justify-center gap-0.5 px-1 text-[11px] text-slate-400">
+      <label className="flex min-h-11 shrink-0 flex-col items-center justify-center gap-0.5 px-1 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <Grid3x3 className="size-3.5" /> Grade
         </span>
@@ -613,14 +614,14 @@ function Editor({
   return (
     <div
       className={cn(
-        "flex h-full flex-col bg-slate-950 text-slate-100",
+        "flex h-full flex-col bg-background text-foreground",
         !compacto && "min-h-[480px]",
       )}
     >
       {compacto ? (
         !paisagem && <BarraCompacta>{ferramentasCompactas}</BarraCompacta>
       ) : (
-        <div className="flex flex-wrap items-center gap-1 border-b border-slate-800 px-2 py-1 text-sm">
+        <div className="flex flex-wrap items-center gap-1 border-b border-border px-2 py-1 text-sm">
           <Botao
             ativo={ferramenta === "selecionar"}
             onClick={() => trocarFerramenta("selecionar")}
@@ -651,7 +652,7 @@ function Editor({
           >
             Enquadrar tudo
           </Botao>
-          <label className="ml-1 flex items-center gap-1 text-xs text-slate-400">
+          <label className="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
             Grade
             {seletorGrade}
           </label>
@@ -659,21 +660,17 @@ function Editor({
             type="button"
             onClick={() => setAtalhos(true)}
             title="Atalhos de teclado (?)"
-            className="ml-auto flex items-center gap-1 rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-400"
+            className="ml-auto flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
             <Keyboard aria-hidden className="size-4" /> Atalhos
-            <kbd className="rounded border border-slate-600 px-1 font-mono text-[10px]">?</kbd>
+            <kbd className="rounded border border-border px-1 font-mono text-[10px]">?</kbd>
           </button>
         </div>
       )}
 
       <DialogoAtalhos aberto={atalhos} aoMudarAberto={setAtalhos} />
       {!compacto && (
-        <DicaUso
-          id="planta"
-          titulo="Como desenhar a planta"
-          className="m-2 mb-0 border-sky-700/60 bg-sky-950/40"
-        >
+        <DicaUso id="planta" titulo="Como desenhar a planta" className="m-2 mb-0">
           Escolha <strong>Laje</strong> (tecla L) e arraste de um canto ao outro; o cursor prende na
           grade e nos bordos das outras lajes, e as vigas e os pilares nascem dos bordos. Clique num
           elemento para editar no painel à direita. <strong>Medir</strong> (M) mede distâncias, e{" "}
@@ -737,7 +734,7 @@ function Editor({
         {!compacto ? (
           <aside
             aria-label="Propriedades"
-            className="w-72 shrink-0 overflow-y-auto border-l border-slate-800"
+            className="w-72 shrink-0 overflow-y-auto border-l border-border"
           >
             {painel}
           </aside>
@@ -748,21 +745,24 @@ function Editor({
             <aside
               aria-label="Propriedades"
               className={cn(
-                "flex shrink-0 flex-col border-slate-700 bg-slate-950",
+                "flex shrink-0 flex-col border-border bg-background",
                 paisagem
                   ? "w-[min(20rem,45%)] border-l"
                   : "max-h-[50%] rounded-t-xl border-t shadow-[0_-4px_12px_rgb(0_0_0/0.4)]",
               )}
             >
-              <div className="flex items-center gap-2 border-b border-slate-800 pl-3">
+              <div className="flex items-center gap-2 border-b border-border pl-3">
                 {!paisagem && (
-                  <span aria-hidden className="mx-auto h-1 w-10 rounded-full bg-slate-600" />
+                  <span
+                    aria-hidden
+                    className="mx-auto h-1 w-10 rounded-full bg-muted-foreground/40"
+                  />
                 )}
                 <button
                   type="button"
                   aria-label="Fechar propriedades"
                   onClick={() => setFolha(false)}
-                  className="ml-auto flex size-11 items-center justify-center text-slate-300 hover:bg-slate-800"
+                  className="ml-auto flex size-11 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   <X className="size-5" />
                 </button>
@@ -778,7 +778,7 @@ function Editor({
       <div
         className={cn(
           // pr-16: o canto de baixo à direita fica livre para o botão flutuante do app
-          "flex items-center gap-x-4 border-t border-slate-800 py-0.5 pr-16 pl-2 font-mono text-xs text-slate-400",
+          "flex items-center gap-x-4 border-t border-border py-0.5 pr-16 pl-2 font-mono text-xs text-muted-foreground",
           compacto && "flex-wrap gap-x-2 leading-tight",
         )}
       >
@@ -826,9 +826,11 @@ const DICAS_TOQUE: Record<Ferramenta, string> = {
 function TextoMedida({ medida }: { medida: Medida }) {
   const { d, dx, dy } = medir(medida.a, medida.b);
   return (
-    <span role="status" className="text-yellow-300 tabular-nums">
+    <span role="status" className="text-aviso tabular-nums">
       {`d = ${fmt(d)} m  (Δx = ${fmt(dx)}  Δy = ${fmt(dy)} m)`}
-      {!medida.fixa && <span className="font-sans text-slate-400"> · marque o segundo ponto</span>}
+      {!medida.fixa && (
+        <span className="font-sans text-muted-foreground"> · marque o segundo ponto</span>
+      )}
     </span>
   );
 }
@@ -863,7 +865,7 @@ function BarraCompacta({
       aria-label="Ferramentas da planta"
       aria-orientation={vertical ? "vertical" : "horizontal"}
       className={cn(
-        "flex shrink-0 gap-0.5 border-slate-800 [scrollbar-width:none]",
+        "flex shrink-0 gap-0.5 border-border [scrollbar-width:none]",
         vertical
           ? "w-16 flex-col overflow-y-auto overscroll-y-contain border-r py-0.5"
           : "items-stretch overflow-x-auto overscroll-x-contain border-b px-1",
@@ -900,7 +902,7 @@ function BotaoCompacto({
       aria-pressed={ativo}
       className={cn(
         "flex min-h-12 min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded px-1.5 text-[11px] leading-none",
-        ativo ? "bg-sky-700 text-white" : "text-slate-200 active:bg-slate-800",
+        ativo ? "bg-primary text-primary-foreground" : "text-foreground active:bg-accent",
         "disabled:opacity-40",
       )}
     >
@@ -911,9 +913,9 @@ function BotaoCompacto({
 }
 
 const COR_MENSAGEM: Record<Mensagem["tipo"], string> = {
-  erro: "text-red-400",
-  aviso: "text-amber-300",
-  info: "text-sky-300",
+  erro: "text-destructive",
+  aviso: "text-aviso",
+  info: "text-primary",
 };
 
 /** Cores da situação de cálculo. `compacta` (celular): numa linha, sem a dica do mouse. */
@@ -936,12 +938,12 @@ function Legenda({ compacta }: { compacta: boolean }) {
           {ROTULO_SITUACAO[s]}
         </div>
       ))}
-      {!compacta && <div className="mt-0.5 text-slate-500">Passe o mouse para ver os avisos.</div>}
+      {!compacta && <div className="mt-0.5 text-slate-400">Passe o mouse para ver os avisos.</div>}
     </div>
   );
 }
 
-const Separador = () => <span className="mx-1 h-5 w-px bg-slate-700" />;
+const Separador = () => <span className="mx-1 h-5 w-px bg-border" />;
 
 function Botao({
   children,
@@ -964,7 +966,7 @@ function Botao({
       title={dica && `${children} (${dica})`}
       aria-pressed={ativo}
       className={`rounded px-2 py-0.5 ${
-        ativo ? "bg-sky-700 text-white" : "text-slate-200 hover:bg-slate-800"
+        ativo ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
       } disabled:opacity-40 disabled:hover:bg-transparent`}
     >
       {children}

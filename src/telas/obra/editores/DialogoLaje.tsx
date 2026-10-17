@@ -50,7 +50,7 @@ export function EditorLaje({ pav, laje }: { pav: Pavimento; laje: Laje }) {
       gatilho={
         <button
           type="button"
-          className="w-full rounded border border-slate-600 px-2 py-1 text-xs hover:bg-slate-800"
+          className="w-full rounded border border-border px-2 py-1 text-xs hover:bg-accent"
         >
           Dados do SISTRUT da laje…
         </button>
