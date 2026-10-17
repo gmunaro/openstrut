@@ -57,7 +57,7 @@ export const somaReacoesPilares: SomaReacoesPilares = (analises, vigas, parametr
       const r = parametros.reacaoNoPilar === "maxima" ? apoio.rMax : apoio.r;
       const valor = modo === "original" ? s(qbInt(r * 100) / 100) : r;
       linha.total = s(linha.total + valor);
-      linha.parcelas.push({ viga: viga.nome, valor, texto: textoDoRep(valor, modo) });
+      linha.parcelas.push({ viga: viga.nome, valor, texto: textoDoRep(valor, modo), semCorte: r });
       const [mEsq, mDir] = analise.momentosPilar;
       if (mEsq !== 0 && k === 0) {
         linha.momentos.push(momento(viga, mEsq, 1, viga.tramos[0]?.vao ?? 0, modo));

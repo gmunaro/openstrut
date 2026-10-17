@@ -374,6 +374,32 @@ export interface ResultadoSistrut {
   /** Resumo de cargas na fundação por coluna (PILAREDI.BAS:960-1000, `resumoFundacao`):
    *  acumulada, peso próprio, carga na fundação e momentos da base, t e tm. */
   fundacoes: ({ coluna: string; pilarId: string } & ReturnType<typeof resumoFundacao>)[];
+  /** Pilares que nascem sobre uma viga de transição com carga concentrada sob eles e que
+   *  o .COL declara como a mesma coluna do pilar de baixo (defeito P-b). Serve ao painel
+   *  de erros do original (`calculo/defeitosOriginal.ts`). */
+  transicoes: TransicaoPilar[];
+}
+
+/** Um pilar que nasce sobre viga de transição com concentrada sob ele (P-b; ver
+ *  `calcularPilaresSistrut`). Cargas em t, sem o peso próprio. */
+export interface TransicaoPilar {
+  /** O pilar que nasce na viga (o lance de cima) e o pavimento dele. */
+  pilarId: string;
+  pilar: string;
+  pavimento: string;
+  /** A viga de transição e o pavimento dela. */
+  viga: string;
+  pavimentoViga: string;
+  /** Concentrada lançada na viga sob a seção do pilar, t. */
+  concentrada: number;
+  /** Carga que os lances de cima levam à base deles (linhas do .REP e carga no topo), t. */
+  cargaDeCima: number;
+  /** A concentrada cobre a carga de cima (folga `FOLGA_CARGA_NA_VIGA`): é a carga dele. */
+  cobre: boolean;
+  /** O lance continua a coluna de baixo: sempre no original; no corrigido, só sem cobrir. */
+  continua: boolean;
+  /** Id do pilar da base da coluna que o lance continua (`fundacoes[].pilarId`). */
+  pilarIdBase: string;
 }
 
 // ---------------------------------------------------------------- lajes
@@ -1402,6 +1428,7 @@ function calcularPilaresSistrut(
     indexa(porInicio, chave(t[0]!.nivel, t[0]!.pilar.nome), t);
   }
   const avisosDeFusao = new Map<string, string>();
+  const transicoes: TransicaoPilar[] = [];
   /** Lances de cima de cada fusão (id do pilar): o pilar de baixo e o deslocamento, cm. */
   const juncoes = new Map<string, { de: string; cm: number }>();
   const fundidos = new Set<Trecho>();
@@ -1455,7 +1482,20 @@ function calcularPilaresSistrut(
       if (!juncao || !naViga) continue;
       const carga = cargaDosLances(t.slice(k));
       const viga = `a viga ${naViga.viga} do pavimento ${naViga.pavimento}, que tem ${num(naViga.f, 2)} t de carga concentrada sob ele`;
-      if (modo === "corrigido" && cobre(naViga.f, carga)) {
+      const partida = modo === "corrigido" && cobre(naViga.f, carga);
+      transicoes.push({
+        pilarId: l.pilar.id,
+        pilar: l.pilar.nome,
+        pavimento: niveis[l.nivel]!.pav.nome,
+        viga: naViga.viga,
+        pavimentoViga: naViga.pavimento,
+        concentrada: naViga.f,
+        cargaDeCima: carga,
+        cobre: cobre(naViga.f, carga),
+        continua: !partida,
+        pilarIdBase: t[0]!.pilar.id,
+      });
+      if (partida) {
         trechos.push(t.splice(k));
         avisosDeFusao.delete(l.pilar.id);
         continue;
@@ -1770,7 +1810,7 @@ function calcularPilaresSistrut(
         { id: "pilar.nasce-em-transicao", pilarId: base.pilar.id },
       );
   });
-  return { colunas, lances, verificacoes, predimensionamentos, fundacoes };
+  return { colunas, lances, verificacoes, predimensionamentos, fundacoes, transicoes };
 }
 
 // ---------------------------------------------------------------- obra
@@ -1796,14 +1836,8 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     calcularPavimentoSistrut(p, mat, par, modo, otimiza, matViga),
   );
   const falhas: ResultadoSistrut["falhas"] = [];
-  const { colunas, lances, verificacoes, predimensionamentos, fundacoes } = calcularPilaresSistrut(
-    obra,
-    pavimentos,
-    matPilar,
-    par,
-    modo,
-    falhas,
-  );
+  const { colunas, lances, verificacoes, predimensionamentos, fundacoes, transicoes } =
+    calcularPilaresSistrut(obra, pavimentos, matPilar, par, modo, falhas);
   const quadros = pavimentos.flatMap((p) => p.vigas.flatMap((v) => (v.quadro ? [v.quadro] : [])));
   return {
     modo,
@@ -1848,5 +1882,6 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     verificacoes,
     predimensionamentos,
     fundacoes,
+    transicoes,
   };
 }

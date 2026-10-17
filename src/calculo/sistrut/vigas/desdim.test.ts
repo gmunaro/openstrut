@@ -416,6 +416,18 @@ describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado 
     expect(asw(0.001)).toBeCloseTo(9.918, 3);
   });
 
+  it("original: semDefeitoPsi é o Asw com ρ = As/(3·bw·h) da As de flexão do próprio original", () => {
+    const r = dimensionaViga({ ...entrada, parametros: emSingle(PARAMETROS_DSP) }, "original");
+    const as = r.tramos[0]!.flexao.as;
+    const rho = Math.min(0.015, Math.max(0.001, as / (3 * 20 * 50)));
+    const x = r.tramos[0]!.cisalhamento.semDefeitoPsi!;
+    expect(x.aswEsquerda).toBeCloseTo(asw(rho), 2);
+    expect(x.aswEsquerda).toBeLessThan(r.tramos[0]!.cisalhamento.aswEsquerda - 0.1);
+    expect(dimensionaViga(entrada, "corrigido").tramos[0]!.cisalhamento.semDefeitoPsi).toBe(
+      undefined,
+    );
+  });
+
   it("corrigido: ρ = As/(3·bw·h) com a As de flexão do tramo, ψ maior e Asw menor", () => {
     const r = dimensionaViga(entrada, "corrigido");
     const as = r.tramos[0]!.flexao.as;

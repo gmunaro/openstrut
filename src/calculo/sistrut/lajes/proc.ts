@@ -130,6 +130,7 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
       const bordoVizinho = ladoA ? (c.lajeB === null ? c.bordoA : c.bordoB) : c.bordoA;
       // R2: o original pula o vizinho quando o lado dele tem o mesmo número.
       const recalculaVizinho = vizinho !== null && (modo === "corrigido" || bordoVizinho !== bordo);
+      const naoRecalculado = vizinho !== null && !recalculaVizinho ? vizinho : undefined;
       if (vizinho !== null && !recalculaVizinho) {
         avisos.push(
           `${laje.nome}, lado ${bordo + 1}: o vizinho ${vizinho} tem o mesmo número de lado e não foi ` +
@@ -189,6 +190,7 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
         as,
         barra,
         continuidade: { ...c, armaduraImposta: codigosNegativos[indice] ?? 0 },
+        ...(naoRecalculado ? { vizinhoNaoRecalculado: naoRecalculado } : {}),
       };
       memoria.push({
         descricao: `${laje.nome}, negativa com ${vizinho ?? "engaste"}: ${barra.ok ? textoBarraLaje(barra) : "*"}`,
