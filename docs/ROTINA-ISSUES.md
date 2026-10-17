@@ -1,6 +1,6 @@
 # Rotina das issues
 
-Um agente roda esta rotina a cada hora, por uma tarefa agendada do T3 Code, no clone do repositório que a tarefa indica. Hoje ela roda no Munaro-Pc. Ele lê as issues abertas de `gmunaro/openstrut`, investiga cada novidade no código e responde na própria issue com diagnóstico, opções e recomendação. Quando o problema e a solução estão definidos, ele avisa na issue o que vai implementar, implementa com a skill `enxame`, publica uma versão nova e avisa na issue para o usuário conferir.
+Um agente roda esta rotina uma vez por dia, no clone do repositório que a tarefa indica: na primeira issue aberta do dia (webhook do GitHub) ou às 18h, o que vier primeiro. A segunda chamada do dia encerra sem fazer nada. Hoje ela roda no T3 Code do Munaro-Pc. Ele lê as issues abertas de `gmunaro/openstrut`, investiga cada novidade no código e responde na própria issue com diagnóstico, opções e recomendação. Quando o problema e a solução estão definidos, ele avisa na issue o que vai implementar, implementa com a skill `enxame`, publica uma versão nova e avisa na issue para o usuário conferir.
 
 ## Para quem o OpenStrut existe
 
@@ -49,7 +49,7 @@ O objetivo de cada issue é deixar a ferramenta alinhada com o que ele precisa p
 2. A skill `enxame` está em `~/.claude/skills/enxame` e os agentes que ela usa (`scout`, `auditor`, `implementer`, `reviewer`, `researcher`) em `~/.claude/agents`.
 3. No T3 Code da máquina, abra uma thread num projeto cujo diretório é o clone e peça:
 
-   > Crie uma tarefa agendada a cada 1 hora, neste thread, com o prompt: "Rode uma rodada da rotina de `docs/ROTINA-ISSUES.md` neste clone." Depois rode a primeira rodada agora.
+   > Crie duas tarefas agendadas neste thread com o mesmo prompt de rodada: uma todo dia às 18h e uma por webhook, ligada ao evento `issues` do repositório, que só segue quando a ação é `opened`. O prompt de rodada encerra sem fazer nada se o arquivo de controle já tem a data de hoje; senão, grava a data e roda uma rodada de `docs/ROTINA-ISSUES.md` neste clone. Depois rode a primeira rodada agora.
 
 O t3-lab também está pronto (clone `~/openstrut`, `gh` logado, skill e agentes copiados), caso a rotina mude para lá.
 
