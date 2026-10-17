@@ -1,9 +1,22 @@
+/// <reference types="node" />
 // Leitor do .EDV. Referências: o registro R1__E2E.EDV que o SISTRUT original gravou no
 // oráculo (caso retrad_des_edc: viga V1 20×50 de 2 tramos, apoios de 20 cm e vãos livres
 // de 380 cm, editada no DESEDCAO), conferido campo a campo à mão contra a gravação
 // (DESEDCAO.BAS:464-588); e registros sintéticos montados aqui como o PRINT # grava.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { casarEdv, lerEdv, nomeArquivoEdv, nomeEdv, type EdicaoVigaSistrut } from "./edv";
+import { arquivoOraculo } from "../../calculo/sistrut/__oraculo__/arquivosOraculo";
+import { obraNova } from "../../dominio/criar";
+import type { Obra } from "../../dominio/obra";
+import {
+  aplicarEdv,
+  casarEdv,
+  lerEdv,
+  nomeArquivoEdv,
+  nomeEdv,
+  type EdicaoVigaSistrut,
+} from "./edv";
+import { lerVig } from "./viga";
 
 /** Uma linha como o PRINT # de SINGLE grava: sinal (branco ou "-"), número sem o zero
  *  antes do ponto e um branco no fim; texto vai como está. */
@@ -289,5 +302,76 @@ describe("casarEdv", () => {
       ok: false,
       aviso: expect.stringContaining("TERREO1, TERREO2"),
     });
+  });
+});
+
+describe("aplicarEdv", () => {
+  // E2E.VIG do oráculo (retrad_des_menu): V1 é o registro 1
+  const vig = {
+    nome: "E2E.VIG",
+    dados: new Uint8Array(
+      readFileSync(arquivoOraculo("oraculo/casos/retrad_des_menu.dados/E2E.VIG")),
+    ),
+  };
+  const nomes = lerVig(vig.dados).map((r) => r.nome);
+  const obra = (): Obra => {
+    const o = obraNova("E2E", "nb1-78");
+    const pav = o.pavimentos[0]!;
+    pav.id = "E2E";
+    pav.nome = "E2E";
+    pav.vigas = nomes.map((nome, i) => ({
+      id: `E2E/${nome}`,
+      nome,
+      x1: 0,
+      y1: i,
+      x2: 8,
+      y2: i,
+      bw: 20,
+      h: 50,
+      cargaLinear: 0,
+    }));
+    return o;
+  };
+
+  it("guarda a edição na viga do registro e avisa uma vez, sem mudar a obra de entrada", () => {
+    const base = obra();
+    const r = aplicarEdv(base, [{ nome: "R1__E2E.EDV", texto: E2E }], [vig]);
+    expect(nomes[0]).toBe("V1");
+    const v1 = r.obra.pavimentos[0]!.vigas.find((v) => v.nome === "V1");
+    expect(v1?.armaduraEditada).toEqual(edicao("R1__E2E.EDV", E2E));
+    expect(r.obra.pavimentos[0]!.vigas.filter((v) => v.armaduraEditada)).toHaveLength(1);
+    expect(base.pavimentos[0]!.vigas.some((v) => v.armaduraEditada)).toBe(false);
+    expect(r.ignorados).toEqual([]);
+    expect(r.avisos).toEqual([
+      expect.stringMatching(/^Armadura editada no DESEDCAO \(\.EDV\) em E2E V1:/),
+    ]);
+  });
+
+  it("fica de fora, com o motivo: ilegível, sem viga no .VIG, nome trocado, viga fora da obra", () => {
+    const semV1 = obra();
+    semV1.pavimentos[0]!.vigas = semV1.pavimentos[0]!.vigas.filter((v) => v.nome !== "V1");
+    const r = aplicarEdv(
+      semV1,
+      [
+        { nome: "R1__E2E.EDV", texto: E2E },
+        { nome: "R2__E2E.EDV", texto: " 1 \r\n" },
+        { nome: "R99_E2E.EDV", texto: E2E },
+        { nome: "R3__E2E.EDV", texto: E2E },
+      ],
+      [vig],
+    );
+    const motivo = (arquivo: string) => r.ignorados.find((i) => i.arquivo === arquivo)?.motivo;
+    expect(motivo("R1__E2E.EDV")).toBe(
+      "a viga V1 do E2E.VIG não entrou na obra; a armadura editada dela ficou de fora.",
+    );
+    expect(motivo("R2__E2E.EDV")).toMatch(/^armadura editada no DESEDCAO que não foi possível ler/);
+    expect(motivo("R99_E2E.EDV")).toBe(
+      "o E2E.VIG não tem a viga do registro 99; arquivo ignorado.",
+    );
+    expect(motivo("R3__E2E.EDV")).toMatch(
+      /^o registro 3 do E2E\.VIG é a viga .*, mas a edição é da V1/,
+    );
+    expect(r.obra).toBe(semV1);
+    expect(r.avisos).toHaveLength(4);
   });
 });

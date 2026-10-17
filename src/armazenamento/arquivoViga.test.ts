@@ -2,6 +2,7 @@
 // Obra.parametrosViga): ida e volta, arquivo antigo sem os campos e as mensagens de erro.
 import { describe, expect, it } from "vitest";
 import { obraNova } from "../dominio/criar";
+import type { EdicaoVigaSistrut } from "../dominio/edicaoViga";
 import type { Obra, Viga } from "../dominio/obra";
 import { lerObra, serializarObra } from "./arquivo";
 
@@ -164,5 +165,77 @@ describe("arquivo: parâmetros do VIGA.INI e do .DSP (revisão do 1d12659)", () 
   it("seção 0 num trecho (balanço que herda a do apoio) é aceita", () => {
     const o = obraCom({ secoes: { trechos: [{ bw: 0, h: 0, bf: 0, hf: 0 }] } });
     expect(lerObra(serializarObra(o)).ok).toBe(true);
+  });
+});
+
+describe("arquivo: armadura editada no DESEDCAO (Viga.armaduraEditada)", () => {
+  const edicao: EdicaoVigaSistrut = {
+    registro: 1,
+    pavimento: "E2E",
+    viga: "V1",
+    comprimento: 820,
+    materiais: { fck: 0.15, fyk: 5, fatorUnidade: 1, unidade: "t/cm2" },
+    cobrimento: 2,
+    cobrimentoMaisAcrescimo: 4,
+    repeticoes: 0,
+    tramos: 2,
+    balancoEsquerdo: false,
+    balancoDireito: false,
+    negativas: [{ quantidade: 2, bitola: 10, inicio: 190, fim: 630, dobras: [0, 0] }],
+    grampoNegativos: [
+      { quantidade: 2, bitola: 8, inicio: 2, fim: 42, lado: "esquerdo", largura: 16 },
+    ],
+    positivas: [{ quantidade: 2, bitola: 10, inicio: 2, fim: 818, dobras: [25, 25] }],
+    grampoPositivos: [],
+    portaEstribos: [{ quantidade: 2, bitola: 6.3, inicio: 67, fim: 205 }],
+    pele: {
+      linhas: 1,
+      trechos: [{ trecho: 1, quantidadePorFace: 1, bitola: 8, inicio: 20, fim: 400 }],
+      trechosPorBitola: [0, 0, 0, 1, 0, 0],
+    },
+    estribos: [
+      {
+        inicio: 20,
+        fim: 400,
+        bitola: 5,
+        espacamento: 12,
+        ladoALado: 1,
+        bw: 20,
+        h: 50,
+        posicao: 1,
+      },
+    ],
+    notasForma: [{ trecho: 1, local: "C", texto: "VER CORTE" }],
+    momentosPositivos: [0, 0.5467786, 0.5467786],
+    notasArmadura: [{ posicao: 1, texto: "DOBRAR NA OBRA" }],
+  };
+
+  it("vai e volta igual, com e sem pele", () => {
+    for (const armaduraEditada of [edicao, { ...edicao, pele: null }]) {
+      const o = obraCom({ armaduraEditada });
+      const r = lerObra(serializarObra(o));
+      expect(r.ok && r.obra).toEqual(o);
+    }
+  });
+
+  it("erros com o caminho do campo e os limites do original", () => {
+    const d = JSON.parse(serializarObra(obraCom({ armaduraEditada: edicao })));
+    const e = d.pavimentos[0].vigas[0].armaduraEditada;
+    e.tramos = 0;
+    e.grampoNegativos[0].lado = "meio";
+    e.estribos[0].espacamento = 0;
+    e.positivas = Array.from({ length: 61 }, () => e.positivas[0]);
+    e.negativas[0].dobras = [0];
+    const r = lerObra(JSON.stringify(d));
+    const c = "pavimentos[0].vigas[0].armaduraEditada";
+    expect(r.ok ? [] : r.erros).toEqual(
+      expect.arrayContaining([
+        `${c}.tramos: esperado um número maior que zero, veio 0.`,
+        `${c}.grampoNegativos[0].lado: esperado um de "esquerdo", "direito", veio "meio".`,
+        `${c}.estribos[0].espacamento: esperado um número maior que zero, veio 0.`,
+        `${c}.positivas: esperados no máximo 60 itens (limite do SISTRUT), veio 61.`,
+        `${c}.negativas[0].dobras: esperados 2 números, veio [0].`,
+      ]),
+    );
   });
 });

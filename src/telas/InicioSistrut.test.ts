@@ -5,9 +5,11 @@
 // editado linha a linha para os casos das obras gravadas por usuários (vaga livre de
 // A_1014 com o fechamento da última área, pavimento só com buracos) e um .COL montado
 // aqui no formato do PIGRAEDI.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { importarLaj } from "../armazenamento/sistrut/laje";
 import { importarVigasSistrut } from "../armazenamento/sistrut/viga";
+import { arquivoOraculo } from "../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { KN_POR_TF } from "../calculo/sistrut/base/unidades";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
 import {
@@ -392,13 +394,15 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
     expect(r.avisos).toContainEqual(expect.stringMatching(/^RUIM\.VIG: .*ficaram de fora\.$/));
   });
 
-  it(".BAK e .EDV ficam de fora com o motivo, no aviso e no resumo", () => {
+  it(".BAK e .EDV ilegível ficam de fora com o motivo, no aviso e no resumo", () => {
     const r = importa(PREDIO);
     expect(r.avisos).toContain(
       "TETO.BAK: cópia de segurança do .LAJ ou do .COL anterior, que o LAJEGRAV e o PIGRAEDI guardam ao gravar (LAJEGRAV.BAS:484, PIGRAEDI.BAS:467); não usada.",
     );
-    expect(r.avisos).toContain(
-      "R5__TETO.EDV: desenho de armadura editado de uma viga, do DESEDCAO; não importado.",
+    expect(r.avisos).toContainEqual(
+      expect.stringMatching(
+        /^R5__TETO\.EDV: armadura editada no DESEDCAO que não foi possível ler \(.*\); ficou de fora\.$/,
+      ),
     );
     expect(r.resumo.ignorados.map((i) => i.arquivo)).toEqual(
       expect.arrayContaining(["TETO.BAK", "R5__TETO.EDV", "TETO.REP", "TETO.RLP"]),
@@ -461,5 +465,49 @@ describe("importarVigasSistrut: a montagem calculada uma vez", () => {
     if (!dada.ok || !recalculada.ok) return;
     expect(dada.obra).toEqual(recalculada.obra);
     expect(dada.avisos).toEqual(recalculada.avisos);
+  });
+});
+
+describe("importarObraSistrut: armadura editada (.EDV)", () => {
+  // obra E2E do oráculo só de vigas (.VIG/.SEC/.FOR/.TAB de retrad_des_menu) com o
+  // R1__E2E.EDV e o E2E.TAB que o original gravou ao sair do DESEDCAO (retrad_des_edc)
+  const doOraculo = (caminho: string): ArquivoEntrada => ({
+    nome: caminho.replace(/^.*\//, ""),
+    dados: new Uint8Array(readFileSync(arquivoOraculo(caminho))),
+  });
+  const caso = "oraculo/casos/retrad_des_menu.dados";
+  const run = "oraculo/runs/retrad_des_edc-20261015-082513/obra";
+  const arquivos = [
+    ...["E2E.VIG", "E2E.SEC", "E2E.FOR"].map((n) => doOraculo(`${caso}/${n}`)),
+    doOraculo(`${run}/R1__E2E.EDV`),
+  ];
+
+  it("a viga V1 recebe a edição e o quadro dela bate com o .TAB regravado pelo original", () => {
+    const r = importa(arquivos);
+    const v1 = r.obra.pavimentos[0]!.vigas.find((v) => v.nome === "V1");
+    expect(v1?.armaduraEditada?.registro).toBe(1);
+    expect(r.resumo.lidos).toContain("R1__E2E.EDV");
+    expect(r.avisos).toContainEqual(
+      expect.stringMatching(/^Armadura editada no DESEDCAO .* E2E V1:/),
+    );
+    const tab = readFileSync(arquivoOraculo(`${run}/E2E.TAB`));
+    const comprimentos = Array.from({ length: 10 }, (_, i) => tab.readFloatLE(10 + 4 * (5 + i)));
+    const res = calcularObraSistrut(r.obra, { modo: "original" });
+    const q = res.pavimentos[0]!.vigas.find((v) => v.nome === "V1")?.quadro;
+    expect(q?.comprimentoPorBitola).toEqual(comprimentos);
+  });
+
+  it(".TAB sem .DSP: avisa que a obra parece usar parâmetros próprios; com o .DSP, não", () => {
+    const comTab = [...arquivos, doOraculo(`${caso}/E2E.TAB`)];
+    const aviso =
+      /^A obra parece usar parâmetros próprios \(há \.TAB do DESENHO e nenhum \.DSP\): selecione também os arquivos de C:\\SISTRUT\\EXEC40 /;
+    expect(importa(comTab).avisos).toContainEqual(expect.stringMatching(aviso));
+    expect(importa(arquivos).avisos).not.toContainEqual(
+      expect.stringMatching(/parâmetros próprios/),
+    );
+    const dsp = doOraculo("oraculo/orig/SISTRUT.DSP");
+    expect(importa([...comTab, dsp]).avisos).not.toContainEqual(
+      expect.stringMatching(/parâmetros próprios/),
+    );
   });
 });

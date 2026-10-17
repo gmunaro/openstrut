@@ -19,6 +19,7 @@
 // vigas, que os lê com o leitor do DESENHO (^Z e CR inclusive).
 import { lerObra, serializarObra } from "../armazenamento/arquivo";
 import { importarV1 } from "../armazenamento/importarV1";
+import { aplicarEdv } from "../armazenamento/sistrut/edv";
 import { importarLaj } from "../armazenamento/sistrut/laje";
 import { explicarErros, type OrigemPavimento } from "../armazenamento/sistrut/mensagens";
 import {
@@ -69,7 +70,6 @@ const VIGAS_DA_OBRA = new Set(["DSP", "INI"]);
 export const NAO_LIDOS: Record<string, string> = {
   BAK: "cópia de segurança do .LAJ ou do .COL anterior, que o LAJEGRAV e o PIGRAEDI guardam ao gravar (LAJEGRAV.BAS:484, PIGRAEDI.BAS:467); não usada.",
   FOK: "cópia de segurança do .FOR anterior, que o FORMEDCA guarda ao gravar (FORMEDCA.BAS:2974); não usada.",
-  EDV: "desenho de armadura editado de uma viga, do DESEDCAO; não importado.",
   FRM: "fôrma do pavimento montada no FORMEDCA (FORMEDCA.BAS:2722), para o desenho de fôrmas, que a V2 não faz; não importada.",
   CFO: "fôrma dos pilares do FORMEDCA, para o desenho de fôrmas, que a V2 não faz; não importada.",
   LAP: "parametrização das lajes, que a importação ainda não lê; valem os parâmetros de fábrica (SISTRUT.LAP).",
@@ -83,8 +83,9 @@ export const NAO_LIDOS: Record<string, string> = {
   EIX: "eixos de auxílio do desenho da OpenStrut V1, não do SISTRUT original; não usados no cálculo.",
 };
 /** Leitor de uma extensão que completa a obra já montada (lajes, vigas, pilares), como o
- *  .EDV para o detalhamento das vigas. Recebe a obra e todos os arquivos da extensão
- *  (com o texto lido como o QuickBASIC lê) e devolve a obra completa. Uma exceção vira
+ *  .EDV para o detalhamento das vigas. Recebe a obra, todos os arquivos da extensão
+ *  (com o texto lido como o QuickBASIC lê) e todos os arquivos selecionados (o .EDV casa
+ *  pela ordem das vigas no .VIG) e devolve a obra completa. Uma exceção vira
  *  aviso e os arquivos ficam de fora; `ignorados` são os que ele não usou, com o motivo.
  *  Com um leitor registrado, a extensão sai de `NAO_LIDOS`. */
 export interface LeitorExtra {
@@ -92,10 +93,21 @@ export interface LeitorExtra {
   completa(
     obra: Obra,
     arquivos: readonly (ArquivoEntrada & { texto: string })[],
+    todos: readonly ArquivoEntrada[],
   ): { obra: Obra; avisos: string[]; ignorados?: { arquivo: string; motivo: string }[] };
 }
 /** Os leitores extras, na ordem em que rodam. */
-export const LEITORES_EXTRA: LeitorExtra[] = [];
+export const LEITORES_EXTRA: LeitorExtra[] = [
+  {
+    extensao: "EDV",
+    completa: (obra, edvs, todos) =>
+      aplicarEdv(
+        obra,
+        edvs,
+        todos.filter((a) => extensaoDe(a.nome) === "VIG"),
+      ),
+  },
+];
 
 /** .INI de configuração que não mudam o cálculo, por nome. O VIGA.INI e o DESENHO.INI
  *  entram nas vigas. */
@@ -488,6 +500,26 @@ function pavimentoSemPlanta(
     pilares,
     pilaresRemovidos: [],
   };
+}
+
+/** Aviso de parâmetros próprios da instalação do usuário que não vieram: há .TAB (o
+ *  DESENHO detalhou vigas com algum .DSP) e nenhum .DSP, ou o .COL usa uma parametrização
+ *  de pilar que não é a SISTRUT e o .PIP dela não veio. Sem eles valem os de fábrica, e o
+ *  detalhamento e o quadro podem divergir do .TAB (docs/sistrut/ARQUIVOS.md, seção 2). */
+function parametrosProprios(
+  grupo: (ext: string) => ArquivoEntrada[],
+  pipDoCol: string | undefined,
+): string | undefined {
+  const pip = pipDoCol?.trim().toUpperCase();
+  const pipFaltando =
+    pip !== undefined && pip !== "SISTRUT" && !grupo("PIP").some((a) => baseDe(a.nome) === pip);
+  const dspFaltando = grupo("TAB").length > 0 && grupo("DSP").length === 0;
+  if (!pipFaltando && !dspFaltando) return undefined;
+  const indicios = [
+    ...(dspFaltando ? ["há .TAB do DESENHO e nenhum .DSP"] : []),
+    ...(pipFaltando ? [`o .COL usa a parametrização ${pip}, que não veio`] : []),
+  ];
+  return `A obra parece usar parâmetros próprios (${indicios.join("; ")}): selecione também os arquivos de C:\\SISTRUT\\EXEC40 (o .DSP, o .LAP, o .PIP e os .INI), junto com os da obra. Sem eles valem os parâmetros de fábrica (SISTRUT), e o detalhamento e o quadro das vigas podem sair diferentes do .TAB do original.`;
 }
 
 /**
@@ -909,6 +941,9 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
     }
   }
 
+  const proprios = parametrosProprios(grupo, colOk?.valor.parametros.pip);
+  if (proprios) avisos.push(proprios);
+
   if (!obra)
     return {
       ok: false,
@@ -942,6 +977,7 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
       leitor.completa(
         base,
         arqs.map((a) => ({ ...a, texto: textoDe(a) })),
+        arquivos,
       ),
     );
     if (!r) continue;

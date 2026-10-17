@@ -2,6 +2,8 @@
 // arquivo .openstrut.json. Geometria da planta em metros; seções em cm;
 // cargas em kN/m² (lajes) e kN/m (vigas).
 
+import type { EdicaoVigaSistrut } from "./edicaoViga";
+
 export type NormaId = "nb1-78" | "nbr6118-2023";
 export type Aco = "CA-25" | "CA-50" | "CA-60";
 /** Classe de agressividade ambiental (NBR 6118:2023, tabela 6.1). */
@@ -249,6 +251,11 @@ export interface Viga {
    *  simples (DESDIM.BAS:3062-3080). Ausente = o padrão "N": no modo original a viga para
    *  ali, sem detalhamento nem quadro (.TAB). O modo corrigido sempre segue, com aviso. */
   continuaSeExcederLimite?: boolean;
+  /** Armadura editada à mão no DESEDCAO do SISTRUT (o .EDV importado). O detalhamento e o
+   *  quadro do caminho SISTRUT usam estas barras e estribos no lugar dos automáticos, como
+   *  o DESINIT ao voltar do DESEDCAO; se a viga não tem mais os tramos, os balanços ou o
+   *  comprimento da edição, ela é descartada com aviso. Ausente = detalhamento automático. */
+  armaduraEditada?: EdicaoVigaSistrut;
   /** Seção de cada trecho e de cada apoio no DESENHO (.SEC). Ausente = bw × h. */
   secoes?: { trechos?: SecaoTrechoViga[]; apoios?: SecaoApoioViga[] };
   /** Dados de forma do DESENHO (.FOR) que substituem os tirados da planta.

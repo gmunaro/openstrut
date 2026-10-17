@@ -140,25 +140,18 @@ Leitor: [`edv.ts`](../../src/armazenamento/sistrut/edv.ts) (`lerEdv`, `nomeEdv`,
   10. notas da armadura até o fim do arquivo (A_1C90$(6..): "N", posição em 2 caracteres, texto).
 - Conteúdo: entrada do usuário. É a armadura que o engenheiro editou à mão no DESEDCAO, mais as notas do desenho.
 - O que a edição muda no original: do DESEDCAO o controle volta ao DESINIT, que refaz o quadro de ferros com os arrays editados e regrava o `.TAB` (S_202b9, DESINIT.BAS:96-104 e 404-966) antes do DESIMP. O desenho impresso, o DXF, a folha do VPLOTA, o `.TAB` e o resumo de aço do DESENHO saem todos da armadura editada. Conferido na obra do cliente: nas 19 vigas com `.EDV`, os comprimentos das barras longitudinais tirados do `.EDV` (fim − início + dobras, × quantidade) batem com o `.TAB`. A exceção são as φ12,5 com dobra, de 8 a 16 cm, por causa do desconto de dobra que esse cálculo de conferência não aplica.
-- Decisão: importar. A V2 deve aplicar a edição no detalhamento e no quantitativo da viga. Enquanto o motor não aplica, o importador lê, casa com a viga e avisa que a edição ficou de fora.
+- Decisão: importar e aplicar no detalhamento e no quantitativo da viga.
 
 ### Ligação na V2
 
-1. **Importação** (`telas/InicioSistrut.ts`, depois das vigas):
-   - decodificar cada `.EDV` em windows-1252 e chamar `lerEdv(nome, texto)`;
-   - montar a lista `VigaDoVig` (pavimento = base do `.VIG`, registro = ordem da viga no `.VIG`, a mesma do `.SEC`/`.FOR`, e nome);
-   - chamar `casarEdv`;
-   - se o casamento der certo, guardar a edição na viga; os erros do leitor e os avisos de `casarEdv` vão para os avisos com o nome do arquivo;
-   - enquanto o motor não aplicar a edição, o aviso é: "`<nome>`: armadura da viga `<V>` editada no DESEDCAO; a V2 ainda não aplica a edição, e o detalhamento e o quantitativo desta viga são os automáticos (o desenho e o .TAB do original saíram da armadura editada)."
-2. **Domínio** (`dominio/obra.ts`): campo opcional `Viga.armaduraEditada?: EdicaoVigaSistrut`, com o tipo movido para o domínio. Ausente = detalhamento automático. É um campo novo opcional e não precisa de migração de versão. Precisa estar em `armazenamento/arquivo.ts` (validação do `.openstrut.json`) e passar pelo checklist "todas as superfícies".
-3. **Motor** (`calculo/sistrut/`, fora do escopo da importação):
-   - campo `edicao?` em `ExtrasDesinit` (`base/tipos.ts`);
-   - em `detalhaViga` (`vigas/desinit.ts`), depois de `portaEstribos(c)` e antes de `posicoesDoQuadro(c)`, trocar contagens e arrays do `Comum` (V_185E/A_1AF2/A_1B4E, V_1872/A_1BD8, V_1866/A_1AC4/A_1B20, V_1876/A_1BAA, V_1862/A_1B7C, V_186E/A_1C34/A_1A96, V_186A/A_1C06) pelos da edição;
-   - assim `posicoes`, `trechosEstribo` e o `quadroDaViga` saem da armadura editada, como no S_202b9;
-   - antes de trocar, conferir se a edição ainda serve à viga: nº de tramos, balanços e comprimento (até 1 cm de diferença). Se não servir, a edição é descartada com aviso e vale o detalhamento automático;
-   - em `obra.ts`, passar `g.viga.armaduraEditada` em `extras`.
-4. **Modo corrigido**: aplicar a mesma edição, mas conferir a As de cada seção (apoios e tramos) contra a As necessária do dimensionamento corrigido e avisar onde a armadura editada fica abaixo. O original não faz essa conferência ao gravar o `.EDV` (não verificado no DESEDCAO).
-5. **Conferência**: com a edição aplicada, o `QuadroViga` da viga deve bater com o registro dela no `.TAB` da mesma pasta, desde que a obra tenha vindo com o `.DSP` usado no original.
+1. **Importação** (`telas/InicioSistrut.ts`, leitor de `LEITORES_EXTRA`; a lógica é `aplicarEdv` em `edv.ts`): decodifica cada `.EDV` em windows-1252, chama `lerEdv`, monta a lista `VigaDoVig` (pavimento = base do `.VIG`, registro = ordem da viga no `.VIG`, a mesma do `.SEC`/`.FOR`, e nome) e chama `casarEdv`. A edição casada vai para a viga, com um aviso só que lista as vigas editadas. O `.EDV` ilegível, sem viga no registro, de nome trocado ou cuja viga não entrou na obra fica de fora, com o motivo no aviso e no resumo.
+2. **Domínio** (`dominio/edicaoViga.ts`, `dominio/obra.ts`): campo opcional `Viga.armaduraEditada?: EdicaoVigaSistrut`, nas unidades do original. Ausente = detalhamento automático. Campo novo opcional, sem migração; validado em `armazenamento/arquivo.ts` com os limites dos arrays do original (`LIMITES_EDICAO_VIGA`).
+3. **Motor** (`calculo/sistrut/vigas/desinitEdicao.ts`, chamado por `detalhaViga`): `ExtrasDesinit.armaduraEditada`. Depois de `portaEstribos(c)` e antes de `posicoesDoQuadro(c)`, as contagens e os arrays do `Comum` (V_185E/A_1AF2/A_1B4E, V_1872/A_1BD8, V_1866/A_1AC4/A_1B20, V_1876/A_1BAA, V_1862/A_1B7C, V_186E/A_1C34/A_1A96, V_186A/A_1C06) são trocados pelos da edição, e `posicoes`, `trechosEstribo` e o `quadroDaViga` saem da armadura editada, como no S_202b9. A bitola da edição é a da tabela do `.DSP` igual em SINGLE. Antes de trocar, a edição tem de servir à viga: nº de tramos, balanços e comprimento (o da linha 2 do `.EDV`, DESEDCAO.BAS:466, até 1 cm de diferença). Se não servir, é descartada com aviso ("a viga mudou depois da edição") e vale o detalhamento automático. `obra.ts` passa `g.viga.armaduraEditada` em `extras` e leva os avisos do detalhamento à viga.
+4. **DESDIM que não conclui**: se o DESDIM da V2 para com erro do QuickBASIC numa viga editada (caso de um `.DSP` do usuário que não veio, como a lista de espaçamentos com 7,5 cm), o quadro sai só da edição (`ExtrasDesinit.reabreEdicao`), como na reabertura pelo DESEDITA: vindo do DESEDITA, o DESINIT só refaz as faces (S_30132) e o quadro, sem o detalhamento automático (DESINIT.BAS:84-100). Aviso na viga.
+5. **Modo corrigido**: a mesma edição, com a As das negativas no meio de cada apoio com negativa e das positivas no meio do vão livre de cada tramo conferida contra a As necessária do dimensionamento corrigido; aviso onde fica abaixo. O original não confere ao gravar o `.EDV`.
+6. **Conferência**:
+   - oráculo: o quadro da V1 da E2E com o `R1__E2E.EDV` bate com o `E2E.TAB` regravado em `retrad_des_edc` (`desinitEdicao.test.ts`, `InicioSistrut.test.ts`). Os 16 `.EDV` do oráculo são o mesmo arquivo, e a edição desse roteiro não muda a armadura; o teste com edição que muda o quadro é sintético, com a conta à mão do DESINIT;
+   - obra Alpha1 do cliente (16/10/2026, fora do repositório): as 18 vigas editadas que existem no `.VIG` batem com o `.TAB` nos dois modos, inclusive as 5 que não detalham com o `.DSP` de fábrica. O `R12_TER.EDV` sobra de uma viga que saiu do `.VIG` (o cabeçalho diz 11 vigas) e fica de fora com aviso. As vigas sem edição dependem do `.DSP` do cliente (seção 2).
 
 ## 10. Lacunas
 

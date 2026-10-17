@@ -11,6 +11,7 @@
 // partir de `entrada.viga` como o DESDIM faz, com a envoltória das acidentais; é o
 // mesmo DESCALC que o dimensionamento (`desdim.ts`) usa. O Mk dos tramos e o Vk com
 // alívio gravados no COMMON também saem dele.
+import { nomeArquivoEdv } from "../../../dominio/edicaoViga";
 import { numAte } from "../../texto";
 import type {
   ApoioFormaViga,
@@ -28,6 +29,7 @@ import { type Comum, qb } from "./desinitComum";
 import { apoiosComNegativo, cortaBarras } from "./desinitCorte";
 import { analisaDescalc } from "./desinitDescalc";
 import { detalhaLongitudinal, estribos, faces, portaEstribos, qbVal } from "./desinitBarras";
+import { aplicaEdicao, conferenciaAsEditada, motivosEdicaoNaoServe } from "./desinitEdicao";
 
 type TramoParaDetalhe = DimensionamentoParaDetalhe["tramos"][number];
 type FlexaoParaDetalhe = DimensionamentoParaDetalhe["apoios"][number];
@@ -114,6 +116,14 @@ export function montaComum(
   extras: ExtrasDesinit = {},
 ) {
   const c = analisaDescalc(entrada, modo);
+  formaNoComum(c, entrada, extras);
+  montaDimensionamento(c, dim, extras);
+  return c;
+}
+
+/** A forma (.FOR) no COMMON: apoios, vãos livres, lajes no corte e eixos (o que o DESINIT
+ *  usa para as faces, S_30132, e para o quadro). */
+function formaNoComum(c: Comum, entrada: EntradaDesdim, extras: ExtrasDesinit) {
   const { forma } = entrada;
   const n = c.v0ddc;
 
@@ -141,9 +151,6 @@ export function montaComum(
     c.a19b0.p(t, e?.alinhamento ?? 0);
     c.a19de.p(t, e?.eixo ?? (existe ? c.a1926.g(Math.max(0, t - 1), 0) / 2 : 0));
   }
-
-  montaDimensionamento(c, dim, extras);
-  return c;
 }
 
 /** Apoios padrão a partir da forma do contrato (ver `ExtrasDesinit.apoios`). */
@@ -424,9 +431,16 @@ function posicoesDoQuadro(c: Comum): PosicaoBarra[] {
 export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras = {}) => {
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
-  const c = montaComum(entrada, dimensionamento, modo, extras);
-  cortaBarras(c);
-  for (let t = 1; t <= c.v0ddc; t++) {
+  const edicao = extras.armaduraEditada;
+  // reabertura da viga editada (DESEDITA → DESINIT): sem DESDIM, o DESINIT só refaz as
+  // faces (S_30132) e o quadro com os arrays do .EDV (DESINIT.BAS:84-100)
+  const reabre = extras.reabreEdicao === true && edicao !== undefined;
+  const c = reabre
+    ? analisaDescalc(entrada, modo)
+    : montaComum(entrada, dimensionamento, modo, extras);
+  if (reabre) formaNoComum(c, entrada, extras);
+  else cortaBarras(c);
+  for (let t = 1; t <= (reabre ? 0 : c.v0ddc); t++) {
     for (let g = 1; g <= c.a12ea.g(t, 0, 0); g++) {
       memoria.push({
         descricao: `Tramo ${t}, grupo ${g} de positivas: trecho necessário (decalagem e ancoragem)`,
@@ -436,9 +450,31 @@ export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras 
     }
   }
   faces(c);
-  detalhaLongitudinal(c, modo);
-  estribos(c);
-  portaEstribos(c);
+  if (!reabre) {
+    detalhaLongitudinal(c, modo);
+    estribos(c);
+    portaEstribos(c);
+  }
+  if (edicao) {
+    const motivos = motivosEdicaoNaoServe(c, edicao);
+    if (motivos.length > 0 && reabre)
+      throw new Error(
+        `a armadura editada no SISTRUT (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}) não serve à viga, que mudou depois da edição (${motivos.join("; ")})`,
+      );
+    if (motivos.length > 0) {
+      avisos.push(
+        `${entrada.viga.nome}: a armadura editada no SISTRUT (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}) foi descartada porque a viga mudou depois da edição (${motivos.join("; ")}); valem o detalhamento e o quadro automáticos.`,
+      );
+    } else {
+      aplicaEdicao(c, edicao);
+      memoria.push({
+        descricao: `Armadura editada no DESEDCAO (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}) no lugar da automática: ${edicao.negativas.length} negativas, ${edicao.positivas.length} positivas, ${edicao.portaEstribos.length} porta-estribos, ${edicao.estribos.length} trechos de estribo`,
+        ref: "DESINIT.BAS:96-104, 404-966 (S_202b9 com os arrays do DESEDCAO)",
+      });
+      if (modo === "corrigido" && !reabre)
+        avisos.push(...conferenciaAsEditada(c, edicao, dimensionamento));
+    }
+  }
   const posicoes = posicoesDoQuadro(c);
   for (const p of posicoes) {
     memoria.push({

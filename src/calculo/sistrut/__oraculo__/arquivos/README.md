@@ -170,6 +170,13 @@ item 1 se for texto do original e leia com `arquivoOraculo`.
 | `telas/024_d24.txt` | 2473 | oraculo.test.ts |
 | `telas/028_d28.txt` | 2647 | oraculo.test.ts |
 
+### `oraculo/runs/retrad_des_edc-20261015-082513/`
+
+| arquivo | bytes | testes |
+|---|---:|---|
+| `obra/E2E.TAB` | 70 | desinitEdicao.test.ts, InicioSistrut.test.ts |
+| `obra/R1__E2E.EDV` | 418 | desinitEdicao.test.ts, InicioSistrut.test.ts |
+
 ### `oraculo/runs/retrad_des_menu-20261015-082520/`
 
 | arquivo | bytes | testes |
