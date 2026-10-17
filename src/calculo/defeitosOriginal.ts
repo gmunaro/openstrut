@@ -140,7 +140,8 @@ function transicao(o: ResultadoSistrut, c: ResultadoSistrut | undefined, ativo: 
         : `${modoAtivo(ativo)} A V2 não continua o pilar de baixo: a carga do pilar que nasce na viga chega à fundação uma vez, pela reação da viga.${exemplo}`,
     oQueFazer:
       "Se a fundação e os lances de baixo já foram executados com os valores do SISTRUT, estão a favor da segurança. Num projeto novo, use os valores do modo corrigido e confira que a carga concentrada lançada em cada viga de transição é a carga do pilar que nasce nela.",
-    referencia: "PILGEEDI.BAS:567@11fa6-579@121a9; PILAREDI.BAS:513@11b1e-516@11b7c, 3870@40a9d-3872@40afc",
+    referencia:
+      "PILGEEDI.BAS:567@11fa6-579@121a9; PILAREDI.BAS:513@11b1e-516@11b7c, 3870@40a9d-3872@40afc",
     elementos: duplas.concat(conferir).flatMap((t) => [
       { local: t.pavimento, elemento: t.pilar },
       { local: t.pavimentoViga, elemento: t.pilar },
@@ -321,7 +322,8 @@ function flechaNaoVerificada(corrigido: ResultadoObra | undefined, ativo: ModoSi
         : `${modoAtivo(ativo)} A V2 verifica a flecha (vão/300 e vão/500), avisa e procura a espessura mínima que também a atende: na ${maior.laje}, ${num(maior.f, 2)} cm contra ${num(maior.lim, 2)} cm${espessura(maior)}. O SISTRUT não verificaria.`,
     oQueFazer:
       "Confira a flecha dessas lajes. Aumente a espessura até a mínima indicada na coluna do modo corrigido, que atende a flecha; se ela não indicar espessura, justifique com contraflecha ou cálculo mais preciso.",
-    referencia: "LAJE.BAS:1373@1560e-1374@1561f (limites 300 e 500); LAJECALC.BAS:532@118af-557@11ad5 (coluna L/f)",
+    referencia:
+      "LAJE.BAS:1373@1560e-1374@1561f (limites 300 e 500); LAJECALC.BAS:532@118af-557@11ad5 (coluna L/f)",
     elementos: acima.map((x) => ({ local: x.local, elemento: x.laje })),
   } satisfies ErroDoOriginal;
 }
@@ -437,7 +439,8 @@ function otimizacaoSemFim(
     }; nesta obra a otimização no modo corrigido: ${paradas.map((x) => `${x.pav} ${noCorrigido(x.id)}`).join("; ")}.`,
     oQueFazer:
       "Se o projeto saiu do SISTRUT, esse pavimento foi calculado sem a otimização (o usuário teve de interrompê-la): confira os negativos e os positivos impressos. No modo corrigido a otimização vai até o fim.",
-    referencia: "LAJECALC.BAS:2176@1b4aa, 2195@1b65b (relação com 2 casas); LAJECALC.BAS:2186@1b5c1 (código com CINT)",
+    referencia:
+      "LAJECALC.BAS:2176@1b4aa, 2195@1b65b (relação com 2 casas); LAJECALC.BAS:2186@1b5c1 (código com CINT)",
     elementos: paradas.map((x) => ({ local: x.pav, elemento: x.parada.laje })),
   } satisfies ErroDoOriginal;
 }
@@ -558,7 +561,8 @@ function pilarSemResultado(
       v2Faz: `${modoAtivo(ativo)} A V2 para a procura nos dois modos e deixa o caso sem resultado, com aviso; a V2 não resolve este caso. No modo corrigido: ${laco.map((x) => `${x.elemento} caso ${x.caso}, ${x.corrigido}`).join("; ")}.`,
       oQueFazer:
         "Verifique esses pilares por outro meio, ou mude a seção ou a armadura até o caso ter resultado.",
-      referencia: "PILAR.BAS:5152@33b14 (L_33b0f) em diante; PILAREDI.BAS:5237@482ed (L_482e8) em diante",
+      referencia:
+        "PILAR.BAS:5152@33b14 (L_33b0f) em diante; PILAREDI.BAS:5237@482ed (L_482e8) em diante",
       elementos: laco.map(({ local, elemento }) => ({ local, elemento })),
     });
   return out;
