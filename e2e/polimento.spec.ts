@@ -110,3 +110,11 @@ test("tema claro: a tela clareia e a planta continua escura", async ({ page }) =
   expect(fundoPlanta).not.toMatch(/oklch\(1 0 0\)|rgb\(255, 255, 255\)/);
   await page.screenshot({ path: path.join(PASTA, "tema-claro-planta.png") });
 });
+
+test("impressão: color-scheme claro mesmo com o tema escuro", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.emulateMedia({ media: "print" });
+  const esquema = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+  expect(esquema).toBe("light");
+});

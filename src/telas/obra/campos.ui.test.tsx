@@ -96,7 +96,7 @@ describe("CampoNumero", () => {
 
     expect(confirmar).not.toHaveBeenCalled();
     expect(campo.getAttribute("aria-invalid")).toBe("true");
-    expect(descricaoDo(campo)).toBe("Digite um número, com vírgula ou ponto decimal.");
+    expect(descricaoDo(campo)).toBe("Valor fora do aceito neste campo. Confira o limite.");
     expect(screen.getByRole("textbox", { name: "Pé-direito" })).toBe(campo);
     expect(screen.getByText("Pé-direito", { selector: "label" }).textContent).toBe("Pé-direito");
   });
@@ -129,14 +129,14 @@ describe("CampoNumero", () => {
     const campo = screen.getByRole("textbox", { name: "Pé-direito" });
     await user.clear(campo);
     await user.type(campo, "-1{Enter}");
-    expect(descricaoDo(campo)).toBe("Digite um número, com vírgula ou ponto decimal.");
+    expect(descricaoDo(campo)).toBe("Valor fora do aceito neste campo. Confira o limite.");
 
     await user.clear(campo);
     await user.type(campo, "3{Enter}");
     expect(confirmar).toHaveBeenCalledWith(3);
     expect(campo.getAttribute("aria-invalid")).toBe("false");
     expect(campo.getAttribute("aria-describedby")).toBeNull();
-    expect(screen.queryByText("Digite um número, com vírgula ou ponto decimal.")).toBeNull();
+    expect(screen.queryByText("Valor fora do aceito neste campo. Confira o limite.")).toBeNull();
   });
 
   it("Esc descarta o texto inválido e volta ao valor atual", async () => {

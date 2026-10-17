@@ -82,6 +82,7 @@ const posPilar = (p: Partial<PosicaoPilar>): PosicaoPilar => ({
 const pilar = (): DetalhamentoPilarObra => {
   const lance = {
     nivel: "Tipo",
+    nome: "P1",
     pavimentoId: "p",
     repeticao: 1,
     peDireito: 280,

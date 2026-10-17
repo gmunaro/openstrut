@@ -160,8 +160,12 @@ function Editor({
   const enquadrarTudo = () =>
     enquadrar(caixaDoPavimento(pav) ?? CAIXA_VAZIA, tamanho.largura, tamanho.altura);
   // enquadra ao abrir e ao trocar de pavimento (ajuste de estado durante a renderização)
-  if (tamanho.largura > 0 && vistaSalva?.pavId !== pav.id)
+  if (tamanho.largura > 0 && vistaSalva?.pavId !== pav.id) {
     setVistaSalva({ pavId: pav.id, vista: enquadrarTudo() });
+    // a medida e as guias eram do pavimento anterior
+    setMedida(undefined);
+    setGuias(undefined);
+  }
   const vista = vistaSalva?.pavId === pav.id ? vistaSalva.vista : undefined;
   const setVista = (v: Vista) => setVistaSalva({ pavId: pav.id, vista: v });
 
@@ -696,7 +700,10 @@ function Editor({
               e.pointerType === "touch" ? aoSoltarDedo(e, pontoTela(e)) : aoSoltar()
             }
             onPointerCancel={aoCancelar}
-            onPointerLeave={() => setCursor(undefined)}
+            onPointerLeave={() => {
+              setCursor(undefined);
+              setGuias(undefined);
+            }}
             onMouseDown={(e) => {
               if (e.button === 1) e.preventDefault(); // sem rolagem automática do botão do meio
             }}

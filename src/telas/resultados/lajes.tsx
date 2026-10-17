@@ -9,7 +9,7 @@ import { avisosLaje } from "../calculo";
 import { DetalhamentoContexto, type DetalhamentoLajeObra } from "../detalhamento";
 import { formatarBarraEspacada, formatarGrandeza, formatarNumero, unidade } from "../formato";
 import { useUnidades } from "../sessao";
-import { useFiltro } from "./filtro";
+import { MOSTRA_TUDO, useFiltro } from "./filtro";
 import { LinhaElemento } from "./memoria";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
 import {
@@ -61,7 +61,7 @@ export function TabelasLajes({
     valorLaje,
   );
   // filtro sem laje deste pavimento: o bloco some (a tabela vazia não diz nada)
-  if (todas.length > 0 && lajes.length === 0) return null;
+  if ((todas.length > 0 || mostra !== MOSTRA_TUDO) && lajes.length === 0) return null;
   if (lajes.length === 0)
     return (
       <>

@@ -405,6 +405,8 @@ export function detalharLajesObra(resultado: ResultadoObra, obra: Obra): Detalha
 export interface LanceDetalhadoObra {
   /** Rótulo do nível, como na tabela de pilares ("Tipo (2/3)"). */
   nivel: string;
+  /** Nome do pilar neste nível (pode mudar de um pavimento para outro). */
+  nome: string;
   pavimentoId: string;
   repeticao: number;
   /** Pé-direito do lance e seção, cm. */
@@ -502,6 +504,7 @@ export function detalharPilaresObra(resultado: ResultadoObra, obra: Obra): Detal
       );
       return {
         nivel: rotuloNivel(resultado, p),
+        nome: p.pilar.nome,
         pavimentoId: p.pavimentoId,
         repeticao: p.repeticao,
         peDireito: pe,

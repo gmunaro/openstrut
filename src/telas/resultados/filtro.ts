@@ -10,9 +10,9 @@ export const MOSTRA_TUDO: Filtro = () => true;
 
 /**
  * Filtro a partir do texto digitado. Termos separados por vírgula, ponto e vírgula ou
- * espaço; sem diferença de maiúsculas. Um termo só de letras pega todos os nomes que
- * começam por ele seguido de número ("V" pega V1 e V12, não "Viga"); um termo com número
- * pega o nome exato ("V1" não pega V10). Texto vazio mostra tudo.
+ * espaço; sem diferença de maiúsculas. Todo termo pega o nome exato ("V1" não pega V10);
+ * um termo só de letras pega também os nomes que começam por ele seguido de número ("V"
+ * pega V1 e V12, não "Viga"). Texto vazio mostra tudo.
  */
 export function filtroDeTexto(texto: string): Filtro {
   const termos = texto
@@ -22,7 +22,7 @@ export function filtroDeTexto(texto: string): Filtro {
   if (termos.length === 0) return MOSTRA_TUDO;
   return (nome) => {
     const n = nome.trim().toUpperCase();
-    return termos.some((t) => (/^[A-Z]+$/.test(t) ? new RegExp(`^${t}\\d`).test(n) : n === t));
+    return termos.some((t) => n === t || (/^[A-Z]+$/.test(t) && new RegExp(`^${t}\\d`).test(n)));
   };
 }
 

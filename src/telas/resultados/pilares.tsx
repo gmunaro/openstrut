@@ -376,11 +376,14 @@ function DetalhamentosPilares({ comMemoria }: { comMemoria: boolean }) {
   const det = useContext(DetalhamentoContexto);
   const mostra = useFiltro();
   if (!det) return null;
-  return det.pilares.pilares
-    .filter((d) => mostra(d.nome))
-    .map((d) => (
-      <BlocoPilar key={`${d.chave}|${d.lances[0]?.nivel}`} d={d} comMemoria={comMemoria} />
-    ));
+  return (
+    det.pilares.pilares
+      // o nome pode mudar de um nível para outro: vale o de qualquer lance
+      .filter((d) => mostra(d.nome) || d.lances.some((l) => mostra(l.nome)))
+      .map((d) => (
+        <BlocoPilar key={`${d.chave}|${d.lances[0]?.nivel}`} d={d} comMemoria={comMemoria} />
+      ))
+  );
 }
 
 /** Título do lance na tabela de posições: nível, pé-direito, seção, barras por

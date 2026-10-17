@@ -25,6 +25,12 @@ describe("filtroDeTexto", () => {
     expect(f("Viga")).toBe(false);
   });
 
+  it("nome só de letras (renomeado) também casa exato", () => {
+    expect(filtroDeTexto("px")("PX")).toBe(true);
+    expect(filtroDeTexto("px")("PX2")).toBe(true);
+    expect(filtroDeTexto("px")("P1")).toBe(false);
+  });
+
   it("aceita ponto e vírgula e espaço como separador", () => {
     const f = filtroDeTexto("L2;P1 V3");
     expect(["L2", "P1", "V3", "L1"].map(f)).toEqual([true, true, true, false]);

@@ -6,6 +6,10 @@ import { obraNova } from "../../dominio/criar";
 import { acrescentarLaje, substituirPavimento } from "../../planta/edicao";
 import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
 import { adicionarPavimento, copiarPlanta } from "../pavimentos";
+import { calcular } from "../calculo";
+import { DetalhamentoContexto, detalharObra } from "../detalhamento";
+import { FiltroContexto, filtroDeTexto } from "./filtro";
+import { TabelasObra } from "./Resultados";
 import { tsvDaTabela } from "./tabela";
 
 /** Obra com L1 de 3 × 5 m e L2 de 5 × 5 m lado a lado (para a ordenação por lx). */
@@ -178,4 +182,90 @@ describe("montagem gradual", () => {
       expect(screen.getAllByRole("heading", { name: /^Pavimento \d/, level: 2 })).toHaveLength(4);
     },
   );
+});
+
+/** Obra de `n` pavimentos iguais à obraDuasLajes ("Pavimento 1" na base). */
+function obraDeAndares(n: number) {
+  let obra = obraDuasLajes("nb1-78");
+  for (let i = 1; i < n; i++) {
+    const r = adicionarPavimento(obra, 0);
+    obra = copiarPlanta(r.obra, obra.pavimentos.at(-1)!.id, r.pavimento.id);
+  }
+  return obra;
+}
+
+describe("TabelasObra com filtro", () => {
+  function renderTabelas(obra: ReturnType<typeof obraDuasLajes>, filtro: string, ate?: number) {
+    const c = calcular(obra);
+    if (c.tipo !== "ok") throw new Error("sem cálculo");
+    return render(
+      <DetalhamentoContexto value={detalharObra(c.resultado, obra)}>
+        <FiltroContexto value={filtroDeTexto(filtro)}>
+          <TabelasObra resultado={c.resultado} comMemoria={false} {...(ate ? { ate } : {})} />
+        </FiltroContexto>
+      </DetalhamentoContexto>,
+    );
+  }
+
+  it("na montagem, conta os pavimentos da obra antes de filtrar", () => {
+    // 3 pavimentos; só o de baixo (o 3º na lista) tem uma laje chamada L9
+    let obra = obraDeAndares(3);
+    obra = {
+      ...obra,
+      pavimentos: obra.pavimentos.map((p, i) =>
+        i === 2 ? { ...p, lajes: p.lajes.map((l, k) => (k === 0 ? { ...l, nome: "L9" } : l)) } : p,
+      ),
+    };
+    // com 2 etapas montadas, o 3º pavimento ainda não entrou: nada aparece
+    renderTabelas(obra, "L9", 2);
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+  });
+
+  it('com filtro de viga, sem o bloco de lajes (nem "Nenhuma laje")', () => {
+    renderTabelas(obraDuasLajes("nb1-78"), "V1");
+    expect(screen.queryByRole("heading", { name: /^Lajes/ })).toBeNull();
+    expect(screen.queryByText(/Nenhuma laje/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Vigas" })).toBeTruthy();
+  });
+
+  it("pilar com outro nome em outro nível: o filtro por esse nome acha o detalhamento", () => {
+    const obra = obraDeAndares(2);
+    const topo = obra.pavimentos[0]!;
+    const p1 = topo.pilares.find((p) => p.nome === "P1")!;
+    const renomeada = {
+      ...obra,
+      pavimentos: obra.pavimentos.map((p, i) =>
+        i === 0
+          ? { ...p, pilares: p.pilares.map((x) => (x.id === p1.id ? { ...x, nome: "PX" } : x)) }
+          : p,
+      ),
+    };
+    renderTabelas(renomeada, "PX");
+    expect(screen.getAllByRole("region", { name: /^Detalhamento P/ }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("ordenação de M− dir", () => {
+  it("ordena pelo maior |M− dir| da viga, não pelo do outro apoio", async () => {
+    const obra = obraLajesDiferentes();
+    const c = calcular(obra);
+    if (c.tipo !== "ok") throw new Error("sem cálculo");
+    const esperado = c.resultado.pavimentos[0]!.vigas.flatMap((v) =>
+      v.analise.ok
+        ? [
+            {
+              nome: v.viga.nome,
+              m: Math.max(...v.analise.tramos.map((t) => Math.abs(t.mNegDir))),
+            },
+          ]
+        : [],
+    )
+      .sort((a, b) => b.m - a.m)
+      .map((v) => v.nome);
+    const { user } = await abrirResultados(obra);
+    const tabela = () => tabelaDe("Vigas");
+    await user.click(within(tabela()).getByRole("button", { name: /^M− dir/ }));
+    const nomes = nomesDasLinhas(tabela()).filter((n) => /^V\d/.test(n));
+    expect(nomes).toEqual(esperado);
+  });
 });

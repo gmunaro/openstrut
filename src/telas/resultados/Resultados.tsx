@@ -87,22 +87,24 @@ export function TabelasObra({
   const gamaF = Math.max(resultado.norma.gamaG, resultado.norma.gamaQ);
   const mostra = useFiltro();
   const filtrando = mostra !== MOSTRA_TUDO;
-  // com filtro, o pavimento sem laje nem viga do filtro some inteiro
+  // `ate` conta os pavimentos da obra (as etapas da montagem); o filtro vem depois. Com
+  // filtro, o pavimento sem laje nem viga do filtro some inteiro
+  const montados = resultado.pavimentos.slice(0, ate);
   const pavimentos = filtrando
-    ? resultado.pavimentos.filter(
+    ? montados.filter(
         (rp) =>
           rp.lajes.some((l) => mostra(l.laje.nome)) ||
           rp.vigas.some((v) => mostra(v.viga.nome)) ||
           rp.montagem.naoCalculadas.some((v) => mostra(v.nome)),
       )
-    : resultado.pavimentos;
+    : montados;
   const todosNaTela = ate === undefined || ate > resultado.pavimentos.length;
   const comPilares =
     todosNaTela && (!filtrando || resultado.pilares.some((p) => mostra(p.pilar.nome)));
   const secao = naTela ? SECAO_LEVE : undefined;
   return (
     <>
-      {pavimentos.slice(0, ate).map((rp) => (
+      {pavimentos.map((rp) => (
         <section key={rp.pavimento.id} className={cn("mt-6 break-inside-auto", secao)}>
           <h2 className="border-b pb-1 text-base font-semibold">
             {rp.pavimento.nome}
@@ -260,7 +262,8 @@ const ETAPAS_DE_UMA_VEZ = 3;
  */
 function useMontagemGradual(total: number) {
   const [ate, setAte] = useState(() => (total <= ETAPAS_DE_UMA_VEZ ? total : 1));
-  // obra trocada ou recalculada com outro número de pavimentos: recomeça
+  // outro número de etapas (obra trocada, pavimento criado ou apagado): obra pequena
+  // mostra tudo; obra grande continua de onde estava, sem voltar ao começo
   const [totalAntes, setTotalAntes] = useState(total);
   if (total !== totalAntes) {
     setTotalAntes(total);

@@ -20,7 +20,7 @@ import {
 } from "../formato";
 import { useUnidades } from "../sessao";
 import { EsquemaViga } from "./desenhos";
-import { useFiltro } from "./filtro";
+import { MOSTRA_TUDO, useFiltro } from "./filtro";
 import { LinhaElemento, Memoria, type GrupoMemoria } from "./memoria";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
 
@@ -50,7 +50,7 @@ function memoriaDoTramo(r: ResultadoViga, i: number): GrupoMemoria[] {
   return grupos;
 }
 
-type ColunaViga = "nome" | "vao" | "mPos" | "mNeg" | "v";
+type ColunaViga = "nome" | "vao" | "mPos" | "mNegEsq" | "mNegDir" | "v";
 
 /** Valor de cada coluna ordenável da tabela de vigas: o maior entre os tramos (a viga
  *  inteira se move, com os tramos juntos). Sem análise, null (vai para o fim). */
@@ -61,7 +61,8 @@ function valorViga(r: ResultadoViga, k: ColunaViga) {
   const maior = (f: (x: (typeof t)[number]) => number) => Math.max(...t.map(f));
   if (k === "vao") return maior((x) => x.comprimento);
   if (k === "mPos") return maior((x) => x.mPos);
-  if (k === "mNeg") return maior((x) => Math.max(Math.abs(x.mNegEsq), Math.abs(x.mNegDir)));
+  if (k === "mNegEsq") return maior((x) => Math.abs(x.mNegEsq));
+  if (k === "mNegDir") return maior((x) => Math.abs(x.mNegDir));
   return maior((x) => Math.max(x.vEsq, x.vDir));
 }
 
@@ -93,7 +94,8 @@ export function TabelaVigas({
   );
   const naoCalculadas = todasNaoCalculadas.filter((v) => mostra(v.nome));
   const haviaVigas = todas.length + todasNaoCalculadas.length > 0;
-  if (haviaVigas && vigas.length + naoCalculadas.length === 0) return null;
+  if ((haviaVigas || mostra !== MOSTRA_TUDO) && vigas.length + naoCalculadas.length === 0)
+    return null;
   if (vigas.length === 0 && naoCalculadas.length === 0)
     return (
       <>
@@ -135,10 +137,10 @@ export function TabelaVigas({
             <Th rowSpan={2} num unidade={uM} ordenar={ord.coluna("mPos")}>
               M+
             </Th>
-            <Th rowSpan={2} num unidade={uM} ordenar={ord.coluna("mNeg")}>
+            <Th rowSpan={2} num unidade={uM} ordenar={ord.coluna("mNegEsq")}>
               M− esq
             </Th>
-            <Th rowSpan={2} num unidade={uM}>
+            <Th rowSpan={2} num unidade={uM} ordenar={ord.coluna("mNegDir")}>
               M− dir
             </Th>
             <Th rowSpan={2} num unidade={unidade("forca", s)} ordenar={ord.coluna("v")}>

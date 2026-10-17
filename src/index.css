@@ -158,6 +158,10 @@
 }
 
 @media print {
+  /* tema.ts põe color-scheme no <html>; no papel, sempre claro */
+  html {
+    color-scheme: light !important;
+  }
   /* o cabeçalho repetido de cada página (thead em Relatorio.tsx) fica abaixo desta margem */
   @page {
     size: A4;

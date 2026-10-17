@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { obraNova } from "../dominio/criar";
 import { useObra } from "../estado/obra";
 import { abrirObra, obraDuasLajes, renderizarApp } from "../test-setup";
+import { adicionarPavimento } from "../telas/pavimentos";
 
 // Pavimento vazio numa área de 800 × 600 px: escala 63 px/m, origem em (85; 552) px
 // (a conta está em EditorPlanta.ui.test.tsx).
@@ -45,6 +46,19 @@ describe("ferramentas do editor", () => {
     expect(screen.queryByText(/d = 5,00 m/)).toBeNull();
     // não muda a obra
     expect(useObra.getState().passado).toHaveLength(0);
+  });
+
+  it("trocar de pavimento limpa a medida do anterior", async () => {
+    const o = obraNova("Dois andares", "nb1-78");
+    const r = adicionarPavimento(o, 0);
+    const { user, svg } = await abrirEditor(r.obra);
+    svg.focus();
+    await user.keyboard("m");
+    await user.pointer({ keys: "[MouseLeft]", target: svg, coords: tela(1, 1) });
+    await user.pointer({ keys: "[MouseLeft]", target: svg, coords: tela(4, 5) });
+    expect(screen.getByText(/d = 5,00 m/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Pavimento 1" }));
+    expect(screen.queryByText(/d = 5,00 m/)).toBeNull();
   });
 
   it("mostra a guia tracejada quando o cursor prende no bordo de uma laje", async () => {

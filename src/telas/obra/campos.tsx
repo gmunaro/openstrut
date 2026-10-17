@@ -98,9 +98,13 @@ export function CampoTexto({
 /** Número para editar: sem separador de milhar. */
 const mostrar = (n: number, casas: number) => formatarNumero(n, casas).replace(/\./g, "");
 
+/** Recusa padrão de um número que `valido` não aceita (o texto é número, o valor não). */
+export const VALOR_RECUSADO = "Valor fora do aceito neste campo. Confira o limite.";
+
 /**
- * Número confirmado (aceita vírgula). Valor que `valido` recusa fica marcado com
- * `mensagemInvalido` e não grava; sair do campo ou Esc voltam ao valor atual.
+ * Número confirmado (aceita vírgula). Texto que não é número fica marcado com
+ * NUMERO_INVALIDO; número que `valido` recusa, com `mensagemInvalido`. Nenhum dos dois
+ * grava; sair do campo ou Esc voltam ao valor atual.
  */
 export function CampoNumero({
   rotulo,
@@ -109,7 +113,7 @@ export function CampoNumero({
   casas = 2,
   valido,
   confirmar,
-  mensagemInvalido = NUMERO_INVALIDO,
+  mensagemInvalido = VALOR_RECUSADO,
   className,
   id,
   ...props
@@ -125,35 +129,28 @@ export function CampoNumero({
   const gerado = useId();
   const campoId = id ?? gerado;
   const [texto, setTexto] = useState(mostrar(valor, casas));
-  const [invalido, setInvalido] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   useEffect(() => {
     setTexto(mostrar(valor, casas));
-    setInvalido(false);
+    setErro(null);
   }, [valor, casas]);
   const aplicar = () => {
     const n = lerNumero(texto);
-    if (n === null || !valido(n)) {
-      setInvalido(true);
-      return;
-    }
-    setInvalido(false);
+    if (n === null) return setErro(NUMERO_INVALIDO);
+    if (!valido(n)) return setErro(mensagemInvalido);
+    setErro(null);
     if (n !== valor) confirmar(n);
     else setTexto(mostrar(valor, casas));
   };
   return (
-    <CampoRotulado
-      id={campoId}
-      rotulo={rotulo}
-      unidade={unidade}
-      erro={invalido ? mensagemInvalido : null}
-    >
+    <CampoRotulado id={campoId} rotulo={rotulo} unidade={unidade} erro={erro}>
       <Input
         {...props}
         id={campoId}
         inputMode="decimal"
         value={texto}
-        aria-invalid={invalido}
-        aria-describedby={invalido ? idDoErro(campoId) : props["aria-describedby"]}
+        aria-invalid={erro !== null}
+        aria-describedby={erro ? idDoErro(campoId) : props["aria-describedby"]}
         className={cn("h-7 px-2 text-right font-mono text-sm tabular-nums", className)}
         onChange={(e) => setTexto(e.target.value)}
         onBlur={aplicar}
@@ -161,7 +158,7 @@ export function CampoNumero({
           if (e.key === "Enter") aplicar();
           if (e.key === "Escape") {
             setTexto(mostrar(valor, casas));
-            setInvalido(false);
+            setErro(null);
           }
         }}
       />
