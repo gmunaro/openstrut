@@ -115,3 +115,47 @@ export function queDiferem(diferencas: Iterable<Diferenca>): Diferenca[] {
         Math.abs(b.relativa ?? 0) - Math.abs(a.relativa ?? 0),
     );
 }
+
+/**
+ * Defeitos do SISTRUT original que atingem a peça, pelo índice `pavimento|elemento` de
+ * `errosPorElemento` (telas/resultados/errosOriginal.tsx, o mesmo das marcas de Resultados):
+ * o nome do pavimento da peça e o dela. Vazio quando nenhum defeito conferido a atinge.
+ */
+export function defeitosDaPeca<T>(
+  e: Pick<Elemento3D, "nome" | "pavimentoId">,
+  pavimentos: readonly { id: string; nome: string }[],
+  porElemento: ReadonlyMap<string, readonly T[]>,
+): readonly T[] {
+  const pav = pavimentos.find((p) => p.id === e.pavimentoId);
+  return (pav && porElemento.get(`${pav.nome}|${e.nome}`)) ?? [];
+}
+
+/** Peça que difere sem defeito conferido (lista e cartão): não afirma a causa. */
+export const SEM_DEFEITO =
+  "Sem defeito conferido nesta peça. A diferença pode vir dos materiais em SI, dos cobrimentos da obra, da precisão ou de um defeito que não é conferido aqui.";
+
+/** O que o corrigido muda além dos defeitos conferidos, em docs/MODO-CALCULO.md ("Outras
+ *  diferenças do corrigido (não são defeito)", a tabela de entrada dos materiais e a lista
+ *  de defeitos corrigidos). */
+export const CAUSAS_SEM_DEFEITO =
+  "O corrigido usa concreto de 25 kN/m³ (2,5493 t/m³; o original, 2,5 t/m³), aço de 500 MPa (5,0986 t/cm²; o original, 5 t/cm²), o fck convertido exato, os cobrimentos da obra e float64 no lugar do Float32 do original, o que muda um pouco todas as peças. Também dimensiona a viga acima do limite de cisalhamento ou de 40 % do momento, que o original para, e calcula as lajes depois de uma que falha. E corrige outros defeitos da lista de docs/MODO-CALCULO.md, que não são conferidos peça a peça.";
+
+/**
+ * O que a lista e o cartão dizem do motivo da diferença de uma peça, a partir dos defeitos
+ * conferidos que a atingem (`defeitosDaPeca`). Sem nenhum: o texto de `SEM_DEFEITO`. Com
+ * `noQuadro` (os textos do quadro "Afetado por defeito" do cartão da vista no modo original,
+ * `DadosElemento.defeitos`, que citam "(defeito P-b)"), separa os que o quadro já mostra,
+ * para o cartão não repeti-los.
+ */
+export function motivoDaPeca<T extends { id: string }>(
+  defeitos: readonly T[],
+  noQuadro: readonly string[] = [],
+): { tipo: "sem"; texto: string } | { tipo: "defeitos"; proprios: T[]; doQuadro: T[] } {
+  if (defeitos.length === 0) return { tipo: "sem", texto: SEM_DEFEITO };
+  const citado = (d: T) => noQuadro.some((t) => t.includes(`(defeito ${d.id})`));
+  return {
+    tipo: "defeitos",
+    proprios: defeitos.filter((d) => !citado(d)),
+    doQuadro: defeitos.filter(citado),
+  };
+}

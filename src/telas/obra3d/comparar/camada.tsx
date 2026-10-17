@@ -2,12 +2,17 @@
 // do modo da obra), compara peça a peça (comparacao.ts) e pinta: cinza igual, laranja-terra
 // maior no original, azul menor no original e verde-azulado quando a situação muda. O
 // Painel mostra os modos, a tolerância, a contagem, a legenda e a lista das peças que
-// diferem, cada uma levando à peça na vista.
-import { useState, useSyncExternalStore } from "react";
+// diferem, cada uma levando à peça na vista e com os defeitos do original que a atingem
+// (calculo/defeitosOriginal.ts), com link para a explicação em Resultados. O cartão da peça
+// selecionada repete a categoria e os defeitos.
+import { Bug } from "lucide-react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
+import { type ErroDoOriginal, errosDoOriginal } from "../../../calculo/defeitosOriginal";
 import { normaPorId } from "../../../calculo/normas";
 import type { ModoCalculo, Obra } from "../../../dominio/obra";
 import { calcular, NOME_MODO, NOME_NORMA } from "../../calculo";
 import { converter, formatarNumero, type SistemaUnidades } from "../../formato";
+import { ancoraErro, errosPorElemento } from "../../resultados/errosOriginal";
 import { useSessao } from "../../sessao";
 import type {
   Calculo,
@@ -16,14 +21,18 @@ import type {
   DadosElemento,
   Elemento3D,
   EstadoElemento,
+  PropsCamada,
 } from "../api";
 import { dadosDosElementos, GRANDEZAS } from "../dados";
 import {
   CATEGORIAS,
+  CAUSAS_SEM_DEFEITO,
   COR_COMPARACAO,
   compararModos,
   contar,
+  defeitosDaPeca,
   type Diferenca,
+  motivoDaPeca,
   queDiferem,
   ROTULO_CATEGORIA,
 } from "./comparacao";
@@ -44,6 +53,8 @@ const estado = {
   fase: { tipo: "calculando" } as Fase,
   modoObra: "corrigido" as ModoCalculo,
   diferencas: new Map<string, Diferenca>(),
+  /** Erros do original na obra por `pavimento|elemento` (errosPorElemento). */
+  defeitos: new Map() as ReadonlyMap<string, readonly ErroDoOriginal[]>,
 };
 
 /** O cálculo do outro modo da última obra, para não refazer ao religar a camada. */
@@ -77,6 +88,22 @@ function comparar(ctx: ContextoVista, outro: Calculo) {
     ctx.obra.modoCalculo === "original" ? [ctx.dados, dadosOutro] : [dadosOutro, ctx.dados];
   estado.diferencas = compararModos(ctx.modelo.elementos, original, corrigido, estado.tolerancia);
 }
+
+/** Erros do original na obra, por `pavimento|elemento`, com a obra calculada nos dois modos
+ *  (como o painel de Resultados, useErrosDoOriginal). */
+function indiceDefeitos(daObra: Calculo, outro: Calculo) {
+  if (daObra.tipo !== "ok" || outro.tipo !== "ok" || !daObra.resultado.sistrut) return new Map();
+  const ativo = daObra.resultado.sistrut.modo;
+  const [original, corrigido] =
+    ativo === "original"
+      ? [daObra.resultado, outro.resultado]
+      : [outro.resultado, daObra.resultado];
+  return errosPorElemento(errosDoOriginal(original, corrigido, ativo));
+}
+
+/** Os defeitos do original que atingem a peça. */
+const defeitosDe = (ctx: ContextoVista, e: Elemento3D) =>
+  defeitosDaPeca(e, ctx.obra.pavimentos, estado.defeitos);
 
 /** Cores e filtro a partir de `estado.diferencas` (refaz a geometria). */
 function pintar(ctx: ContextoVista) {
@@ -129,7 +156,7 @@ function mudarEsconder(ctx: ContextoVista, sim: boolean) {
   avisar();
 }
 
-function Painel({ ctx }: { ctx: ContextoVista }) {
+function Painel({ ctx, verNosResultados }: PropsCamada) {
   useSyncExternalStore(assinar, () => versao);
   const unidades = useSessao((s) => s.unidades);
   const [texto, setTexto] = useState(formatarNumero(estado.tolerancia * 100, 1));
@@ -201,11 +228,24 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
           {lista.length === 0 ? (
             <p className="text-muted-foreground">Nenhuma, com esta tolerância.</p>
           ) : (
-            <ul className="grid max-h-72 gap-0.5 overflow-y-auto" data-testid="comparar-lista">
-              {lista.map((d) => (
-                <ItemDiferenca key={d.chave} ctx={ctx} d={d} unidades={unidades} />
-              ))}
-            </ul>
+            <>
+              <p className="text-muted-foreground">
+                Cada peça traz os defeitos do SISTRUT original que a atingem, com link para a
+                explicação em Resultados.
+              </p>
+              <Causas testid="comparar-causas" />
+              <ul className="grid max-h-72 gap-1 overflow-y-auto" data-testid="comparar-lista">
+                {lista.map((d) => (
+                  <ItemDiferenca
+                    key={d.chave}
+                    ctx={ctx}
+                    d={d}
+                    unidades={unidades}
+                    verNosResultados={verNosResultados}
+                  />
+                ))}
+              </ul>
+            </>
           )}
         </section>
       )}
@@ -248,25 +288,119 @@ function grandeza(tipo: Elemento3D["tipo"], u: SistemaUnidades) {
   };
 }
 
+/** O que muda em toda peça além dos defeitos, recolhido (o texto é longo para o painel). */
+function Causas({ testid }: { testid?: string }) {
+  return (
+    <details className="text-muted-foreground" data-testid={testid}>
+      <summary className="compacto:py-1.5 cursor-pointer">O que muda além dos defeitos</summary>
+      <p className="mt-0.5">{CAUSAS_SEM_DEFEITO}</p>
+    </details>
+  );
+}
+
+/** " (+2,4 %)", ou vazio sem diferença relativa. */
+const textoRelativa = (d: Diferenca) =>
+  d.relativa !== undefined
+    ? ` (${d.relativa > 0 ? "+" : ""}${formatarNumero(100 * d.relativa, 1)} %)`
+    : "";
+
+/** Link para a explicação do defeito em Resultados ("Erros do SISTRUT original"). */
+function LinkExplicacao({
+  chave,
+  erro,
+  verNosResultados,
+  children,
+  rotulo,
+}: {
+  chave: string;
+  erro: ErroDoOriginal;
+  verNosResultados: PropsCamada["verNosResultados"];
+  children: ReactNode;
+  rotulo?: string;
+}) {
+  return (
+    <a
+      href={`#${ancoraErro(erro.id)}`}
+      aria-label={rotulo}
+      title="Abre a explicação em Resultados, Erros do SISTRUT original"
+      className="text-primary compacto:py-1.5 flex items-start gap-1 rounded underline-offset-2 hover:underline"
+      onClick={(ev) => {
+        ev.preventDefault();
+        verNosResultados(chave, ancoraErro(erro.id));
+      }}
+    >
+      <Bug className="mt-0.5 size-3 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </a>
+  );
+}
+
+/** Os defeitos do original que atingem a peça (`motivoDaPeca`), cada um com link para a
+ *  explicação em Resultados; sem nenhum, o texto de `SEM_DEFEITO`. Os que o quadro
+ *  "Afetado por defeito" do cartão já cita (`noQuadro`) ficam só com o link. */
+function DefeitosDaPeca({
+  chave,
+  erros,
+  verNosResultados,
+  noQuadro,
+}: {
+  chave: string;
+  erros: readonly ErroDoOriginal[];
+  verNosResultados: PropsCamada["verNosResultados"];
+  noQuadro?: readonly string[];
+}) {
+  const motivo = motivoDaPeca(erros, noQuadro);
+  if (motivo.tipo === "sem")
+    return (
+      <p className="text-muted-foreground" data-testid="comparar-sem-defeito">
+        {motivo.texto}
+      </p>
+    );
+  return (
+    <div className="grid gap-0.5" data-testid="comparar-defeitos">
+      <p className="text-muted-foreground">Defeitos do original nesta peça:</p>
+      {motivo.proprios.map((erro) => (
+        <LinkExplicacao key={erro.id} chave={chave} erro={erro} verNosResultados={verNosResultados}>
+          <span className="font-mono font-medium">{erro.id}</span> {erro.titulo}
+        </LinkExplicacao>
+      ))}
+      {motivo.doQuadro.length > 0 && (
+        <p className="text-muted-foreground">
+          {motivo.proprios.length > 0 ? "E os" : "Os"} do quadro acima:
+        </p>
+      )}
+      {motivo.doQuadro.map((erro) => (
+        <LinkExplicacao
+          key={erro.id}
+          chave={chave}
+          erro={erro}
+          verNosResultados={verNosResultados}
+          rotulo={`Explicação de ${erro.id} em Resultados`}
+        >
+          explicação em Resultados
+        </LinkExplicacao>
+      ))}
+    </div>
+  );
+}
+
 function ItemDiferenca({
   ctx,
   d,
   unidades,
+  verNosResultados,
 }: {
   ctx: ContextoVista;
   d: Diferenca;
   unidades: SistemaUnidades;
+  verNosResultados: PropsCamada["verNosResultados"];
 }) {
   const e = ctx.elemento(d.chave);
   if (!e) return null;
   const g = grandeza(e.tipo, unidades);
   const valor = (v: number | undefined) => (v === undefined ? "—" : g.fmt(v));
-  const rel =
-    d.relativa !== undefined
-      ? ` (${d.relativa > 0 ? "+" : ""}${formatarNumero(100 * d.relativa, 1)} %)`
-      : "";
   return (
-    <li>
+    <li className="grid gap-0.5">
       <button
         type="button"
         className="hover:bg-accent grid w-full gap-0.5 rounded px-1 py-0.5 text-left"
@@ -294,10 +428,59 @@ function ItemDiferenca({
         )}
         <span className="text-muted-foreground tabular-nums">
           {g.nome}: original {valor(d.original.grandeza)}, corrigido {valor(d.corrigido.grandeza)}
-          {rel}
+          {textoRelativa(d)}
         </span>
       </button>
+      <div className="pl-5">
+        <DefeitosDaPeca
+          chave={d.chave}
+          erros={defeitosDe(ctx, e)}
+          verNosResultados={verNosResultados}
+        />
+      </div>
     </li>
+  );
+}
+
+/** No cartão da peça selecionada: a categoria da comparação e, se a peça difere, os
+ *  defeitos do original que a atingem ou, sem nenhum, o que muda além dos defeitos. */
+function Cartao({ ctx, chave, verNosResultados }: PropsCamada & { chave: string }) {
+  useSyncExternalStore(assinar, () => versao);
+  const d = estado.fase.tipo === "pronto" ? estado.diferencas.get(chave) : undefined;
+  const e = ctx.elemento(chave);
+  if (!d || !e) return null;
+  const erros = defeitosDe(ctx, e);
+  const difere = d.categoria !== "igual";
+  // o quadro "Afetado por defeito" da vista, que só aparece no modo original
+  const noQuadro =
+    ctx.obra.modoCalculo === "original" ? (ctx.dados.get(chave)?.defeitos ?? []) : [];
+  return (
+    <div className="mt-2 grid gap-1 rounded border p-1.5" data-testid="comparar-cartao">
+      <p className="flex items-center gap-1.5 font-semibold">
+        <span
+          aria-hidden
+          className="inline-block size-2.5 shrink-0 rounded-sm"
+          style={{ background: COR_COMPARACAO[d.categoria] }}
+        />
+        Original × Corrigido: {ROTULO_CATEGORIA[d.categoria]}
+        {textoRelativa(d)}
+      </p>
+      {d.categoria === "situacao" && (
+        <p>
+          Situação: original {NOME_ESTADO[d.original.estado]}, corrigido{" "}
+          {NOME_ESTADO[d.corrigido.estado]}
+        </p>
+      )}
+      {difere && (
+        <DefeitosDaPeca
+          chave={chave}
+          erros={erros}
+          verNosResultados={verNosResultados}
+          noQuadro={noQuadro}
+        />
+      )}
+      {difere && erros.length === 0 && <Causas />}
+    </div>
   );
 }
 
@@ -323,10 +506,12 @@ export const camada: Camada = {
           mensagem: `O cálculo no modo ${NOME_MODO[outroModo(ctx.obra.modoCalculo)]} não saiu (${outro.tipo === "erro" ? outro.mensagem : "norma sem implementação"}).`,
         };
         estado.diferencas = new Map();
+        estado.defeitos = new Map();
         limparCena(ctx);
         return avisar();
       }
       estado.fase = { tipo: "pronto" };
+      estado.defeitos = indiceDefeitos(ctx.calculo, outro);
       comparar(ctx, outro);
       pintar(ctx);
       avisar();
@@ -344,6 +529,7 @@ export const camada: Camada = {
       if (motivo) {
         estado.fase = { tipo: "indisponivel", mensagem: motivo };
         estado.diferencas = new Map();
+        estado.defeitos = new Map();
         limparCena(ctx);
         return avisar();
       }
@@ -351,6 +537,7 @@ export const camada: Camada = {
       // as cores do modelo antigo saem enquanto o outro modo calcula
       estado.fase = { tipo: "calculando" };
       estado.diferencas = new Map();
+      estado.defeitos = new Map();
       limparCena(ctx);
       avisar();
       // o cálculo trava a página por centenas de ms: espera um quadro desenhado com o
@@ -376,8 +563,10 @@ export const camada: Camada = {
       pararCena();
       limparCena(ctx);
       estado.diferencas = new Map();
+      estado.defeitos = new Map();
       estado.fase = { tipo: "calculando" };
     };
   },
   Painel,
+  Cartao,
 };
