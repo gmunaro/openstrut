@@ -21,6 +21,12 @@ import { DetalhamentoContexto } from "../detalhamento";
 import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
+import {
+  BlocoErrosOriginal,
+  ErrosOriginalContexto,
+  errosPorElemento,
+  useErrosDoOriginal,
+} from "./errosOriginal";
 import { TabelasLajes } from "./lajes";
 import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "./motorSistrut";
 import { TabelaPilares } from "./pilares";
@@ -81,9 +87,10 @@ export function TabelasObra({
               {rp.pavimento.repeticoes > 1 ? ` · repete ${rp.pavimento.repeticoes}×` : ""}
             </span>
           </h2>
-          <TabelasLajes lajes={rp.lajes} comMemoria={comMemoria} />
+          <TabelasLajes lajes={rp.lajes} comMemoria={comMemoria} pavimento={rp.pavimento.nome} />
           <TabelaVigas
             vigas={rp.vigas}
+            pavimento={rp.pavimento.nome}
             interrompidas={vigasInterrompidas(resultado, rp.pavimento.id)}
             naoCalculadas={rp.montagem.naoCalculadas}
             gamaF={gamaF}
@@ -103,6 +110,8 @@ export function TabelasObra({
 export function Resultados({ calculo }: { calculo: Calculo }) {
   const obra = useObra((e) => e.obra);
   const detalhamento = useContext(DetalhamentoContexto);
+  const erros = useErrosDoOriginal(calculo, obra);
+  const porElemento = useMemo(() => errosPorElemento(erros), [erros]);
   if (calculo.tipo !== "ok") return <SemCalculo calculo={calculo} />;
   // obra vazia: sem "Nenhum aviso" nem tabelas vazias, que sugerem uma verificação que não houve
   if (obra && obraSemElementos(obra))
@@ -126,13 +135,16 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
         )}
       </p>
       <ListaFalhas falhas={coletarFalhas(r)} comOpcoes />
+      <BlocoErrosOriginal erros={erros} calculo={calculo} />
       <ListaAvisos
         avisos={semMarcasDuplicadas(coletarAvisos(r, detalhamento), r)}
         vazio={vazioComMarcas(r)}
         comOpcoes
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
-      <TabelasObra resultado={r} comMemoria />
+      <ErrosOriginalContexto.Provider value={porElemento}>
+        <TabelasObra resultado={r} comMemoria />
+      </ErrosOriginalContexto.Provider>
       {obra && <BlocoQuantitativos obra={obra} resultado={r} />}
     </div>
   );

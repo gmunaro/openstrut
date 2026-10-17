@@ -17,6 +17,7 @@ import {
   TabelaPosicoes,
   type ColunaPosicao,
 } from "./vigas";
+import { NomeComMarca } from "./errosOriginal";
 
 const ABREV: Record<Bordo, string> = {
   esquerdo: "esq",
@@ -34,9 +35,12 @@ const memoriaLaje = (r: ResultadoLaje) => [
 export function TabelasLajes({
   lajes,
   comMemoria,
+  pavimento = "",
 }: {
   lajes: ResultadoLaje[];
   comMemoria: boolean;
+  /** Nome do pavimento, para a marca de erro do SISTRUT original no nome da laje. */
+  pavimento?: string;
 }) {
   const s = useUnidades();
   if (lajes.length === 0)
@@ -118,7 +122,7 @@ export function TabelasLajes({
             return (
               <LinhaElemento
                 key={r.laje.id}
-                nome={r.laje.nome}
+                nome={<NomeComMarca nome={r.laje.nome} local={pavimento} />}
                 avisos={avisosLaje(r)}
                 memoria={memoriaLaje(r)}
                 colunas={colunasEsforcos}

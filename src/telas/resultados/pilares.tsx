@@ -18,6 +18,7 @@ import { LinhaElemento } from "./memoria";
 import { textoErro } from "./motorSistrut";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "./tabela";
 import { AvisosDetalhamento, MemoriaDetalhamento, TabelaPosicoes } from "./vigas";
+import { NomeComMarca } from "./errosOriginal";
 
 const COLUNAS = 14;
 
@@ -127,7 +128,7 @@ export function TabelaPilares({
                 return (
                   <LinhaElemento
                     key={`${nivel}-${p.pilar.id}`}
-                    nome={p.pilar.nome}
+                    nome={<NomeComMarca nome={p.pilar.nome} local={p.pavimento} />}
                     avisos={r.avisos}
                     memoria={[{ titulo: `Pilar ${p.pilar.nome} em ${nivel}`, etapas: r.memoria }]}
                     colunas={COLUNAS}
