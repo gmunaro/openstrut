@@ -44,6 +44,7 @@ import type { Bordo, Laje, Materiais, Obra, Pavimento, Pilar, Vinculo } from "..
 import type { BarraImposta, ParametrosLajeObra, Ponto, TipoLaje } from "../../dominio/obra";
 import type { ParametrosVigaObra } from "../../dominio/obra";
 import { nomeArquivoEdv, type EdicaoVigaSistrut } from "../../dominio/edicaoViga";
+import { posicaoNoEixo, TOL } from "../../dominio/gerar";
 import { geometriaDasVigas, type GeometriaViga } from "../montagem";
 import type { Etapa } from "../tipos";
 import { atribuicao, ErroQB, qbUsing, sng } from "./base/f32";
@@ -204,7 +205,10 @@ export function aplicaParametrosLaje(
 ) {
   if (!lap) return;
   const editados = tabelaLapDaObra(lap);
-  par.laje = { ...par.laje, ...(modo === "original" ? emSingle(editados) : editados) };
+  par.laje = {
+    ...par.laje,
+    ...(modo === "original" ? emSingle(editados) : editados),
+  };
 }
 
 /** Adaptador domínio → cálculo: o VIGA.INI e o .DSP da obra (`ParametrosVigaObra`, tipo
@@ -214,7 +218,10 @@ export function tabelasDaObra(pv: ParametrosVigaObra | undefined): {
   dsp: typeof PARAMETROS_DSP;
   viga: typeof PARAMETROS_VIGA;
 } {
-  return { dsp: { ...PARAMETROS_DSP, ...pv?.dsp }, viga: { ...PARAMETROS_VIGA, ...pv?.viga } };
+  return {
+    dsp: { ...PARAMETROS_DSP, ...pv?.dsp },
+    viga: { ...PARAMETROS_VIGA, ...pv?.viga },
+  };
 }
 
 /** Materiais do DESDIM/DESINIT. No modo original, o fck, o fyk, a classe do aço e os γ do
@@ -270,7 +277,11 @@ export interface VigaSistrut {
    *  detalhamento nem quadro (.TAB) e ela fica fora do resumo. `impressa` = a tabela de
    *  apoios e tramos já saiu na impressora: só na passada que imprime (V_187a = 1, sem
    *  fissuração nem "Altero a armadura", DESDIM.BAS:2771-2776, 3058-3060). */
-  interrompida?: { motivos: ("cisalhamento" | "momento")[]; impressa: boolean; aviso: string };
+  interrompida?: {
+    motivos: ("cisalhamento" | "momento")[];
+    impressa: boolean;
+    aviso: string;
+  };
 }
 
 export interface PavimentoSistrut {
@@ -345,7 +356,11 @@ export interface ResultadoSistrut {
   /** Carga que não chegou à fundação, por pavimento: a da base de um pilar que nasce
    *  sobre viga de transição sem `Pilar.transicao` e a linha do .REP sem coluna. A
    *  projeção marca o pavimento com falha. */
-  falhas: { pavimentoId: string; texto: string; opcao?: { id: IdAviso; pilarId: string } }[];
+  falhas: {
+    pavimentoId: string;
+    texto: string;
+    opcao?: { id: IdAviso; pilarId: string };
+  }[];
   /** Avisos que a tela liga a uma opção do elemento, com id estável (`calculo/avisos.ts`):
    *  a viga que parou no DESDIM e o pilar que nasce acima da fundação. O `texto` é o mesmo
    *  da lista de avisos da viga ou das falhas do pavimento. */
@@ -482,7 +497,11 @@ const dentro = (v: number, a: number, b: number) =>
 function poligonoDaLaje(l: Laje, outras: readonly Laje[]) {
   // polígono da obra: como está (é o que o usuário do LAJEGEOM desenhou)
   const p = l.poligono;
-  if (p) return { vertices: p, bordos: p.map((a, k) => bordoDoLado(a, p[(k + 1) % p.length]!)) };
+  if (p)
+    return {
+      vertices: p,
+      bordos: p.map((a, k) => bordoDoLado(a, p[(k + 1) % p.length]!)),
+    };
   const cantos = cantosDaLaje(l);
   const vertices: { x: number; y: number }[] = [];
   const bordos: Bordo[] = [];
@@ -706,7 +725,12 @@ function painelDoPavimento(
           return [{ lajeA: outra, bordoA: bordo, lajeB: null, bordoB: bordo }];
         });
       } else if (!continuidades.some(doBordo)) {
-        continuidades.push({ lajeA: sl.nome, bordoA: k, lajeB: null, bordoB: k });
+        continuidades.push({
+          lajeA: sl.nome,
+          bordoA: k,
+          lajeB: null,
+          bordoB: k,
+        });
       }
     });
   });
@@ -1170,7 +1194,12 @@ function calcularPavimentoSistrut(
       materiais: matViga,
       parametros: par.dsp,
     };
-    const v: VigaSistrut = { id: g.viga.id, nome: dados.nome, entrada, avisos: avisosForma };
+    const v: VigaSistrut = {
+      id: g.viga.id,
+      nome: dados.nome,
+      entrada,
+      avisos: avisosForma,
+    };
     try {
       v.dimensionamento = dimensionaViga(entrada, modo);
       const motivos = v.dimensionamento.limitesExcedidos ?? [];
@@ -1308,6 +1337,44 @@ function calcularPilaresSistrut(
     const [ma, mb] = [meias(a), meias(b)];
     return Math.abs(a.x - b.x) < ma.x + mb.x && Math.abs(a.y - b.y) < ma.y + mb.y;
   };
+  /** O pilar que nasce no nível k do edifício sobre o eixo de uma viga do pavimento
+   *  desse nível, fora de um pilar dele, com carga concentrada lançada na viga sob a
+   *  seção do pilar (a carga do pilar no VIGA, como o usuário do original faz na viga
+   *  de transição): a viga e a soma dessas F, t. Reações indexadas (viga sobre viga)
+   *  não contam. Sem concentrada, undefined: a viga não leva a carga do pilar. */
+  const cargaNaViga = (p: Pilar, k: number) => {
+    const pav = niveis[k]?.pav;
+    const ps = pav && porId.get(pav.id);
+    if (!pav || !ps || pav.pilares.some((q) => chavePilar(q) === chavePilar(p))) return undefined;
+    for (const g of ps.geometriaVigas) {
+      const s = posicaoNoEixo(g.eixo, p.x, p.y);
+      // o .VIG antes do VIGA resolver as indexadas, que ainda as marca
+      const dados = ps.vig.find((v) => v.nome === g.viga.nome);
+      if (s === undefined || !dados) continue;
+      const meia = (g.eixo.horizontal ? meias(p).x : meias(p).y) + TOL;
+      const apoios = g.nos.filter((_, i) => g.apoios[i]!.tipo !== "livre");
+      // posição de cada F ao longo do eixo: no balanço esquerdo, D a partir do apoio
+      // para a ponta; nos tramos e no balanço direito, a partir do apoio da esquerda
+      const trechos = [
+        ...(dados.balancoEsquerdo ? [{ t: dados.balancoEsquerdo, de: apoios[0]!, sinal: -1 }] : []),
+        ...dados.tramos.map((t, i) => ({ t, de: apoios[i]!, sinal: 1 })),
+        ...(dados.balancoDireito
+          ? [{ t: dados.balancoDireito, de: apoios.at(-1)!, sinal: 1 }]
+          : []),
+      ];
+      let f = 0;
+      for (const { t, de, sinal } of trechos)
+        for (const dv of t.divisoes)
+          if (dv.f > 0 && !dv.indexada && Math.abs(de + sinal * dv.d - s) <= meia) f += dv.f;
+      if (f > 0) return { viga: g.viga.nome, pavimento: pav.nome, f };
+    }
+    return undefined;
+  };
+  /** Corrigido: o pilar que nasce numa viga com a carga dele lançada nela não continua a
+   *  coluna de baixo; a carga chega à fundação pela viga. O original liga pela coluna do
+   *  .COL e conta a carga duas vezes (PILGEEDI.BAS:567-579; PILAREDI.BAS:513-516). */
+  const naoContinua = (p: Pilar, nivel: number) =>
+    p.transicao === true || (modo === "corrigido" && cargaNaViga(p, nivel - 1) !== undefined);
   type Trecho = (typeof trechos)[number];
   const chave = (nivel: number, nome: string) => `${nivel}|${nome}`;
   /** Trechos por (nível, nome) da ponta de cima e da de baixo. */
@@ -1324,7 +1391,7 @@ function calcularPilaresSistrut(
   // de baixo para cima, para uma coluna crescer lance a lance
   for (const t of [...trechos].sort((a, b) => a[0]!.nivel - b[0]!.nivel)) {
     const ini = t[0]!;
-    if (ini.nivel === 0 || ini.pilar.transicao) continue;
+    if (ini.nivel === 0 || naoContinua(ini.pilar, ini.nivel)) continue;
     const de = (porFim.get(chave(ini.nivel - 1, ini.pilar.nome)) ?? []).filter((u) =>
       sobrepoe(u.at(-1)!.pilar, ini.pilar),
     );
@@ -1332,14 +1399,19 @@ function calcularPilaresSistrut(
     const u = de[0]!;
     const fim = u.at(-1)!;
     const rivais = (porInicio.get(chave(ini.nivel, ini.pilar.nome)) ?? []).filter(
-      (v) => !v[0]!.pilar.transicao && sobrepoe(fim.pilar, v[0]!.pilar),
+      (v) => !naoContinua(v[0]!.pilar, ini.nivel) && sobrepoe(fim.pilar, v[0]!.pilar),
     );
     if (rivais.length !== 1) continue;
     const cm =
       Math.round(Math.hypot(ini.pilar.x - fim.pilar.x, ini.pilar.y - fim.pilar.y) * 1000) / 10;
+    // no original, o pilar que nasce numa viga carregada com a carga dele continua a
+    // coluna (o .COL não sabe da viga) e a carga chega à fundação duas vezes
+    const naViga = cargaNaViga(ini.pilar, ini.nivel - 1);
     avisosDeFusao.set(
       ini.pilar.id,
-      `${ini.pilar.nome}: lance deslocado ${numAte(cm, 1)} cm do de baixo na planta; tratado como a mesma coluna, como no .COL do original, e o deslocamento não entra no cálculo (sem excentricidade).`,
+      naViga
+        ? `${ini.pilar.nome}: nasce sobre a viga ${naViga.viga} do pavimento ${naViga.pavimento}, que tem ${num(naViga.f, 2)} t de carga concentrada sob ele, e continua a coluna do ${fim.pilar.nome} de baixo, deslocado ${numAte(cm, 1)} cm, como no .COL do original: a carga dele chega à fundação duas vezes, pela coluna e pela reação da viga. O modo corrigido não continua a coluna.`
+        : `${ini.pilar.nome}: lance deslocado ${numAte(cm, 1)} cm do de baixo na planta; tratado como a mesma coluna, como no .COL do original, e o deslocamento não entra no cálculo (sem excentricidade).`,
     );
     porFim.set(
       chave(fim.nivel, fim.pilar.nome),
@@ -1354,6 +1426,32 @@ function calcularPilaresSistrut(
     fundidos.add(t);
   }
   for (let i = trechos.length - 1; i >= 0; i--) if (fundidos.has(trechos[i]!)) trechos.splice(i, 1);
+  // coluna que nasce sobre viga de transição e não recebe carga em nível nenhum (nenhuma
+  // viga descarrega nela, sem carga no topo nem na base): é só o apoio de uma viga à
+  // parte, como os de uma escada calculada no VIGA, com os apoios desconsiderados. Não é
+  // pilar do prédio: fica sem coluna, sem peso próprio e sem resumo na fundação.
+  const recebeCarga = ({ pilar, nivel }: Trecho[number]) =>
+    pilar.cargaTopo !== undefined ||
+    pilar.cargaBase !== undefined ||
+    (porId.get(niveis[nivel]!.pav.id)?.rep.some((l) => l.pilar === pilar.nome) ?? false);
+  const soApoio = new Map<string, string[]>();
+  for (let i = trechos.length - 1; i >= 0; i--) {
+    const t = trechos[i]!;
+    if (!t[0]!.pilar.transicao || t.some(recebeCarga)) continue;
+    const pav = niveis[t[0]!.nivel]!.pav;
+    soApoio.set(pav.id, [t[0]!.pilar.nome, ...(soApoio.get(pav.id) ?? [])]);
+    trechos.splice(i, 1);
+  }
+  for (const [pavId, nomes] of soApoio) {
+    const [um, varios] = [nomes.length === 1, nomes.join(", ")];
+    porId
+      .get(pavId)
+      ?.avisos.push(
+        um
+          ? `Pilar ${varios}: nenhuma viga descarrega nele e ele nasce sobre viga de transição; é só apoio de cálculo, sem carga, e não é calculado como pilar nem descarrega na fundação.`
+          : `Pilares ${varios}: nenhuma viga descarrega neles e eles nascem sobre viga de transição; são só apoios de cálculo, sem carga, e não são calculados como pilares nem descarregam na fundação.`,
+      );
+  }
   const colunas: ColunaEdificio[] = [];
   /** Lances de cada coluna (mesmo índice de `colunas`): pilar e nível do edifício. */
   const lancesDasColunas: { pilar: Pilar; nivel: number }[][] = [];
@@ -1447,7 +1545,12 @@ function calcularPilaresSistrut(
     // o .REP do pavimento do lance k vai ao topo do lance: nível k + 1 do edifício, que
     // na coluna com base b é o nível k + 1 − b
     if (linhas.length === 0)
-      reps.push({ linhas, nivelInicial: k + 1, nivelFinal: k + 1, modo: "substitui" });
+      reps.push({
+        linhas,
+        nivelInicial: k + 1,
+        nivelFinal: k + 1,
+        modo: "substitui",
+      });
     for (const [base, ls] of porBase)
       reps.push({
         linhas: ls,
@@ -1594,7 +1697,14 @@ function calcularPilaresSistrut(
     const { pav } = niveis[base.nivel]!;
     const abaixo = niveis[base.nivel - 1]!.pav;
     const carga = `${num(f.fundacao * KN_POR_TF, 1)} kN (${num(f.fundacao, 2)} t)`;
-    if (base.pilar.transicao)
+    const naViga = cargaNaViga(base.pilar, base.nivel - 1);
+    if (naViga && !base.pilar.transicao)
+      lances
+        .find((l) => l.pilarId === base.pilar.id && l.nivel === base.nivel)
+        ?.avisos.push(
+          `${base.pilar.nome}: nasce sobre a viga ${naViga.viga} do pavimento ${abaixo.nome}, que tem ${num(naViga.f, 2)} t de carga concentrada sob ele; a carga na base do pilar, ${carga}, chega à fundação por essa viga, e não por uma coluna de baixo. Confira que a concentrada é a carga deste pilar.`,
+        );
+    else if (base.pilar.transicao)
       lances
         .find((l) => l.pilarId === base.pilar.id && l.nivel === base.nivel)
         ?.avisos.push(
@@ -1618,7 +1728,10 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
   const { modo } = opcoes;
   const mat = materiaisSistrut(obra.materiais, modo);
   const parBase = parametrosSistrut(obra.materiais, modo, obra.parametrosViga);
-  const par = { ...parBase, ...parametrosPilarDaObra(parBase, obra.parametrosPilar, modo) };
+  const par = {
+    ...parBase,
+    ...parametrosPilarDaObra(parBase, obra.parametrosPilar, modo),
+  };
   aplicaParametrosLaje(par, obra.parametrosLaje, modo);
   const matPilar = materiaisPilar(mat, obra.parametrosPilar, modo);
   const matViga = materiaisDaViga(mat, obra.parametrosViga, modo);
