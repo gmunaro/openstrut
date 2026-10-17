@@ -1,38 +1,40 @@
 # Importar do Google Drive
 
-A tela inicial tem a opção "Importar do Google Drive", ao lado de "Importar pasta do SISTRUT". Ela lê a pasta da obra direto do Drive, no navegador, e entrega os arquivos à mesma importação da pasta do disco (`importarObraSistrut`, ver `docs/MODO-CALCULO.md`). Este documento explica como a opção funciona e o que o dono do app precisa configurar no Google Cloud para ligá-la.
+A tela inicial tem a opção "Importar do Google Drive", ao lado de "Importar pasta do SISTRUT". Ela lê a obra direto do Drive, no navegador, e entrega os arquivos à mesma importação da pasta do disco (`importarObraSistrut`, ver `docs/MODO-CALCULO.md`). Este documento explica como a opção funciona e o que o dono do app precisa configurar no Google Cloud para ligá-la.
 
 ## Como funciona
 
 O usuário tem dois caminhos.
 
-1. **Colar o link** de uma pasta ou de um arquivo do Drive. O app tenta primeiro só com a API key, sem login. Isso abre pastas compartilhadas como "qualquer pessoa com o link". Se o Google responde 403 ou 404, a tela pede login e abre o Google Picker já na pasta do link, e o usuário marca a pasta (ou os arquivos) e toca em Selecionar.
-2. **Escolher no Drive** pelo Google Picker, com login.
+1. **Colar o link** de uma pasta ou de um arquivo do Drive. O campo aceita também o link sem `https://` e o id puro. O app tenta primeiro só com a API key, sem login. Isso abre pastas compartilhadas como "qualquer pessoa com o link". Se o Google responde 403 ou 404, a tela pede login e abre o Google Picker já na pasta do link (ou mostrando só o arquivo do link), e o usuário marca os arquivos da obra.
+2. **Escolher no Drive** pelo Google Picker, com login. O usuário abre a pasta da obra e marca os arquivos; dá para marcar vários de uma vez. Se os parâmetros (.DSP, .PIP, .INI) estão em outra pasta, como a EXEC40, "Marcar arquivos de outra pasta" abre o Picker de novo e soma os arquivos. "Importar os arquivos marcados" segue para a importação. Os arquivos de cada pasta do Drive entram como uma pasta própria ("Pasta 1", "Pasta 2"), e a tela trata a pasta só de parâmetros como trata a EXEC40 do disco.
 
-Depois de escolhida a pasta, o app a lista pela Drive API v3 (`files.list` com `q='<id>' in parents and trashed=false`), página por página, e entra nas subpastas. Cada arquivo leva o caminho dentro da pasta (`PREDIO/EXEC40/SISTRUT.DSP`), igual ao que o seletor de pasta do disco dá. A tela segue como na pasta do disco: pergunta a subpasta quando há mais de uma obra, pergunta o .DSP quando nada decide, e mostra o resumo antes de abrir.
+Pelo link de uma pasta pública, o app lista a pasta pela Drive API v3 (`files.list` com `q='<id>' in parents and trashed=false`), página por página, e entra nas subpastas, até 4 níveis e 2000 arquivos. Uma subpasta mais funda fica de fora com nota. Mais de 2000 arquivos param a leitura com a mensagem "Parece uma pasta de várias obras: mande o link da pasta de uma obra só". Cada arquivo leva o caminho dentro da pasta (`PREDIO/EXEC40/SISTRUT.DSP`), igual ao que o seletor de pasta do disco dá. A tela segue como na pasta do disco: pergunta a subpasta quando há mais de uma obra, pergunta o .DSP quando nada decide, e mostra o resumo antes de abrir.
 
-O app só baixa (`files.get?alt=media`) os arquivos que a importação lê. Os .DXF, .PLT, .BAK e os outros de `NAO_LIDOS` aparecem no resumo, entre os ignorados, sem sair do Drive. Documentos do Google (Docs, Planilhas) e atalhos para pasta ficam de fora, com uma nota no resumo. Um atalho para arquivo baixa o arquivo de destino. O diálogo "Baixando do Google Drive" mostra "n de N arquivos" e tem Cancelar.
+O app só baixa (`files.get?alt=media`) os arquivos que a importação lê. Os .DXF, .PLT, .BAK e os outros de `NAO_LIDOS` aparecem no resumo, entre os ignorados, sem sair do Drive. Documentos do Google (Docs, Planilhas) e atalhos para pasta ficam de fora, com uma nota no resumo. Um atalho para arquivo baixa o arquivo de destino. Uma barra no nome do Drive vira `_`, com nota, para não virar pasta. O Drive aceita dois arquivos com o mesmo nome na mesma pasta e a importação não: a tela recusa e mostra a data de modificação e o id de cada um, para o usuário saber qual apagar.
+
+O diálogo "Baixando do Google Drive" mostra "n de N arquivos" e tem Cancelar, que interrompe os downloads. Fechar o diálogo do Drive interrompe a leitura em andamento e descarta o resultado. Se algum arquivo de uma pasta pública não baixa sem login, o resumo oferece "Entrar com Google e marcar os arquivos".
 
 Código: `src/telas/drive/api.ts` (Drive API), `src/telas/drive/google.ts` (login e Picker), `src/telas/ImportarDrive.tsx` (diálogo) e `src/telas/selecao.ts` (leitura sob demanda, comum ao disco e ao Drive).
 
 ### Escopo OAuth: só `drive.file`
 
-O app pede só `https://www.googleapis.com/auth/drive.file`. Com ele, o app lê apenas o que o usuário escolhe no Picker. O Google classifica esse escopo como não sensível.
+O app pede só `https://www.googleapis.com/auth/drive.file`. O Google classifica esse escopo como não sensível. A documentação o descreve como acesso por arquivo: vale para os arquivos "that the user shares with an app while using the Google Picker API" ([Choose Google Drive API scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth)). A página não fala de pastas. A resposta de Eric Koleda, do Google, no fórum do Apps Script ([drive.file scope](https://groups.google.com/g/google-apps-script-community/c/_W-NKbttfbo), junho de 2019) diz que escolher uma pasta no Picker não dá acesso aos arquivos dentro dela. Por isso o Picker do app não deixa escolher pasta (`setSelectFolderEnabled(false)`): as pastas servem só para navegar, e o usuário marca os arquivos. O Drive falso dos testes (`src/telas/drive/__fixtures__/driveFalso.ts`, opção `concedidos`) segue essa regra: com token, só existe o que foi marcado.
 
-O `drive.readonly` leria qualquer pasta pelo link, sem o passo do Picker. O app não o pede porque o Google o classifica como restrito. Um app em produção com escopo restrito passa por verificação, que segundo o Google "can potentially take several weeks", tem de ser refeita todo ano, e pode exigir uma avaliação de segurança paga (CASA) quando os dados passam por servidor. Até a verificação sair, a tela de consentimento mostra o aviso de app não verificado e o app fica limitado a 100 usuários. Para o caso comum, a pasta pública, nenhum escopo é necessário, e para a pasta privada o Picker resolve com um toque a mais.
-
-Ponto a testar com o Google de verdade: não há documentação oficial que diga se escolher uma pasta no Picker com `drive.file` libera os arquivos de dentro dela. O app trata os dois casos. Se a pasta escolhida vier vazia, a tela diz "O Google deu acesso só à pasta, não aos arquivos dentro dela" e reabre o Picker na pasta para o usuário marcar os arquivos (dá para marcar vários).
+O `drive.readonly` leria qualquer pasta pelo link, com subpastas, sem o passo do Picker. O app não o pede porque o Google o classifica como restrito ([OAuth 2.0 scopes](https://developers.google.com/identity/protocols/oauth2/scopes)). Um app em produção com escopo restrito passa por verificação, que segundo o Google "can potentially take several weeks", tem de ser refeita todo ano, e pode exigir uma avaliação de segurança paga (CASA) quando os dados passam por servidor ([Restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)). Até a verificação sair, a tela de consentimento mostra o aviso de app não verificado e o app fica limitado a 100 usuários. O caso comum, a pasta pública, não precisa de escopo nenhum. Para a pasta privada, o custo do `drive.file` é marcar os arquivos no Picker, e mais uma rodada se os parâmetros estão em outra pasta.
 
 ### Privacidade
 
 - Nada passa por servidor do OpenStrut. O navegador fala direto com `www.googleapis.com`, `accounts.google.com` e `apis.google.com`, e a obra fica no navegador, como na importação do disco.
-- O token de acesso vem do Google Identity Services (token client, popup). Ele fica só numa variável em memória (`src/telas/drive/google.ts`), nunca em localStorage, e vence em cerca de 1 hora. Fechar ou recarregar a página o descarta.
+- O token de acesso vem do Google Identity Services (token client, popup). Ele fica só numa variável em memória (`src/telas/drive/google.ts`), nunca em localStorage, e vence em cerca de 1 hora. Fechar ou recarregar a página o descarta. Um token que o Google recusa (401) é esquecido, e a tela pede para entrar de novo.
 - O Client ID e a API key não são segredo: vão no JavaScript público do site. A proteção da API key é a restrição por referrer e por API, configurada no passo 5.
 - O app carrega os scripts do Google só quando o usuário abre o diálogo do Drive.
 
 ### Celular e PWA
 
-O login usa o popup do Google, que o navegador só deixa abrir no toque do usuário. O app carrega o script do login quando o diálogo abre e pede o token no próprio toque em "Escolher no Drive" ou "Entrar com Google e escolher a pasta". Um bloqueio de popup vira a mensagem "O navegador bloqueou a janela de login do Google. Libere os popups deste site e tente de novo." O Picker não é popup: ele aparece por cima da página, e o diálogo do app sai da frente enquanto ele está aberto.
+O login usa o popup do Google, que o navegador só deixa abrir no toque do usuário. O app carrega o script do login quando o diálogo abre, e os botões de entrar ficam desabilitados ("Carregando o login do Google…") até ele chegar. Assim o pedido do token sai na mesma pilha do toque em "Escolher no Drive" ou "Entrar com Google e marcar os arquivos". O e2e confere isso pelo `window.event` do clique no momento do pedido. Um bloqueio de popup vira a mensagem "O navegador bloqueou a janela de login do Google. Libere os popups deste site e tente de novo."
+
+O Picker não é popup: ele aparece por cima da página, e o diálogo do app sai da frente enquanto ele está aberto. O app carrega o Picker antes de fechar o diálogo, com 20 s de prazo. O diálogo ignora toques fora do app (o Picker fica fora da raiz do React), porque o Radix os tratava como "clique fora" e fechava o diálogo logo depois de reabri-lo.
 
 O e2e (`e2e/drive.spec.ts`) confere esse fluxo em 390x844 e 1366x768 com o Google falso. Não foi testado com o Google de verdade, no Chrome do Android nem com o app instalado como PWA. Veja o roteiro em "Teste manual".
 
@@ -128,8 +130,9 @@ bun run preview   # http://localhost:4173, que está nas origens e nos referenci
 O e2e usa o Google falso. Com as chaves reais, confira uma vez:
 
 1. Pasta "qualquer pessoa com o link": colar o link abre o resumo sem pedir login.
-2. Pasta compartilhada só com você: colar o link mostra "Entrar com Google e escolher a pasta", o popup abre, o Picker abre na pasta, e depois de Selecionar o resumo aparece. Se a tela disser que o Google deu acesso só à pasta, marque os arquivos.
-3. Pasta com subpastas (a obra mais a EXEC40): a tela pergunta a obra e leva os parâmetros junto, como na pasta do disco.
-4. Link antigo com `?resourcekey=`: abre como os outros.
-5. No Chrome do Android, no navegador e com o app instalado ("Adicionar à tela inicial"): o popup de login abre e volta para o app, e o Picker aparece por cima da página e aceita o toque.
-6. Depois de 1 hora, "Escolher no Drive" pede login de novo.
+2. Pasta compartilhada só com você: colar o link mostra "Entrar com Google e marcar os arquivos", o popup abre, o Picker abre na pasta, e depois de marcar os arquivos e tocar em Selecionar aparece a lista dos marcados. "Importar os arquivos marcados" leva ao resumo. Confira também que o Picker não deixa selecionar a pasta.
+3. Pasta pública com subpastas (a obra mais a EXEC40): a tela pergunta a obra e leva os parâmetros junto, como na pasta do disco. Pelo Picker, marque os arquivos da obra, depois "Marcar arquivos de outra pasta" e os da EXEC40.
+4. Link de um arquivo privado: o Picker mostra só aquele arquivo.
+5. Link antigo com `?resourcekey=`: abre como os outros.
+6. No Chrome do Android, no navegador e com o app instalado ("Adicionar à tela inicial"): o popup de login abre e volta para o app, e o Picker aparece por cima da página e aceita o toque.
+7. Depois de 1 hora, "Escolher no Drive" pede login de novo.
