@@ -214,4 +214,11 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Corta o prédio na horizontal acima de um pavimento, como a planta de fôrma.",
     carregar: () => import("./camadas/corte").then((m) => m.camada),
   },
+  {
+    id: "armadura",
+    nome: "Armadura",
+    descricao:
+      "Mostra a armadura calculada dentro da viga ou da coluna selecionada, com as peças transparentes.",
+    carregar: () => import("./armadura/camada").then((m) => m.camada),
+  },
 ];
