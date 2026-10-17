@@ -166,6 +166,35 @@ Importe as classes do pacote `three` (`import { Mesh, SphereGeometry, MeshBasicM
 <!-- tipos:inicio -->
 ### Referência da API
 
+O cabeçalho de `api.ts` traz a referência rápida:
+
+```ts
+// Tipos e constantes públicos da vista 3D para quem escreve uma camada. Importe daqui:
+// `import type { Camada, ContextoVista } from "../api";`. O contrato completo está em
+// docs/VISTA-3D.md ("Ponto de extensão: camadas"), que copia as declarações abaixo.
+//
+// Referência rápida (ctx: ContextoVista; chave = Elemento3D.chave):
+// - ligar e limpar: `camada.ativar(ctx)` devolve a função de limpeza; `Painel({ ctx })`.
+// - peças: `ctx.modelo.elementos` (Elemento3D[]), `ctx.elemento(chave)`, níveis em
+//   `ctx.modelo.niveis` (0 = o de baixo), colunas em `ctx.modelo.colunas[k].chaves`.
+// - seleção: `ctx.selecao` (string | null, a chave), `ctx.selecionar(chave | null)`.
+// - eventos: `ctx.aoMudar("selecao" | "cena" | "visibilidade" | "explodido" | "camera",
+//   f, fonte?)` devolve `() => void` (cancelar). `ctx.aoQuadro(f)` idem, f(dtSegundos).
+// - cálculo: `ctx.calculo.tipo` ("ok" | "semNorma" | "erro"); `ctx.dados.get(chave)`
+//   (estado "ok" | "aviso" | "falha" | "sem", principal, grandeza, defeitos).
+// - armadura pronta: `ctx.barrasDe(chave)` → ArmaduraNaCena[] (tipo, phi mm, barras como
+//   Vector3[][] na cena). Detalhamento cru: `ctx.detalhamentoDe(chave)`, discriminado por
+//   `tipo`; no pilar, as posições do lance são as de `tramo === lance`.
+// - visibilidade: `ctx.estaVisivel(chave)`, `ctx.definirFiltro(id, f | null)`,
+//   `ctx.definirPlanosCorte(id, planos)`.
+// - posição: `ctx.caixaDe(chave)`, `ctx.caixaDoNivel(i)` (Box3 na cena, com o explodido),
+//   `ctx.alturaNaCena(i, cota)`, `ctx.paraCena(x, y, z)`, `ctx.pontoDaViga(chave, xCm)`.
+// - câmera: `ctx.enquadrarEm(caixa)`, `ctx.moverCamera(pos, alvo)` ("concluida" |
+//   "cancelada"), `ctx.travarControles(sim)`.
+// - materiais: `ctx.definirMateriais(fabrica | null)`, padrão em `materiaisPadrao`.
+// - redesenhar: `ctx.pedirRender()`.
+```
+
 Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
 
 `src/telas/obra3d/camadas.ts` (em `api.ts`: `ArmaduraNaCena, Camada, ContextoVista, DefinicaoCamada, DetalhamentoElemento, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
@@ -301,11 +330,14 @@ export interface DefinicaoCamada {
 }
 
 /** Detalhamento de armadura de uma peça (o mesmo das abas Resultados e Relatório e do
- *  DXF de armação). Viga e escada: o da viga, igual em todas as repetições do pavimento.
- *  Laje: o da laje. Pilar e fundação: o da coluna inteira, com `lance` = índice deste
- *  lance em `pilar.lances` (0 = o de baixo), `niveis` = o índice em `modelo.niveis` de
- *  cada lance e `cotaBase` = a cota do piso do lance de baixo, m (a origem das cotas das
- *  posições do pilar). */
+ *  DXF de armação). Discrimine por `tipo` antes de ler o resto. Viga e escada: o da
+ *  viga (`viga.detalhamento.posicoes`), igual em todas as repetições do pavimento. Laje:
+ *  o da laje (`laje.detalhamento.posicoes`). Pilar e fundação: o do grupo de lances do
+ *  pilar, com `lance` = índice deste lance em `pilar.lances` (0 = o de baixo), que é o
+ *  `tramo` das posições (as deste lance: `pilar.detalhamento.posicoes.filter((p) =>
+ *  p.tramo === lance)`); `niveis[i]` = o índice em `modelo.niveis` do lance i; e
+ *  `cotaBase` = a cota do piso do lance de baixo, m, a origem das cotas `xInicio` e
+ *  `xFim` (cm) das posições do pilar. */
 export type DetalhamentoElemento =
   | { tipo: "viga"; viga: DetalhamentoVigaObra }
   | { tipo: "laje"; laje: DetalhamentoLajeObra }
@@ -480,7 +512,16 @@ export interface P3 {
  *  deslocamento de cada barra igual. Cada barra é `forma` somada a uma `copia`. */
 export interface PosicaoGeometria {
   nome: string;
-  tipo: "positiva" | "negativa" | "porta-estribos" | "pele" | "construtiva" | "estribo";
+  /** Viga: positiva, negativa, porta-estribos, pele, construtiva ou estribo. Pilar:
+   *  longitudinal ou estribo. */
+  tipo:
+    | "positiva"
+    | "negativa"
+    | "porta-estribos"
+    | "pele"
+    | "construtiva"
+    | "longitudinal"
+    | "estribo";
   /** Bitola, mm. */
   phi: number;
   aco: string;

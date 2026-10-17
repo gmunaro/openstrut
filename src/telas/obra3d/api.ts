@@ -1,5 +1,27 @@
-// Tipos públicos da vista 3D para quem escreve uma camada (docs/VISTA-3D.md, "Tipos").
-// Importe daqui: `import type { Camada, ContextoVista, Elemento3D } from "../api";`.
+// Tipos e constantes públicos da vista 3D para quem escreve uma camada. Importe daqui:
+// `import type { Camada, ContextoVista } from "../api";`. O contrato completo está em
+// docs/VISTA-3D.md ("Ponto de extensão: camadas"), que copia as declarações abaixo.
+//
+// Referência rápida (ctx: ContextoVista; chave = Elemento3D.chave):
+// - ligar e limpar: `camada.ativar(ctx)` devolve a função de limpeza; `Painel({ ctx })`.
+// - peças: `ctx.modelo.elementos` (Elemento3D[]), `ctx.elemento(chave)`, níveis em
+//   `ctx.modelo.niveis` (0 = o de baixo), colunas em `ctx.modelo.colunas[k].chaves`.
+// - seleção: `ctx.selecao` (string | null, a chave), `ctx.selecionar(chave | null)`.
+// - eventos: `ctx.aoMudar("selecao" | "cena" | "visibilidade" | "explodido" | "camera",
+//   f, fonte?)` devolve `() => void` (cancelar). `ctx.aoQuadro(f)` idem, f(dtSegundos).
+// - cálculo: `ctx.calculo.tipo` ("ok" | "semNorma" | "erro"); `ctx.dados.get(chave)`
+//   (estado "ok" | "aviso" | "falha" | "sem", principal, grandeza, defeitos).
+// - armadura pronta: `ctx.barrasDe(chave)` → ArmaduraNaCena[] (tipo, phi mm, barras como
+//   Vector3[][] na cena). Detalhamento cru: `ctx.detalhamentoDe(chave)`, discriminado por
+//   `tipo`; no pilar, as posições do lance são as de `tramo === lance`.
+// - visibilidade: `ctx.estaVisivel(chave)`, `ctx.definirFiltro(id, f | null)`,
+//   `ctx.definirPlanosCorte(id, planos)`.
+// - posição: `ctx.caixaDe(chave)`, `ctx.caixaDoNivel(i)` (Box3 na cena, com o explodido),
+//   `ctx.alturaNaCena(i, cota)`, `ctx.paraCena(x, y, z)`, `ctx.pontoDaViga(chave, xCm)`.
+// - câmera: `ctx.enquadrarEm(caixa)`, `ctx.moverCamera(pos, alvo)` ("concluida" |
+//   "cancelada"), `ctx.travarControles(sim)`.
+// - materiais: `ctx.definirMateriais(fabrica | null)`, padrão em `materiaisPadrao`.
+// - redesenhar: `ctx.pedirRender()`.
 export type {
   ArmaduraNaCena,
   Camada,

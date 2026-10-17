@@ -25,7 +25,16 @@ export type PerfilSecao =
  *  deslocamento de cada barra igual. Cada barra é `forma` somada a uma `copia`. */
 export interface PosicaoGeometria {
   nome: string;
-  tipo: "positiva" | "negativa" | "porta-estribos" | "pele" | "construtiva" | "estribo";
+  /** Viga: positiva, negativa, porta-estribos, pele, construtiva ou estribo. Pilar:
+   *  longitudinal ou estribo. */
+  tipo:
+    | "positiva"
+    | "negativa"
+    | "porta-estribos"
+    | "pele"
+    | "construtiva"
+    | "longitudinal"
+    | "estribo";
   /** Bitola, mm. */
   phi: number;
   aco: string;
@@ -299,7 +308,7 @@ export function armaduraPilar(e: EntradaArmaduraPilar): PosicaoGeometria[] {
   const lg = e.longitudinal ?? { z0: 0, z1: altura };
   pos.push({
     nome: "Longitudinal",
-    tipo: "positiva",
+    tipo: "longitudinal",
     phi: barras.phi,
     aco,
     comprimento: Math.round((lg.z1 - lg.z0) * 100),

@@ -283,7 +283,7 @@ test("obra de 3 pavimentos: gira, seleciona, oculta e explode, sem erro no conso
   });
   expect(barras.viga.posicoes).toBeGreaterThan(0);
   expect(barras.viga.fora).toBe(0);
-  expect(barras.pilar.tipos).toEqual(["positiva", "estribo"]);
+  expect(barras.pilar.tipos).toEqual(["longitudinal", "estribo"]);
   expect(barras.pilar.fora).toBe(0);
 
   // ocultar as lajes: a malha sólida das lajes some

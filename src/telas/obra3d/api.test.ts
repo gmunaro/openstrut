@@ -52,6 +52,12 @@ describe("docs/VISTA-3D.md, Referência da API", () => {
   const doc = ler("docs/VISTA-3D.md");
   const todas = exportacoes();
 
+  it("a referência rápida do cabeçalho de api.ts está no documento", () => {
+    const linhas = ler(`${PASTA}/api.ts`).split("\n");
+    const fim = linhas.findIndex((l) => !l.startsWith("//"));
+    expect(doc).toContain(linhas.slice(0, fim).join("\n"));
+  });
+
   it("api.ts exporta alguma coisa", () => {
     expect(todas.flatMap((e) => e.nomes).length).toBeGreaterThan(20);
   });

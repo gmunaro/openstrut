@@ -29,11 +29,14 @@ import type { DadosElemento } from "./dados";
 import type { Elemento3D, Modelo3D } from "./modelo";
 
 /** Detalhamento de armadura de uma peça (o mesmo das abas Resultados e Relatório e do
- *  DXF de armação). Viga e escada: o da viga, igual em todas as repetições do pavimento.
- *  Laje: o da laje. Pilar e fundação: o da coluna inteira, com `lance` = índice deste
- *  lance em `pilar.lances` (0 = o de baixo), `niveis` = o índice em `modelo.niveis` de
- *  cada lance e `cotaBase` = a cota do piso do lance de baixo, m (a origem das cotas das
- *  posições do pilar). */
+ *  DXF de armação). Discrimine por `tipo` antes de ler o resto. Viga e escada: o da
+ *  viga (`viga.detalhamento.posicoes`), igual em todas as repetições do pavimento. Laje:
+ *  o da laje (`laje.detalhamento.posicoes`). Pilar e fundação: o do grupo de lances do
+ *  pilar, com `lance` = índice deste lance em `pilar.lances` (0 = o de baixo), que é o
+ *  `tramo` das posições (as deste lance: `pilar.detalhamento.posicoes.filter((p) =>
+ *  p.tramo === lance)`); `niveis[i]` = o índice em `modelo.niveis` do lance i; e
+ *  `cotaBase` = a cota do piso do lance de baixo, m, a origem das cotas `xInicio` e
+ *  `xFim` (cm) das posições do pilar. */
 export type DetalhamentoElemento =
   | { tipo: "viga"; viga: DetalhamentoVigaObra }
   | { tipo: "laje"; laje: DetalhamentoLajeObra }
