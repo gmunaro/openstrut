@@ -184,6 +184,11 @@ export interface ContextoVista {
    *  perde a seleção. O filtro vale também para o modelo novo depois de editar a obra:
    *  confira índices contra `modelo.niveis`. */
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
+  /** Cor desta fonte (`id`) por peça: `f` devolve uma cor CSS (ex.: "#ef4444") ou null
+   *  para deixar a cor da vista. A última fonte registrada que der cor vale. `null`
+   *  remove. Refaz a geometria (eventos "cena" e "visibilidade"): não chame a cada
+   *  quadro. A legenda da vista não sabe dessas cores; a camada mostra a sua no Painel. */
+  definirCores(id: string, f: ((e: Elemento3D) => string | null) | null): void;
 }
 
 export interface Camada {

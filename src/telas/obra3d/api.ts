@@ -20,6 +20,7 @@
 //   `ctx.alturaNaCena(i, cota)`, `ctx.paraCena(x, y, z)`, `ctx.pontoDaViga(chave, xCm)`.
 // - câmera: `ctx.enquadrarEm(caixa)`, `ctx.moverCamera(pos, alvo)` ("concluida" |
 //   "cancelada"), `ctx.travarControles(sim)`.
+// - cores por peça: `ctx.definirCores(id, (e) => "#hex" | null)` (refaz a geometria).
 // - materiais: `ctx.definirMateriais(fabrica | null)`, padrão em `materiaisPadrao`.
 // - redesenhar: `ctx.pedirRender()`.
 export type {

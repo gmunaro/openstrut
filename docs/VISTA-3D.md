@@ -191,6 +191,7 @@ O cabeçalho de `api.ts` traz a referência rápida:
 //   `ctx.alturaNaCena(i, cota)`, `ctx.paraCena(x, y, z)`, `ctx.pontoDaViga(chave, xCm)`.
 // - câmera: `ctx.enquadrarEm(caixa)`, `ctx.moverCamera(pos, alvo)` ("concluida" |
 //   "cancelada"), `ctx.travarControles(sim)`.
+// - cores por peça: `ctx.definirCores(id, (e) => "#hex" | null)` (refaz a geometria).
 // - materiais: `ctx.definirMateriais(fabrica | null)`, padrão em `materiaisPadrao`.
 // - redesenhar: `ctx.pedirRender()`.
 ```
@@ -319,6 +320,11 @@ export interface ContextoVista {
    *  perde a seleção. O filtro vale também para o modelo novo depois de editar a obra:
    *  confira índices contra `modelo.niveis`. */
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
+  /** Cor desta fonte (`id`) por peça: `f` devolve uma cor CSS (ex.: "#ef4444") ou null
+   *  para deixar a cor da vista. A última fonte registrada que der cor vale. `null`
+   *  remove. Refaz a geometria (eventos "cena" e "visibilidade"): não chame a cada
+   *  quadro. A legenda da vista não sabe dessas cores; a camada mostra a sua no Painel. */
+  definirCores(id: string, f: ((e: Elemento3D) => string | null) | null): void;
 }
 
 /** Entrada da barra: o botão liga/desliga e só então carrega o código da camada. */
@@ -798,13 +804,14 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `travarControles(sim)` | trava só a órbita, o zoom e o pan do mouse e do toque. Os botões de vista do usuário e `moverCamera` continuam valendo |
 | `definirMateriais(fabrica)` | troca os materiais dos papéis `"solido"`, `"fantasma"`, `"arestas"` e `"destaque"` (PBR). `null` volta aos padrão. Refaz a geometria |
 | `definirPlanosCorte(id, planos)` | planos de corte desta fonte (`Plane` do three, na cena). A vista junta os de todas as fontes e mantém o lado positivo de todos (`plano.distanceToPoint(p) >= 0`). Lista vazia remove |
+| `definirCores(id, f)` | cor por peça desta fonte (`f` devolve uma cor CSS ou `null` para deixar a da vista); a última fonte com cor vale. Refaz a geometria: use para mapas que mudam pouco (comparação, etapas do 4D), não a cada quadro. A legenda da vista não mostra essas cores |
 | `definirFiltro(id, f)` | esconde as peças para as quais `f` devolve `false`; `null` remove o filtro desta fonte. Vários filtros valem juntos: a peça aparece só se todos devolvem `true` |
 
 **Eventos.** Todos são síncronos, emitidos no fim da operação que os causa:
 
 | Operação | Eventos, nesta ordem |
 |---|---|
-| a obra é editada; foco, cores, tipos ou pavimentos ocultos mudam; `definirMateriais` | `"cena"`, depois `"visibilidade"` |
+| a obra é editada; foco, cores, tipos ou pavimentos ocultos mudam; `definirMateriais`; `definirCores` | `"cena"`, depois `"visibilidade"` |
 | `definirFiltro(id, …)`, `definirPlanosCorte(id, …)` | `"visibilidade"` (sem avisar quem registrou com `fonte` = `id`) |
 | explodido ligado ou desligado | `"explodido"` a cada quadro da animação e no fim |
 | seleção (clique, lista, `selecionar`) | `"selecao"` |

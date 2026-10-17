@@ -177,6 +177,7 @@ export class Cena3D implements ContextoVista {
   private materialContorno = new LineBasicMaterial({ color: COR_SELECAO, depthTest: false });
   private planos = new Map<string, Plane[]>();
   private filtros = new Map<string, (e: Elemento3D) => boolean>();
+  private cores = new Map<string, (e: Elemento3D) => string | null>();
   private ouvintes = new Map<EventoVista, Set<{ f: () => void; fonte?: string }>>();
   private quadros = new Set<(dt: number) => void>();
   private sujo = true;
@@ -453,6 +454,11 @@ export class Cena3D implements ContextoVista {
   }
 
   private corDe(e: Elemento3D): string {
+    // cores das camadas: a última registrada que der uma cor vale
+    for (const f of [...this.cores.values()].reverse()) {
+      const c = f(e);
+      if (c) return c;
+    }
     const d = this.dados.get(e.chave);
     const modo = this.estado.modoCor;
     if (modo === "estado") {
@@ -1260,6 +1266,12 @@ export class Cena3D implements ContextoVista {
     else this.planos.set(id, planos);
     this.sujo = true;
     this.emitir("visibilidade", id);
+  }
+
+  definirCores(id: string, f: ((e: Elemento3D) => string | null) | null) {
+    if (f) this.cores.set(id, f);
+    else this.cores.delete(id);
+    this.reconstruir();
   }
 
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null) {
