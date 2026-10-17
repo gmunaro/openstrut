@@ -1144,7 +1144,7 @@ function calcularPavimentoSistrut(
         otimizacaoParada = e.estado;
         memoria.push({
           descricao: `Otimização dos negativos parada: ${mensagem(e)} Valem os momentos antes da otimização.`,
-          ref: "LAJECALC.BAS:2113-2145 (R3)",
+          ref: "LAJECALC.BAS:2176-2195 (R3)",
         });
       } else
         avisos.push(

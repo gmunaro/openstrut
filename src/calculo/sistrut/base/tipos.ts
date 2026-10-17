@@ -538,7 +538,7 @@ export interface PosicaoLajeproc {
 export interface ResultadoLajeproc extends ComMemoria {
   positivas: Record<string, { principal: PosicaoLajeproc; secundaria: PosicaoLajeproc }>;
   /** Mesmo índice de `esforcos.continuidades`. `vizinhoNaoRecalculado`: só no original, o
-   *  vizinho que o LAJEPROC pulou por ter o lado de mesmo número (R2, LAJEPROC.BAS:836, 855). */
+   *  vizinho que o LAJEPROC pulou por ter o lado de mesmo número (R2, LAJEPROC.BAS:843-874). */
   negativas: (PosicaoLajeproc & { continuidade: Continuidade; vizinhoNaoRecalculado?: string })[];
 }
 export type Lajeproc = (
@@ -836,7 +836,7 @@ export type AnalisaVigas = (
   modo: ModoSistrut,
 ) => AnaliseDeVigas;
 
-/** Uma linha do .REP por pilar (VIGA.BAS:2412-2420, 2545). Caso b: P5 17,37 =
+/** Uma linha do .REP por pilar (VIGA.BAS:2498-2501, 2545). Caso b: P5 17,37 =
  *  6,93 (V2) + 10,44 (V5); P7 momentos "-.64@1 [4]" (V1) e "-1.22@2 [5]" (V4). */
 export interface LinhaRep {
   pilar: string;
@@ -1005,7 +1005,7 @@ export interface CisalhamentoViga {
   estriboDireita: EstriboLado;
   /** Só no modo original: o Asw (cm²/m) e o texto do estribo de cada lado com o ρ do ψ
    *  tirado da armadura de flexão, como no corrigido, e o resto igual ao original. É o
-   *  que o original daria sem o defeito D-ψ (DESDIM.BAS:5004); serve ao painel de erros
+   *  que o original daria sem o defeito D-ψ (DESDIM.BAS:3194-3208); serve ao painel de erros
    *  do original (`calculo/defeitosOriginal.ts`). */
   semDefeitoPsi?: {
     aswEsquerda: number;

@@ -470,7 +470,7 @@ export const dimensionaPilar: DimensionaPilar = (
     avisos.push(
       "Lance não dimensionado: Nk = 0; no original a busca do equilíbrio divide por zero.",
     );
-    memoria.push({ descricao: "Recusa NKNULO: Nk = 0", ref: "PILAREDI.BAS:5105 (D-3)" });
+    memoria.push({ descricao: "Recusa NKNULO: Nk = 0", ref: "PILAREDI.BAS:5300, 5385 (D-3)" });
     return { ...resultado, recusa: "NKNULO" };
   }
   const secaoDe = (barras: BarraCalculo[]): SecaoCalculo =>

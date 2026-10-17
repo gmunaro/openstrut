@@ -400,7 +400,7 @@ describe("fontes dos JSONs de __desdim__", () => {
   }
 });
 
-describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado de 4 m, q = 8 t/m", () => {
+describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:3194-3208), tramo biapoiado de 4 m, q = 8 t/m", () => {
   // Vk com alívio = qL/2 − q·h/2 = 16 − 8·0,25 = 14 t; bw 20, h 50, d 46; fck 0,15, fyk 5.
   // Asw = (Vk/(bw·d)·γs·γf − ψ·√(1000·fck)/1000)/fyk·bw·100·γs (DESDIM.BAS:3176-3207).
   const asw = (rho: number) =>

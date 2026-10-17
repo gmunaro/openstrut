@@ -211,7 +211,7 @@ function reacoesTruncadas(
         : "A V2 soma as reações sem cortar."
     } No ${maior.pilar} do ${maior.pav}: ${tr(maior.total)} no SISTRUT${maior.corr === undefined ? "" : ` e ${tr(maior.corr)} no modo corrigido, que tem também as outras correções`}.`,
     oQueFazer: `A maior perda nesta obra é ${fr} da carga de um pilar (${maior.pilar} no ${maior.pav}). Só confira a fundação ou o pilar que tenha folga menor que isso.`,
-    referencia: "VIGA.BAS:2412-2420",
+    referencia: "VIGA.BAS:2498-2501",
     elementos: perdas.map((x) => ({ local: x.pav, elemento: x.pilar })),
   } satisfies ErroDoOriginal;
 }
@@ -271,7 +271,8 @@ function psiNoPiso(o: ResultadoSistrut, c: ResultadoSistrut | undefined, ativo: 
       mudam === 0
         ? "Nada a revisar: os estribos detalhados são os mesmos."
         : "Os estribos executados com os valores do SISTRUT estão a favor da segurança. Num projeto novo, os do modo corrigido bastam.",
-    referencia: "DESDIM.BAS:5004",
+    referencia:
+      "DESDIM.BAS:3194-3208 (ρ com o piso 0,001); 5048, 5053 (a coluna 5 de A_128e, a As, só é gravada depois)",
     elementos: linhas.map((l) => ({ local: l.local, elemento: l.elemento })),
   } satisfies ErroDoOriginal;
 }
@@ -320,7 +321,7 @@ function flechaNaoVerificada(corrigido: ResultadoObra | undefined, ativo: ModoSi
         : `${modoAtivo(ativo)} A V2 verifica a flecha (vão/300 e vão/500), avisa e procura a espessura mínima que também a atende: na ${maior.laje}, ${num(maior.f, 2)} cm contra ${num(maior.lim, 2)} cm${espessura(maior)}. O SISTRUT não verificaria.`,
     oQueFazer:
       "Confira a flecha dessas lajes. Aumente a espessura até a mínima indicada na coluna do modo corrigido, que atende a flecha; se ela não indicar espessura, justifique com contraflecha ou cálculo mais preciso.",
-    referencia: "LAJE.BAS:1374-1387; LAJECALC.BAS:752, 781",
+    referencia: "LAJE.BAS:1373-1374 (limites 300 e 500); LAJECALC.BAS:532-557 (coluna L/f)",
     elementos: acima.map((x) => ({ local: x.local, elemento: x.laje })),
   } satisfies ErroDoOriginal;
 }
@@ -387,7 +388,7 @@ function vizinhoNaoRefeito(
       menores.length > 0
         ? "Confira a negativa dessas continuidades: use a As do modo corrigido, que cobre as duas lajes."
         : "Nada a revisar nesta obra.",
-    referencia: "LAJEPROC.BAS:836, 855",
+    referencia: "LAJEPROC.BAS:843-874 (V_16a8 <> V_0efc, linha 874)",
     elementos: casos.flatMap(({ local, n }) =>
       [n.continuidade.lajeA, n.continuidade.lajeB]
         .filter((x): x is string => !!x)
@@ -436,7 +437,7 @@ function otimizacaoSemFim(
     }; nesta obra a otimização no modo corrigido: ${paradas.map((x) => `${x.pav} ${noCorrigido(x.id)}`).join("; ")}.`,
     oQueFazer:
       "Se o projeto saiu do SISTRUT, esse pavimento foi calculado sem a otimização (o usuário teve de interrompê-la): confira os negativos e os positivos impressos. No modo corrigido a otimização vai até o fim.",
-    referencia: "LAJECALC.BAS:2113, 2123, 2145",
+    referencia: "LAJECALC.BAS:2176, 2195 (relação com 2 casas); 2186 (código com CINT)",
     elementos: paradas.map((x) => ({ local: x.pav, elemento: x.parada.laje })),
   } satisfies ErroDoOriginal;
 }
@@ -539,7 +540,7 @@ function pilarSemResultado(
       }: ${nk.map((x) => `${x.elemento} caso ${x.caso}, ${x.corrigido}`).join("; ")}.`,
       oQueFazer:
         "Esses casos não têm resultado no original. Use o resultado do modo corrigido e confira a armadura do pilar nesse caso antes de usá-la.",
-      referencia: "PILAR.BAS:5078, 5147; PILAREDI.BAS:5105",
+      referencia: "PILAR.BAS:5222, 5293; PILAREDI.BAS:5300, 5385",
       elementos: nk.map(({ local, elemento }) => ({ local, elemento })),
     });
   const laco = casosComErro(o, c, nomes, "nao-converge");
@@ -557,7 +558,7 @@ function pilarSemResultado(
       v2Faz: `${modoAtivo(ativo)} A V2 para a procura nos dois modos e deixa o caso sem resultado, com aviso; a V2 não resolve este caso. No modo corrigido: ${laco.map((x) => `${x.elemento} caso ${x.caso}, ${x.corrigido}`).join("; ")}.`,
       oQueFazer:
         "Verifique esses pilares por outro meio, ou mude a seção ou a armadura até o caso ter resultado.",
-      referencia: "PILAR.BAS:5015-5534; PILAREDI.BAS:5053-5425",
+      referencia: "PILAR.BAS:5152 (L_33b0f) em diante; PILAREDI.BAS:5237 (L_482e8) em diante",
       elementos: laco.map(({ local, elemento }) => ({ local, elemento })),
     });
   return out;

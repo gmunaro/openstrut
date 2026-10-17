@@ -165,7 +165,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
   }
 
   // Asw de cada lado e bitolas da viga. ρ do ψ: no original a coluna 5 de A_128e, que
-  // o DESAUXDI só grava depois do dimensionamento (DESDIM.BAS:5004), ainda é 0 e ρ fica
+  // o DESAUXDI só grava depois do dimensionamento (DESDIM.BAS:5048, 5053), ainda é 0 e ρ fica
   // no piso 0,001 (defeito D-ψ, T7). Corrigido: ρ = As/(3·bw·h) com a As de flexão do
   // tramo (o terço da positiva que chega ao apoio) ou, no balanço, a do apoio vizinho
   // (NB-1/78: τc = ψ·√fck cresce com a taxa da armadura longitudinal de tração;

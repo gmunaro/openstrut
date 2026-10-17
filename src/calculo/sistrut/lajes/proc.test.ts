@@ -156,7 +156,7 @@ describe("retrad_lajeproc: L1 do E2E", () => {
   }
 });
 
-describe("R2: vizinho com o mesmo número de lado (LAJEPROC.BAS:836)", () => {
+describe("R2: vizinho com o mesmo número de lado (LAJEPROC.BAS:874)", () => {
   // L1 lado 2 (índice 1) contínuo com o lado 2 de L2. L2 com M+ 30 → M− 60 → As 2,620
   // (# 6.3 c/10); L1 com M− 49,55 → As 2,130 (c/12.5). L2 é processada antes; a L1, por
   // último, regrava a continuidade.
@@ -171,7 +171,7 @@ describe("R2: vizinho com o mesmo número de lado (LAJEPROC.BAS:836)", () => {
     expect(r.negativas[0]!.as).toBeCloseTo(2.1299, 3);
     expect(r.negativas[0]!.barra).toMatchObject({ ok: true, espacamento: 12.5 });
     expect(r.avisos.join(" ")).toContain("não foi recalculado, como no SISTRUT original");
-    expect(r.memoria.some((m) => m.ref === "LAJEPROC.BAS:836, 855")).toBe(true);
+    expect(r.memoria.some((m) => m.ref === "LAJEPROC.BAS:843-874")).toBe(true);
   });
   it("corrigido: usa o maior As dos dois lados, 2,620 # 6.3 c/10", () => {
     const r = lajeproc(esforcos, E2E, PARAM, "corrigido");

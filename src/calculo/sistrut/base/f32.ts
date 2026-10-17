@@ -92,7 +92,7 @@ export function qbClng(x: number) {
 }
 
 /** `INT(x * 10^casas) / 10^casas`: o truncamento para baixo que o original faz ao
- *  gravar ou transferir valores (PLANO.md X3; .REP em VIGA.BAS:2413). Devolve
+ *  gravar ou transferir valores (PLANO.md X3; .REP em VIGA.BAS:2499). Devolve
  *  float64; quem atribui a uma variável `!` aplica `sng`. */
 export function qbIntCasas(x: number, casas: number) {
   const escala = 10 ** casas;
