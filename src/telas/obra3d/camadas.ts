@@ -72,12 +72,18 @@ export interface ContextoVista {
   /** Altura na cena (Y) de uma cota do nível, com o deslocamento do explodido como está
    *  desenhado agora (durante a animação, "explodido" avisa a cada quadro). */
   alturaNaCena(indiceNivel: number, cota: number): number;
-  /** Ponto da planta (x, y em m; z = cota) na cena, sem o explodido. */
+  /** Ponto da planta (x, y em m, como em `Elemento3D.solidos`; z = cota) na cena, sem o
+   *  explodido: devolve (x, z, −y). Não serve para converter de volta. */
   paraCena(x: number, y: number, z: number): Vector3;
   /** Caixa do modelo inteiro na cena, sem o explodido. */
   caixaNaCena(): Box3;
   /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
   esferaVisivel(): Sphere;
+  /** Caixa das lajes, vigas e pilares do nível `indice` na cena, com o explodido como
+   *  está desenhado agora. Undefined se o nível não tem peças. */
+  caixaDoNivel(indice: number): Box3 | undefined;
+  /** O explodido ainda está animando: o aviso de "explodido" atual não é o último. */
+  readonly explodidoEmAnimacao: boolean;
   /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
   caixaDe(chave: string): Box3 | undefined;
   /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */
@@ -104,6 +110,10 @@ export interface ContextoVista {
     alvo: Vector3,
     animar?: boolean,
   ): Promise<"concluida" | "cancelada">;
+  /** Enquadra uma caixa ou esfera da cena (`caixaDoNivel(i)`, `caixaDe(chave)`), com a
+   *  direção atual da câmera e a mesma margem do botão Enquadrar. É um `moverCamera`:
+   *  anima, cancela a câmera em curso e resolve "concluida" ou "cancelada". */
+  enquadrarEm(alvo: Box3 | Sphere, animar?: boolean): Promise<"concluida" | "cancelada">;
   /** Liga ou desliga a órbita, o zoom e o pan do usuário (o tour e o 4D animam a câmera).
    *  Não trava os botões de vista nem `moverCamera`. */
   travarControles(travar: boolean): void;

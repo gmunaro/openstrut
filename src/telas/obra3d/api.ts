@@ -21,3 +21,7 @@ export type {
   TipoElemento,
 } from "./modelo";
 export type { Ponto } from "../../dominio/obra";
+export type { Calculo } from "../calculo";
+
+// Cores da vista, para marcas e legendas das camadas combinarem com as da vista e da planta.
+export { COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA } from "./cores";

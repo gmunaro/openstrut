@@ -19,6 +19,7 @@ const TIPOS_DOCUMENTADOS: [string, string[]][] = [
     ["Modelo3D", "Nivel", "Elemento3D", "TipoElemento", "Solido", "Ponto3", "Coluna", "Eixo3D"],
   ],
   ["src/telas/obra3d/dados.ts", ["DadosElemento", "Estado", "GrandezaMapa"]],
+  ["src/telas/calculo.ts", ["Calculo"]],
 ];
 
 /** O texto de `export interface Nome {…}` ou `export type Nome = …;` no código. */

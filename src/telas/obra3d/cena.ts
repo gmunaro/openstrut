@@ -698,6 +698,25 @@ export class Cena3D implements ContextoVista {
     this.emitir("explodido");
   }
 
+  /** Caixa das lajes, vigas e pilares do nível na cena, com o explodido desenhado agora
+   *  (sem fundação e escada, que só usam o nível para agrupar). */
+  caixaDoNivel(indice: number): Box3 | undefined {
+    const caixa = new Box3();
+    for (const e of this.modelo.elementos)
+      if (e.nivel === indice && (e.tipo === "laje" || e.tipo === "viga" || e.tipo === "pilar")) {
+        const c = this.caixaDe(e.chave);
+        if (c) caixa.union(c);
+      }
+    return caixa.isEmpty() ? undefined : caixa;
+  }
+
+  /** O explodido ainda está animando (o próximo "explodido" não é o último). */
+  get explodidoEmAnimacao() {
+    return this.deslocamentos.some(
+      (y, i) => Math.abs((this.deslocamentosAlvo[i] ?? 0) - y) >= 1e-3,
+    );
+  }
+
   /** Altura Y de uma cota do nível, com o deslocamento do explodido já desenhado
    *  (o valor animado: durante a animação, o evento "explodido" avisa a cada quadro). */
   alturaNaCena = (indiceNivel: number, cota: number) =>
@@ -973,7 +992,18 @@ export class Cena3D implements ContextoVista {
 
   /** Enquadra o que está visível; sem `dir`, mantém a direção atual da câmera. */
   enquadrar(animar = true, dir?: Vector3) {
-    const esfera = this.esferaVisivel();
+    return this.enquadrarEsfera(this.esferaVisivel(), animar, dir);
+  }
+
+  /** Enquadra uma caixa ou esfera da cena (um nível, uma peça), mantendo a direção da
+   *  câmera; a mesma conta do botão Enquadrar. */
+  enquadrarEm(alvo: Box3 | Sphere, animar = true) {
+    const esfera = alvo instanceof Box3 ? alvo.getBoundingSphere(new Sphere()) : alvo.clone();
+    esfera.radius = Math.max(esfera.radius, 0.5);
+    return this.enquadrarEsfera(esfera, animar);
+  }
+
+  private enquadrarEsfera(esfera: Sphere, animar: boolean, dir?: Vector3) {
     const atual = this.camera.position.clone().sub(this.controles.target);
     const d = (dir ?? (atual.lengthSq() > 1e-9 ? atual : this.direcao(this.vista)))
       .clone()

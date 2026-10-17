@@ -143,9 +143,17 @@ Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original ×
 
 ### Ciclo de vida
 
-Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel` (as declarações estão em "Tipos", abaixo). Ela entra na barra por uma `DefinicaoCamada` em `CAMADAS`, com `id`, `nome` (texto do botão), `descricao` (dica do botão) e `carregar`, que faz o import dinâmico do arquivo dela.
+Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel` (as declarações estão em "Tipos", abaixo). Ela entra na barra por uma `DefinicaoCamada` no array `CAMADAS` de `src/telas/obra3d/camadas.ts`, com `id`, `nome` (texto do botão), `descricao` (dica do botão) e `carregar`, que faz o import dinâmico do arquivo dela. O arquivo da camada fica em `src/telas/obra3d/<recurso>/` e importa os tipos de `../api`.
 
-`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum. Ele recebe o mesmo `ctx` e some quando a camada desliga. Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
+`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum, montado na seção "Camadas" do painel lateral, logo abaixo dos botões, enquanto a camada está ligada. Ele recebe só `{ ctx }` e some quando a camada desliga. O painel lateral já usa texto `text-xs` e tem 20 a 24 rem de largura (no celular, a largura da tela); o Painel não precisa de título, porque o botão da camada fica logo acima. Use as classes do Tailwind e os componentes do app (`@/components/ui/button`, `@/components/ui/switch` e outros de `src/components/ui/`), que já estão no pacote principal. Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
+
+### Objetos da camada
+
+`ctx.cena` é o mesmo objeto durante toda a vida da vista: o que a camada põe direto nela fica lá até a camada tirar, e nenhum evento mexe nisso. Os grupos dos níveis (`grupoDoNivel`) são recriados a cada `"cena"`. O clique de seleção só testa as peças da vista e as marcas "!": objetos da camada não são selecionáveis e não bloqueiam o clique nas peças atrás deles. Para seleção própria, a camada usa um `Raycaster` do three no `ctx.renderer.domElement`.
+
+Toda peça de `ctx.modelo.elementos` tem uma entrada em `ctx.dados` (sem cálculo, `estado: "sem"`). `caixaDe(chave)` e `elemento(chave)` só devolvem `undefined` para uma chave que não está no modelo atual, o que acontece depois que a obra é editada e uma peça some.
+
+`api.ts` também exporta as cores da vista: `COR_ESTADO` (`ok`, `aviso` e `falha`, as cores da planta), `COR_DEFEITO` (a marca "!"), `NEUTRO` (o cinza de cada tipo sem cálculo) e `RAMPA` (os 7 passos da rampa azul). Uma marca de falha feita por uma camada deve usar `COR_ESTADO.falha`.
 
 ### three.js
 
@@ -201,12 +209,18 @@ export interface ContextoVista {
   /** Altura na cena (Y) de uma cota do nível, com o deslocamento do explodido como está
    *  desenhado agora (durante a animação, "explodido" avisa a cada quadro). */
   alturaNaCena(indiceNivel: number, cota: number): number;
-  /** Ponto da planta (x, y em m; z = cota) na cena, sem o explodido. */
+  /** Ponto da planta (x, y em m, como em `Elemento3D.solidos`; z = cota) na cena, sem o
+   *  explodido: devolve (x, z, −y). Não serve para converter de volta. */
   paraCena(x: number, y: number, z: number): Vector3;
   /** Caixa do modelo inteiro na cena, sem o explodido. */
   caixaNaCena(): Box3;
   /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
   esferaVisivel(): Sphere;
+  /** Caixa das lajes, vigas e pilares do nível `indice` na cena, com o explodido como
+   *  está desenhado agora. Undefined se o nível não tem peças. */
+  caixaDoNivel(indice: number): Box3 | undefined;
+  /** O explodido ainda está animando: o aviso de "explodido" atual não é o último. */
+  readonly explodidoEmAnimacao: boolean;
   /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
   caixaDe(chave: string): Box3 | undefined;
   /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */
@@ -233,6 +247,10 @@ export interface ContextoVista {
     alvo: Vector3,
     animar?: boolean,
   ): Promise<"concluida" | "cancelada">;
+  /** Enquadra uma caixa ou esfera da cena (`caixaDoNivel(i)`, `caixaDe(chave)`), com a
+   *  direção atual da câmera e a mesma margem do botão Enquadrar. É um `moverCamera`:
+   *  anima, cancela a câmera em curso e resolve "concluida" ou "cancelada". */
+  enquadrarEm(alvo: Box3 | Sphere, animar?: boolean): Promise<"concluida" | "cancelada">;
   /** Liga ou desliga a órbita, o zoom e o pan do usuário (o tour e o 4D animam a câmera).
    *  Não trava os botões de vista nem `moverCamera`. */
   travarControles(travar: boolean): void;
@@ -379,13 +397,24 @@ export type Estado = "ok" | "aviso" | "falha" | "sem";
 export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
 ```
 
+`calculo.ts`:
+
+```ts
+export type Calculo =
+  | { tipo: "ok"; resultado: ResultadoObra }
+  /** A norma da obra ainda não tem implementação no motor. */
+  | { tipo: "semNorma"; norma: NormaId }
+  | { tipo: "erro"; mensagem: string };
+```
+
 <!-- tipos:fim -->
 
 ### Coordenadas
 
 - A cena tem Y para cima, em metros: X = x da planta, Y = cota (z), Z = −y da planta. `ctx.paraCena(x, y, z)` faz a conversão.
 - `ctx.modelo.niveis` vem de baixo para cima, e `niveis[i].indice === i`. `cota` é a face de cima da laje do nível e `cotaPiso` é a do nível de baixo, as duas em metros a partir da fundação (cota 0).
-- `Elemento3D.nivel` é esse índice. A fundação fica no nível 0. A escada fica no nível de baixo dela, e a escada sem posição no nível 0.
+- `niveis[0]` é o primeiro pavimento de verdade acima da fundação (num prédio com térreo, o térreo). A fundação não é um nível.
+- `Elemento3D.nivel` é esse índice. Laje e viga do nível `i` ficam na cota `niveis[i].cota`. O pilar do nível `i` é o lance que sustenta essa laje: vai de `cotaPiso` a `cota` do nível `i` (termina nele). Os blocos de fundação usam o nível 0 só para agrupar, e ficam de −0,50 a 0. A escada fica no nível de baixo dela, e a escada sem posição no nível 0. `caixaDoNivel(i)` considera só lajes, vigas e pilares.
 - Os sólidos de `Elemento3D.solidos` estão em coordenadas da planta: prisma (polígono anti-horário de z0 a z1) ou barra (eixo da face de cima de `a` a `b`, com `largura` e `altura` para baixo).
 - O explodido só muda o `position.y` do grupo de cada nível, que não gira nem escala. Por isso as coordenadas locais de um filho de `ctx.grupoDoNivel(i)` são as da cena sem o explodido: um objeto posto em `ctx.paraCena(x, y, cota)` dentro do grupo anda com o nível. O grupo é recriado a cada evento `"cena"`, e os filhos que a camada pôs nele se perdem: ponha de novo no aviso de `"cena"`.
 - Fora do grupo (direto em `ctx.cena`), a altura com o explodido é `ctx.alturaNaCena(i, cota)`, que muda a cada aviso de `"explodido"`. `ctx.caixaDe(chave)` já vem com o explodido.
@@ -398,6 +427,8 @@ export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
 | `modelo`, `obra`, `calculo`, `dados` | o modelo 3D (`modelo.elementos` é a lista de peças), a obra, o cálculo (`calculo.tipo === "ok"` traz `calculo.resultado`) e os dados de cada peça, um `ReadonlyMap` pela `chave` do elemento. Sem cálculo, toda peça tem `estado: "sem"`. `estado` é `"ok"`, `"aviso"`, `"falha"` ou `"sem"`, com a mesma regra e as mesmas cores da planta. `defeitos` é uma lista de textos, vazia fora do modo "Como o SISTRUT original" (`ctx.obra.modoCalculo === "original"`) |
 | `elemento(chave)`, `grupoDoNivel(i)` | o elemento do modelo e o grupo do nível |
 | `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera das peças visíveis (`Sphere`, com o explodido) |
+| `caixaDoNivel(i)`, `enquadrarEm(caixa)` | caixa das lajes, vigas e pilares do nível na cena (`Box3`, com o explodido) e o enquadramento dela com a direção atual da câmera e a margem do botão Enquadrar. Para ir a um nível: `ctx.enquadrarEm(ctx.caixaDoNivel(i)!)` |
+| `explodidoEmAnimacao` | `true` enquanto o explodido anima; no último aviso de `"explodido"` já é `false` |
 | `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |
 | `estaVisivel(chave)`, `exibicao(chave)` | se a peça aparece considerando tudo (foco, tipos e pavimentos ocultos, filtros de todas as camadas e planos de corte) e como o foco a mostra (`"solido"`, `"fantasma"` ou `"oculto"`) |
 | `alturaNaCena(nivel, cota)` | a altura Y de uma cota, com o deslocamento do explodido como está desenhado agora |
@@ -427,7 +458,9 @@ Para saber se uma peça aparece depois de qualquer mudança, ouça `"visibilidad
 
 **Materiais.** As malhas `"solido"` e `"fantasma"` têm o atributo `color` por vértice com a cor da situação ou da grandeza. Um material trocado precisa de `vertexColors: true` para mantê-la. `"fantasma"` é a peça de contexto transparente. `"destaque"` é a seleção, desenhada sem teste de profundidade.
 
-**Câmera.** Uma camada que anima a câmera (tour, 4D) deve chamar `travarControles(true)` ao ligar e `travarControles(false)` na limpeza. Para animar continuamente, use `aoQuadro` e mexa em `ctx.camera.position` e `ctx.controles.target`. Para ir a um ponto, use `moverCamera`.
+**Câmera.** `ctx.controles` é o `OrbitControls` de `three/addons/controls/OrbitControls.js`; o alvo da câmera é `ctx.controles.target`. Uma camada que anima a câmera (tour, 4D) deve chamar `travarControles(true)` ao ligar e `travarControles(false)` na limpeza. Para ir a um nível ou a uma peça, use `enquadrarEm(ctx.caixaDoNivel(i))` ou `enquadrarEm(ctx.caixaDe(chave))`; para um ponto exato, `moverCamera`. Para animar continuamente, use `aoQuadro` e mexa em `ctx.camera.position` e `ctx.controles.target`.
+
+Só uma animação de câmera corre por vez: `moverCamera` e `enquadrarEm` cancelam a que estava em curso, e a Promise dela resolve `"cancelada"`. Isso inclui as chamadas da própria vista (botões de vista, Enquadrar, trilha e escolha de parte) e de outras camadas. Uma camada que encadeia paradas (tour) deve tratar `"cancelada"` como "outra coisa assumiu a câmera" e decidir se segue ou para, sem repetir a chamada em laço. O explodido não mexe na câmera: ele só sobe os níveis. Para manter um nível enquadrado durante o explodido, reenquadre uma vez quando `explodidoEmAnimacao` ficar `false` no aviso de `"explodido"`; chamar `enquadrarEm` a cada quadro da animação cancela a si mesmo e a câmera não chega.
 
 ### Exemplo: sequência construtiva 4D mínima
 
