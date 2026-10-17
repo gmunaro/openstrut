@@ -1445,7 +1445,9 @@ function calcularPilaresSistrut(
   // 513-516). O corrigido parte a coluna quando a concentrada cobre a carga de cima: ela
   // chega à fundação pela viga. Sem cobrir, a coluna continua, com aviso. De cima para
   // baixo: a carga de uma parte já partida vai pela viga dela, no .REP de um lance abaixo.
-  for (const t of [...trechos])
+  // as partes partidas entram no fim de `trechos` e não são revistas
+  for (let i = 0, n = trechos.length; i < n; i++) {
+    const t = trechos[i]!;
     for (let k = t.length - 1; k >= 1; k--) {
       const l = t[k]!;
       const juncao = juncoes.get(l.pilar.id);
@@ -1465,6 +1467,7 @@ function calcularPilaresSistrut(
           : `${l.pilar.nome}: nasce sobre ${viga}, menos que a carga dele (${num(carga, 2)} t sem o peso próprio); a coluna continua a do ${juncao.de} de baixo, deslocado ${numAte(juncao.cm, 1)} cm. Se a concentrada é parte da carga deste pilar, ela chega à fundação duas vezes, pela coluna e pela reação da viga; confira.`,
       );
     }
+  }
   // coluna que nasce sobre viga de transição e não recebe carga em nível nenhum (nenhuma
   // viga descarrega nela, sem carga no topo nem na base): é só o apoio de uma viga à
   // parte, como os de uma escada calculada no VIGA, com os apoios desconsiderados. Não é
