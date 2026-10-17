@@ -38,7 +38,9 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
       return new MeshBasicMaterial({
         color: COR_SELECAO,
         transparent: true,
-        opacity: 0.45,
+        // leve: a cor da peça (falha, aviso) continua visível sob a seleção, que se marca
+        // mais pelo contorno ciano
+        opacity: 0.2,
         depthTest: false,
       });
   }

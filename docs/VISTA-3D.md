@@ -93,7 +93,7 @@ O cartão do elemento repete o texto do defeito, e o painel lista as peças marc
 
 - Órbita, zoom e pan pelo `OrbitControls`. No mouse, arrastar gira, a roda aproxima e o botão direito move. No toque, um dedo gira e dois dedos fazem pinça e pan. Com o desenho em foco, as setas do teclado movem a vista.
 - Os botões de vista são Perspectiva, Frente, Lado, Topo e Enquadrar. Frente, lado e topo usam câmera ortográfica.
-- Tocar ou clicar numa peça seleciona e mostra o cartão com nome, nível, seção, situação e resultado principal (As, Nd ou momento).
+- Tocar ou clicar numa peça seleciona e mostra o cartão com nome, nível, seção, situação e resultado principal (As, Nd ou momento). A seleção é um contorno ciano com um preenchimento leve, para a cor da situação (falha, aviso) continuar visível. No celular, o cartão fica logo abaixo do desenho, sem cobri-lo.
 - Mostrar e ocultar por tipo (lajes, vigas, pilares, escada, fundação) e por pavimento.
 - O explodido afasta os níveis 0,8 vez o pé-direito médio (no mínimo 1,5 m) e só move os grupos, sem refazer a geometria.
 - Todos os controles são botões, caixas de seleção e listas comuns, operáveis por teclado. A lista "Elemento (com os vizinhos)" seleciona qualquer peça sem apontar no desenho. Uma região `aria-live` anuncia a seleção.
@@ -140,6 +140,18 @@ Pelo relatório do vite-plugin-pwa, o precache ficou com 1539,5 KiB, contra 1535
 ## Ponto de extensão: camadas
 
 Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original × Corrigido, sequência construtiva 4D, realidade aumentada) entram como camadas, sem editar o núcleo (`cena.ts`, `Vista3D.tsx`). Cada recurso fica na pasta dele (`obra3d/armadura/`, `obra3d/render/`, `obra3d/tour/`, `obra3d/comparar/`, `obra3d/sequencia/`, `obra3d/ar/`) e acrescenta uma linha a `CAMADAS` em `camadas.ts`. O botão da camada aparece na seção "Camadas" do painel. O código dela só é baixado quando o usuário liga o botão, num pedaço `3d-` fora do precache.
+
+### Camadas que já existem
+
+| `id` | Pasta | O que faz |
+|---|---|---|
+| `corte` | `camadas/` | corte horizontal acima de um pavimento |
+| `armadura` | `armadura/` | barras e estribos calculados da viga ou da coluna selecionada, com as peças transparentes |
+| `sequencia` | `sequencia/` | sequência construtiva 4D por etapas e datas, com CSV |
+| `comparar` | `comparar/` | Original × Corrigido: calcula o outro modo e pinta as diferenças |
+| `ar` | `ar/` | realidade aumentada no celular (WebXR, maquete na mesa ou 1:1) |
+| `render` | `render/` | materiais PBR, luz de estúdio, sombras e path tracing progressivo |
+| `tour` | `tour/` | tour guiado pelas paradas (níveis, falhas e defeitos agrupados por nível) e caminhada em primeira pessoa |
 
 ### Ciclo de vida
 
@@ -199,7 +211,8 @@ O cabeçalho de `api.ts` traz a referência rápida:
 // - legenda da camada: `ctx.definirLegenda(id, { titulo, itens, substitui? } | null)`.
 // - redesenhar: `ctx.pedirRender()`; desenhar no lugar do núcleo (WebXR):
 //   `ctx.assumirDesenho(f | null)`; planos de corte juntos: `ctx.planosCorte()`.
-// - luzes da vista: `ctx.luzes`; exportar .glb: `ctx.exportarGlb()`.
+// - luzes da vista: `ctx.luzes`; exportar .glb: `ctx.exportarGlb()`; depois de cada
+//   quadro: `ctx.depoisDoQuadro(f)`; ir a uma parte: `ctx.definirFoco(foco)`.
 ```
 
 Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
@@ -273,6 +286,12 @@ export interface ContextoVista {
    *  WebXR com `renderer.setAnimationLoop`). O núcleo continua com LOD, rótulos e planos
    *  de corte; só não desenha. `null` devolve o desenho ao núcleo. */
   assumirDesenho(f: (() => void) | null): void;
+  /** Chamado logo depois de cada quadro que a vista desenha (ex.: ler o canvas, acumular
+   *  amostras); devolve o cancelamento. Não faz a vista desenhar mais quadros. */
+  depoisDoQuadro(f: () => void): () => void;
+  /** Leva a vista a uma parte (prédio, nível, elemento com vizinhos ou eixo), como a trilha
+   *  e o painel "Partes", e enquadra. A trilha e o painel acompanham. */
+  definirFoco(foco: Foco): Promise<"concluida" | "cancelada">;
   /** O modelo visível em glTF binário (.glb), como o botão "glTF (.glb)" da vista. */
   exportarGlb(): Promise<ArrayBuffer>;
   /** Legenda desta fonte (`id`) na legenda da vista; `null` remove. Avisa "legenda". */
@@ -557,6 +576,16 @@ export type Calculo =
   | { tipo: "erro"; mensagem: string };
 ```
 
+`src/telas/obra3d/partes.ts` (em `api.ts`: `Foco`):
+
+```ts
+export type Foco =
+  | { tipo: "todo" }
+  | { tipo: "nivel"; nivel: number }
+  | { tipo: "elemento"; chave: string }
+  | { tipo: "eixo"; chave: string };
+```
+
 `src/dominio/armaduraGeometria.ts` (em `api.ts`: `P3, PosicaoGeometria`):
 
 ```ts
@@ -816,7 +845,9 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
       return new MeshBasicMaterial({
         color: COR_SELECAO,
         transparent: true,
-        opacity: 0.45,
+        // leve: a cor da peça (falha, aviso) continua visível sob a seleção, que se marca
+        // mais pelo contorno ciano
+        opacity: 0.2,
         depthTest: false,
       });
   }
@@ -858,6 +889,7 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `definirTransparencia(id, f)` | peças transparentes desta fonte (papel `"fantasma"`), sem trocar materiais: é o jeito de "ver através" que convive com o render PBR. Refaz a geometria |
 | `definirLegenda(id, legenda)` | a legenda da camada na legenda da vista (`{ titulo, itens: [{ cor, rotulo }], substitui? }`); com `substitui`, esconde a legenda de situação ou grandeza |
 | `corDe(chave)`, `fontesAtivas()` | a cor com que a peça está desenhada e os `id` das fontes registradas por tipo (para testes) |
+| `definirFoco(foco)`, `depoisDoQuadro(f)` | levar a vista a uma parte (prédio, nível, elemento com vizinhos, eixo) com a trilha e o painel acompanhando; e uma chamada logo depois de cada quadro desenhado |
 | `assumirDesenho(f)`, `planosCorte()`, `luzes`, `exportarGlb()` | desenhar no lugar do núcleo (WebXR), os planos de corte juntos, as luzes da vista e o .glb do modelo visível |
 | `definirPlanosCorte(id, planos)` | planos de corte desta fonte (`Plane` do three, na cena). A vista junta os de todas as fontes e mantém o lado positivo de todos (`plano.distanceToPoint(p) >= 0`). Lista vazia remove |
 | `definirCores(id, f)` | cor por peça desta fonte (`f` devolve uma cor CSS ou `null` para deixar a da vista); a última fonte com cor vale. Refaz a geometria: use para mapas que mudam pouco (comparação, etapas do 4D), não a cada quadro. A legenda da vista não mostra essas cores |

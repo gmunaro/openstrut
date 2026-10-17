@@ -62,9 +62,15 @@ export default defineConfig({
           // camada numa pasta própria (obra3d/<pasta>/camada.tsx): 3d-<pasta>-camada-<hash>
           const pasta = /[\/]telas[\/]obra3d[\/]([^\/]+)[\/][^\/]+$/.exec(id)?.[1];
           if (pasta) return `assets/3d-${pasta}-[name]-[hash].js`;
-          return /[\/](telas[\/]obra3d|node_modules[\/]three)[\/]/.test(id)
-            ? "assets/3d-[name]-[hash].js"
-            : "assets/[name]-[hash].js";
+          // pedaço só da vista 3D: a entrada (ou, num pedaço compartilhado sem entrada, todos
+          // os módulos) em obra3d, no three ou nas libs de path tracing
+          const ids = c.facadeModuleId ? [c.facadeModuleId] : c.moduleIds;
+          const da3d =
+            ids.length > 0 &&
+            ids.every((m) =>
+              /[\/](telas[\/]obra3d|node_modules[\/](three|three-gpu-pathtracer|three-mesh-bvh))[\/]/.test(m),
+            );
+          return da3d ? "assets/3d-[name]-[hash].js" : "assets/[name]-[hash].js";
         },
       },
     },

@@ -28,7 +28,8 @@
 // - legenda da camada: `ctx.definirLegenda(id, { titulo, itens, substitui? } | null)`.
 // - redesenhar: `ctx.pedirRender()`; desenhar no lugar do núcleo (WebXR):
 //   `ctx.assumirDesenho(f | null)`; planos de corte juntos: `ctx.planosCorte()`.
-// - luzes da vista: `ctx.luzes`; exportar .glb: `ctx.exportarGlb()`.
+// - luzes da vista: `ctx.luzes`; exportar .glb: `ctx.exportarGlb()`; depois de cada
+//   quadro: `ctx.depoisDoQuadro(f)`; ir a uma parte: `ctx.definirFoco(foco)`.
 export type {
   ArmaduraNaCena,
   Camada,
@@ -55,6 +56,7 @@ export type {
 } from "./modelo";
 export type { Ponto } from "../../dominio/obra";
 export type { Calculo } from "../calculo";
+export type { Foco } from "./partes";
 // Geometria das barras (a regra comum à vista 3D e ao IFC), no sistema local da peça.
 export type { P3, PosicaoGeometria } from "../../dominio/armaduraGeometria";
 // Detalhamento de armadura (cm, mm), o mesmo de Resultados, Relatório e DXF de armação.

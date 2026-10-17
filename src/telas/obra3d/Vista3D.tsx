@@ -133,12 +133,15 @@ export default function Vista3D({
     setCena(c);
     const parar = c.aoMudar("selecao", () => setSelecao(c.selecao));
     const pararLegenda = c.aoMudar("legenda", () => setLegendas(c.legendasCamadas));
+    // foco e visibilidade mudados por uma camada (definirFoco): a trilha e o painel seguem
+    const pararCena = c.aoMudar("cena", () => setEv(c.estado));
     // e2e e depuração: a cena viva, só para leitura
     (window as { __vista3d?: Cena3D }).__vista3d = c;
     const camadas = ativas.current;
     return () => {
       parar();
       pararLegenda();
+      pararCena();
       for (const a of camadas.values()) a.limpar?.();
       camadas.clear();
       delete (window as { __vista3d?: Cena3D }).__vista3d;

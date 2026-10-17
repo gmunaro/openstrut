@@ -273,6 +273,19 @@ export class Cena3D implements ContextoVista {
     this.renderer.clippingPlanes = this.planosCorte();
     if (this.desenhoAssumido) this.desenhoAssumido();
     else this.renderer.render(this.cena, this.camera);
+    for (const f of this.posQuadro) f();
+  }
+
+  private posQuadro = new Set<() => void>();
+
+  depoisDoQuadro(f: () => void) {
+    this.posQuadro.add(f);
+    return () => void this.posQuadro.delete(f);
+  }
+
+  definirFoco(foco: Foco) {
+    this.definirEstado({ foco });
+    return this.enquadrar(true);
   }
 
   /** Desenho de uma camada no lugar do `renderer.render` do núcleo (sessão WebXR). */
@@ -680,6 +693,7 @@ export class Cena3D implements ContextoVista {
         const ry = eixo?.direcao === "y" ? eixo.c : c.min.y - 0.6;
         rotulo.position.set(...paraCena(rx, ry, nv.cota));
         rotulo.center.set(1, 0.5);
+        rotulo.userData = { ...rotulo.userData, rotuloNivel: true };
         grupo.add(rotulo);
       }
       this.raiz.add(grupo);
@@ -1044,7 +1058,8 @@ export class Cena3D implements ContextoVista {
   private ajustarPlacas() {
     const h = Math.max(1, this.renderer.domElement.clientHeight);
     // tela estreita (celular): placas menores, para os rótulos caberem ao lado do prédio
-    const fator = this.renderer.domElement.clientWidth < 520 ? 0.7 : 1;
+    const estreita = this.renderer.domElement.clientWidth < 520;
+    const fator = estreita ? 0.7 : 1;
     const porPx =
       this.camera instanceof PerspectiveCamera
         ? (2 * Math.tan((this.camera.fov * Math.PI) / 360)) / h
@@ -1052,9 +1067,15 @@ export class Cena3D implements ContextoVista {
     for (const n of this.niveis)
       n.grupo.traverse((o) => {
         if (!(o instanceof Sprite)) return;
-        const { alturaPx, aspecto } = o.userData as { alturaPx: number; aspecto: number };
+        const { alturaPx, aspecto, rotuloNivel } = o.userData as {
+          alturaPx: number;
+          aspecto: number;
+          rotuloNivel?: boolean;
+        };
         const k = alturaPx * fator * porPx;
         o.scale.set(k * aspecto, k, 1);
+        // tela estreita: o rótulo do nível cresce para dentro do desenho, não para fora
+        if (rotuloNivel) o.center.set(estreita ? 0 : 1, 0.5);
       });
   }
 

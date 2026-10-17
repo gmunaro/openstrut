@@ -1,12 +1,19 @@
 // Paradas do tour guiado, a partir do modelo e dos dados da vista (lógica pura, testada em
 // paradas.test.ts): o prédio inteiro, cada nível de baixo para cima, as peças com falha e
-// as afetadas por defeito do SISTRUT original. Cada peça entra uma vez só.
+// as afetadas por defeito do SISTRUT original. Cada peça entra uma vez só. Num nível com
+// mais de LIMITE_POR_NIVEL peças do mesmo motivo, elas viram uma parada só (o tour de uma
+// obra de 20 pavimentos não passa de 61 paradas).
 import type { DadosElemento, Elemento3D, Modelo3D, TipoElemento } from "../api";
 
 export type Parada =
   | { tipo: "todo" }
   | { tipo: "nivel"; nivel: number }
-  | { tipo: "peca"; chave: string; motivo: "falha" | "defeito" };
+  | { tipo: "peca"; chave: string; motivo: "falha" | "defeito" }
+  /** As peças de um nível com o mesmo motivo, juntas, na ordem das peças. */
+  | { tipo: "grupo"; nivel: number; motivo: "falha" | "defeito"; chaves: string[] };
+
+/** Peças do mesmo motivo num nível acima das quais elas viram uma parada só. */
+export const LIMITE_POR_NIVEL = 3;
 
 const ORDEM_TIPO: Record<TipoElemento, number> = {
   fundacao: 0,
@@ -51,10 +58,19 @@ export function montarParadas(
   const pecas = [...modelo.elementos].sort(ordemDasPecas);
   const falhas = pecas.filter((e) => dados.get(e.chave)?.estado === "falha");
   const vistas = new Set(falhas.map((e) => e.chave));
-  for (const e of falhas) paradas.push({ tipo: "peca", chave: e.chave, motivo: "falha" });
-  for (const e of pecas)
-    if (!vistas.has(e.chave) && (dados.get(e.chave)?.defeitos.length ?? 0) > 0)
-      paradas.push({ tipo: "peca", chave: e.chave, motivo: "defeito" });
+  const defeitos = pecas.filter(
+    (e) => !vistas.has(e.chave) && (dados.get(e.chave)?.defeitos.length ?? 0) > 0,
+  );
+  for (const [lista, motivo] of [
+    [falhas, "falha"],
+    [defeitos, "defeito"],
+  ] as const)
+    for (const n of new Set(lista.map((e) => e.nivel))) {
+      const doNivel = lista.filter((e) => e.nivel === n);
+      if (doNivel.length > LIMITE_POR_NIVEL)
+        paradas.push({ tipo: "grupo", nivel: n, motivo, chaves: doNivel.map((e) => e.chave) });
+      else for (const e of doNivel) paradas.push({ tipo: "peca", chave: e.chave, motivo });
+    }
   return paradas;
 }
 
@@ -100,6 +116,22 @@ export function descreverParada(
       linhas: [
         `${pecas} peças (lajes, vigas e pilares)`,
         falhas === 0 ? "Nenhuma com falha" : `${falhas} com falha`,
+      ],
+    };
+  }
+  if (p.tipo === "grupo") {
+    const nomes = p.chaves.flatMap((k) => {
+      const e = modelo.elementos.find((x) => x.chave === k);
+      return e ? [`${NOME_TIPO[e.tipo]} ${e.nome}`] : [];
+    });
+    const mostrar = 12;
+    return {
+      titulo: `${modelo.niveis[p.nivel]?.nome ?? "Nível"}: ${p.chaves.length} peças ${
+        p.motivo === "falha" ? "com falha" : "afetadas por defeito do original"
+      }`,
+      linhas: [
+        nomes.slice(0, mostrar).join(", ") +
+          (nomes.length > mostrar ? ` e mais ${nomes.length - mostrar}` : ""),
       ],
     };
   }

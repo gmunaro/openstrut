@@ -66,6 +66,30 @@ describe("montarParadas", () => {
     ]);
   });
 
+  it("mais de 3 falhas num nível viram uma parada só, com as peças em ordem", () => {
+    const muitas = ["V1", "V2", "V3", "V4"].map((n) => peca("viga", n, 2));
+    const comMuitas = new Map(dados);
+    for (const v of muitas) comMuitas.set(v.chave, d("falha"));
+    const paradas = montarParadas({ niveis, elementos: [...elementos, ...muitas] }, comMuitas);
+    // nível 2: L9 + V1..V4 = 5 falhas (> 3): um grupo; o nível 0 (2 falhas) segue peça a peça
+    expect(paradas.filter((p) => p.tipo === "grupo")).toEqual([
+      {
+        tipo: "grupo",
+        nivel: 2,
+        motivo: "falha",
+        chaves: [...muitas.map((v) => v.chave), l9.chave],
+      },
+    ]);
+    expect(paradas.filter((p) => p.tipo === "peca" && p.motivo === "falha")).toHaveLength(2);
+    const texto = descreverParada(
+      paradas.find((p) => p.tipo === "grupo")!,
+      { niveis, elementos: [...elementos, ...muitas] },
+      comMuitas,
+    );
+    expect(texto.titulo).toBe("Cobertura: 5 peças com falha");
+    expect(texto.linhas).toEqual(["Viga V1, Viga V2, Viga V3, Viga V4, Laje L9"]);
+  });
+
   it("sem cálculo: só o todo e os níveis", () => {
     const sem = new Map(elementos.map((e) => [e.chave, d("sem")]));
     expect(montarParadas({ niveis, elementos }, sem)).toEqual([

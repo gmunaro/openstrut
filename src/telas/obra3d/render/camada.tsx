@@ -198,7 +198,16 @@ export const camada: Camada = {
     const s = { ctx, materiais, luz, tracador: null as Tracador | null };
     sessao = s;
     // a vista chama a fábrica uma vez por papel e descarta os materiais na troca
-    ctx.definirMateriais((papel) => (materiais[papel] = materialPBR(papel, estado.rugosidade)));
+    ctx.definirMateriais(
+      "render",
+      (papel) => (materiais[papel] = materialPBR(papel, estado.rugosidade)),
+    );
+    // celular (ponteiro grosso): densidade 1× enquanto o render está ligado; o PBR custa
+    // por pixel, e na medida corta o quadro em 2,1×
+    const densidade = ctx.renderer.getPixelRatio();
+    const grosso =
+      typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+    if (grosso) ctx.renderer.setPixelRatio(1);
     luz.atualizar(ehSolido);
     const geometria = () => {
       luz.atualizar(ehSolido);
@@ -217,7 +226,8 @@ export const camada: Camada = {
       s.tracador?.limpar();
       sessao = null;
       luz.limpar();
-      ctx.definirMateriais(null);
+      ctx.definirMateriais("render", null);
+      if (grosso) ctx.renderer.setPixelRatio(densidade);
       mudar({ tracado: "desligado", amostras: 0 });
       ctx.pedirRender();
     };

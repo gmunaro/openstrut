@@ -18,6 +18,7 @@ import type {
 } from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PosicaoGeometria } from "../../dominio/armaduraGeometria";
+import type { Foco } from "./partes";
 import type { Obra } from "../../dominio/obra";
 import type {
   DetalhamentoLajeObra,
@@ -152,6 +153,12 @@ export interface ContextoVista {
    *  WebXR com `renderer.setAnimationLoop`). O núcleo continua com LOD, rótulos e planos
    *  de corte; só não desenha. `null` devolve o desenho ao núcleo. */
   assumirDesenho(f: (() => void) | null): void;
+  /** Chamado logo depois de cada quadro que a vista desenha (ex.: ler o canvas, acumular
+   *  amostras); devolve o cancelamento. Não faz a vista desenhar mais quadros. */
+  depoisDoQuadro(f: () => void): () => void;
+  /** Leva a vista a uma parte (prédio, nível, elemento com vizinhos ou eixo), como a trilha
+   *  e o painel "Partes", e enquadra. A trilha e o painel acompanham. */
+  definirFoco(foco: Foco): Promise<"concluida" | "cancelada">;
   /** O modelo visível em glTF binário (.glb), como o botão "glTF (.glb)" da vista. */
   exportarGlb(): Promise<ArrayBuffer>;
   /** Legenda desta fonte (`id`) na legenda da vista; `null` remove. Avisa "legenda". */

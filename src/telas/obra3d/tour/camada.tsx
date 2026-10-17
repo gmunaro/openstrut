@@ -5,7 +5,7 @@
 // ou pelo joystick na tela, com a órbita travada. Com prefers-reduced-motion, a câmera
 // salta sem animar e o tour só avança pelos botões.
 import { useSyncExternalStore } from "react";
-import { Sphere, Vector3 } from "three";
+import { Box3, Sphere, Vector3 } from "three";
 import { Button } from "@/components/ui/button";
 import type { Camada, ContextoVista } from "../api";
 import { ALTURA_OLHOS, type Caminhante, type Comando, frenteDe, passo, pisos } from "./caminhada";
@@ -80,6 +80,15 @@ const RAIO_PECA = 4;
 function alvoDa(ctx: ContextoVista, p: Parada) {
   if (p.tipo === "todo") return ctx.esferaVisivel();
   if (p.tipo === "nivel") return ctx.caixaDoNivel(p.nivel);
+  if (p.tipo === "grupo") {
+    // as peças do grupo juntas
+    const caixa = new Box3();
+    for (const k of p.chaves) {
+      const c = ctx.caixaDe(k);
+      if (c) caixa.union(c);
+    }
+    return caixa.isEmpty() ? ctx.caixaDoNivel(p.nivel) : caixa;
+  }
   const esfera = ctx.caixaDe(p.chave)?.getBoundingSphere(new Sphere());
   if (esfera) esfera.radius = Math.max(esfera.radius * 2, RAIO_PECA);
   return esfera;
