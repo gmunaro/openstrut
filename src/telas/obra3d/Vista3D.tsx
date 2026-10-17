@@ -786,7 +786,7 @@ function Legenda({
             <span>{faixa ? num(faixa.min) : "—"}</span>
             <span>{faixa ? num(faixa.max) : "—"}</span>
           </span>
-          <span className="text-muted-foreground">Outros tipos em cinza.</span>
+          <span className="text-muted-foreground">Outros tipos transparentes.</span>
         </div>
       )}
       {original && (

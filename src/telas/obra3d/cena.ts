@@ -126,7 +126,8 @@ const movimentoReduzido = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Placa com texto para rótulos e marcas (tamanho constante na tela). */
-function placa(texto: string, fundo: string, cor: string, altura = 0.035): Sprite {
+/** Placa com texto de `alturaPx` px de altura na tela (ajustarPlacas refaz a escala). */
+function placa(texto: string, fundo: string, cor: string, alturaPx = 22): Sprite {
   const c = document.createElement("canvas");
   const g = c.getContext("2d");
   const px = 48;
@@ -146,7 +147,7 @@ function placa(texto: string, fundo: string, cor: string, altura = 0.035): Sprit
   }
   const tex = new CanvasTexture(c);
   const s = new Sprite(new SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
-  s.scale.set((altura * c.width) / c.height, altura, 1);
+  s.userData = { alturaPx, aspecto: c.width / c.height };
   s.renderOrder = 10;
   return s;
 }
@@ -256,6 +257,7 @@ export class Cena3D implements ContextoVista {
   desenhar() {
     this.sujo = false;
     this.lodArestas();
+    this.ajustarPlacas();
     this.renderer.clippingPlanes = [...this.planos.values()].flat();
     this.renderer.render(this.cena, this.camera);
   }
@@ -363,9 +365,13 @@ export class Cena3D implements ContextoVista {
     const mapa = new Map<string, Exibicao>();
     let solidos: Set<string> | null = null;
     let resto: Exibicao = "solido";
+    let lajesFantasma = false;
     if (foco.tipo === "elemento") {
       solidos = vizinhos(this.modelo, foco.chave);
       resto = "fantasma";
+      // as lajes vizinhas de uma viga ou de um pilar ficam transparentes: não escondem
+      // os pilares e vigas de baixo
+      lajesFantasma = this.porChave.get(foco.chave)?.tipo !== "laje";
     } else if (foco.tipo === "eixo") {
       const eixo = this.modelo.eixos.find((e) => e.chave === foco.chave);
       solidos = eixo ? elementosNoEixo(this.modelo, eixo) : new Set();
@@ -373,11 +379,15 @@ export class Cena3D implements ContextoVista {
     }
     for (const e of this.modelo.elementos) {
       let x: Exibicao = solidos ? (solidos.has(e.chave) ? "solido" : resto) : "solido";
+      if (lajesFantasma && e.tipo === "laje" && x === "solido") x = "fantasma";
       if (foco.tipo === "nivel") {
         const d = Math.abs(e.nivel - foco.nivel);
         x = d === 0 ? "solido" : d === 1 && vizinhosTransparentes ? "fantasma" : "oculto";
-        if (e.tipo === "fundacao" && foco.nivel !== 0) x = "oculto";
+        if ((e.tipo === "fundacao" || e.tipo === "escada") && d !== 0) x = "oculto";
       }
+      // no mapa de uma grandeza, os outros tipos ficam transparentes (contexto)
+      const modo = this.estado.modoCor;
+      if (x === "solido" && modo !== "estado" && GRANDEZAS[modo].tipo !== e.tipo) x = "fantasma";
       const filtrado = [...this.filtros.values()].some((f) => !f(e));
       if (tiposOcultos.has(e.tipo) || niveisOcultos.has(e.nivel) || filtrado) x = "oculto";
       mapa.set(e.chave, x);
@@ -490,7 +500,7 @@ export class Cena3D implements ContextoVista {
           `${nv.nome}  +${nv.cota.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
           "rgba(15,23,42,0.75)",
           "#f8fafc",
-          0.028,
+          20,
         );
         const c = this.modelo.caixa;
         rotulo.position.set(...paraCena(c.min.x - 0.6, c.min.y - 0.6, nv.cota));
@@ -535,14 +545,33 @@ export class Cena3D implements ContextoVista {
   /** Marca de defeito do original: placa "!" em cima do elemento (não só a cor). */
   private marcaDefeito(e: Elemento3D) {
     const m = this.malhaDe(e.chave);
-    const s = placa("!", "#b91c1c", "#ffffff", 0.04);
+    const s = placa("!", "#b91c1c", "#ffffff", 26);
     const [x, , z] = centroDe(m.posicoes);
     let topo = -Infinity;
     for (let k = 1; k < m.posicoes.length; k += 3) topo = Math.max(topo, m.posicoes[k]!);
     s.position.set(x, topo + 0.3, z);
     s.center.set(0.5, 0);
-    s.userData = { chave: e.chave, marca: true };
+    s.userData = { ...s.userData, chave: e.chave, marca: true };
     return s;
+  }
+
+  /** Escala das placas (sizeAttenuation false) para a altura em px pedida: na perspectiva
+   *  1 unidade = H / (2·tan(fov/2)) px; na ortográfica, H·zoom / (top − bottom) px. */
+  private ajustarPlacas() {
+    const h = Math.max(1, this.renderer.domElement.clientHeight);
+    // tela estreita (celular): placas menores, para os rótulos caberem ao lado do prédio
+    const fator = this.renderer.domElement.clientWidth < 520 ? 0.7 : 1;
+    const porPx =
+      this.camera instanceof PerspectiveCamera
+        ? (2 * Math.tan((this.camera.fov * Math.PI) / 360)) / h
+        : (this.orto.top - this.orto.bottom) / this.orto.zoom / h;
+    for (const n of this.niveis)
+      n.grupo.traverse((o) => {
+        if (!(o instanceof Sprite)) return;
+        const { alturaPx, aspecto } = o.userData as { alturaPx: number; aspecto: number };
+        const k = alturaPx * fator * porPx;
+        o.scale.set(k * aspecto, k, 1);
+      });
   }
 
   /** Esconde as arestas dos níveis longe da câmera (LOD simples). */
@@ -739,7 +768,9 @@ export class Cena3D implements ContextoVista {
     }
     const fov = (this.perspectiva.fov * Math.PI) / 180;
     const fovH = 2 * Math.atan(Math.tan(fov / 2) * this.perspectiva.aspect);
-    const dist = (esfera.radius * 1.08) / Math.sin(Math.min(fov, fovH) / 2);
+    // tela estreita (celular em pé): mais folga para os rótulos dos níveis
+    const folga = this.perspectiva.aspect < 1 ? 1.45 : 1.08;
+    const dist = (esfera.radius * folga) / Math.sin(Math.min(fov, fovH) / 2);
     const pos = esfera.center.clone().add(d.multiplyScalar(dist));
     this.perspectiva.near = Math.max(0.05, dist / 500);
     this.perspectiva.far = dist * 20;
