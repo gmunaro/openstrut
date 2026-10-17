@@ -1,7 +1,7 @@
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { abasDoArquivo, itensDasAbas, numeroCelula } from "./importar";
-import { crc32, deszipar, gerarCsv, gerarXlsx, lerCsv, lerXlsx } from "./planilha";
+import { abrirPlanilha, itensDaAba, metadadosSinapi, numeroCelula } from "./importar";
+import { crc32, deszipar, gerarCsv, gerarXlsx, lerCsv, lerXlsx, zipar } from "./planilha";
 
 const enc = new TextEncoder();
 
@@ -104,11 +104,64 @@ describe("XLSX", () => {
       null,
       "SP",
     ]);
-    const imp = itensDasAbas(abas, "SP");
+    const imp = itensDaAba(abas[0]!, "SP");
     expect(imp).toMatchObject({
       ok: true,
       uf: "SP",
       itens: [{ codigo: "34", descricao: "AÇO CA-50 & tal", unidade: "KG", preco: 7.5 }],
+    });
+  });
+
+  it("aba de composições da SINAPI: código no HYPERLINK, UF na linha de cima, metadados", async () => {
+    // como a CSD 09/2026: B11 = HYPERLINK(...; 92267) com cache 0; "Custo (R$)" sob cada UF
+    const z = zipDeflate([
+      {
+        nome: "xl/workbook.xml",
+        texto: `<workbook xmlns:r="x"><sheets><sheet name="CSD" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+      },
+      {
+        nome: "xl/_rels/workbook.xml.rels",
+        texto: `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`,
+      },
+      {
+        nome: "xl/worksheets/sheet1.xml",
+        texto: `<worksheet><sheetData><row r="3"><c r="A3" t="inlineStr"><is><t>Mês de Referência:</t></is></c><c r="B3" t="inlineStr"><is><t>09/2026</t></is></c></row><row r="9"><c r="E9" t="inlineStr"><is><t>AC</t></is></c><c r="G9" t="inlineStr"><is><t>SP</t></is></c></row><row r="10"><c r="B10" t="inlineStr"><is><t>Código da Composição</t></is></c><c r="C10" t="inlineStr"><is><t>Descrição</t></is></c><c r="D10" t="inlineStr"><is><t>Unidade</t></is></c><c r="E10" t="inlineStr"><is><t>Custo (R$)</t></is></c><c r="F10" t="inlineStr"><is><t>%AS</t></is></c><c r="G10" t="inlineStr"><is><t>Custo (R$)</t></is></c></row><row r="11"><c r="B11"><f>HYPERLINK("#"&amp;CELL("address",OFFSET(Analítico!$B$1,MATCH(92267,Analítico!$B:$B,0)-1,3)),92267)</f><v>0</v></c><c r="C11" t="inlineStr"><is><t>FABRICAÇÃO DE FÔRMA PARA LAJES</t></is></c><c r="D11" t="inlineStr"><is><t>M2</t></is></c><c r="E11"><v>50.1</v></c><c r="F11"><v>0</v></c><c r="G11"><v>44.25</v></c></row></sheetData></worksheet>`,
+      },
+    ]);
+    const p = await abrirPlanilha("SINAPI_Referência_2026_09.xlsx", z);
+    expect(p.nomes).toEqual(["CSD"]);
+    const aba = await p.ler("CSD");
+    expect(itensDaAba(aba, "SP")).toMatchObject({
+      ok: true,
+      uf: "SP",
+      ufs: ["AC", "SP"],
+      itens: [{ codigo: "92267", unidade: "M2", preco: 44.25 }],
+    });
+    // UF que a planilha não tem: a primeira (AC), avisada pela uf devolvida
+    expect(itensDaAba(aba, "PR")).toMatchObject({ uf: "AC", itens: [{ preco: 50.1 }] });
+    expect(metadadosSinapi(aba)).toEqual({ referencia: "2026-09", desonerado: false });
+    expect(metadadosSinapi({ ...aba, nome: "ICD" }).desonerado).toBe(true);
+  });
+
+  it("ZIP mensal da SINAPI: abre a planilha de referência de dentro dele", async () => {
+    const ref = gerarXlsx([
+      {
+        nome: "ISD",
+        linhas: [
+          ["Código", "Descrição", "Unidade", "SP"],
+          [34, "AÇO", "KG", 6.69],
+        ],
+      },
+    ]);
+    const outra = gerarXlsx([{ nome: "X", linhas: [] }]);
+    const z = zipar([
+      { nome: "SINAPI_familias_2026_09.xlsx", dados: outra },
+      { nome: "SINAPI_Referência_2026_09.xlsx", dados: ref },
+    ]);
+    const p = await abrirPlanilha("SINAPI-2026-09-formato-xlsx.zip", z);
+    expect(p.nomes).toEqual(["ISD"]);
+    expect(itensDaAba(await p.ler("ISD"))).toMatchObject({
+      itens: [{ codigo: "34", preco: 6.69 }],
     });
   });
 });
@@ -130,8 +183,8 @@ describe("CSV", () => {
   it("importa CSV com vírgula, cabeçalho abaixo de um título, e preço vazio", async () => {
     const texto =
       'Minha tabela,,,\ncodigo,descricao,unid,preco unitario\nC25,Concreto 25,m3,"1.234,56"\nX,Sem preço,kg,\n';
-    const abas = await abasDoArquivo("precos.csv", enc.encode(texto));
-    const imp = itensDasAbas(abas);
+    const p = await abrirPlanilha("precos.csv", enc.encode(texto));
+    const imp = itensDaAba(await p.ler(p.nomes[0]!));
     expect(imp).toMatchObject({
       ok: true,
       uf: "",
@@ -143,8 +196,8 @@ describe("CSV", () => {
   });
 
   it("recusa planilha sem cabeçalho e .xls", async () => {
-    expect(itensDasAbas([{ nome: "a", linhas: [["a", "b"]] }])).toMatchObject({ ok: false });
-    await expect(abasDoArquivo("a.xls", new Uint8Array())).rejects.toThrow(/xlsx/);
+    expect(itensDaAba({ nome: "a", linhas: [["a", "b"]] })).toMatchObject({ ok: false });
+    await expect(abrirPlanilha("a.xls", new Uint8Array())).rejects.toThrow(/xlsx/);
   });
 });
 

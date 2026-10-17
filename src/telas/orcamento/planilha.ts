@@ -191,7 +191,7 @@ const escXml = (s: string) =>
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    // caracteres de controle não valem em XML 1.0
+    // oxlint-disable-next-line no-control-regex -- caracteres de controle não valem em XML 1.0
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 
 const desescXml = (s: string) =>

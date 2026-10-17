@@ -2,7 +2,7 @@
 // unidade e preço) e a planilha de insumos da SINAPI (mesmas colunas, com o preço numa
 // coluna por UF). O cabeçalho é achado nas primeiras linhas pelos nomes das colunas.
 import type { ItemPreco, TabelaPrecos } from "../../dominio/orcamento";
-import { lerCsv, lerXlsx, type Aba, type Celula } from "./planilha";
+import { abrirXlsx, deszipar, lerCsv, type Aba, type Celula } from "./planilha";
 
 const UFS = [
   "AC",
@@ -129,21 +129,37 @@ export function itensDaAba(aba: Aba, uf = "SP"): Importacao {
   return { ok: true, itens, aba: aba.nome, ufs: col.ufs, uf: ufUsada, ignoradas };
 }
 
-/** A primeira aba que tem o cabeçalho (ou a aba de nome dado). */
-export function itensDasAbas(abas: readonly Aba[], uf = "SP", nomeAba?: string): Importacao {
-  let erro = "A planilha está vazia.";
-  for (const a of abas) {
-    if (nomeAba && a.nome !== nomeAba) continue;
-    const r = itensDaAba(a, uf);
-    if (r.ok) return r;
-    erro = r.erro;
+/** Mês de referência ("AAAA-MM") e desoneração da aba da SINAPI, pelo nome da aba
+ *  (ISD/CSD sem, ICD/CCD com desoneração) e pela linha "Mês de Referência: MM/AAAA". */
+export function metadadosSinapi(aba: Aba): { referencia: string; desonerado: boolean | null } {
+  let referencia = "";
+  for (const l of aba.linhas.slice(0, 10)) {
+    const i = l.findIndex((c) => normal(c).startsWith("mes de referencia"));
+    const m = i >= 0 ? /(\d{2})\/(\d{4})/.exec(String(l[i + 1] ?? l[i] ?? "")) : null;
+    if (m) referencia = `${m[2]}-${m[1]}`;
   }
-  return { ok: false, erro };
+  const n = aba.nome.toUpperCase();
+  const desonerado = /^(ISD|CSD)$/.test(n) ? false : /^(ICD|CCD)$/.test(n) ? true : null;
+  return { referencia, desonerado };
 }
 
-/** Lê o arquivo do usuário (CSV ou XLSX pela extensão) e devolve as abas. */
-export async function abasDoArquivo(nome: string, dados: Uint8Array): Promise<Aba[]> {
-  if (/\.xlsx$/i.test(nome)) return lerXlsx(dados);
+/** Planilha aberta: os nomes das abas e a leitura de uma (CSV: uma aba só). */
+export interface Planilha {
+  nomes: string[];
+  ler(nome: string): Promise<Aba>;
+}
+
+/** Abre o arquivo do usuário pela extensão: CSV, XLSX ou o ZIP mensal da SINAPI (lê a
+ *  planilha de referência de dentro dele). */
+export async function abrirPlanilha(nome: string, dados: Uint8Array): Promise<Planilha> {
+  if (/\.xlsx$/i.test(nome)) return abrirXlsx(dados);
+  if (/\.zip$/i.test(nome)) {
+    const xlsx = await deszipar(dados, (n) => /\.xlsx$/i.test(n));
+    const nomes = [...xlsx.keys()];
+    const ref = nomes.find((n) => /refer/i.test(n)) ?? nomes[0];
+    if (!ref) throw new Error("O ZIP não tem planilha .xlsx.");
+    return abrirXlsx(xlsx.get(ref)!);
+  }
   if (/\.(csv|txt)$/i.test(nome)) {
     // UTF-8; se não decodifica, latin1 (CSV salvo pelo Excel em Windows)
     let texto: string;
@@ -152,10 +168,11 @@ export async function abasDoArquivo(nome: string, dados: Uint8Array): Promise<Ab
     } catch {
       texto = new TextDecoder("latin1").decode(dados);
     }
-    return [{ nome, linhas: lerCsv(texto) }];
+    const aba = { nome, linhas: lerCsv(texto) };
+    return { nomes: [nome], ler: async () => aba };
   }
   throw new Error(
-    "Formato não suportado: use .csv ou .xlsx (o .xls antigo não é lido; salve como .xlsx).",
+    "Formato não suportado: use .csv, .xlsx ou o .zip da SINAPI (o .xls antigo não é lido; salve como .xlsx).",
   );
 }
 
@@ -166,10 +183,19 @@ export const tabelaImportada = (
   extra: Partial<Pick<TabelaPrecos, "referencia" | "desonerado">> = {},
 ): TabelaPrecos => ({
   id: crypto.randomUUID(),
-  nome: nomeArquivo.replace(/\.[^.]+$/, ""),
+  nome: `${nomeArquivo.replace(/\.[^.]+$/, "")} · ${imp.aba}${imp.uf ? ` · ${imp.uf}` : ""}`,
   fonte: `Importada de ${nomeArquivo} (aba ${imp.aba}${imp.uf ? `, preços de ${imp.uf}` : ""})`,
   referencia: extra.referencia ?? "",
   uf: imp.uf,
   desonerado: extra.desonerado ?? null,
   itens: imp.itens,
 });
+
+/** Junta itens numa tabela: o código que já existe recebe a descrição, a unidade e o
+ *  preço novos; os outros entram no fim. */
+export function juntarItens(tabela: TabelaPrecos, itens: readonly ItemPreco[]): TabelaPrecos {
+  const novos = new Map(itens.map((i) => [i.codigo, i]));
+  const atualizados = tabela.itens.map((i) => novos.get(i.codigo) ?? i);
+  const existentes = new Set(tabela.itens.map((i) => i.codigo));
+  return { ...tabela, itens: [...atualizados, ...itens.filter((i) => !existentes.has(i.codigo))] };
+}
