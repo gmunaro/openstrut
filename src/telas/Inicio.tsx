@@ -3,7 +3,15 @@
 // de rascunhos recentes do navegador, a seção de instalar o app e o aviso de origem.
 import { useNavigate } from "@tanstack/react-router";
 import { Building2, Download, FilePlus2, FolderOpen, Import, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Badge } from "@/components/ui/badge";
 import { DicaUso } from "@/components/ui/dica-uso";
 import { Button } from "@/components/ui/button";
@@ -22,13 +30,10 @@ import {
   novoIdRascunho,
   type ResumoRascunho,
 } from "../armazenamento/rascunho";
-import { importarV1 } from "../armazenamento/importarV1";
-import { normaPorId } from "../calculo/normas";
 import { obraNova } from "../dominio/criar";
 import { obraExemplo } from "../dominio/exemplo";
 import type { NormaId, Obra } from "../dominio/obra";
 import { abrirNaSessao, useAbrirObra } from "./acoes";
-import { NOME_NORMA } from "./calculo";
 import { Erros } from "./Erros";
 import { formatarData } from "./formato";
 import {
@@ -39,13 +44,21 @@ import {
   useInstalacao,
 } from "./instalar";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "./marca";
-import { ImportarSistrut } from "./ImportarSistrut";
 import { useConfirmacao } from "./useConfirmacao";
 
-const NORMAS: { id: NormaId; rotulo: string }[] = [
-  { id: "nb1-78", rotulo: "NB-1/78 (NBR 6118:1978)" },
-  { id: "nbr6118-2023", rotulo: "NBR 6118:2023" },
+// A tela inicial não importa o motor de cálculo nem os importadores (telas/calculo.ts,
+// armazenamento/importarV1.ts, ImportarSistrut.tsx): eles carregam depois, sob demanda,
+// e a primeira tela abre sem esperar por eles.
+const ImportarSistrut = lazy(() =>
+  import("./ImportarSistrut").then((m) => ({ default: m.ImportarSistrut })),
+);
+
+/** Normas da obra nova: rótulo do seletor e nome curto (o mesmo de NOME_NORMA em calculo.ts). */
+const NORMAS: { id: NormaId; rotulo: string; curto: string }[] = [
+  { id: "nb1-78", rotulo: "NB-1/78 (NBR 6118:1978)", curto: "NB-1/78" },
+  { id: "nbr6118-2023", rotulo: "NBR 6118:2023", curto: "NBR 6118:2023" },
 ];
+const nomeCurto = (n: NormaId) => NORMAS.find((x) => x.id === n)?.curto ?? n;
 
 const ehNorma = (x: string): x is NormaId => NORMAS.some((n) => n.id === x);
 
@@ -107,6 +120,7 @@ export function Inicio() {
       const lidos = await Promise.all(
         arquivos.map(async (f) => ({ nome: f.name, texto: await f.text() })),
       );
+      const { importarV1 } = await import("../armazenamento/importarV1");
       const r = importarV1(lidos);
       if (!r.ok) setErrosImportacao(["Não foi possível importar a obra da V1:", ...r.erros]);
       else if (r.avisos.length === 0) abrirImportada(r.obra);
@@ -207,12 +221,6 @@ export function Inicio() {
                   ))}
                 </SelectContent>
               </Select>
-              {!normaPorId(norma) && (
-                <p className="text-aviso text-xs">
-                  O cálculo pela {NOME_NORMA[norma]} ainda não está disponível; a obra pode ser
-                  desenhada e salva.
-                </p>
-              )}
             </div>
             <Button type="submit" disabled={nome.trim() === ""}>
               <FilePlus2 /> Criar obra
@@ -268,7 +276,9 @@ export function Inicio() {
             className="hidden"
             onChange={(e) => void importar(e)}
           />
-          <ImportarSistrut aoAbrir={abrirImportada} />
+          <Suspense fallback={<div className="h-40" aria-hidden />}>
+            <ImportarSistrut aoAbrir={abrirImportada} />
+          </Suspense>
 
           <h3 className="text-muted-foreground mt-6 mb-2 text-xs font-semibold uppercase tracking-wide">
             Rascunhos recentes (neste navegador)
@@ -294,7 +304,7 @@ export function Inicio() {
                       {formatarData(r.atualizadoEm)}
                     </span>
                   </button>
-                  <Badge variant="secondary">{NOME_NORMA[r.norma] ?? r.norma}</Badge>
+                  <Badge variant="secondary">{nomeCurto(r.norma)}</Badge>
                   <Button
                     variant="ghost"
                     size="icon-sm"

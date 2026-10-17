@@ -54,11 +54,11 @@ describe("descreverFalha", () => {
 });
 
 describe("baixarFormasDxf", () => {
-  it("falha ao gerar o DXF vira frase em pt-BR, sem lançar", () => {
+  it("falha ao gerar o DXF vira frase em pt-BR, sem lançar", async () => {
     vi.mocked(dxfFormasObra).mockImplementationOnce(() => {
       throw new Error("A obra não tem lajes para desenhar.");
     });
-    expect(baixarFormasDxf(obraNova("TESTE", "nb1-78"))).toEqual({
+    await expect(baixarFormasDxf(obraNova("TESTE", "nb1-78"))).resolves.toEqual({
       erros: ["Não foi possível exportar o DXF de formas: ocorreu um erro inesperado."],
       detalhe: "A obra não tem lajes para desenhar.",
     });

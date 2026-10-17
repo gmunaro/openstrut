@@ -1,7 +1,9 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { BotaoRelatar } from "../components/relato/BotaoRelatar";
 import { instalarColetorErros } from "../components/relato/coletorErros";
-import { AVISO_CONFERENCIA } from "../telas/calculo";
+// de marca.ts, não de telas/calculo.ts: este arquivo está no carregamento inicial e o
+// outro traz o motor de cálculo junto
+import { AVISO_CONFERENCIA } from "../telas/marca";
 
 // os erros da página vão para o diagnóstico do relato de problema; liga antes de montar
 instalarColetorErros();

@@ -8,22 +8,27 @@
 // fora dele (o botão interrompe a propagação, e o diálogo continua aberto no print).
 // Se o canto inferior direito tiver um controle (a barra Aplicar/Cancelar de um diálogo em
 // tela cheia no celular), o botão sobe pela borda direita até um lugar livre.
+// O diálogo, a captura de tela, o diagnóstico e a fila de envio só carregam no uso
+// (import dinâmico): o botão está em todas as telas e não pesa na abertura do app.
 import { Bug, LoaderCircle } from "lucide-react";
 import {
+  lazy,
   type RefObject,
   type SyntheticEvent,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { useObra } from "../../estado/obra";
-import { enviarFilaAgora } from "./acoes";
-import { capturarTela } from "./captura";
-import { coletarDiagnostico } from "./diagnostico";
-import { type Captura, DialogoRelato } from "./DialogoRelato";
+import type { Captura } from "./DialogoRelato";
 import { cobreControle, deslocamentoLivre } from "./posicao";
 import { caminhoRelato } from "./relay";
+
+const DialogoRelato = lazy(() =>
+  import("./DialogoRelato").then((m) => ({ default: m.DialogoRelato })),
+);
 
 export const ATALHO = "Alt+Shift+R";
 
@@ -118,8 +123,13 @@ export function BotaoRelatar() {
     setCapturando(true);
     // obra e diagnóstico do mesmo instante do print
     const obra = useObra.getState().obra;
-    const diagnostico = coletarDiagnostico(obra, location.pathname);
+    const caminho = location.pathname;
     const agora = new Date();
+    const [{ coletarDiagnostico }, { capturarTela }] = await Promise.all([
+      import("./diagnostico"),
+      import("./captura"),
+    ]);
+    const diagnostico = coletarDiagnostico(obra, caminho);
     const print = await capturarTela();
     setCapturando(false);
     setCaptura({ print, diagnostico, obra, agora });
@@ -144,7 +154,8 @@ export function BotaoRelatar() {
   useEffect(() => {
     const c = caminhoRelato();
     if (c.tipo !== "relay") return;
-    const tentar = () => void enviarFilaAgora(c.url).catch(() => {});
+    const tentar = () =>
+      void import("./acoes").then((m) => m.enviarFilaAgora(c.url)).catch(() => {});
     tentar();
     window.addEventListener("online", tentar);
     return () => window.removeEventListener("online", tentar);
@@ -180,7 +191,11 @@ export function BotaoRelatar() {
           <span className="sr-only">{capturando ? "Capturando a tela…" : ""}</span>
         </div>
       )}
-      {captura && <DialogoRelato captura={captura} aoFechar={fechar} />}
+      {captura && (
+        <Suspense fallback={null}>
+          <DialogoRelato captura={captura} aoFechar={fechar} />
+        </Suspense>
+      )}
     </>
   );
 }

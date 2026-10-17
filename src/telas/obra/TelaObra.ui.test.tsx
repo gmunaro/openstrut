@@ -106,7 +106,8 @@ describe("tela da obra: arquivo", () => {
       baixados.push(this.download);
     });
     await user.click(screen.getByRole("button", { name: /Exportar DXF \(formas\)/ }));
-    expect(baixados).toEqual(["Casa - formas.dxf"]);
+    // o gerador de DXF carrega sob demanda (import dinâmico): o download vem depois
+    await waitFor(() => expect(baixados).toEqual(["Casa - formas.dxf"]));
     const blob = criarUrl.mock.calls[0]?.[0];
     const texto = blob instanceof Blob ? await blob.text() : "";
     expect(texto.startsWith("  0\r\nSECTION\r\n  2\r\nHEADER\r\n")).toBe(true);
@@ -127,7 +128,7 @@ describe("tela da obra: arquivo", () => {
       baixados.push(this.download);
     });
     await user.click(screen.getByRole("button", { name: /Exportar DXF \(armação\)/ }));
-    expect(baixados).toEqual(["Casa - armação.dxf"]);
+    await waitFor(() => expect(baixados).toEqual(["Casa - armação.dxf"]));
     const blob = criarUrl.mock.calls[0]?.[0];
     const texto = blob instanceof Blob ? await blob.text() : "";
     expect(texto.startsWith("  0\r\nSECTION\r\n  2\r\nHEADER\r\n")).toBe(true);

@@ -7,8 +7,6 @@ import { EXTENSAO, lerObra, serializarObra } from "../armazenamento/arquivo";
 import { abrirRascunho, novoIdRascunho } from "../armazenamento/rascunho";
 import type { Obra } from "../dominio/obra";
 import { useObra } from "../estado/obra";
-import { dxfArmacaoVigas } from "../exportacao/armacaoVigas";
-import { dxfFormasObra } from "../exportacao/plantaFormas";
 import { escolherArquivo, gravarArquivo, nomeArquivoSugerido } from "./arquivoLocal";
 import type { DetalhamentoVigasObra } from "./detalhamento";
 import { useSessao } from "./sessao";
@@ -145,11 +143,15 @@ export type FalhaDxf = { erros: string[]; detalhe: string | null } | null;
 /**
  * Gera o DXF e baixa pela pasta de downloads ("<obra> - <sufixo>.dxf"), como o salvar
  * faz sem a File System Access API. Se gerar ou baixar falhar, devolve a falha em vez
- * de lançar, para a tela mostrar.
+ * de lançar, para a tela mostrar. Os geradores de DXF carregam só na exportação.
  */
-function baixarDxf(obra: Obra, sufixo: string, gerar: () => string): FalhaDxf {
+async function baixarDxf(
+  obra: Obra,
+  sufixo: string,
+  gerar: () => Promise<string>,
+): Promise<FalhaDxf> {
   try {
-    const conteudo = gerar();
+    const conteudo = await gerar();
     const nome = `${nomeArquivoSugerido(obra.nome).slice(0, -EXTENSAO.length)} - ${sufixo}.dxf`;
     const url = URL.createObjectURL(new Blob([conteudo], { type: "application/dxf" }));
     const a = document.createElement("a");
@@ -164,9 +166,13 @@ function baixarDxf(obra: Obra, sufixo: string, gerar: () => string): FalhaDxf {
 }
 
 /** Baixa a planta de formas da obra inteira ("<obra> - formas.dxf"). */
-export const baixarFormasDxf = (obra: Obra): FalhaDxf =>
-  baixarDxf(obra, "formas", () => dxfFormasObra(obra));
+export const baixarFormasDxf = (obra: Obra) =>
+  baixarDxf(obra, "formas", async () =>
+    (await import("../exportacao/plantaFormas")).dxfFormasObra(obra),
+  );
 
 /** Baixa a armação das vigas detalhadas ("<obra> - armação.dxf"). */
-export const baixarArmacaoDxf = (obra: Obra, detalhamento: DetalhamentoVigasObra): FalhaDxf =>
-  baixarDxf(obra, "armação", () => dxfArmacaoVigas(obra, detalhamento));
+export const baixarArmacaoDxf = (obra: Obra, detalhamento: DetalhamentoVigasObra) =>
+  baixarDxf(obra, "armação", async () =>
+    (await import("../exportacao/armacaoVigas")).dxfArmacaoVigas(obra, detalhamento),
+  );
