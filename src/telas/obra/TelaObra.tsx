@@ -5,6 +5,7 @@
 // Salva o rascunho no navegador a cada edição (com debounce).
 import { Link } from "@tanstack/react-router";
 import {
+  ChevronDown,
   EllipsisVertical,
   FileDown,
   FolderOpen,
@@ -15,7 +16,7 @@ import {
   SlidersHorizontal,
   Undo2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { VERSAO_ATUAL } from "../../armazenamento/arquivo";
@@ -380,8 +387,9 @@ function ObraAberta({ obra }: { obra: Obra }) {
               <Home />
             </Link>
           </Button>
-          <div className="mr-2 min-w-0">
-            <h1 className="truncate text-base leading-tight font-semibold">
+          {/* basis-0: o título encolhe (truncado) em vez de mandar os botões para outra linha */}
+          <div className="mr-2 min-w-24 flex-1 basis-0">
+            <h1 className="truncate text-base leading-tight font-semibold" title={obra.nome}>
               {obra.nome || "(sem nome)"}
             </h1>
             <p className="text-muted-foreground truncate text-[11px]">
@@ -438,50 +446,39 @@ function ObraAberta({ obra }: { obra: Obra }) {
             <Button variant="ghost" size="sm" onClick={() => void salvar(true)}>
               Salvar como…
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="aria-disabled:opacity-50"
-              aria-disabled={motivoFormas !== undefined}
-              aria-describedby={motivoFormas ? "motivo-dxf-formas" : undefined}
-              title={motivoFormas}
-              onClick={() => void exportar(motivoFormas, () => baixarFormasDxf(obra))}
-            >
-              <FileDown /> Exportar DXF (formas)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="aria-disabled:opacity-50"
-              aria-disabled={motivoArmacao !== undefined}
-              aria-describedby={motivoArmacao ? "motivo-dxf-armacao" : undefined}
-              title={motivoArmacao}
-              onClick={() =>
-                void exportar(motivoArmacao, () =>
-                  detalhamento ? baixarArmacaoDxf(obra, detalhamento) : null,
-                )
-              }
-            >
-              <FileDown /> Exportar DXF (armação)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void exportar(undefined, () => baixarIfc(obra, calculo, detalhamento))}
-            >
-              <FileDown /> Exportar IFC
-            </Button>
+            {/* não modal: o anúncio de exportação bloqueada (role=status) fica fora do menu e
+                o menu modal o esconderia (aria-hidden) dos leitores de tela */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileDown /> Exportar <ChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-w-72">
+                <ItemExportar
+                  rotulo="DXF de formas"
+                  motivo={motivoFormas}
+                  aoEscolher={() => void exportar(motivoFormas, () => baixarFormasDxf(obra))}
+                />
+                <ItemExportar
+                  rotulo="DXF de armação"
+                  motivo={motivoArmacao}
+                  aoEscolher={() =>
+                    void exportar(motivoArmacao, () =>
+                      detalhamento ? baixarArmacaoDxf(obra, detalhamento) : null,
+                    )
+                  }
+                />
+                <ItemExportar
+                  rotulo="IFC"
+                  motivo={undefined}
+                  aoEscolher={() =>
+                    void exportar(undefined, () => baixarIfc(obra, calculo, detalhamento))
+                  }
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          {(motivoFormas || motivoArmacao) && (
-            // por que a exportação está indisponível, à vista e ligado ao botão (aria-describedby)
-            <p className="text-muted-foreground basis-full text-right text-[11px]">
-              {motivoFormas && <span id="motivo-dxf-formas">DXF de formas: {motivoFormas}</span>}
-              {motivoFormas && motivoArmacao && " · "}
-              {motivoArmacao && (
-                <span id="motivo-dxf-armacao">DXF de armação: {motivoArmacao}</span>
-              )}
-            </p>
-          )}
         </header>
       )}
 
@@ -508,7 +505,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
             />
           )}
           {bloqueio && (
-            // o motivo já está à vista sob os botões; aqui só o anúncio do clique bloqueado
+            // o motivo já está à vista no item do menu (ou na folha do celular); aqui só o
+            // anúncio do clique bloqueado
             <p role="status" className="sr-only">
               {bloqueio}
             </p>
@@ -566,6 +564,43 @@ function ObraAberta({ obra }: { obra: Obra }) {
       />
       {dialogoConfirmacao}
     </Tabs>
+  );
+}
+
+/** Item do menu "Exportar" do cabeçalho de desktop. Indisponível, continua focável pelas
+ *  setas (aria-disabled, não disabled), mostra o motivo embaixo como descrição acessível e,
+ *  escolhido, deixa o menu aberto e só anuncia o bloqueio. */
+function ItemExportar({
+  rotulo,
+  motivo,
+  aoEscolher,
+}: {
+  rotulo: string;
+  motivo: string | undefined;
+  aoEscolher: () => void;
+}) {
+  const idMotivo = useId();
+  return (
+    <DropdownMenuItem
+      className="flex-wrap"
+      aria-label={rotulo}
+      aria-disabled={motivo !== undefined || undefined}
+      aria-describedby={motivo ? idMotivo : undefined}
+      onSelect={(e) => {
+        if (motivo) e.preventDefault();
+        aoEscolher();
+      }}
+    >
+      {/* só o rótulo esmaece: o motivo fica com o contraste normal do texto secundário */}
+      <span className={cn("flex items-center gap-2", motivo && "opacity-60")}>
+        <FileDown /> {rotulo}
+      </span>
+      {motivo && (
+        <span id={idMotivo} className="text-muted-foreground basis-full pl-6 text-xs">
+          {motivo}
+        </span>
+      )}
+    </DropdownMenuItem>
   );
 }
 

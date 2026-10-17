@@ -3,7 +3,7 @@
 // As funções de DXF são simuladas para devolver a falha (ou null, sucesso).
 import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
+import { abrirObra, itemExportar, obraDuasLajes, renderizarApp } from "../../test-setup";
 
 type Falha = { erros: string[]; detalhe?: string } | null;
 const estado = vi.hoisted(() => ({ falha: null as Falha }));
@@ -35,7 +35,7 @@ describe("tela da obra: falha ao exportar DXF", () => {
       detalhe: "RangeError: contorno com 2 pontos",
     };
     const { user } = await abrirTela();
-    await user.click(screen.getByRole("button", { name: "Exportar DXF (formas)" }));
+    await user.click(await itemExportar(user, "DXF de formas"));
 
     const alerta = screen.getByRole("alert");
     expect(alerta.textContent).toContain("Não foi possível gerar o DXF de formas:");
@@ -50,7 +50,7 @@ describe("tela da obra: falha ao exportar DXF", () => {
   it("armação com erro sem detalhe: a lista aparece e não há <details>", async () => {
     estado.falha = { erros: ["Não foi possível gerar o DXF de armação:", "Viga V1 sem aço."] };
     const { user } = await abrirTela();
-    await user.click(screen.getByRole("button", { name: "Exportar DXF (armação)" }));
+    await user.click(await itemExportar(user, "DXF de armação"));
 
     expect(screen.getByRole("alert").textContent).toContain("Viga V1 sem aço.");
     expect(document.querySelector("details")).toBeNull();
@@ -59,7 +59,7 @@ describe("tela da obra: falha ao exportar DXF", () => {
   it("exportação bem-sucedida (null) não mostra alerta", async () => {
     estado.falha = null;
     const { user } = await abrirTela();
-    await user.click(screen.getByRole("button", { name: "Exportar DXF (formas)" }));
+    await user.click(await itemExportar(user, "DXF de formas"));
 
     expect(screen.queryByRole("alert")).toBeNull();
     expect(document.querySelector("details")).toBeNull();
@@ -71,7 +71,7 @@ describe("tela da obra: falha ao exportar DXF", () => {
       detalhe: "RangeError: contorno com 2 pontos",
     };
     const { user } = await abrirTela();
-    await user.click(screen.getByRole("button", { name: "Exportar DXF (formas)" }));
+    await user.click(await itemExportar(user, "DXF de formas"));
     await user.click(screen.getByRole("button", { name: "Fechar" }));
 
     expect(screen.queryByRole("alert")).toBeNull();

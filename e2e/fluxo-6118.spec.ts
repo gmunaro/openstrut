@@ -3,6 +3,7 @@
 // para conferência à mão (ver relatório da rodada).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { itemExportar } from "./cabecalho";
 
 const PRINTS = "e2e/prints/6118";
 
@@ -145,16 +146,21 @@ test("fluxo NBR 6118:2023 de ponta a ponta", async ({ page }) => {
   expect.soft(textoRelatorio).not.toMatch(/NaN|undefined|Infinity/);
 
   // 4. Exportações ----------------------------------------------------------------
-  const dxfFormas = page.getByRole("button", { name: "Exportar DXF (formas)", exact: true });
-  const dxfArmacao = page.getByRole("button", { name: "Exportar DXF (armação)", exact: true });
-  await expect(dxfArmacao).toBeEnabled();
+  // o print mostra o menu Exportar aberto
+  await expect(await itemExportar(page, "DXF de armação")).toBeEnabled();
   await foto("exportacoes-botoes");
 
-  const [dlFormas] = await Promise.all([page.waitForEvent("download"), dxfFormas.click()]);
+  const [dlFormas] = await Promise.all([
+    page.waitForEvent("download"),
+    itemExportar(page, "DXF de formas").then((item) => item.click()),
+  ]);
   await dlFormas.saveAs(`${PRINTS}/${dlFormas.suggestedFilename()}`);
   expect(dlFormas.suggestedFilename()).toMatch(/formas\.dxf$/);
 
-  const [dlArmacao] = await Promise.all([page.waitForEvent("download"), dxfArmacao.click()]);
+  const [dlArmacao] = await Promise.all([
+    page.waitForEvent("download"),
+    itemExportar(page, "DXF de armação").then((item) => item.click()),
+  ]);
   await dlArmacao.saveAs(`${PRINTS}/${dlArmacao.suggestedFilename()}`);
   expect(dlArmacao.suggestedFilename()).toMatch(/armação\.dxf$/);
 

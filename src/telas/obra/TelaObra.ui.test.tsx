@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { lerObra, serializarObra } from "../../armazenamento/arquivo";
 import { obraNova } from "../../dominio/criar";
 import { useObra } from "../../estado/obra";
-import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
+import { abrirObra, itemExportar, obraDuasLajes, renderizarApp } from "../../test-setup";
 
 /** Arquivo em disco simulado: guarda o que for gravado. */
 function arquivoFalso(name: string, conteudo = "") {
@@ -105,7 +105,7 @@ describe("tela da obra: arquivo", () => {
     ) {
       baixados.push(this.download);
     });
-    await user.click(screen.getByRole("button", { name: /Exportar DXF \(formas\)/ }));
+    await user.click(await itemExportar(user, "DXF de formas"));
     // o gerador de DXF carrega sob demanda (import dinâmico): o download vem depois
     await waitFor(() => expect(baixados).toEqual(["Casa - formas.dxf"]));
     const blob = criarUrl.mock.calls[0]?.[0];
@@ -127,7 +127,7 @@ describe("tela da obra: arquivo", () => {
     ) {
       baixados.push(this.download);
     });
-    await user.click(screen.getByRole("button", { name: /Exportar DXF \(armação\)/ }));
+    await user.click(await itemExportar(user, "DXF de armação"));
     await waitFor(() => expect(baixados).toEqual(["Casa - armação.dxf"]));
     const blob = criarUrl.mock.calls[0]?.[0];
     const texto = blob instanceof Blob ? await blob.text() : "";
@@ -314,30 +314,33 @@ describe("tela da obra: abrir com alterações não salvas", () => {
 });
 
 describe("tela da obra: exportar DXF sem o que exportar", () => {
-  it.each([
-    ["formas", /Exportar DXF \(formas\)/],
-    ["armação", /Exportar DXF \(armação\)/],
-  ])(
-    "DXF de %s com obra vazia fica com aria-disabled, sem baixar, e mostra o motivo",
-    async (_nome, botao) => {
+  it.each(["DXF de formas", "DXF de armação"] as const)(
+    "%s com obra vazia: item com aria-disabled e o motivo, focável pelas setas, sem baixar",
+    async (item) => {
       abrirObra(obraNova("Casa", "nb1-78"));
       const { user } = renderizarApp("/obra");
       await screen.findByRole("heading", { level: 1, name: "Casa" });
       const clique = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
-      const dxf = screen.getByRole("button", { name: botao });
+      const dxf = await itemExportar(user, item);
       expect(dxf.getAttribute("aria-disabled")).toBe("true");
-      expect(dxf.hasAttribute("disabled")).toBe(false);
-      // o motivo está à vista antes do clique e é a descrição acessível do botão
+      expect(dxf.hasAttribute("data-disabled")).toBe(false);
+      // o motivo está à vista no item e é a descrição acessível dele
       const descricao = document.getElementById(dxf.getAttribute("aria-describedby") ?? "");
-      expect(descricao?.textContent).toMatch(/(Não há|Calcule a obra primeiro)/);
-      dxf.focus();
+      expect(descricao?.textContent).toMatch(/^(Não há|Calcule a obra primeiro)/);
+      expect(dxf.contains(descricao)).toBe(true);
+      // as setas passam pelo item bloqueado (o Radix pula os itens `disabled`)
+      const itens = screen.getAllByRole("menuitem");
+      for (let i = 0; i < itens.length && document.activeElement !== dxf; i++)
+        await user.keyboard("{ArrowDown}");
       expect(document.activeElement).toBe(dxf);
 
-      await user.click(dxf);
+      await user.keyboard("{Enter}");
       expect(clique).not.toHaveBeenCalled();
-      const motivo = screen.getByText(/^(Não há|Calcule a obra primeiro)/);
-      expect(motivo.getAttribute("role")).toBe("status");
+      // o menu fica aberto com o motivo e o bloqueio é anunciado
+      expect(screen.getByRole("menu")).toBeTruthy();
+      const anuncio = screen.getByRole("status");
+      expect(anuncio.textContent).toMatch(/^(Não há|Calcule a obra primeiro)/);
       clique.mockRestore();
     },
   );

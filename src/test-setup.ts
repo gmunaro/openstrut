@@ -4,7 +4,7 @@
 // auxiliares que os testes usam para montar o app e obras de exemplo.
 import "fake-indexeddb/auto";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { cleanup, configure, render } from "@testing-library/react";
+import { cleanup, configure, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterEach, vi } from "vitest";
@@ -100,3 +100,12 @@ export function obraDuasLajes(norma: NormaId, nome = "Obra teste"): Obra {
 
 /** Abre a obra como a tela inicial faz (estado + sessão com rascunho novo). */
 export const abrirObra = (obra: Obra) => abrirNaSessao(obra, novoIdRascunho());
+
+/** Abre o menu "Exportar" do cabeçalho da obra (desktop) e devolve o item `nome`. */
+export async function itemExportar(
+  user: ReturnType<typeof userEvent.setup>,
+  nome: "DXF de formas" | "DXF de armação" | "IFC",
+) {
+  await user.click(screen.getByRole("button", { name: "Exportar" }));
+  return screen.findByRole("menuitem", { name: nome });
+}

@@ -1,10 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { itemExportar } from "./cabecalho";
 
 // Exportação IFC pela tela: importa a obra E2E do SISTRUT (fixtures reais em
-// src/telas/__fixtures__/sistrut), clica em "Exportar IFC" e confere o arquivo baixado
-// (IFC4, pilares, vigas, lajes e barras da obra calculada). Confere também que o código
+// src/telas/__fixtures__/sistrut), escolhe IFC no menu "Exportar" e confere o arquivo
+// baixado (IFC4, pilares, vigas, lajes e barras da obra calculada). Confere também que o código
 // da exportação só é baixado no clique (chunk sob demanda) e o botão no menu do celular.
 // Qualquer erro no console da página reprova o teste.
 
@@ -60,7 +61,9 @@ async function conferirIfc(baixado: import("@playwright/test").Download) {
   expect(contar("IFCREINFORCINGBAR")).toBeGreaterThan(0);
 }
 
-test("Exportar IFC baixa o IFC4 da obra, com o código carregado só no clique", async ({ page }) => {
+test("Exportar ▸ IFC baixa o IFC4 da obra, com o código carregado só no clique", async ({
+  page,
+}) => {
   const erros = vigiarErros(page);
   const scripts: string[] = [];
   page.on("request", (r) => {
@@ -73,7 +76,7 @@ test("Exportar IFC baixa o IFC4 da obra, com o código carregado só no clique",
 
   const [baixado] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Exportar IFC" }).click(),
+    itemExportar(page, "IFC").then((item) => item.click()),
   ]);
   await conferirIfc(baixado);
   expect(scripts.filter(chunkIfc)).toHaveLength(1);

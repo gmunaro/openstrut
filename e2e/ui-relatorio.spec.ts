@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { itemExportar } from "./cabecalho";
 import { arrastar, clicar } from "./planta";
 
 // Áreas RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO, numa obra NB-1/78 de referência
@@ -126,10 +127,9 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
   await page.getByRole("button", { name: "Criar obra", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: NOME_OBRA })).toBeVisible();
   // Obra vazia: sem vigas, não há armação para exportar.
-  await expect(
-    page.getByRole("button", { name: "Exportar DXF (armação)", exact: true }),
-  ).toBeDisabled();
+  await expect(await itemExportar(page, "DXF de armação")).toBeDisabled();
   await foto(page, "obra-vazia-armacao-desabilitada");
+  await page.keyboard.press("Escape");
 
   // 2. Planta: 4 lajes 4×5 m em grade 2×2, 9 pilares ---------------------------
   const svg = page.getByRole("application", { name: "Planta do pavimento" });
@@ -218,11 +218,12 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
 
   // 6. Exportação DXF: nomes e conteúdo -----------------------------------------
   await page.getByRole("tab", { name: "Planta", exact: true }).click();
-  const botaoFormas = page.getByRole("button", { name: "Exportar DXF (formas)", exact: true });
-  const botaoArmacao = page.getByRole("button", { name: "Exportar DXF (armação)", exact: true });
-  await expect(botaoArmacao).toBeEnabled();
+  await expect(await itemExportar(page, "DXF de armação")).toBeEnabled();
 
-  const [formas] = await Promise.all([page.waitForEvent("download"), botaoFormas.click()]);
+  const [formas] = await Promise.all([
+    page.waitForEvent("download"),
+    itemExportar(page, "DXF de formas").then((item) => item.click()),
+  ]);
   expect(formas.suggestedFilename()).toBe(`${NOME_OBRA} - formas.dxf`);
   const caminhoFormas = path.join(PASTA, formas.suggestedFilename());
   await formas.saveAs(caminhoFormas);
@@ -230,7 +231,10 @@ test("RELATÓRIO, IMPRESSÃO, QUANTITATIVOS e EXPORTAÇÃO na obra de referênci
   expect(textoFormas).toMatch(/^\s*0\r?\nSECTION/);
   expect(textoFormas).toContain("EOF");
 
-  const [armacao] = await Promise.all([page.waitForEvent("download"), botaoArmacao.click()]);
+  const [armacao] = await Promise.all([
+    page.waitForEvent("download"),
+    itemExportar(page, "DXF de armação").then((item) => item.click()),
+  ]);
   expect(armacao.suggestedFilename()).toBe(`${NOME_OBRA} - armação.dxf`);
   const caminhoArmacao = path.join(PASTA, armacao.suggestedFilename());
   await armacao.saveAs(caminhoArmacao);

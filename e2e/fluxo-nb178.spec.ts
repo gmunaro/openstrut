@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { itemExportar } from "./cabecalho";
 import { selecionarLaje } from "./planta";
 
 // Fluxo NB-1/78 de ponta a ponta: materiais, planta, resultados, relatório e DXF.
@@ -151,7 +152,7 @@ test("fluxo NB-1/78 completo", async ({ page }) => {
   await page.getByRole("tab", { name: "Planta" }).click();
   const [formas] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Exportar DXF (formas)" }).click(),
+    itemExportar(page, "DXF de formas").then((item) => item.click()),
   ]);
   const caminhoFormas = path.join(PASTA, formas.suggestedFilename());
   await formas.saveAs(caminhoFormas);
@@ -161,7 +162,7 @@ test("fluxo NB-1/78 completo", async ({ page }) => {
 
   const [armacao] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Exportar DXF (armação)" }).click(),
+    itemExportar(page, "DXF de armação").then((item) => item.click()),
   ]);
   const caminhoArmacao = path.join(PASTA, armacao.suggestedFilename());
   await armacao.saveAs(caminhoArmacao);
