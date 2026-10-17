@@ -869,7 +869,9 @@ function importar(
           ? `A reação delas chega aos pilares do .COL no nível ${k} (${nomeDoNivel(k)}) pelo ${temRep ? `${b}.REP` : ".REP que o motor calcula por elas"}.`
           : lajesFalhas.has(b) && k >= 2 && colOk
             ? `A reação delas não vai a pilar nenhum; nos pilares do nível ${k} (${nomeDoNivel(k)}) entra a carga do ${temRep ? `${b}.REP` : ".COL"}.`
-            : undefined,
+            : lajesFalhas.has(b)
+              ? `A reação delas não vai a pilar nem a viga nenhuma: no original, as vigas desse piso descarregam nos pilares pelo ${b}.REP, e sem a planta a carga delas não chega aos pilares. Corrija o ${b}.LAJ e importe de novo.`
+              : undefined,
         deVigas,
       );
       if (pav) pavimentosAvulsos.push(pav);

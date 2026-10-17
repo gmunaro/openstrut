@@ -289,6 +289,19 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
     expect(new Set(c.lances.map((l) => l.nivel))).toEqual(new Set([0, 1, 2, 3]));
   });
 
+  it(".LAJ que não abre, sem .COL: o aviso das vigas é o do piso, não o da escada", () => {
+    const r = importa([
+      comNome("TETO.LAJ", COM_VAGA_SUJA),
+      { nome: "BASE.LAJ", dados: new Uint8Array([65]) },
+      comNome("BASE.VIG", arquivo("E2E.VIG")),
+    ]);
+    const aviso = r.avisos.find((a) => a.startsWith("BASE.VIG: o BASE.LAJ não pôde ser lido"));
+    expect(aviso).toMatch(
+      /A reação delas não vai a pilar nem a viga nenhuma: no original, as vigas desse piso descarregam nos pilares pelo BASE\.REP, e sem a planta a carga delas não chega aos pilares\. Corrija o BASE\.LAJ e importe de novo\.$/,
+    );
+    expect(aviso).not.toMatch(/Como no SISTRUT|escada|já estão/);
+  });
+
   it(".LAJ que não abre: o .VIG dele fica avulso com o motivo, e o nível entra sem planta", () => {
     const r = importa([
       comNome("TETO.LAJ", COM_VAGA_SUJA),
