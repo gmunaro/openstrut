@@ -214,4 +214,10 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Corta o prédio na horizontal acima de um pavimento, como a planta de fôrma.",
     carregar: () => import("./camadas/corte").then((m) => m.camada),
   },
+  {
+    id: "ar",
+    nome: "Realidade aumentada",
+    descricao: "Põe o prédio na mesa, como maquete, ou no terreno pela câmera do celular.",
+    carregar: () => import("./ar/camada").then((m) => m.camada),
+  },
 ];
