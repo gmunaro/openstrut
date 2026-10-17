@@ -52,6 +52,8 @@ export interface DetalhamentoVigaObra {
   nos: number[];
   /** Largura de cada apoio na direção da viga, cm (0 na ponta livre). */
   larguraApoios: number[];
+  /** Nome de cada apoio (pilar ou viga), na ordem dos nós; "" na ponta livre. */
+  nomesApoios: string[];
   detalhamento: VigaDetalhamento;
 }
 
@@ -75,6 +77,16 @@ export function larguraApoios(v: VigaMontada, pav: Pavimento): number[] {
     const p = pav.pilares.find((x) => x.id === a.id);
     if (!p) return 0;
     return v.eixo.horizontal ? p.b : p.h;
+  });
+}
+
+/** Nome de cada apoio da viga (pilar ou viga de apoio); "" na ponta livre ou se o
+ *  elemento não está mais no pavimento. */
+export function nomesApoios(v: VigaMontada, pav: Pavimento): string[] {
+  return v.apoios.map((a) => {
+    if (a.tipo === "livre") return "";
+    const lista = a.tipo === "viga" ? pav.vigas : pav.pilares;
+    return lista.find((x) => x.id === a.id)?.nome ?? "";
   });
 }
 
@@ -147,6 +159,7 @@ export function detalharVigasObra(resultado: ResultadoObra, obra: Obra): Detalha
         cobrimento,
         nos: abscissasNos(entrada),
         larguraApoios: entrada.larguraApoios,
+        nomesApoios: nomesApoios(r.viga, pav),
         detalhamento: detalharViga(entrada, regras),
       });
     }
@@ -409,6 +422,8 @@ export interface LanceDetalhadoObra {
   /** Quanto as barras deste lance passam do topo dele (traspasse com o lance de
    *  cima, já arredondado), cm; null no último lance ou sem barras. */
   traspasse: number | null;
+  /** Seção retangular b × h (false: seção em L, T ou U, que a tela não desenha). */
+  retangular: boolean;
 }
 
 export interface DetalhamentoPilarObra {
@@ -496,6 +511,7 @@ export function detalharPilaresObra(resultado: ResultadoObra, obra: Obra): Detal
         porFaceY: arranjo.porFaceY,
         arranjo: arranjo.origem,
         traspasse: longitudinal && i < g.niveis.length - 1 ? longitudinal.reto - pe : null,
+        retangular: !p.pilar.secao,
       };
     });
     return { chave: g.chave, nome, cobrimento, lances, detalhamento };

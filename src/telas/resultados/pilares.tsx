@@ -14,6 +14,7 @@ import {
   unidade,
 } from "../formato";
 import { useUnidades } from "../sessao";
+import { CortesPilar } from "./desenhos";
 import { useFiltro } from "./filtro";
 import { LinhaElemento } from "./memoria";
 import { textoErro } from "./motorSistrut";
@@ -423,10 +424,13 @@ function BlocoPilar({ d, comMemoria }: { d: DetalhamentoPilarObra; comMemoria: b
         </p>
       )}
       {posicoes.length > 0 ? (
-        <TabelaPosicoes
-          posicoes={posicoes}
-          grupo={(p) => ({ chave: p.tramo, titulo: tituloLance(d, p.tramo) })}
-        />
+        <>
+          <TabelaPosicoes
+            posicoes={posicoes}
+            grupo={(p) => ({ chave: p.tramo, titulo: tituloLance(d, p.tramo) })}
+          />
+          <CortesPilar d={d} />
+        </>
       ) : (
         <p className="text-muted-foreground text-xs">Sem barras a detalhar.</p>
       )}

@@ -110,7 +110,9 @@ describe.each<NormaId>(["nb1-78", "nbr6118-2023"])("resultados pela %s", (norma)
         expect(tipo).toMatch(/^(positiva|negativa|porta-estribos|construtiva|estribo c\/[\d,]+)$/);
       }
       // esquema: uma barra (path) por posição longitudinal, com o rótulo "N1 2φ10 c=…"
-      const svg = within(bloco).getByRole("img", { name: /^Esquema das barras de V\d+$/ });
+      const svg = within(bloco).getByRole("img", {
+        name: /^Esquema das barras de V\d+, cotas em cm$/,
+      });
       // estribos não viram path (só tracinhos); "porta-estribos" é barra longitudinal
       const longitudinais = linhas.filter(
         (tr) => !tr.querySelector("td:last-child")?.textContent?.startsWith("estribo"),

@@ -5,13 +5,12 @@
 // tela da obra preenche com detalharObra. A tabela de posições, os avisos e a
 // memória do detalhamento também servem aos blocos de lajes e pilares.
 import { useContext, type ReactNode } from "react";
-import type { PosicaoArmadura } from "../../calculo/detalhamento/vigas";
 import type { ResultadoViga, SecaoViga } from "../../calculo/fluxo";
 import type { VigaMontada } from "../../calculo/montagem";
 import type { Etapa } from "../../calculo/tipos";
 import { cn } from "@/lib/utils";
 import { avisosViga } from "../calculo";
-import { DetalhamentoContexto, rotuloPosicao, type DetalhamentoVigaObra } from "../detalhamento";
+import { DetalhamentoContexto, type DetalhamentoVigaObra } from "../detalhamento";
 import {
   formatarBarraEspacada,
   formatarBarras,
@@ -20,6 +19,7 @@ import {
   unidade,
 } from "../formato";
 import { useUnidades } from "../sessao";
+import { EsquemaViga } from "./desenhos";
 import { useFiltro } from "./filtro";
 import { LinhaElemento, Memoria, type GrupoMemoria } from "./memoria";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
@@ -440,7 +440,7 @@ function BlocoDetalhamento({
       <AvisosDetalhamento avisos={avisos} />
       <div className="flex flex-wrap items-start gap-4">
         <TabelaPosicoes posicoes={posicoes} />
-        <EsquemaBarras d={d} />
+        <EsquemaViga d={d} />
       </div>
       <MemoriaDetalhamento
         titulo={`Detalhamento ${d.nome}`}
@@ -448,126 +448,5 @@ function BlocoDetalhamento({
         comMemoria={comMemoria}
       />
     </section>
-  );
-}
-
-/** Largura do esquema e alturas das faixas, px. */
-const LARGURA_ESQUEMA = 760;
-const MARGEM = 12;
-const FAIXA = 20;
-const ALTURA_VIGA = 22;
-const GANCHO_PX = 6;
-
-const emCima = (p: PosicaoArmadura) => p.tipo === "negativa" || p.tipo === "porta-estribos";
-
-/**
- * Esquema da viga, com escala só na horizontal: barras superiores (negativas e
- * porta-estribos) em faixas acima do contorno, inferiores (positivas e
- * construtivas) abaixo e os estribos na última faixa. Cada barra vai de xInicio
- * a xFim, com um tracinho onde há gancho. Os apoios aparecem com a largura deles.
- */
-function EsquemaBarras({ d }: { d: DetalhamentoVigaObra }) {
-  const ps = d.detalhamento.posicoes;
-  const sup = ps.filter(emCima);
-  const inf = ps.filter((p) => !emCima(p) && p.tipo !== "estribo");
-  const est = ps.filter((p) => p.tipo === "estribo");
-  const meia = (k: number) => (d.larguraApoios[k] ?? 0) / 2;
-  const xs = [
-    ...ps.flatMap((p) => [p.xInicio, p.xFim]),
-    ...d.nos.flatMap((x, k) => [x - meia(k), x + meia(k)]),
-  ];
-  const xMin = Math.min(...xs);
-  const escala = (LARGURA_ESQUEMA - 2 * MARGEM) / Math.max(Math.max(...xs) - xMin, 1);
-  const px = (x: number) => MARGEM + (x - xMin) * escala;
-  const inicioViga = d.nos[0] ?? 0;
-  const fimViga = d.nos.at(-1) ?? 0;
-
-  const topoViga = MARGEM + sup.length * FAIXA + 4;
-  const baseViga = topoViga + ALTURA_VIGA;
-  const altura = baseViga + 4 + (inf.length + est.length) * FAIXA + MARGEM;
-  // as de cima empilham a partir da viga para cima; as de baixo, para baixo
-  const ySup = (i: number) => topoViga - 4 - (sup.length - 1 - i) * FAIXA;
-  const yInf = (i: number) => baseViga + 4 + i * FAIXA + FAIXA / 2;
-  const rotulo = (x: number, y: number, p: PosicaoArmadura) => (
-    <text x={x} y={y} textAnchor="middle" fontSize={10} className="fill-current">
-      {rotuloPosicao(p)}
-    </text>
-  );
-
-  /** Barra longitudinal na altura y; o gancho desce (gancho > 0) ou sobe. */
-  const barra = (p: PosicaoArmadura, y: number, gancho: number) => {
-    const [a, b] = [px(p.xInicio), px(p.xFim)];
-    const caminho = [
-      p.ganchoInicio > 0 ? `M${a},${y + gancho} L${a},${y}` : `M${a},${y}`,
-      `L${b},${y}`,
-      p.ganchoFim > 0 ? `L${b},${y + gancho}` : "",
-    ].join(" ");
-    return (
-      <g key={p.numero}>
-        <path d={caminho} fill="none" strokeWidth={1.5} className="stroke-current" />
-        {rotulo((a + b) / 2, y - 3, p)}
-      </g>
-    );
-  };
-
-  return (
-    <svg
-      role="img"
-      aria-label={`Esquema das barras de ${d.nome}`}
-      viewBox={`0 0 ${LARGURA_ESQUEMA} ${altura}`}
-      width={LARGURA_ESQUEMA}
-      height={altura}
-      className="text-foreground h-auto max-w-full"
-    >
-      {d.nos.map((x, k) =>
-        meia(k) > 0 ? (
-          <rect
-            key={`apoio${k}`}
-            x={px(x - meia(k))}
-            y={topoViga - 3}
-            width={Math.max(2 * meia(k) * escala, 2)}
-            height={ALTURA_VIGA + 6}
-            strokeWidth={0.75}
-            className="fill-muted stroke-muted-foreground"
-          />
-        ) : null,
-      )}
-      <rect
-        x={px(inicioViga)}
-        y={topoViga}
-        width={(fimViga - inicioViga) * escala}
-        height={ALTURA_VIGA}
-        fill="none"
-        strokeWidth={0.75}
-        className="stroke-muted-foreground"
-      />
-      {sup.map((p, i) => barra(p, ySup(i), GANCHO_PX))}
-      {inf.map((p, i) => barra(p, yInf(i), -GANCHO_PX))}
-      {est.map((p, i) => {
-        const y = yInf(inf.length + i);
-        const [a, b] = [px(p.xInicio), px(p.xFim)];
-        // um tracinho por estribo (até 60, para não borrar)
-        const n = Math.min(p.quantidade, 60);
-        return (
-          <g key={p.numero}>
-            {Array.from({ length: n }, (_, k) => {
-              const x = n > 1 ? a + ((b - a) * k) / (n - 1) : a;
-              return (
-                <line
-                  key={k}
-                  x1={x}
-                  x2={x}
-                  y1={y - 4}
-                  y2={y + 4}
-                  strokeWidth={0.75}
-                  className="stroke-current"
-                />
-              );
-            })}
-            {rotulo((a + b) / 2, y - 6, p)}
-          </g>
-        );
-      })}
-    </svg>
   );
 }
