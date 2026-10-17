@@ -13,7 +13,7 @@ import { OBRA_E2E } from "../../telas/__fixtures__/predioSistrut";
 import { calcular } from "../../telas/calculo";
 import { detalharObra } from "../../telas/detalhamento";
 import { obraTresPavimentos } from "./__fixtures__/obras";
-import { gerarIfc } from "./gerar";
+import { gerarIfc } from "./exportarIfc";
 
 const PYTHON = process.env.OPENSTRUT_IFC_PYTHON;
 

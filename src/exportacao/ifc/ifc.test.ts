@@ -9,7 +9,7 @@ import { OBRA_E2E, PREDIO } from "../../telas/__fixtures__/predioSistrut";
 import { calcular } from "../../telas/calculo";
 import { detalharObra } from "../../telas/detalhamento";
 import { obraTresPavimentos } from "./__fixtures__/obras";
-import { gerarIfc } from "./gerar";
+import { gerarIfc } from "./exportarIfc";
 import {
   type CalculoIfc,
   modeloIfc,

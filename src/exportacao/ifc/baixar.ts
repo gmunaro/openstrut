@@ -1,4 +1,4 @@
-// Botão "Exportar IFC": carrega a exportação sob demanda (o chunk de gerar.ts só baixa no
+// Botão "Exportar IFC": carrega a exportação sob demanda (o chunk de exportarIfc.ts só baixa no
 // primeiro clique) e baixa "<obra>.ifc" pela pasta de downloads, como os DXF.
 import { EXTENSAO } from "../../armazenamento/arquivo";
 import type { Obra } from "../../dominio/obra";
@@ -17,7 +17,7 @@ export async function baixarIfc(
   if (obraSemElementos(obra))
     return { erros: ["A obra ainda não tem elementos para exportar em IFC."], detalhe: null };
   try {
-    const { gerarIfc } = await import("./gerar");
+    const { gerarIfc } = await import("./exportarIfc");
     const { conteudo } = gerarIfc(
       obra,
       calculo.tipo === "ok" ? { resultado: calculo.resultado, detalhamento } : null,
