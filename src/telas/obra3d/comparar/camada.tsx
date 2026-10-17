@@ -85,6 +85,12 @@ function pintar(ctx: ContextoVista) {
     const d = dif.get(e.chave);
     return d ? COR_COMPARACAO[d.categoria] : null;
   });
+  // a legenda da comparação substitui a de situação enquanto as peças estão repintadas
+  ctx.definirLegenda(ID, {
+    titulo: "Original × Corrigido",
+    itens: CATEGORIAS.map((c) => ({ cor: COR_COMPARACAO[c], rotulo: ROTULO_CATEGORIA[c] })),
+    substitui: true,
+  });
   filtrar(ctx);
 }
 
@@ -103,6 +109,7 @@ function filtrar(ctx: ContextoVista) {
 
 function limparCena(ctx: ContextoVista) {
   ctx.definirCores(ID, null);
+  ctx.definirLegenda(ID, null);
   ctx.definirFiltro(ID, null);
 }
 

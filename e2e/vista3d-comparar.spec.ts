@@ -86,8 +86,7 @@ async function abrir3d(page: Page) {
 
 /** Membros de window.__vista3d que este spec usa (o Cena3D tem mais). */
 type VistaMin = {
-  cores: { has(id: string): boolean };
-  filtros: { has(id: string): boolean };
+  fontesAtivas(): { cores: string[]; filtros: string[]; legendas: string[] };
   selecao: string | null;
   estaVisivel(chave: string): boolean;
 };
@@ -152,7 +151,7 @@ test("camada Original × Corrigido: contagens, lista, seleção, filtro, tolerâ
   await expect(lista.locator("li").first()).toContainText("(+2,4 %)");
 
   // a camada registrou a cor na cena
-  expect(await vista(page, (v) => v.cores.has("comparar"))).toBe(true);
+  expect(await vista(page, (v) => v.fontesAtivas().cores.includes("comparar"))).toBe(true);
 
   // a lista leva à peça: seleciona e enquadra
   await lista.getByRole("button").first().click();
@@ -197,8 +196,8 @@ test("camada Original × Corrigido: contagens, lista, seleção, filtro, tolerâ
   // desligar: o painel some, a camada tira cor e filtro, e a laje volta a aparecer
   await page.getByRole("button", { name: "Original × Corrigido" }).click();
   await expect(painel).toHaveCount(0);
-  expect(await vista(page, (v) => v.cores.has("comparar"))).toBe(false);
-  expect(await vista(page, (v) => v.filtros.has("comparar"))).toBe(false);
+  expect(await vista(page, (v) => v.fontesAtivas().cores.includes("comparar"))).toBe(false);
+  expect(await vista(page, (v) => v.fontesAtivas().filtros.includes("comparar"))).toBe(false);
   await expect.poll(() => vista(page, (v) => v.estaVisivel("laje:TIPO#1:TIPO/L1"))).toBe(true);
 
   expect(erros).toEqual([]);
