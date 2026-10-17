@@ -384,8 +384,18 @@ describe("importarObraSistrut: obra de vários pavimentos", () => {
     const yPredio = predio.flatMap((p) => p.pilares.map((q) => q.y));
     expect(Math.max(...escada!.pilares.map((p) => p.y))).toBeLessThan(Math.min(...yPredio));
     expect(r.avisos).toContainEqual(
-      expect.stringMatching(/^ESCADA\.VIG: não há ESCADA\.LAJ e o \.VIG não diz de que pavimento/),
+      expect.stringMatching(
+        /^ESCADA\.VIG: não há ESCADA\.LAJ e o \.VIG não diz de que pavimento elas são\. .* entraram à parte, no pavimento "ESCADA", .*Como no SISTRUT, a reação delas não vai a viga nem a pilar nenhum: o usuário do original lança essas reações à mão nas vigas que as recebem.*, e elas já estão nas cargas do \.VIG dessas vigas\. Por isso os apoios de ESCADA não descarregam em pilar nem na fundação\./,
+      ),
     );
+    // os apoios de cálculo não viram coluna, não somam carga e não avisam de transição
+    for (const modo of ["original", "corrigido"] as const) {
+      const c = calcularObraSistrut(r.obra, { modo });
+      const ids = new Set(escada!.pilares.map((p) => p.id));
+      expect(c.lances.some((l) => ids.has(l.pilarId))).toBe(false);
+      expect(c.fundacoes.some((f) => ids.has(f.pilarId))).toBe(false);
+      expect(c.lances.flatMap((l) => l.avisos).join(" ")).not.toMatch(/viga de transição/);
+    }
   });
 
   it("viga avulsa ilegível só gera aviso; o resto da obra entra", () => {

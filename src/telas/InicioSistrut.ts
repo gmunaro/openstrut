@@ -358,15 +358,17 @@ function obraDeVigas(
  *  calculada à parte no VIGA): a obra só de vigas do importador vira um pavimento à
  *  parte, no topo. Cada apoio tem um pilar só para a viga ficar de pé na planta: a
  *  reação não vai a pilar nenhum (apoio desconsiderado) e o pilar é marcado como sobre
- *  viga de transição, para não pesar no prédio. */
+ *  viga de transição; sem carga, o motor não o calcula. No original é o mesmo: o VIGA
+ *  calcula a escada sozinha, e o usuário lança as reações dela à mão nas vigas que a
+ *  recebem, que já as trazem no .VIG delas. */
 function pavimentoDeVigasAvulsas(
   base: string,
   arquivos: readonly ArquivoEntrada[],
   c: Coleta,
   /** Por que as vigas não entram num pavimento do prédio (padrão: não há .LAJ). */
   porque = `não há ${base}.LAJ e o .VIG não diz de que pavimento elas são`,
-  /** Para onde vai a carga delas (padrão: a lugar nenhum, com o conselho da escada). */
-  destino = "a reação não vai a pilar nem a viga nenhuma. Se as vigas carregam o prédio, lance as reações como carga nas vigas de apoio.",
+  /** Para onde vai a carga delas, frase inteira (padrão: as vigas que as recebem). */
+  destino?: string,
   obraJaLida?: Obra,
 ): Pavimento | undefined {
   const pav = (obraJaLida ?? obraDeVigas(base, arquivos, c))?.pavimentos[0];
@@ -380,8 +382,15 @@ function pavimentoDeVigasAvulsas(
     );
     if (titulos.length > 0) apoiosEmViga.push(`${v.nome} em ${titulos.join(" e ")}`);
   }
+  const recebem =
+    apoiosEmViga.length > 0
+      ? `nas vigas que as recebem (pelo .FOR, ${apoiosEmViga.join("; ")})`
+      : "nas vigas que as recebem";
   c.avisos.push(
-    `${base}.VIG: ${porque}. As vigas ${pav.vigas.map((v) => v.nome).join(", ")} entraram como vigas avulsas, no pavimento "${base}" no topo da obra, fora da planta do prédio, cada uma com um apoio em cada ponta${apoiosEmViga.length > 0 ? ` (pelo .FOR, ${apoiosEmViga.join("; ")})` : ""}; ${destino}`,
+    `${base}.VIG: ${porque}. As vigas ${pav.vigas.map((v) => v.nome).join(", ")} entraram à parte, no pavimento "${base}", fora da planta do prédio, com um apoio de cálculo em cada ponta. ${
+      destino ??
+      `Como no SISTRUT, a reação delas não vai a viga nem a pilar nenhum: o usuário do original lança essas reações à mão ${recebem}, e elas já estão nas cargas do .VIG dessas vigas. Por isso os apoios de ${base} não descarregam em pilar nem na fundação. Se alguma das vigas que recebem ${base} não tem essas reações, lance-as nela como carga.`
+    }`,
   );
   return { ...pav, pilares: pav.pilares.map((p) => ({ ...p, transicao: true as const })) };
 }
@@ -764,9 +773,9 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
             ? "obra sem .LAJ: as vigas não têm planta"
             : undefined,
         vigasPeloCol && k >= 2
-          ? `a reação delas chega aos pilares do .COL no nível ${k} (${nomeDoNivel(k)}) pelo ${temRep ? `${b}.REP` : ".REP que o motor calcula por elas"}.`
+          ? `A reação delas chega aos pilares do .COL no nível ${k} (${nomeDoNivel(k)}) pelo ${temRep ? `${b}.REP` : ".REP que o motor calcula por elas"}.`
           : lajesFalhas.has(b) && k >= 2 && colOk
-            ? `nos pilares do nível ${k} (${nomeDoNivel(k)}) entra a carga do ${temRep ? `${b}.REP` : ".COL"}.`
+            ? `A reação delas não vai a pilar nenhum; nos pilares do nível ${k} (${nomeDoNivel(k)}) entra a carga do ${temRep ? `${b}.REP` : ".COL"}.`
             : undefined,
         deVigas,
       );
