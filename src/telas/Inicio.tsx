@@ -2,9 +2,10 @@
 // obra da V1 (.LAJ + .VIG + .COL) e obra do SISTRUT (ImportarSistrut.tsx), a lista
 // de rascunhos recentes do navegador, a seção de instalar o app e o aviso de origem.
 import { useNavigate } from "@tanstack/react-router";
-import { Download, FilePlus2, FolderOpen, Import, Trash2 } from "lucide-react";
+import { Building2, Download, FilePlus2, FolderOpen, Import, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
+import { DicaUso } from "@/components/ui/dica-uso";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ import {
 import { importarV1 } from "../armazenamento/importarV1";
 import { normaPorId } from "../calculo/normas";
 import { obraNova } from "../dominio/criar";
+import { obraExemplo } from "../dominio/exemplo";
 import type { NormaId, Obra } from "../dominio/obra";
 import { abrirNaSessao, useAbrirObra } from "./acoes";
 import { NOME_NORMA } from "./calculo";
@@ -82,6 +84,12 @@ export function Inicio() {
     void navigate({ to: "/obra" });
   };
 
+  /** Abre a obra-exemplo (rascunho novo); o cálculo roda ao abrir a tela da obra. */
+  const abrirExemplo = (n: NormaId) => {
+    abrirNaSessao(obraExemplo(n), novoIdRascunho());
+    void navigate({ to: "/obra" });
+  };
+
   /** Abre a obra importada como uma obra nova (rascunho novo, sem arquivo .openstrut.json). */
   const abrirImportada = (obra: Obra) => {
     abrirNaSessao(obra, novoIdRascunho());
@@ -129,6 +137,13 @@ export function Inicio() {
           Cálculo de estruturas de concreto armado: lajes, vigas e pilares, pavimento por pavimento.
         </p>
       </header>
+
+      <DicaUso id="inicio" titulo="Primeira vez no OpenStrut?">
+        Abra a <strong>obra-exemplo</strong> para ver uma obra já calculada: a planta com lajes,
+        vigas e pilares, os resultados com a memória de cálculo e o relatório. Para começar a sua,
+        dê um nome em <strong>Nova obra</strong> e desenhe as lajes na aba Planta; as vigas e os
+        pilares nascem dos bordos das lajes.
+      </DicaUso>
 
       <Erros erros={erros} aoFechar={limparErros} />
       {detalhe && (
@@ -203,6 +218,27 @@ export function Inicio() {
               <FilePlus2 /> Criar obra
             </Button>
           </form>
+
+          <section aria-labelledby="titulo-exemplo" className="mt-6 border-t pt-4">
+            <h3
+              id="titulo-exemplo"
+              className="text-muted-foreground mb-1 text-xs font-semibold uppercase tracking-wide"
+            >
+              Obra-exemplo
+            </h3>
+            <p className="text-muted-foreground mb-3 text-sm">
+              Sobrado com duas lajes de piso (5 lajes, 7 vigas e 11 pilares por pavimento), aberto
+              já calculado. Altere à vontade: o original não muda.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button variant="secondary" onClick={() => abrirExemplo("nbr6118-2023")}>
+                <Building2 /> Exemplo NBR 6118:2023
+              </Button>
+              <Button variant="secondary" onClick={() => abrirExemplo("nb1-78")}>
+                <Building2 /> Exemplo NB-1/78
+              </Button>
+            </div>
+          </section>
         </section>
 
         <section className="bg-card rounded-lg border p-5">
