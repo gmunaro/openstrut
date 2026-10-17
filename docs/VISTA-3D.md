@@ -128,14 +128,23 @@ A aba carrega `Vista3D` por `import()` dinâmico. O three.js e o código da vist
 
 | Pedaço | Tamanho | gzip (relatório do Vite) | Quando baixa |
 |---|---|---|---|
-| `3d-Vista3D` (vista + three.js) | 626,6 kB | 160,6 kB | ao abrir a aba 3D |
-| `3d-GLTFExporter` | 36,8 kB | 10,7 kB | ao exportar glTF |
-| `3d-corte` | 1,5 kB | 0,8 kB | ao ligar a camada de corte |
-| carregamento inicial (`index`) | +0,4 kB | +0,04 kB | sempre |
-| tela da obra (`obra`) | +2,1 kB | +1,0 kB | ao abrir uma obra |
-| CSS | +1,7 kB | +0,3 kB | sempre |
+| `3d-Vista3D` (vista) | 444,0 kB | 113,2 kB | ao abrir a aba 3D |
+| `3d-three.core` (three.js, compartilhado) | 209,0 kB | 56,7 kB | ao abrir a aba 3D |
+| `3d-GLTFExporter` | 36,8 kB | 10,8 kB | ao exportar glTF |
+| `3d-camadas-corte` | 1,5 kB | 0,8 kB | ao ligar a camada |
+| `3d-comparar-camada` | 7,6 kB | 3,1 kB | ao ligar a camada |
+| `3d-armadura-camada` | 8,5 kB | 3,6 kB | ao ligar a camada |
+| `3d-render-camada` | 9,1 kB | 3,8 kB | ao ligar a camada |
+| `3d-sequencia-camada` | 9,5 kB | 4,0 kB | ao ligar a camada |
+| `3d-tour-camada` | 11,9 kB | 4,9 kB | ao ligar a camada |
+| `3d-ar-camada` | 13,4 kB | 5,3 kB | ao ligar a camada |
+| `3d-render-tracado` (path tracing) | 205,3 kB | 59,1 kB | ao ligar o path tracing no render |
+| carregamento inicial (`index`) | +0,4 kB | +0,1 kB | sempre |
+| tela da obra (`obra`) | +3,2 kB | +1,4 kB | ao abrir uma obra |
 
-Pelo relatório do vite-plugin-pwa, o precache ficou com 1539,5 KiB, contra 1535,6 KiB na `main` (912bd50). Sem a regra do prefixo, ele iria a 2186,8 KiB.
+Os pedaços que só a vista 3D carrega levam o prefixo `3d-`: o de uma camada leva também o nome da pasta dela (`3d-<pasta>-camada`), e o pedaço compartilhado só com three.js ou as libs de path tracing (`three-gpu-pathtracer`, `three-mesh-bvh`) também (`vite.config.ts`, `chunkFileNames`).
+
+Pelo relatório do vite-plugin-pwa, o precache ficou com 1542,4 KiB (14 entradas), contra 1535,6 KiB na `main` (912bd50). Sem a regra do prefixo, os pedaços da 3D entrariam no precache.
 
 ## Ponto de extensão: camadas
 
