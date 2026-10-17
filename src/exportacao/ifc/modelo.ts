@@ -22,6 +22,7 @@ import type {
 import type { PosicaoBarra, TrechoEstribo } from "../../calculo/sistrut/base/tipos";
 import type { PosicaoArmadura } from "../../calculo/detalhamento/vigas";
 import { eixoDaViga } from "../../dominio/gerar";
+import { deduzirApoiosEscada, type NivelPredio, pavimentoDeVigasAvulsas } from "./escada";
 import type { Laje, Obra, Pavimento, Pilar, Ponto, Viga } from "../../dominio/obra";
 import type { DetalhamentoVigasObra } from "../../telas/detalhamento";
 
@@ -79,7 +80,7 @@ interface ElementoBase {
   nome: string;
   nivel: NivelIfc;
   descricao?: string;
-  /** Pset_OpenStrut. */
+  /** OpenStrut. */
   propriedades: Propriedades;
   armadura: PosicaoIfc[];
 }
@@ -105,9 +106,10 @@ export interface TrechoVigaIfc {
 
 export interface VigaIfc extends ElementoBase {
   tipo: "viga";
-  /** Origem do eixo no plano e direção unitária. */
-  origem: { x: number; y: number };
-  direcao: { x: number; y: number };
+  /** Origem do eixo (z relativo ao nível) e direção unitária; z ≠ 0 só na escada, que
+   *  vai inclinada de um nível ao outro. */
+  origem: P3;
+  direcao: P3;
   comprimento: number;
   trechos: TrechoVigaIfc[];
   /** Viga avulsa do SISTRUT (escada calculada à parte no VIGA). */
@@ -129,7 +131,7 @@ export interface ModeloIfc {
   elementos: ElementoIfc[];
   /** "Concreto C25". */
   concreto: string;
-  /** Pset_OpenStrut do projeto: norma, materiais e se a obra foi calculada. */
+  /** OpenStrut do projeto: norma, materiais e se a obra foi calculada. */
   propriedades: Propriedades;
   /** Avisos do exportador (o que não entrou ou foi aproximado). */
   avisos: string[];
@@ -150,25 +152,16 @@ const NOMES_NORMA = { "nb1-78": "NB-1/78", "nbr6118-2023": "NBR 6118:2023" } as 
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const decimal = (v: number) => String(r2(v)).replace(".", ",");
 
-/** Pavimento de vigas avulsas que a importação do SISTRUT cria para um .VIG sem .LAJ
- *  (uma escada calculada à parte no VIGA; telas/InicioSistrut.ts,
- *  `pavimentoDeVigasAvulsas`): sem lajes, todos os apoios desconsiderados e pilares só
- *  de apoio, marcados como sobre viga de transição. */
-export function pavimentoDeVigasAvulsas(p: Pavimento) {
-  return (
-    p.lajes.length === 0 &&
-    p.vigas.length > 0 &&
-    p.vigas.every((v) => (v.apoiosDesconsiderados?.length ?? 0) >= (v.vaos?.length ?? 1) + 1) &&
-    p.pilares.every((q) => q.transicao === true)
-  );
-}
+export { pavimentoDeVigasAvulsas } from "./escada";
 
 /** Níveis da obra, da base para o topo: a fundação em 0 e um por repetição de pavimento,
- *  na soma dos pés-direitos. */
+ *  na soma dos pés-direitos. O pavimento de vigas avulsas (escada) não tem cota e fica
+ *  fora da pilha: as vigas dele vão ao nível de baixo dos que ligam (modeloIfc). */
 export function niveisDaObra(obra: Obra): NivelIfc[] {
   const niveis: NivelIfc[] = [{ chave: "fundacao", nome: "Fundação", elevacao: 0 }];
   let z = 0;
   for (const pav of [...obra.pavimentos].reverse()) {
+    if (pavimentoDeVigasAvulsas(pav)) continue;
     const n = Math.max(1, Math.floor(pav.repeticoes));
     for (let r = n; r >= 1; r--) {
       z += pav.peDireito;
@@ -178,12 +171,6 @@ export function niveisDaObra(obra: Obra): NivelIfc[] {
         elevacao: z,
         pavimento: pav,
         repeticao: r,
-        ...(pavimentoDeVigasAvulsas(pav)
-          ? {
-              descricao:
-                "Vigas avulsas importadas do SISTRUT (.VIG sem .LAJ, como uma escada), fora da planta do prédio",
-            }
-          : {}),
       });
     }
   }
@@ -251,15 +238,20 @@ export function eixoIfc(v: Viga) {
   const e = eixoDaViga(v);
   if (e)
     return {
-      origem: e.horizontal ? { x: e.s1, y: e.c } : { x: e.c, y: e.s1 },
-      direcao: e.horizontal ? { x: 1, y: 0 } : { x: 0, y: 1 },
+      origem: e.horizontal ? { x: e.s1, y: e.c, z: 0 } : { x: e.c, y: e.s1, z: 0 },
+      direcao: e.horizontal ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 },
       comprimento: e.s2 - e.s1,
       s1: e.s1,
     };
   const dx = v.x2 - v.x1;
   const dy = v.y2 - v.y1;
   const L = Math.hypot(dx, dy);
-  return { origem: { x: v.x1, y: v.y1 }, direcao: { x: dx / L, y: dy / L }, comprimento: L, s1: 0 };
+  return {
+    origem: { x: v.x1, y: v.y1, z: 0 },
+    direcao: { x: dx / L, y: dy / L, z: 0 },
+    comprimento: L,
+    s1: 0,
+  };
 }
 
 /** Nós da viga ao longo do eixo, m a partir da origem: os da montagem do cálculo; sem
@@ -281,11 +273,19 @@ function nosDaViga(v: Viga, comprimento: number, s1: number, rv: ResultadoViga |
  *  mesa) quando há uma por tramo; senão bw × h na viga inteira. */
 export function trechosDaViga(v: Viga, nos: readonly number[], comprimento: number) {
   const secoes = v.secoes?.trechos;
+  const valida = (s: { bw: number; h: number } | undefined) => !!s && s.bw > 0 && s.h > 0;
+  // seção 0 no .SEC: o balanço herda a do apoio vizinho, como o DESDIM; o tramo, bw × h
+  const daPlanta = { bw: v.bw, h: v.h };
+  const apoios = v.secoes?.apoios ?? [];
+  const herdada = (k: number, n: number) => {
+    const vizinho = k === 0 ? apoios[0] : k === n - 1 ? apoios.at(-1) : undefined;
+    return valida(vizinho) ? { bw: vizinho!.bw, h: vizinho!.h } : daPlanta;
+  };
   if (secoes && secoes.length === nos.length - 1 && secoes.length > 0)
     return secoes.map((s, k) => ({
       inicio: nos[k]!,
       fim: nos[k + 1]!,
-      perfil: perfilViga(s),
+      perfil: perfilViga(valida(s) ? s : herdada(k, secoes.length)),
     }));
   return [{ inicio: 0, fim: comprimento, perfil: perfilViga({ bw: v.bw, h: v.h }) }];
 }
@@ -585,8 +585,24 @@ function armaduraPilar(
 const rotuloBarra = (b: { phi: number; espacamento: number }) =>
   `φ${decimal(b.phi)} c/${decimal(b.espacamento)}`;
 
+/** Número não finito (seção sem solução dá NaN no cálculo) vira "sem solução": o Pset
+ *  não pode mostrar um valor que não existe, e o STEP não tem NaN. */
+const semNaN = (props: Propriedades): Propriedades =>
+  Object.fromEntries(
+    Object.entries(props).map(([k, v]) => [
+      k,
+      typeof v === "number" && !Number.isFinite(v) ? "sem solução" : v,
+    ]),
+  );
+
 function propriedadesPilar(r: ResultadoPilar): Propriedades {
   const x = r.resultado;
+  const avisos: Propriedades = {
+    Avisos: { inteiro: x.avisos.length },
+    ...(x.avisos.length > 0 ? { TextoAvisos: x.avisos.join(" | ") } : {}),
+  };
+  // lance sem solução (ou sem dimensionamento no SISTRUT): sem os zeros e NaN do cálculo
+  if (x.barras.n <= 0) return { Nk_kN: r2(r.nk), Armadura: "sem solução", ...avisos };
   return {
     Nk_kN: r2(r.nk),
     Nd_kN: r2(x.nd),
@@ -599,25 +615,37 @@ function propriedadesPilar(r: ResultadoPilar): Propriedades {
     Armadura: x.barras.n > 0 ? `${x.barras.n} φ${decimal(x.barras.phi)}` : "sem solução",
     Estribos: x.estribo.phi > 0 ? rotuloBarra(x.estribo) : "-",
     Taxa_pct: r2(x.taxa),
-    Avisos: { inteiro: x.avisos.length },
-    ...(x.avisos.length > 0 ? { TextoAvisos: x.avisos.join(" | ") } : {}),
+    ...avisos,
   };
 }
 
-function propriedadesViga(r: ResultadoViga, gamaF: number): Propriedades {
+/** Resultados da viga: Mk e Vk da envoltória; Md e Vd só com o γf do fluxo da V2
+ *  (`gamaF`), que é o que dimensionou. No caminho do SISTRUT o DESDIM usa o γf do .DSP e
+ *  o próprio M+, e `gamaF` vem null. */
+function propriedadesViga(r: ResultadoViga, gamaF: number | null): Propriedades {
   if (!r.analise.ok || r.tramos.length === 0)
     return {
       Avisos: { inteiro: r.avisos.length },
       TextoAvisos: r.avisos.join(" | ") || "sem análise",
     };
   const ts = r.analise.tramos;
-  const max = (xs: number[]) => Math.max(0, ...xs.filter(Number.isFinite));
+  const max = (xs: number[]) => (xs.every(Number.isFinite) ? Math.max(0, ...xs) : Number.NaN);
+  const mPos = max(ts.map((t) => t.mPos));
+  const mNeg = max(ts.flatMap((t) => [-t.mNegEsq, -t.mNegDir]));
+  const v = max(ts.flatMap((t) => [Math.abs(t.vEsq), Math.abs(t.vDir)]));
   const barras = (s: { barras: { n: number; phi: number } | null }) =>
     s.barras ? `${s.barras.n} φ${decimal(s.barras.phi)}` : "-";
   return {
-    MdPositivo_kNm: r2(gamaF * max(ts.map((t) => t.mPos))),
-    MdNegativo_kNm: r2(gamaF * max(ts.flatMap((t) => [-t.mNegEsq, -t.mNegDir]))),
-    Vd_kN: r2(gamaF * max(ts.flatMap((t) => [Math.abs(t.vEsq), Math.abs(t.vDir)]))),
+    MkPositivo_kNm: r2(mPos),
+    MkNegativo_kNm: r2(mNeg),
+    Vk_kN: r2(v),
+    ...(gamaF !== null
+      ? {
+          MdPositivo_kNm: r2(gamaF * mPos),
+          MdNegativo_kNm: r2(gamaF * mNeg),
+          Vd_kN: r2(gamaF * v),
+        }
+      : {}),
     AsPositiva_cm2: r2(max(r.tramos.map((t) => t.positivo.flexao?.as ?? 0))),
     AsNegativa_cm2: r2(
       max(r.tramos.flatMap((t) => [t.negativoEsq.flexao?.as ?? 0, t.negativoDir.flexao?.as ?? 0])),
@@ -670,17 +698,19 @@ const contornoLaje = (l: Laje): Ponto[] =>
         ],
   );
 
-/** Largura do primeiro apoio da viga na direção dela, m (a da tela de detalhamento:
- *  pilar b ou h, viga bw, ponta livre 0). */
-function larguraPrimeiroApoio(rv: ResultadoViga, pav: Pavimento) {
+/** Largura do primeiro apoio da viga na direção dela, m: a LPi do .FOR quando há (a que
+ *  o DESINIT usa), senão a da planta (pilar b ou h, viga bw); ponta livre 0. */
+function larguraPrimeiroApoio(rv: ResultadoViga, pav: Pavimento, v: Viga) {
   const a = rv.viga.apoios[0];
   if (!a || a.tipo === "livre") return 0;
+  const doFor = v.forma?.apoios?.[0]?.largura;
+  if (doFor !== undefined && doFor > 0) return doFor / 100;
   if (a.tipo === "viga") return (pav.vigas.find((x) => x.id === a.id)?.bw ?? 0) / 100;
   const p = pav.pilares.find((x) => x.id === a.id);
   return p ? (rv.viga.eixo.horizontal ? p.b : p.h) / 100 : 0;
 }
 
-/** Modelo BIM da obra. Com `calculo`, os resultados entram no Pset_OpenStrut e, com
+/** Modelo BIM da obra. Com `calculo`, os resultados entram no OpenStrut e, com
  *  `opcoes.armadura` (padrão), as barras detalhadas das vigas e dos pilares. */
 export function modeloIfc(
   obra: Obra,
@@ -708,14 +738,92 @@ export function modeloIfc(
   const elementos: ElementoIfc[] = [];
   const grampos = new Set<string>();
   const semArmaduraPoligonal = new Set<string>();
+  const doNivel = (pav: Pavimento, nivel: NivelIfc) => ({ Pavimento: pav.nome, Nivel: nivel.nome });
+
+  /** Viga com os trechos, as barras e o Pset. `escada.inclinada`: do apoio 0 ao apoio 1
+   *  deduzidos (z relativo ao nível); o comprimento passa a ser o do eixo inclinado, e as
+   *  abscissas dos trechos e das barras crescem na mesma proporção. */
+  const vigaIfc = (
+    v: Viga,
+    pav: Pavimento,
+    nivel: NivelIfc,
+    escada?: { chave: string; inclinada?: { de: P3; ate: P3 }; propriedades: Propriedades },
+  ): VigaIfc | undefined => {
+    if (Math.hypot(v.x2 - v.x1, v.y2 - v.y1) < 1e-6) return undefined;
+    const rp = resultado?.pavimentos.find((x) => x.pavimento.id === pav.id);
+    const sistrutPav = resultado?.sistrut?.pavimentos.find((x) => x.pavimentoId === pav.id);
+    const eixo = eixoIfc(v);
+    const rv = rp?.vigas.find((x) => x.viga.id === v.id);
+    const nos = nosDaViga(v, eixo.comprimento, eixo.s1, rv);
+    let trechos = trechosDaViga(v, nos, eixo.comprimento);
+    let armadura: PosicaoIfc[] = [];
+    if (comArmadura && rv) {
+      const vs = sistrutPav?.vigas.find((x) => x.id === v.id);
+      const origem = nos[0] ?? 0;
+      let barras: BarraViga[] = [];
+      if (vs?.detalhamento)
+        barras = barrasSistrut(
+          vs.detalhamento.posicoes,
+          vs.detalhamento.trechosEstribo,
+          origem - larguraPrimeiroApoio(rv, pav, v) / 2,
+        );
+      else {
+        const dv = calculo?.detalhamento?.vigas.find(
+          (x) => x.pavimentoId === pav.id && x.vigaId === v.id,
+        );
+        if (dv) barras = barrasV2(dv.detalhamento.posicoes, origem);
+      }
+      if (barras.some((b) => b.tipo === "grampo")) grampos.add(v.nome);
+      armadura = armaduraViga(barras, trechos, m.cobrimentoViga, m.aco, m.acoEstribo);
+    }
+    let { origem, direcao, comprimento } = eixo;
+    const inc = escada?.inclinada;
+    if (inc) {
+      const d = { x: inc.ate.x - inc.de.x, y: inc.ate.y - inc.de.y, z: inc.ate.z - inc.de.z };
+      const L = Math.hypot(d.x, d.y, d.z);
+      const f = L / eixo.comprimento;
+      const esticar = (p: P3) => ({ ...p, x: p.x * f });
+      origem = inc.de;
+      direcao = { x: d.x / L, y: d.y / L, z: d.z / L };
+      comprimento = L;
+      trechos = trechos.map((t) => ({ ...t, inicio: t.inicio * f, fim: t.fim * f }));
+      armadura = armadura.map((p) => ({
+        ...p,
+        forma: p.forma.map(esticar),
+        copias: p.copias.map(esticar),
+      }));
+    }
+    return {
+      tipo: "viga",
+      chave: escada?.chave ?? `${nivel.chave}|viga|${v.id}`,
+      nome: v.nome,
+      nivel,
+      origem,
+      direcao,
+      comprimento,
+      trechos,
+      escada: escada !== undefined,
+      ...(escada ? { descricao: "Escada: viga avulsa importada do SISTRUT (.VIG sem .LAJ)" } : {}),
+      propriedades: semNaN({
+        Nome: v.nome,
+        ...doNivel(pav, nivel),
+        Secao: [...new Set(trechos.map((t) => rotuloPerfil(t.perfil)))].join("; "),
+        Vao_m: r2(comprimento),
+        Tramos: { inteiro: Math.max(1, nos.length - 1) },
+        CargaLinear_kN_m: v.cargaLinear,
+        Escada: escada !== undefined,
+        ...escada?.propriedades,
+        ...comuns(m.cobrimentoViga),
+        ...(rv ? propriedadesViga(rv, resultado?.norma.caminho === "sistrut" ? null : gamaF) : {}),
+      }),
+      armadura,
+    };
+  };
 
   for (const nivel of niveis) {
     const pav = nivel.pavimento;
     if (!pav) continue;
     const rp = resultado?.pavimentos.find((x) => x.pavimento.id === pav.id);
-    const avulso = pavimentoDeVigasAvulsas(pav);
-    const sistrutPav = resultado?.sistrut?.pavimentos.find((x) => x.pavimentoId === pav.id);
-    const doNivel = { Pavimento: pav.nome, Nivel: nivel.nome };
 
     // lajes: polígono com a espessura, topo no nível
     for (const l of pav.lajes) {
@@ -727,81 +835,28 @@ export function modeloIfc(
         nivel,
         pontos: contornoLaje(l),
         espessura: l.h / 100,
-        propriedades: {
+        propriedades: semNaN({
           Nome: l.nome,
-          ...doNivel,
+          ...doNivel(pav, nivel),
           Espessura_cm: l.h,
           TipoLaje: l.tipo ?? "macica",
           Revestimento_kN_m2: l.revestimento,
           Sobrecarga_kN_m2: l.sobrecarga,
           ...comuns(m.cobrimentoLaje),
           ...(rl ? propriedadesLaje(rl) : {}),
-        },
+        }),
         armadura: [],
       });
     }
 
     // vigas: eixo, trechos com a seção de cada tramo, barras do detalhamento
     for (const v of pav.vigas) {
-      if (Math.hypot(v.x2 - v.x1, v.y2 - v.y1) < 1e-6) continue;
-      const eixo = eixoIfc(v);
-      const rv = rp?.vigas.find((x) => x.viga.id === v.id);
-      const nos = nosDaViga(v, eixo.comprimento, eixo.s1, rv);
-      const trechos = trechosDaViga(v, nos, eixo.comprimento);
-      let armadura: PosicaoIfc[] = [];
-      if (comArmadura && rv) {
-        const vs = sistrutPav?.vigas.find((x) => x.id === v.id);
-        const origem = nos[0] ?? 0;
-        let barras: BarraViga[] = [];
-        if (vs?.detalhamento)
-          barras = barrasSistrut(
-            vs.detalhamento.posicoes,
-            vs.detalhamento.trechosEstribo,
-            origem - larguraPrimeiroApoio(rv, pav) / 2,
-          );
-        else {
-          const dv = calculo?.detalhamento?.vigas.find(
-            (x) => x.pavimentoId === pav.id && x.vigaId === v.id,
-          );
-          if (dv) barras = barrasV2(dv.detalhamento.posicoes, origem);
-        }
-        if (barras.some((b) => b.tipo === "grampo")) grampos.add(v.nome);
-        armadura = armaduraViga(barras, trechos, m.cobrimentoViga, m.aco, m.acoEstribo);
-      }
-      elementos.push({
-        tipo: "viga",
-        chave: `${nivel.chave}|viga|${v.id}`,
-        nome: v.nome,
-        nivel,
-        origem: eixo.origem,
-        direcao: eixo.direcao,
-        comprimento: eixo.comprimento,
-        trechos,
-        escada: avulso,
-        ...(avulso
-          ? {
-              descricao:
-                "Escada: viga avulsa importada do SISTRUT (.VIG sem .LAJ), fora da planta do prédio",
-            }
-          : {}),
-        propriedades: {
-          Nome: v.nome,
-          ...doNivel,
-          Secao: [...new Set(trechos.map((t) => rotuloPerfil(t.perfil)))].join("; "),
-          Vao_m: r2(eixo.comprimento),
-          Tramos: { inteiro: Math.max(1, nos.length - 1) },
-          CargaLinear_kN_m: v.cargaLinear,
-          Escada: avulso,
-          ...comuns(m.cobrimentoViga),
-          ...(rv ? propriedadesViga(rv, gamaF) : {}),
-        },
-        armadura,
-      });
+      const e = vigaIfc(v, pav, nivel);
+      if (e) elementos.push(e);
     }
 
-    // pilares: o lance abaixo do nível; os apoios da escada não são pilares do prédio
+    // pilares: o lance abaixo do nível
     for (const p of pav.pilares) {
-      if (avulso) continue;
       const perfil = perfilPilar(p);
       const rpil = resultado?.pilares.find(
         (x) => x.pavimentoId === pav.id && x.repeticao === nivel.repeticao && x.pilar.id === p.id,
@@ -829,18 +884,73 @@ export function modeloIfc(
         base: -pav.peDireito,
         altura: pav.peDireito,
         perfil,
-        propriedades: {
+        propriedades: semNaN({
           Nome: p.nome,
-          ...doNivel,
+          ...doNivel(pav, nivel),
           Secao: rotuloSecaoPilar(p),
           ...(p.rotacao && !p.secao ? { Rotacao_graus: p.rotacao } : {}),
           PeDireito_m: pav.peDireito,
           ...(p.transicao ? { NasceEmVigaDeTransicao: true } : {}),
           ...comuns(m.cobrimentoPilar),
           ...(rpil ? propriedadesPilar(rpil) : {}),
-        },
+        }),
         armadura,
       });
+    }
+  }
+
+  // escada (vigas avulsas do SISTRUT): no nível de baixo dos que ela liga, inclinada de
+  // um apoio ao outro (escada.ts); sem dedução, num nível "cota não definida" em 0. Os
+  // pilares do pavimento avulso são só apoios de cálculo e não entram.
+  const maisBaixo = new Map<string, NivelIfc>();
+  for (const n of niveis)
+    if (n.pavimento && !maisBaixo.has(n.pavimento.id)) maisBaixo.set(n.pavimento.id, n);
+  const niveisPredio: NivelPredio[] = [...maisBaixo.values()].map((n) => ({
+    pavimento: n.pavimento!,
+    cota: n.elevacao,
+  }));
+  for (const pav of obra.pavimentos.filter(pavimentoDeVigasAvulsas)) {
+    const deduzidos = deduzirApoiosEscada(pav, niveisPredio);
+    let semCota: NivelIfc | undefined;
+    for (const v of pav.vigas) {
+      const chave = `${pav.id}|escada|${v.id}`;
+      // apoios no mesmo ponto da planta não dão uma escada: sem posição deduzida
+      const par = deduzidos.get(v.id);
+      const deduzida =
+        par !== undefined &&
+        Math.hypot(par[1].ponto.x - par[0].ponto.x, par[1].ponto.y - par[0].ponto.y) > 1e-3;
+      let e: VigaIfc | undefined;
+      if (par && deduzida) {
+        const [a0, a1] = par;
+        const baixo = a0.nivel.cota <= a1.nivel.cota ? a0 : a1;
+        const nivel = maisBaixo.get(baixo.nivel.pavimento.id)!;
+        const ponto = (a: typeof a0): P3 => ({ ...a.ponto, z: a.nivel.cota - nivel.elevacao });
+        e = vigaIfc(v, pav, nivel, {
+          chave,
+          inclinada: { de: ponto(a0), ate: ponto(a1) },
+          propriedades: {
+            PosicaoDeduzida: `reações lançadas em ${a0.viga} (${a0.nivel.pavimento.nome}) e ${a1.viga} (${a1.nivel.pavimento.nome})`,
+            CotaIncerta: false,
+          },
+        });
+      } else {
+        if (!semCota) {
+          semCota = {
+            chave: `${pav.id}|sem-cota`,
+            nome: `${pav.nome} (cota não definida)`,
+            elevacao: 0,
+            descricao:
+              "Vigas avulsas importadas do SISTRUT (.VIG sem .LAJ, como uma escada) cuja posição as cargas do prédio não permitem deduzir; ficam na posição da importação, fora da planta",
+            pavimento: pav,
+          };
+          niveis.splice(1, 0, semCota);
+          avisos.push(
+            `${pav.nome}: nenhuma carga das vigas do prédio casa com as reações das vigas avulsas; elas ficam no nível "${semCota.nome}", em 0, fora da planta.`,
+          );
+        }
+        e = vigaIfc(v, pav, semCota, { chave, propriedades: { CotaIncerta: true } });
+      }
+      if (e) elementos.push(e);
     }
   }
 

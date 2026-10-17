@@ -12,7 +12,7 @@ import { importarObraSistrut } from "../../telas/InicioSistrut";
 import { OBRA_E2E } from "../../telas/__fixtures__/predioSistrut";
 import { calcular } from "../../telas/calculo";
 import { detalharObra } from "../../telas/detalhamento";
-import { obraTresPavimentos } from "./__fixtures__/obras";
+import { obraComEscada, obraTresPavimentos } from "./__fixtures__/obras";
 import { gerarIfc } from "./exportarIfc";
 
 const PYTHON = process.env.OPENSTRUT_IFC_PYTHON;
@@ -41,11 +41,12 @@ afterAll(() => {
 /** Gera o IFC da obra calculada e o confere com o IfcOpenShell, numa pasta temporária. */
 function conferir(nome: string, obra: Obra): Conferencia {
   const c = calcular(obra);
-  if (c.tipo !== "ok") throw new Error(`cálculo: ${c.tipo}`);
-  const { conteudo } = gerarIfc(obra, {
-    resultado: c.resultado,
-    detalhamento: detalharObra(c.resultado, obra),
-  });
+  const { conteudo } = gerarIfc(
+    obra,
+    c.tipo === "ok"
+      ? { resultado: c.resultado, detalhamento: detalharObra(c.resultado, obra) }
+      : null,
+  );
   const arquivo = join(pasta, `${nome}.ifc`);
   writeFileSync(arquivo, conteudo);
   copyFileSync(resolve("src/exportacao/ifc/__validacao__/conferir.py"), join(pasta, "conferir.py"));
@@ -96,7 +97,7 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     expect(z1).toBeCloseTo(11.8, 6);
     expect(p1.material).toEqual(["Concreto C25"]);
     expect(p1.psets.Pset_ColumnCommon).toMatchObject({ Reference: "P1", LoadBearing: true });
-    expect(p1.psets.Pset_OpenStrut).toMatchObject({ Nome: "P1", fck_MPa: 25, Calculado: true });
+    expect(p1.psets.OpenStrut).toMatchObject({ Nome: "P1", fck_MPa: 25, Calculado: true });
 
     // laje L1 do térreo: 4 × 5 m, h = 12 cm, topo em 3,2 m
     const l1 = caixa(r, "IfcSlab", "L1", "Térreo").caixa;
@@ -126,5 +127,24 @@ describe.skipIf(!PYTHON)("IFC lido pelo IfcOpenShell (OPENSTRUT_IFC_PYTHON)", ()
     expect(n7[4]).toBeLessThan(10.06);
     expect(n7[2]).toBeGreaterThan(2.6);
     expect(n7[5]).toBeLessThan(3);
+  }, 600_000);
+
+  it("escada deduzida: válida, no nível do Térreo, inclinada de 3,2 m a 6,0 m", () => {
+    const { obra, apoio0, apoio1 } = obraComEscada();
+    const r = conferir("escada", obra);
+    expect(r.erros).toEqual([]);
+    expect(r.falhasGeometria).toEqual([]);
+    expect(r.niveis.map((n) => n.nome)).not.toContain("ESCADA");
+    const e1 = caixa(r, "IfcBeam", "E1", "Térreo");
+    const [x0, y0, z0, x1, y1, z1] = e1.caixa;
+    // o topo passa pelos dois apoios: 3,2 m no Térreo e 6,0 m no Tipo; 40 cm de altura
+    expect(z1).toBeCloseTo(6, 2);
+    expect(z0).toBeGreaterThan(3.2 - 0.5);
+    expect(z0).toBeLessThan(3.2);
+    expect(x0).toBeLessThanOrEqual(Math.min(apoio0.x, apoio1.x) + 1e-6);
+    expect(x1).toBeGreaterThanOrEqual(Math.max(apoio0.x, apoio1.x) - 1e-6);
+    expect(y0).toBeLessThanOrEqual(Math.min(apoio0.y, apoio1.y) + 1e-6);
+    expect(y1).toBeGreaterThanOrEqual(Math.max(apoio0.y, apoio1.y) - 1e-6);
+    expect(e1.psets.OpenStrut).toMatchObject({ Escada: true, CotaIncerta: false });
   }, 600_000);
 });

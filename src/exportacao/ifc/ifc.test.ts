@@ -8,7 +8,7 @@ import { importarObraSistrut } from "../../telas/InicioSistrut";
 import { OBRA_E2E, PREDIO } from "../../telas/__fixtures__/predioSistrut";
 import { calcular } from "../../telas/calculo";
 import { detalharObra } from "../../telas/detalhamento";
-import { obraTresPavimentos } from "./__fixtures__/obras";
+import { obraComEscada, obraTresPavimentos } from "./__fixtures__/obras";
 import { gerarIfc } from "./exportarIfc";
 import {
   type CalculoIfc,
@@ -20,6 +20,7 @@ import {
   trechosDaViga,
   type VigaIfc,
 } from "./modelo";
+import { deduzirApoiosEscada } from "./escada";
 import { globalId, numeroStep, textoStep } from "./step";
 
 const DATA = new Date("2026-10-17T12:00:00Z");
@@ -264,6 +265,26 @@ describe("obra E2E do oráculo (NB-1/78 pelo SISTRUT)", () => {
     });
   });
 
+  it("viga: Mk e Vk; sem Md, que o DESDIM calcula com o γf do .DSP", () => {
+    expect(v1.propriedades.MkPositivo_kNm).toBeGreaterThan(0);
+    expect(v1.propriedades.Vk_kN).toBeGreaterThan(0);
+    expect(v1.propriedades).not.toHaveProperty("MdPositivo_kNm");
+  });
+
+  it("LPi do .FOR de 30 cm (pilar de 20): as barras partem 5 cm antes", () => {
+    const outra = importada(OBRA_E2E);
+    const pav = outra.pavimentos[0]!;
+    pav.vigas = pav.vigas.map((v) =>
+      v.nome === "V1" ? { ...v, forma: { ...v.forma, apoios: [{ largura: 30 }] } } : v,
+    );
+    const v = modeloIfc(outra, calculado(outra)).elementos.find(
+      (e) => e.tipo === "viga" && e.nome === "V1",
+    )!;
+    const n4 = v.armadura.find((p) => p.nome === "N4")!;
+    // face externa a −15 cm do eixo, positiva a 2 cm dela
+    expect(Math.min(...n4.forma.map((p) => p.x))).toBeCloseTo(-0.13, 9);
+  });
+
   it("laje sem flecha no Pset: o caminho do SISTRUT não a calcula", () => {
     const l1 = m.elementos.find((e) => e.tipo === "laje" && e.nome === "L1")!;
     expect(l1.propriedades.Asx_cm2_m).toBeGreaterThan(0);
@@ -276,14 +297,111 @@ describe("escada importada do SISTRUT", () => {
   const obra = importada(PREDIO);
   const escada = obra.pavimentos.find((p) => p.id === "ESCADA")!;
 
-  it("é reconhecida e entra como vigas marcadas, sem os pilares de apoio", () => {
+  it("é reconhecida, sai da pilha de níveis e, sem cota deduzível, fica num nível em 0", () => {
     expect(pavimentoDeVigasAvulsas(escada)).toBe(true);
     expect(obra.pavimentos.filter(pavimentoDeVigasAvulsas)).toHaveLength(1);
+    // o ESCADA.VIG da fixture é o E2E.VIG (vigas de 2 tramos): sem reação de biapoiada,
+    // não há como casar com as cargas do prédio
     const m = modeloIfc(obra, null);
+    expect(m.niveis.map((n) => [n.nome, n.elevacao])).toEqual([
+      ["Fundação", 0],
+      ["ESCADA (cota não definida)", 0],
+      ["BASE", 0.4],
+      ["TETO", 3.4],
+    ]);
     const doNivel = m.elementos.filter((e) => e.nivel.pavimento?.id === "ESCADA");
     expect(doNivel.map((e) => e.tipo)).toEqual(escada.vigas.map(() => "viga"));
-    expect(doNivel.every((e) => e.tipo === "viga" && e.escada && e.propriedades.Escada)).toBe(true);
-    expect(m.niveis.find((n) => n.pavimento?.id === "ESCADA")?.descricao).toMatch(/escada/);
+    expect(
+      doNivel.every((e) => e.tipo === "viga" && e.escada && e.propriedades.CotaIncerta === true),
+    ).toBe(true);
+    expect(m.avisos.join()).toMatch(/ESCADA: nenhuma carga/);
+  });
+});
+
+describe("escada com as reações lançadas nas vigas do prédio", () => {
+  // R0 = 20 kN no Térreo, R1 = 10 kN no Tipo (ver obraComEscada)
+  const { obra, escada: avulso, apoio0: p0, apoio1: p1 } = obraComEscada();
+
+  it("vai do apoio no Térreo (3,2 m) ao apoio no Tipo mais baixo (6,0 m), no nível do Térreo", () => {
+    const m = modeloIfc(obra, null);
+    expect(m.niveis.map((n) => n.nome)).toEqual([
+      "Fundação",
+      "Térreo",
+      "Tipo (2/2)",
+      "Tipo (1/2)",
+      "Cobertura",
+    ]);
+    const e = m.elementos.find((x) => x.nome === "E1") as VigaIfc;
+    expect(e.nivel.nome).toBe("Térreo");
+    expect(e.origem).toEqual({ ...p0, z: 0 });
+    const fim = {
+      x: e.origem.x + e.direcao.x * e.comprimento,
+      y: e.origem.y + e.direcao.y * e.comprimento,
+      z: e.origem.z + e.direcao.z * e.comprimento,
+    };
+    expect(fim.x).toBeCloseTo(p1.x, 9);
+    expect(fim.y).toBeCloseTo(p1.y, 9);
+    expect(fim.z).toBeCloseTo(2.8, 9);
+    expect(e.propriedades).toMatchObject({ Escada: true, CotaIncerta: false });
+    expect(e.propriedades.PosicaoDeduzida).toMatch(/Térreo.*Tipo/);
+    expect(deduzirApoiosEscada(avulso, []).size).toBe(0);
+  });
+});
+
+describe("resultados sem solução e seção 0 do .SEC", () => {
+  it("pilar sem solução sai com Nk e 'sem solução', sem NaN no arquivo", () => {
+    // P1 da cobertura 12 × 12 com pé-direito 6 m: λ ≈ 173, sem solução (repro da revisão)
+    const obra = obraTresPavimentos();
+    const cob = obra.pavimentos[0]!;
+    obra.pavimentos[0] = {
+      ...cob,
+      peDireito: 6,
+      pilares: cob.pilares.map((p, i) => (i === 0 ? { ...p, b: 12, h: 12 } : p)),
+    };
+    const calc = calculado(obra);
+    const p = modeloIfc(obra, calc).elementos.find(
+      (e) => e.tipo === "pilar" && e.nivel.nome === "Cobertura" && e.nome === cob.pilares[0]!.nome,
+    )!;
+    expect(p.propriedades.Armadura).toBe("sem solução");
+    expect(p.propriedades).not.toHaveProperty("Taxa_pct");
+    expect(gerarIfc(obra, calc, { data: DATA }).conteudo).not.toMatch(/[(,]-?NaN[,)]/); // NaN como valor (o texto "NaN" pode cair num GlobalId);
+  });
+
+  it("trecho com seção 0: o balanço herda a do apoio vizinho; o tramo usa bw × h", () => {
+    const v = {
+      id: "v",
+      nome: "V1",
+      x1: 0,
+      y1: 0,
+      x2: 9,
+      y2: 0,
+      bw: 12,
+      h: 50,
+      cargaLinear: 0,
+      secoes: {
+        trechos: [
+          { bw: 0, h: 0, bf: 0, hf: 0 },
+          { bw: 0, h: 0, bf: 0, hf: 0 },
+        ],
+        apoios: [
+          { bw: 20, h: 45 },
+          { bw: 20, h: 45 },
+        ],
+      },
+    };
+    expect(trechosDaViga(v, [0, 1, 9], 9).map((t) => t.perfil)).toEqual([
+      { tipo: "retangulo", largura: 0.2, altura: 0.45 },
+      { tipo: "retangulo", largura: 0.2, altura: 0.45 },
+    ]);
+    const tres = {
+      ...v,
+      secoes: { ...v.secoes, trechos: [...v.secoes.trechos, { bw: 0, h: 0, bf: 0, hf: 0 }] },
+    };
+    expect(trechosDaViga(tres, [0, 1, 5, 9], 9)[1]!.perfil).toEqual({
+      tipo: "retangulo",
+      largura: 0.12,
+      altura: 0.5,
+    });
   });
 });
 

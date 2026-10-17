@@ -1,7 +1,7 @@
 // Traduz o modelo BIM (modelo.ts) para um arquivo IFC4 (STEP). Estrutura espacial:
 // IfcProject → IfcSite → IfcBuilding → um IfcBuildingStorey por nível. Pilares, vigas e
 // lajes são IfcColumn, IfcBeam e IfcSlab com sólido extrudado (SweptSolid), material
-// "Concreto C{fck}" e os Psets Pset_OpenStrut e Pset_*Common. A armadura sai como
+// "Concreto C{fck}" e os Psets OpenStrut e Pset_*Common. A armadura sai como
 // IfcReinforcingBar agregada ao elemento (IfcRelAggregates), uma por posição, com a
 // barra mapeada (IfcMappedItem) em cada cópia. Unidades: metro, m², m³ e radiano; a
 // origem é a da planta. A ordem dos atributos é a do EXPRESS do IFC4 ADD2 TC1.
@@ -25,7 +25,8 @@ export interface OpcoesEscrita {
 }
 
 const APLICACAO = "OpenStrut V2";
-const PSET = "Pset_OpenStrut";
+/** Pset próprio: o prefixo "Pset_" é reservado aos conjuntos padrão do IFC. */
+const PSET = "OpenStrut";
 
 /** Tipo IFC da barra pela função dela. */
 const TIPO_BARRA: Record<PosicaoIfc["tipo"], string> = {
@@ -411,10 +412,17 @@ export function escreverIfc(modelo: ModeloIfc, opcoes: OpcoesEscrita = {}): stri
         break;
       }
       case "viga": {
-        lugar = local(
-          nivel.lugar,
-          posicao3(ponto(e.origem.x, e.origem.y, 0), Z, direcao(e.direcao.x, e.direcao.y, 0)),
-        );
+        // x local no eixo; z local para cima, perpendicular ao eixo (a escada é inclinada)
+        const d = e.direcao;
+        const n = { x: -d.z * d.x, y: -d.z * d.y, z: 1 - d.z * d.z };
+        const ln = Math.hypot(n.x, n.y, n.z);
+        const eixoZ =
+          Math.abs(d.z) < 1e-12
+            ? Z
+            : ln > 1e-9
+              ? direcao(n.x / ln, n.y / ln, n.z / ln)
+              : direcao(1, 0, 0);
+        lugar = local(nivel.lugar, posicao3(p3(e.origem), eixoZ, direcao(d.x, d.y, d.z)));
         // sólido de cada trecho: perfil no plano (y lateral, z), topo em z = 0,
         // extrudado ao longo de x
         const eixoX = direcao(1, 0, 0);
