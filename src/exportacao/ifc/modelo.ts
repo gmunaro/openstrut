@@ -22,17 +22,20 @@ import type {
   ResultadoViga,
 } from "../../calculo/fluxo";
 import type { PosicaoBarra, TrechoEstribo } from "../../calculo/sistrut/base/tipos";
-import type { PosicaoArmadura } from "../../calculo/detalhamento/vigas";
+import {
+  armaduraPilar,
+  armaduraViga,
+  type BarraViga,
+  barrasDaV2,
+  type P3,
+  type PerfilSecao,
+  type PosicaoGeometria,
+  perfilPilar,
+} from "../../dominio/armaduraGeometria";
 import { eixoDaViga } from "../../dominio/gerar";
 import { deduzirApoiosEscada, type NivelPredio, pavimentoDeVigasAvulsas } from "./escada";
 import type { Laje, Obra, Pavimento, Pilar, Ponto, Viga } from "../../dominio/obra";
 import type { DetalhamentoVigasObra } from "../../telas/detalhamento";
-
-export interface P3 {
-  x: number;
-  y: number;
-  z: number;
-}
 
 /** Valor de propriedade: número sai IfcReal; `{ inteiro }` IfcInteger; texto IfcLabel
  *  (IfcText se passar de 255 caracteres); booleano IfcBoolean. */
@@ -53,31 +56,11 @@ export interface NivelIfc {
   cotaIncerta?: boolean;
 }
 
-/** Perfil 2D centrado na origem do perfil, m. */
-export type PerfilIfc =
-  | { tipo: "retangulo"; largura: number; altura: number }
-  | { tipo: "circulo"; raio: number; parede?: number }
-  /** Contorno anti-horário, sem repetir o primeiro ponto. */
-  | { tipo: "poligono"; pontos: { x: number; y: number }[] }
-  /** Mesa em cima: largura bf e espessura hf; alma bw; altura total. */
-  | { tipo: "T"; altura: number; mesa: number; espessuraMesa: number; alma: number };
-
-/** Uma posição de armadura (N1, N2…): a forma de uma barra no sistema local do
- *  elemento e as translações de cada barra igual. */
-export interface PosicaoIfc {
-  nome: string;
-  tipo: "positiva" | "negativa" | "porta-estribos" | "pele" | "construtiva" | "estribo";
-  /** mm */
-  phi: number;
-  aco: string;
-  /** Comprimento de cada barra do quadro, cm. */
-  comprimento: number;
-  /** Polilinha da barra, m. O estribo é aberto: termina 2φ antes do início (o
-   *  IfcOpenShell não varre polilinha fechada, e o estribo real tem as pontas soltas). */
-  forma: P3[];
-  /** Deslocamento de cada barra em relação à forma, m. */
-  copias: P3[];
-}
+/** Posição de armadura como o escritor a recebe: a do domínio, com a longitudinal do
+ *  pilar já levada a "positiva" (barra MAIN, "Armadura positiva" no IFC). */
+export type PosicaoIfc = PosicaoGeometria & {
+  tipo: Exclude<PosicaoGeometria["tipo"], "longitudinal">;
+};
 
 interface ElementoBase {
   chave: string;
@@ -98,14 +81,14 @@ export interface PilarIfc extends ElementoBase {
   /** Base do lance relativa ao nível dele (o de baixo do pavimento: 0) e altura, m. */
   base: number;
   altura: number;
-  perfil: PerfilIfc;
+  perfil: PerfilSecao;
 }
 
 export interface TrechoVigaIfc {
   /** Ao longo do eixo, m, a partir da origem da viga. */
   inicio: number;
   fim: number;
-  perfil: Extract<PerfilIfc, { tipo: "retangulo" | "T" }>;
+  perfil: Extract<PerfilSecao, { tipo: "retangulo" | "T" }>;
 }
 
 export interface VigaIfc extends ElementoBase {
@@ -192,29 +175,6 @@ function antiHorario<T extends { x: number; y: number }>(pontos: readonly T[]): 
   return area < 0 ? [...pontos].reverse() : [...pontos];
 }
 
-/** Perfil da seção do pilar, m: retângulo b × h, círculo (com vazado) ou polígono
- *  centrado pela caixa dele (b e h são a caixa da seção, dominio/obra.ts). */
-export function perfilPilar(p: Pilar): PerfilIfc {
-  const s = p.secao;
-  if (s?.tipo === "circular") {
-    const raio = s.d / 200;
-    return s.dInterno > 0 && s.dInterno < s.d
-      ? { tipo: "circulo", raio, parede: (s.d - s.dInterno) / 200 }
-      : { tipo: "circulo", raio };
-  }
-  if (s?.tipo === "poligonal" && s.vertices.length >= 3) {
-    const xs = s.vertices.map((v) => v.x);
-    const ys = s.vertices.map((v) => v.y);
-    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-    return {
-      tipo: "poligono",
-      pontos: antiHorario(s.vertices.map((v) => ({ x: (v.x - cx) / 100, y: (v.y - cy) / 100 }))),
-    };
-  }
-  return { tipo: "retangulo", largura: p.b / 100, altura: p.h / 100 };
-}
-
 const rotuloSecaoPilar = (p: Pilar) =>
   p.secao?.tipo === "circular"
     ? `circular d = ${decimal(p.secao.d)} cm${p.secao.dInterno > 0 ? `, vazado d = ${decimal(p.secao.dInterno)} cm` : ""}`
@@ -299,45 +259,7 @@ const rotuloPerfil = (p: TrechoVigaIfc["perfil"]) =>
     ? `T: alma ${decimal(p.alma * 100)} × ${decimal(p.altura * 100)} cm, mesa ${decimal(p.mesa * 100)} × ${decimal(p.espessuraMesa * 100)} cm`
     : `${decimal(p.largura * 100)} × ${decimal(p.altura * 100)} cm`;
 
-// ---- armadura das vigas -----------------------------------------------------------
-
-/** Barra de viga em forma comum aos dois detalhamentos. x em m a partir da origem da
- *  viga; ganchos em m; estribos com a abscissa de cada um. */
-interface BarraViga {
-  nome: string;
-  tipo: PosicaoIfc["tipo"] | "grampo";
-  phi: number;
-  quantidade: number;
-  comprimento: number;
-  inicio: number;
-  fim: number;
-  ganchoInicio: number;
-  ganchoFim: number;
-  /** Só estribos: abscissa de cada um, m. */
-  estribos?: number[];
-}
-
-/** Abscissas de n estribos igualmente espaçados entre a e b. */
-const espalhar = (a: number, b: number, n: number) =>
-  Array.from({ length: Math.max(0, n) }, (_, i) => (n > 1 ? a + ((b - a) * i) / (n - 1) : a));
-
-/** Detalhamento da V2 (calculo/detalhamento/vigas.ts): x a partir do primeiro nó, cm. */
-function barrasV2(posicoes: readonly PosicaoArmadura[], origem: number): BarraViga[] {
-  return posicoes.map((p) => ({
-    nome: p.nome,
-    tipo: p.tipo,
-    phi: p.phi,
-    quantidade: p.quantidade,
-    comprimento: p.comprimento,
-    inicio: origem + p.xInicio / 100,
-    fim: origem + p.xFim / 100,
-    ganchoInicio: p.ganchoInicio / 100,
-    ganchoFim: p.ganchoFim / 100,
-    ...(p.tipo === "estribo"
-      ? { estribos: espalhar(origem + p.xInicio / 100, origem + p.xFim / 100, p.quantidade) }
-      : {}),
-  }));
-}
+// ---- armadura -----------------------------------------------------------------------
 
 /** Detalhamento do SISTRUT (DESINIT): início e fim a partir da face externa do primeiro
  *  apoio, cm (conferido na obra E2E do oráculo: positiva de 2 a 818 numa viga de 8 m com
@@ -382,207 +304,10 @@ const secaoEm = (trechos: readonly TrechoVigaIfc[], t: number) => {
   return p.tipo === "T" ? { bw: p.alma, h: p.altura } : { bw: p.largura, h: p.altura };
 };
 
-/** Contorno do estribo (cantos, sem repetir o primeiro) aberto: volta pelo último lado e
- *  para a `folga` do ponto inicial. */
-function estriboAberto(cantos: readonly P3[], folga: number): P3[] {
-  const a = cantos[0]!;
-  const b = cantos.at(-1)!;
-  const L = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
-  const t = L > 0 ? Math.min(folga / L, 0.5) : 0;
-  return [
-    ...cantos,
-    { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t },
-  ];
-}
-
-/** Posições y de n barras numa camada de largura útil `largura` (centrada). */
-const naLargura = (n: number, largura: number) =>
-  n <= 1 ? [0] : Array.from({ length: n }, (_, i) => -largura / 2 + (largura * i) / (n - 1));
-
-/** Barras da viga no sistema local dela (x no eixo, y lateral, z para cima, topo em 0):
- *  longitudinais numa camada (positivas embaixo, negativas e porta-estribos em cima,
- *  pele nas faces), com os ganchos voltados para dentro da viga; estribos retangulares
- *  na alma. Grampos não entram (aviso). */
-function armaduraViga(
-  barras: readonly BarraViga[],
-  trechos: readonly TrechoVigaIfc[],
-  cobrimento: number,
-  aco: string,
-  acoEstribo: string,
-): PosicaoIfc[] {
-  const phiEstribo = (barras.find((b) => b.tipo === "estribo")?.phi ?? 5) / 1000;
-  const c = cobrimento / 100;
-  const pos: PosicaoIfc[] = [];
-  for (const b of barras) {
-    if (b.tipo === "grampo" || b.quantidade <= 0 || b.phi <= 0) continue;
-    const phi = b.phi / 1000;
-    if (b.tipo === "estribo") {
-      const xs = b.estribos ?? [];
-      if (xs.length === 0) continue;
-      const { bw, h } = secaoEm(trechos, (b.inicio + b.fim) / 2);
-      const meio = bw / 2 - c - phi / 2;
-      const topo = -c - phi / 2;
-      const fundo = -h + c + phi / 2;
-      if (meio <= 0 || topo <= fundo) continue;
-      pos.push({
-        nome: b.nome,
-        tipo: "estribo",
-        phi: b.phi,
-        aco: acoEstribo,
-        comprimento: b.comprimento,
-        forma: estriboAberto(
-          [
-            { x: 0, y: -meio, z: topo },
-            { x: 0, y: meio, z: topo },
-            { x: 0, y: meio, z: fundo },
-            { x: 0, y: -meio, z: fundo },
-          ],
-          2 * phi,
-        ),
-        copias: xs.map((x) => ({ x, y: 0, z: 0 })),
-      });
-      continue;
-    }
-    const { bw, h } = secaoEm(trechos, (b.inicio + b.fim) / 2);
-    const util = bw - 2 * (c + phiEstribo) - phi;
-    const emCima = b.tipo === "negativa" || b.tipo === "porta-estribos";
-    const z = emCima ? -(c + phiEstribo + phi / 2) : -h + c + phiEstribo + phi / 2;
-    const sentido = emCima ? -1 : 1;
-    const gancho = (g: number) => Math.min(g, h - 2 * (c + phiEstribo) - phi);
-    if (b.tipo === "pele") {
-      // metade em cada face, igualmente espaçadas na altura entre as camadas
-      const porFace = Math.max(1, Math.ceil(b.quantidade / 2));
-      const zs = espalhar(-h + c + phiEstribo, -(c + phiEstribo), porFace + 2).slice(1, -1);
-      const copias = [-util / 2, util / 2].flatMap((y) => zs.map((zz) => ({ x: 0, y, z: zz })));
-      pos.push({
-        nome: b.nome,
-        tipo: "pele",
-        phi: b.phi,
-        aco,
-        comprimento: b.comprimento,
-        forma: [
-          { x: b.inicio, y: 0, z: 0 },
-          { x: b.fim, y: 0, z: 0 },
-        ],
-        copias: copias.slice(0, b.quantidade),
-      });
-      continue;
-    }
-    const forma: P3[] = [
-      ...(b.ganchoInicio > 0
-        ? [{ x: b.inicio, y: 0, z: z + sentido * gancho(b.ganchoInicio) }]
-        : []),
-      { x: b.inicio, y: 0, z },
-      { x: b.fim, y: 0, z },
-      ...(b.ganchoFim > 0 ? [{ x: b.fim, y: 0, z: z + sentido * gancho(b.ganchoFim) }] : []),
-    ];
-    pos.push({
-      nome: b.nome,
-      tipo: b.tipo,
-      phi: b.phi,
-      aco,
-      comprimento: b.comprimento,
-      forma,
-      copias: naLargura(b.quantidade, Math.max(util, 0)).map((y) => ({ x: 0, y, z: 0 })),
-    });
-  }
-  return pos;
-}
-
-// ---- armadura dos pilares ----------------------------------------------------------
-
-/** Barras do lance do pilar, no sistema local dele (centro da seção, base em z = 0):
- *  longitudinais com a distribuição por face que o cálculo verificou (retangular) ou em
- *  círculo, e estribos ao longo do lance. Seção poligonal: sem armadura (aviso). */
-function armaduraPilar(
-  r: ResultadoPilar,
-  perfil: PerfilIfc,
-  altura: number,
-  cobrimento: number,
-  aco: string,
-  acoEstribo: string,
-): PosicaoIfc[] {
-  const { barras, estribo } = r.resultado;
-  if (barras.n <= 0 || barras.phi <= 0 || perfil.tipo === "poligono" || perfil.tipo === "T")
-    return [];
-  const c = cobrimento / 100;
-  const phi = barras.phi / 1000;
-  const phiT = estribo.phi > 0 ? estribo.phi / 1000 : 0.005;
-  const pos: PosicaoIfc[] = [];
-  let copias: P3[];
-  let contornoEstribo: P3[];
-  if (perfil.tipo === "circulo") {
-    const rb = perfil.raio - c - phiT - phi / 2;
-    const re = perfil.raio - c - phiT / 2;
-    if (rb <= 0) return [];
-    copias = Array.from({ length: barras.n }, (_, i) => {
-      const a = (2 * Math.PI * i) / barras.n;
-      return { x: rb * Math.cos(a), y: rb * Math.sin(a), z: 0 };
-    });
-    contornoEstribo = Array.from({ length: 24 }, (_, i) => {
-      const a = (2 * Math.PI * i) / 24;
-      return { x: re * Math.cos(a), y: re * Math.sin(a), z: 0 };
-    });
-  } else {
-    const ax = perfil.largura / 2 - c - phiT - phi / 2;
-    const ay = perfil.altura / 2 - c - phiT - phi / 2;
-    if (ax <= 0 || ay <= 0) return [];
-    // porFaceX: barras em cada face de comprimento h (x = ±ax); porFaceY: nas faces de
-    // comprimento b (y = ±ay); os cantos contam nas duas (calculo/tipos.ts BarrasPilar)
-    const nx = Math.max(2, barras.porFaceX);
-    const ny = Math.max(2, barras.porFaceY);
-    const ys = espalhar(-ay, ay, nx);
-    const xs = espalhar(-ax, ax, ny).slice(1, -1);
-    copias = [
-      ...ys.flatMap((y) => [
-        { x: -ax, y, z: 0 },
-        { x: ax, y, z: 0 },
-      ]),
-      ...xs.flatMap((x) => [
-        { x, y: -ay, z: 0 },
-        { x, y: ay, z: 0 },
-      ]),
-    ];
-    const ex = perfil.largura / 2 - c - phiT / 2;
-    const ey = perfil.altura / 2 - c - phiT / 2;
-    contornoEstribo = [
-      { x: -ex, y: -ey, z: 0 },
-      { x: ex, y: -ey, z: 0 },
-      { x: ex, y: ey, z: 0 },
-      { x: -ex, y: ey, z: 0 },
-    ];
-  }
-  pos.push({
-    nome: "Longitudinal",
-    tipo: "positiva",
-    phi: barras.phi,
-    aco,
-    comprimento: Math.round(altura * 100),
-    forma: [
-      { x: 0, y: 0, z: 0 },
-      { x: 0, y: 0, z: altura },
-    ],
-    copias,
-  });
-  if (estribo.phi > 0 && estribo.espacamento > 0) {
-    const s = estribo.espacamento / 100;
-    const n = Math.floor((altura - 2 * c) / s) + 1;
-    const forma = estriboAberto(contornoEstribo, 2 * phiT);
-    const perimetro = forma
-      .slice(1)
-      .reduce((a, p, i) => a + Math.hypot(p.x - forma[i]!.x, p.y - forma[i]!.y), 0);
-    pos.push({
-      nome: "Estribo",
-      tipo: "estribo",
-      phi: estribo.phi,
-      aco: acoEstribo,
-      comprimento: Math.round(perimetro * 100),
-      forma,
-      copias: Array.from({ length: Math.max(0, n) }, (_, i) => ({ x: 0, y: 0, z: c + i * s })),
-    });
-  }
-  return pos;
-}
+/** Posições da geometria comum (dominio/armaduraGeometria.ts) para o IFC: a longitudinal
+ *  do pilar sai como "positiva". */
+const paraIfc = (pos: readonly PosicaoGeometria[]): PosicaoIfc[] =>
+  pos.map((p) => ({ ...p, tipo: p.tipo === "longitudinal" ? "positiva" : p.tipo }));
 
 // ---- propriedades dos resultados ---------------------------------------------------
 
@@ -775,10 +500,12 @@ export function modeloIfc(
         const dv = calculo?.detalhamento?.vigas.find(
           (x) => x.pavimentoId === pav.id && x.vigaId === v.id,
         );
-        if (dv) barras = barrasV2(dv.detalhamento.posicoes, origem);
+        if (dv) barras = barrasDaV2(dv.detalhamento.posicoes, origem);
       }
       if (barras.some((b) => b.tipo === "grampo")) grampos.add(v.nome);
-      armadura = armaduraViga(barras, trechos, m.cobrimentoViga, m.aco, m.acoEstribo);
+      armadura = paraIfc(
+        armaduraViga(barras, (t) => secaoEm(trechos, t), m.cobrimentoViga, m.aco, m.acoEstribo),
+      );
     }
     let { origem, direcao, comprimento } = eixo;
     const inc = escada?.inclinada;
@@ -872,13 +599,16 @@ export function modeloIfc(
       let armadura: PosicaoIfc[] = [];
       if (comArmadura && rpil) {
         if (perfil.tipo === "poligono") semArmaduraPoligonal.add(p.nome);
-        armadura = armaduraPilar(
-          rpil,
-          perfil,
-          pav.peDireito,
-          m.cobrimentoPilar,
-          m.aco,
-          m.acoEstribo,
+        armadura = paraIfc(
+          armaduraPilar({
+            barras: rpil.resultado.barras,
+            estribo: rpil.resultado.estribo,
+            perfil,
+            altura: pav.peDireito,
+            cobrimento: m.cobrimentoPilar,
+            aco: m.aco,
+            acoEstribo: m.acoEstribo,
+          }),
         );
       }
       elementos.push({

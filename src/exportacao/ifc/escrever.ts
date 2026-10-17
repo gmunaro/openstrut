@@ -5,12 +5,11 @@
 // IfcReinforcingBar agregada ao elemento (IfcRelAggregates), uma por posição, com a
 // barra mapeada (IfcMappedItem) em cada cópia. Unidades: metro, m², m³ e radiano; a
 // origem é a da planta. A ordem dos atributos é a do EXPRESS do IFC4 ADD2 TC1.
+import type { P3, PerfilSecao } from "../../dominio/armaduraGeometria";
 import type {
   ElementoIfc,
   ModeloIfc,
   NivelIfc,
-  P3,
-  PerfilIfc,
   PosicaoIfc,
   Propriedades,
   ValorPropriedade,
@@ -275,7 +274,7 @@ export function escreverIfc(modelo: ModeloIfc, opcoes: OpcoesEscrita = {}): stri
     });
 
   /** Perfil IFC; `centro` desloca o perfil no plano dele (o topo da viga em y = 0). */
-  const perfil = (p: PerfilIfc, nome: string, centro = { x: 0, y: 0 }) => {
+  const perfil = (p: PerfilSecao, nome: string, centro = { x: 0, y: 0 }) => {
     switch (p.tipo) {
       case "retangulo":
         return f.add(

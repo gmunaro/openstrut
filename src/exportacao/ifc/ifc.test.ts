@@ -15,11 +15,11 @@ import {
   modeloIfc,
   niveisDaObra,
   pavimentoDeVigasAvulsas,
-  perfilPilar,
   type PilarIfc,
   trechosDaViga,
   type VigaIfc,
 } from "./modelo";
+import { perfilPilar } from "../../dominio/armaduraGeometria";
 import { deduzirApoiosEscada } from "./escada";
 import { globalId, numeroStep, textoStep } from "./step";
 
