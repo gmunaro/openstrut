@@ -23,6 +23,9 @@ export default defineConfig({
       // 3D e fica no cache a partir daí (docs/VISTA-3D.md)
       workbox: {
         globIgnores: ["**/3d-*.js"],
+        // a política de privacidade é página própria (o Google a abre da tela de login), e
+        // não o app
+        navigateFallbackDenylist: [/\/privacidade\.html$/],
         runtimeCaching: [
           { urlPattern: /\/assets\/3d-[^/]+\.js$/, handler: "CacheFirst", options: { cacheName: "vista-3d", expiration: { maxEntries: 10 } } },
         ],

@@ -5,11 +5,12 @@
 // o que a importação lê e mostra o resumo.
 //
 // O link tenta primeiro sem login, só com a API key (pasta pública, "qualquer pessoa com o
-// link"). Se o Google responde 403/404, a tela pede para entrar: o login usa drive.file,
-// que dá acesso só aos arquivos que o usuário marca no Picker (escolher a pasta não
-// basta; ver drive/google.ts). O Picker abre já na pasta do link, ou mostrando só o
-// arquivo do link. Os parâmetros que ficam em outra pasta (a EXEC40) entram numa segunda
-// rodada do Picker: os arquivos marcados se somam até o usuário mandar importar.
+// link"). Se o Google responde 403/404, a tela pede para entrar. Há dois logins (ver
+// drive/google.ts): "Escolher a pasta" pede leitura do Drive (drive.readonly) e lê a pasta
+// inteira, com as subpastas, como a pasta pública; "Marcar arquivos" pede só drive.file,
+// que dá acesso aos arquivos marcados no Picker. O Picker de arquivos abre já na pasta do
+// link, ou mostrando só o arquivo do link. Os parâmetros que ficam em outra pasta (a
+// EXEC40) entram numa segunda rodada do Picker: os marcados se somam até importar.
 //
 // Cada ação abre uma tentativa com AbortController: fechar o diálogo, abri-lo de novo ou
 // começar outra ação interrompe a anterior, e o resultado dela é descartado.
@@ -43,11 +44,16 @@ import {
   carregarPicker,
   configuracaoGoogle,
   entrar,
+  ESCOPO_ARQUIVOS,
+  ESCOPO_LEITURA,
   esquecerToken,
   gisCarregado,
   mostrarPicker,
+  mostrarPickerPasta,
   tokenAtual,
+  type ApiPicker,
   type EscolhidoNoPicker,
+  type EscopoDrive,
 } from "./drive/google";
 import { extensaoDoSistrut } from "./InicioSistrut";
 import type { Escolhido } from "./selecao";
@@ -244,13 +250,18 @@ export function ImportarDrive({
     }
   };
 
-  /** Entra (o popup do Google sai neste clique) e abre o Picker; os arquivos marcados se
-   *  somam aos de antes. */
-  const escolher = (onde: Onde) => {
+  /** Entra com o escopo (o popup do Google sai neste clique), mostra o Picker que
+   *  `mostrar` monta e passa a escolha a `depois`, com o diálogo de volta. */
+  const pelPicker = <T,>(
+    escopo: EscopoDrive,
+    onde: Onde,
+    mostrar: (picker: ApiPicker, token: string) => Promise<T | undefined>,
+    depois: (escolha: T, token: string, signal: AbortSignal) => Promise<void> | void,
+  ) => {
     if (!config) return;
     const signal = novaTentativa();
     // sem await antes: o pedido do token sai na pilha do clique
-    const token = entrar(config.clientId);
+    const token = entrar(config.clientId, escopo);
     setEtapa({ tipo: "ocupado", texto: "Entrando no Google…" });
     void (async () => {
       try {
@@ -267,19 +278,71 @@ export function ImportarDrive({
         setAberto(false);
         await saiu;
         if (signal.aborted) return;
-        const novos = await mostrarPicker(picker, config, t, onde);
+        const escolha = await mostrar(picker, t);
         if (signal.aborted) return;
         setAberto(true);
         setEtapa({ tipo: "inicio" });
-        if (novos)
-          setMarcados((antes) => [
-            ...antes,
-            ...novos.filter((n) => !antes.some((a) => a.id === n.id)),
-          ]);
+        if (escolha !== undefined) await depois(escolha, t, signal);
       } catch (erro) {
         if (signal.aborted) return;
         setAberto(true);
         falhou(erro, onde);
+      }
+    })();
+  };
+
+  /** Marca arquivos no Picker (drive.file); os marcados se somam aos de antes. */
+  const escolher = (onde: Onde) => {
+    if (!config) return;
+    pelPicker(
+      ESCOPO_ARQUIVOS,
+      onde,
+      (picker, t) => mostrarPicker(picker, config, t, onde),
+      (novos) =>
+        setMarcados((antes) => [
+          ...antes,
+          ...novos.filter((n) => !antes.some((a) => a.id === n.id)),
+        ]),
+    );
+  };
+
+  /** Lê a pasta inteira, com as subpastas, com o token de leitura, e entrega. */
+  const lerPasta = async (alvo: AlvoDrive, token: string, signal: AbortSignal) => {
+    if (!config) return;
+    setEtapa({ tipo: "ocupado", texto: "Lendo a pasta no Google Drive…" });
+    const acesso = { apiKey: config.apiKey, token };
+    const conteudo = await lerAlvo(alvo, acesso, { signal });
+    if (!signal.aborted) entregar(conteudo, acesso);
+  };
+
+  /** Escolhe a pasta da obra no Picker (drive.readonly) e a lê inteira. */
+  const escolherPasta = () => {
+    if (!config) return;
+    pelPicker(
+      ESCOPO_LEITURA,
+      {},
+      (picker, t) => mostrarPickerPasta(picker, config, t),
+      (pasta, t, signal) =>
+        lerPasta({ id: pasta.id, tipo: "pasta", resourceKey: pasta.resourceKey }, t, signal),
+    );
+  };
+
+  /** O link é de uma pasta privada: entra com leitura (o popup sai neste clique) e lê a
+   *  pasta do link, sem Picker. */
+  const abrirPastaComLogin = (pasta: string) => {
+    if (!config) return;
+    const alvo: AlvoDrive =
+      ultimoAlvo.current?.id === pasta ? ultimoAlvo.current : { id: pasta, tipo: "pasta" };
+    const signal = novaTentativa();
+    // sem await antes: o pedido do token sai na pilha do clique
+    const token = entrar(config.clientId, ESCOPO_LEITURA);
+    setEtapa({ tipo: "ocupado", texto: "Entrando no Google…" });
+    void (async () => {
+      try {
+        const t = await token;
+        if (!signal.aborted) await lerPasta(alvo, t, signal);
+      } catch (erro) {
+        if (!signal.aborted) falhou(erro, { pasta });
       }
     })();
   };
@@ -372,18 +435,30 @@ export function ImportarDrive({
             </p>
           </form>
           <div className="grid gap-2">
+            <Button variant="outline" onClick={escolherPasta} disabled={!podeEntrar}>
+              Escolher a pasta no Drive
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              Pede login no Google com permissão de leitura do Drive. O app lê a pasta que você
+              escolher, com as subpastas (como a EXEC40). Enquanto o Google não verificar o
+              OpenStrut, o login mostra o aviso "O Google não verificou este app": toque em Avançado
+              e siga para o OpenStrut.
+            </p>
             <Button variant="outline" onClick={() => escolher({})} disabled={!podeEntrar}>
               {gis === "pronto"
-                ? "Escolher no Drive"
+                ? "Marcar arquivos no Drive"
                 : gis === "carregando"
                   ? "Carregando o login do Google…"
                   : "O login do Google não carregou"}
             </Button>
             <p className="text-muted-foreground text-xs">
-              Pede login no Google. O app recebe acesso só aos arquivos que você marcar na janela do
-              Drive (permissão "drive.file"); ele não vê o resto do seu Drive. Abra a pasta da obra
-              e marque todos os arquivos dela. O acesso fica na memória desta página, não é gravado
-              e expira em até 1 hora.
+              Pede login no Google com acesso só aos arquivos que você marcar na janela do Drive
+              (permissão "drive.file"); o app não vê o resto do seu Drive. Abra a pasta da obra e
+              marque todos os arquivos dela.
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Nos dois casos, o acesso fica na memória desta página, não é gravado e expira em até 1
+              hora.
             </p>
           </div>
           {marcados.length > 0 && (
@@ -395,7 +470,12 @@ export function ImportarDrive({
               aoLimpar={() => setMarcados([])}
             />
           )}
-          <Situacao etapa={etapa} podeEntrar={podeEntrar} aoEntrar={(onde) => escolher(onde)} />
+          <Situacao
+            etapa={etapa}
+            podeEntrar={podeEntrar}
+            aoEntrar={(onde) => escolher(onde)}
+            aoAbrirPasta={abrirPastaComLogin}
+          />
           <DialogFooter>
             <Button variant="ghost" onClick={fechar}>
               Fechar
@@ -459,10 +539,12 @@ function Situacao({
   etapa,
   podeEntrar,
   aoEntrar,
+  aoAbrirPasta,
 }: {
   etapa: Etapa;
   podeEntrar: boolean;
   aoEntrar: (onde: Onde) => void;
+  aoAbrirPasta: (pasta: string) => void;
 }) {
   switch (etapa.tipo) {
     case "inicio":
@@ -479,21 +561,38 @@ function Situacao({
           {etapa.mensagem}
         </p>
       );
-    case "login":
+    case "login": {
+      const pasta = etapa.onde.pasta;
       return (
         <section aria-label="O Drive pede login" className="grid gap-2 text-sm">
           <p role="alert">{etapa.mensagem}</p>
+          {pasta !== undefined && (
+            <>
+              <Button onClick={() => aoAbrirPasta(pasta)} disabled={!podeEntrar}>
+                Entrar com Google e abrir a pasta
+              </Button>
+              <p className="text-muted-foreground text-xs">
+                Pede leitura do Drive e abre a pasta do link inteira, com as subpastas. Ou entre só
+                com acesso aos arquivos que você marcar:
+              </p>
+            </>
+          )}
           <p className="text-muted-foreground text-xs">
             {etapa.onde.arquivo
               ? "A janela do Drive mostra o arquivo do link: marque-o e toque em Selecionar."
-              : etapa.onde.pasta
-                ? "A janela do Drive abre nesta pasta: marque todos os arquivos da obra e toque em Selecionar. Marcar só a pasta não basta."
+              : pasta !== undefined
+                ? "A janela do Drive abre nesta pasta: marque todos os arquivos da obra e toque em Selecionar."
                 : "Na janela do Drive, abra a pasta da obra, marque todos os arquivos e toque em Selecionar."}
           </p>
-          <Button onClick={() => aoEntrar(etapa.onde)} disabled={!podeEntrar}>
+          <Button
+            variant={pasta !== undefined ? "outline" : "default"}
+            onClick={() => aoEntrar(etapa.onde)}
+            disabled={!podeEntrar}
+          >
             Entrar com Google e marcar os arquivos
           </Button>
         </section>
       );
+    }
   }
 }

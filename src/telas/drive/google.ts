@@ -3,19 +3,26 @@
 // públicos por natureza e vêm do build (VITE_GOOGLE_CLIENT_ID, VITE_GOOGLE_API_KEY; ver
 // docs/GOOGLE-DRIVE.md). A API key fica restrita por referrer e por API no console.
 //
-// Escopo: só drive.file (não sensível). Com ele o app lê só os arquivos que o usuário
-// marca no Picker; escolher uma pasta não dá acesso aos arquivos dela (o escopo é "por
-// arquivo"), então o Picker não deixa escolher pasta e aceita vários arquivos de uma vez.
-// Uma pasta pública abre só com a API key, sem login (api.ts). drive.readonly, que leria
-// qualquer pasta pelo link, é escopo restrito do Google e não é pedido.
+// Dois escopos, pedidos só quando o usuário escolhe o caminho que precisa deles:
+// - drive.file (não sensível), para marcar arquivos: o app lê só os arquivos marcados no
+//   Picker. Escolher uma pasta com ele não dá acesso ao que ela tem (testado com o Google
+//   de verdade: a listagem volta vazia), então esse Picker não deixa escolher pasta.
+// - drive.readonly (restrito), para escolher a pasta da obra: o app lista a pasta e as
+//   subpastas (a EXEC40) como na pasta pública. Até o Google verificar o app, o login
+//   mostra o aviso de app não verificado.
+// Uma pasta pública abre só com a API key, sem login (api.ts).
 //
-// O token vem do Google Identity Services (token client, popup), fica só nesta variável
-// do módulo, nunca em localStorage, e vence em cerca de 1 h. O popup só abre no clique
-// do usuário: a tela carrega o script antes (carregarGis) e só libera o botão de entrar
-// quando ele está pronto, e `entrar` pede o token na mesma pilha do clique.
+// O token vem do Google Identity Services (token client, popup), fica só neste módulo,
+// nunca em localStorage, e vence em cerca de 1 h. O popup só abre no clique do usuário:
+// a tela carrega o script antes (carregarGis) e só libera os botões de entrar quando ele
+// está pronto, e `entrar` pede o token na mesma pilha do clique.
 import type { ItemDrive } from "./api";
 
-export const ESCOPO = "https://www.googleapis.com/auth/drive.file";
+/** Só os arquivos marcados no Picker. */
+export const ESCOPO_ARQUIVOS = "https://www.googleapis.com/auth/drive.file";
+/** Leitura do Drive: a pasta escolhida, com tudo o que ela tem. */
+export const ESCOPO_LEITURA = "https://www.googleapis.com/auth/drive.readonly";
+export type EscopoDrive = typeof ESCOPO_ARQUIVOS | typeof ESCOPO_LEITURA;
 const SCRIPT_GIS = "https://accounts.google.com/gsi/client";
 const SCRIPT_GAPI = "https://apis.google.com/js/api.js";
 /** Tempo máximo para o Picker carregar (o gapi.load não avisa quando trava). */
@@ -84,7 +91,7 @@ interface ConstrutorPicker {
 export interface ApiPicker {
   PickerBuilder: new () => ConstrutorPicker;
   DocsView: new (viewId?: string) => VistaDocs;
-  ViewId: { DOCS: string };
+  ViewId: { DOCS: string; FOLDERS: string };
   DocsViewMode: { LIST: string };
   Feature: { MULTISELECT_ENABLED: string; SUPPORT_DRIVES: string };
   Action: { PICKED: string; CANCEL: string };
@@ -164,26 +171,31 @@ export async function carregarPicker(): Promise<ApiPicker> {
 
 // ------------------------------------------------------------------ token
 
-/** O token atual, só em memória. */
-let sessao: { token: string; expira: number } | undefined;
+/** Os tokens atuais, um por escopo, só em memória. */
+const sessoes = new Map<EscopoDrive, { token: string; expira: number }>();
 
-/** Token ainda válido (com 1 min de folga), se houver. */
-export function tokenAtual(agora = Date.now()): string | undefined {
-  if (sessao && sessao.expira - 60_000 > agora) return sessao.token;
-  sessao = undefined;
+/** Token ainda válido (com 1 min de folga) para o escopo, se houver. O de leitura serve
+ *  também para os arquivos marcados. */
+export function tokenAtual(escopo: EscopoDrive = ESCOPO_ARQUIVOS, agora = Date.now()) {
+  const aceitos: EscopoDrive[] = escopo === ESCOPO_ARQUIVOS ? [escopo, ESCOPO_LEITURA] : [escopo];
+  for (const e of aceitos) {
+    const s = sessoes.get(e);
+    if (s && s.expira - 60_000 > agora) return s.token;
+    sessoes.delete(e);
+  }
   return undefined;
 }
 
-/** Esquece o token: ele venceu ou o Google o recusou. */
+/** Esquece os tokens: venceram ou o Google recusou um deles. */
 export function esquecerToken() {
-  sessao = undefined;
+  sessoes.clear();
 }
 
-/** Pede o token com drive.file. Chame direto no clique, com o login já carregado
+/** Pede o token com o escopo. Chame direto no clique, com o login já carregado
  *  (gisCarregado): o popup do Google só abre no gesto do usuário. Com um token válido
  *  em memória, não abre nada. */
-export function entrar(clientId: string): Promise<string> {
-  const atual = tokenAtual();
+export function entrar(clientId: string, escopo: EscopoDrive = ESCOPO_ARQUIVOS): Promise<string> {
+  const atual = tokenAtual(escopo);
   if (atual) return Promise.resolve(atual);
   const oauth2 = gisCarregado();
   if (!oauth2)
@@ -191,7 +203,7 @@ export function entrar(clientId: string): Promise<string> {
   return new Promise<string>((ok, falha) => {
     const cliente = oauth2.initTokenClient({
       client_id: clientId,
-      scope: ESCOPO,
+      scope: escopo,
       callback: (r) => {
         if (!r.access_token) {
           falha(
@@ -203,10 +215,10 @@ export function entrar(clientId: string): Promise<string> {
           );
           return;
         }
-        sessao = {
+        sessoes.set(escopo, {
           token: r.access_token,
           expira: Date.now() + Number(r.expires_in ?? 3600) * 1000,
-        };
+        });
         ok(r.access_token);
       },
       error_callback: (e) =>
@@ -262,6 +274,42 @@ export function mostrarPicker(
               pastaId: d.parentId || undefined,
             })),
           );
+        else if (r.action === p.Action.CANCEL) ok(undefined);
+      });
+    if (config.appId) construtor.setAppId(config.appId);
+    construtor.build().setVisible(true);
+  });
+}
+
+/** Mostra o Picker (já carregado) para escolher uma pasta: só pastas aparecem. Devolve a
+ *  pasta escolhida, ou undefined se cancelou. Pede o token de leitura (ESCOPO_LEITURA):
+ *  com drive.file a pasta viria vazia. */
+export function mostrarPickerPasta(
+  p: ApiPicker,
+  config: ConfiguracaoGoogle,
+  token: string,
+): Promise<ItemDrive | undefined> {
+  return new Promise((ok) => {
+    const vista = new p.DocsView(p.ViewId.FOLDERS)
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(true)
+      .setMode(p.DocsViewMode.LIST);
+    const construtor = new p.PickerBuilder()
+      .addView(vista)
+      .enableFeature(p.Feature.SUPPORT_DRIVES)
+      .setOAuthToken(token)
+      .setDeveloperKey(config.apiKey)
+      .setLocale("pt-BR")
+      .setTitle("Escolha a pasta da obra")
+      .setCallback((r) => {
+        const d = r.docs?.[0];
+        if (r.action === p.Action.PICKED && d)
+          ok({
+            id: d.id,
+            name: d.name,
+            mimeType: d.mimeType,
+            resourceKey: d.resourceKey || undefined,
+          });
         else if (r.action === p.Action.CANCEL) ok(undefined);
       });
     if (config.appId) construtor.setAppId(config.appId);

@@ -65,7 +65,7 @@ window.google.accounts = { oauth2: { initTokenClient: function (c) {
 /** gapi e Picker falsos: o Picker é uma camada por cima da página, como o de verdade, com
  *  "Selecionar" (devolve window.__drive.escolher) e "Cancelar". */
 const GAPI_FALSO = `
-function DocsView() { this.onde = {}; }
+function DocsView(vista) { this.onde = {}; this.vista = vista; }
 ["setIncludeFolders", "setSelectFolderEnabled", "setMode"].forEach(function (m) {
   DocsView.prototype[m] = function () { return this; };
 });
@@ -80,6 +80,7 @@ PickerBuilder.prototype.build = function () {
   var self = this;
   return { setVisible: function () {
     window.__drive.picker.push(self.vista.onde);
+    window.__drive.vistas.push(self.vista.vista);
     var caixa = document.createElement("div");
     caixa.setAttribute("role", "dialog");
     caixa.setAttribute("aria-label", "Google Picker");
@@ -98,7 +99,7 @@ PickerBuilder.prototype.build = function () {
 window.gapi = { load: function (lib, c) { setTimeout(function () {
   window.google = window.google || {};
   window.google.picker = { PickerBuilder: PickerBuilder, DocsView: DocsView,
-    ViewId: { DOCS: "all" }, DocsViewMode: { LIST: "list" },
+    ViewId: { DOCS: "all", FOLDERS: "folders" }, DocsViewMode: { LIST: "list" },
     Feature: { MULTISELECT_ENABLED: "m", SUPPORT_DRIVES: "d" },
     Action: { PICKED: "picked", CANCEL: "cancel" } };
   c.callback();
@@ -119,19 +120,20 @@ interface Simulacao {
   /** Atraso do script do login, para ver o botão esperando. */
   atrasoGisMs?: number;
   /** O que o Picker falso devolve em "Selecionar". */
-  escolher?: typeof MARCOU_TODOS;
+  escolher?: { id: string; name: string; mimeType: string; parentId?: string }[];
 }
 
 interface EstadoGoogle {
   pedidos: { scope: string; noClique: boolean; gesto: boolean }[];
   picker: { pasta?: string; arquivo?: string }[];
+  vistas: string[];
 }
 
 /** Liga as rotas: Drive API falsa, scripts do Google falsos, e nada mais sai da máquina. */
 async function simularGoogle(page: Page, s: Simulacao = {}) {
   const chamadas: { url: URL; autorizacao: string | undefined }[] = [];
   await page.addInitScript((escolher) => {
-    Object.assign(window, { __drive: { pedidos: [], picker: [], escolher } });
+    Object.assign(window, { __drive: { pedidos: [], picker: [], vistas: [], escolher } });
   }, s.escolher ?? []);
   await page.route(/^https?:\/\/(?!localhost[:/])/, (r) => r.abort());
   await page.route("https://accounts.google.com/gsi/client", async (r) => {
@@ -309,7 +311,7 @@ for (const { nome, largura, altura } of TAMANHOS) {
     // enquanto o login do Google carrega, o botão espera (o popup tem de sair no clique)
     const escolher = drive.getByRole("button", { name: "Carregando o login do Google…" });
     await expect(escolher).toBeDisabled();
-    await expect(drive.getByRole("button", { name: "Escolher no Drive" })).toBeEnabled();
+    await expect(drive.getByRole("button", { name: "Marcar arquivos no Drive" })).toBeEnabled();
 
     await drive.getByLabel("Link da pasta ou do arquivo no Drive").fill(LINK);
     await drive.getByRole("button", { name: "Abrir link" }).click();
@@ -359,6 +361,39 @@ for (const { nome, largura, altura } of TAMANHOS) {
   });
 }
 
+for (const { nome, largura, altura } of TAMANHOS) {
+  test(`escolher a pasta em ${nome}: login de leitura no clique, Picker de pastas, abre a pasta inteira`, async ({
+    browser,
+  }) => {
+    const page = await novaPagina(browser, largura, altura);
+    const erros = vigiarErros(page);
+    // drive.readonly: com token, o app vê a pasta inteira
+    const chamadas = await simularGoogle(page, {
+      opcoes: { publico: false, token: "tk-e2e" },
+      escolher: [{ id: PASTA_ID, name: "PREDIO", mimeType: "application/vnd.google-apps.folder" }],
+    });
+    const drive = await abrirDialogoDrive(page);
+    const escolherPasta = drive.getByRole("button", { name: "Escolher a pasta no Drive" });
+    await expect(escolherPasta).toBeEnabled();
+    // o fim da animação de abertura do diálogo
+    await expect(drive).toHaveCSS("opacity", "1");
+    await page.screenshot({ path: path.join(PRINTS, `dialogo-${nome}.png`) });
+    await escolherPasta.click();
+    const picker = page.getByRole("dialog", { name: "Google Picker" });
+    await expect(picker).toBeVisible();
+    await picker.getByRole("button", { name: "Selecionar" }).click();
+
+    await expect(page.getByRole("dialog", { name: "Obra PREDIO lida do SISTRUT" })).toBeVisible();
+    const estado = await estadoGoogle(page);
+    expect(estado.pedidos).toEqual([
+      { scope: "https://www.googleapis.com/auth/drive.readonly", noClique: true, gesto: true },
+    ]);
+    expect(estado.vistas).toEqual(["folders"]);
+    expect(chamadas.filter((c) => c.autorizacao === "Bearer tk-e2e").length).toBeGreaterThan(0);
+    expect(erros).toEqual([]);
+  });
+}
+
 test("link de arquivo privado: o Picker mostra só aquele arquivo", async ({ browser }) => {
   const page = await novaPagina(browser, 390, 844);
   await simularGoogle(page, { opcoes: { publico: false } });
@@ -379,7 +414,7 @@ test("cancelar o Picker volta ao diálogo do Drive", async ({ browser }) => {
   const page = await novaPagina(browser, 390, 844);
   await simularGoogle(page);
   const drive = await abrirDialogoDrive(page);
-  await drive.getByRole("button", { name: "Escolher no Drive" }).click();
+  await drive.getByRole("button", { name: "Marcar arquivos no Drive" }).click();
   await page
     .getByRole("dialog", { name: "Google Picker" })
     .getByRole("button", { name: "Cancelar" })
@@ -387,7 +422,7 @@ test("cancelar o Picker volta ao diálogo do Drive", async ({ browser }) => {
   await expect(page.getByRole("dialog", { name: "Importar do Google Drive" })).toBeVisible();
   await expect(
     page.getByRole("dialog", { name: "Importar do Google Drive" }).getByRole("button", {
-      name: "Escolher no Drive",
+      name: "Marcar arquivos no Drive",
     }),
   ).toBeEnabled();
 });

@@ -34,6 +34,8 @@ const google = {
   tokens: ["tk"],
   pedidosDeToken: [] as { scope: string; noClique: boolean }[],
   pickerAbertoEm: [] as { pasta?: string; arquivo?: string }[],
+  /** A vista de cada Picker aberto: "all" (arquivos) ou "folders" (só pastas). */
+  vistas: [] as string[],
 };
 /** Verdadeiro só enquanto um clique é despachado: do capture no document ao bubble no
  *  window. Prova que o pedido do token sai na pilha do clique (o popup precisa disso). */
@@ -45,6 +47,7 @@ const terminaClique = () => (noClique = false);
 function instalarGoogleFalso() {
   class DocsView {
     onde: { pasta?: string; arquivo?: string } = {};
+    constructor(readonly vista = "all") {}
     setIncludeFolders = () => this;
     setSelectFolderEnabled = () => this;
     setMode = () => this;
@@ -65,6 +68,7 @@ function instalarGoogleFalso() {
     build = () => ({
       setVisible: () => {
         google.pickerAbertoEm.push(this.vista?.onde ?? {});
+        google.vistas.push(this.vista?.vista ?? "");
         setTimeout(() =>
           this.cb?.(
             google.escolhidos.length > 0
@@ -88,7 +92,7 @@ function instalarGoogleFalso() {
   const picker = {
     PickerBuilder,
     DocsView,
-    ViewId: { DOCS: "all" },
+    ViewId: { DOCS: "all", FOLDERS: "folders" },
     DocsViewMode: { LIST: "list" },
     Feature: { MULTISELECT_ENABLED: "multi", SUPPORT_DRIVES: "drives" },
     Action: { PICKED: "picked", CANCEL: "cancel" },
@@ -101,6 +105,7 @@ beforeEach(() => {
   google.tokens = ["tk"];
   google.pedidosDeToken = [];
   google.pickerAbertoEm = [];
+  google.vistas = [];
   instalarGoogleFalso();
   document.addEventListener("click", comecaClique, true);
   window.addEventListener("click", terminaClique);
@@ -197,7 +202,9 @@ describe("importar do Google Drive", () => {
 
     const login = await within(dialogo).findByRole("region", { name: "O Drive pede login" });
     expect(within(login).getByRole("alert").textContent).toMatch(/^Sem login, o Google Drive/);
-    expect(login.textContent).toMatch(/Marcar só a pasta não basta/);
+    expect(
+      within(login).getByRole("button", { name: "Entrar com Google e abrir a pasta" }),
+    ).toBeTruthy();
     await user.click(
       within(login).getByRole("button", { name: "Entrar com Google e marcar os arquivos" }),
     );
@@ -215,6 +222,55 @@ describe("importar do Google Drive", () => {
     expect(await screen.findByRole("dialog", { name: "Obra PREDIO lida do SISTRUT" })).toBeTruthy();
     const comToken = falso.chamadas.filter((c) => c.cabecalhos.Authorization === "Bearer tk");
     expect(comToken.length).toBeGreaterThan(0);
+  });
+
+  it("escolher a pasta: login drive.readonly no clique, Picker só de pastas, lê a pasta com as subpastas", async () => {
+    ligarDrive();
+    const exec: NoDrive = {
+      id: "pasta-exec",
+      name: "EXEC40",
+      filhos: [{ id: "ini", name: "SISTRUT.INI", dados: new Uint8Array([1]) }],
+    };
+    const comExec = { ...OBRA, filhos: [...OBRA.filhos!, exec] };
+    // drive.readonly: com token, o app vê a pasta inteira
+    const falso = drive(
+      { id: "raiz", name: "raiz", filhos: [comExec] },
+      { publico: false, token: "tk" },
+    );
+    google.escolhidos = [
+      { id: PASTA_ID, name: "PREDIO", mimeType: "application/vnd.google-apps.folder" },
+    ];
+    const { user, dialogo } = await abrirDrive();
+    await user.click(within(dialogo).getByRole("button", { name: "Escolher a pasta no Drive" }));
+
+    expect(await screen.findByRole("dialog", { name: "Obra PREDIO lida do SISTRUT" })).toBeTruthy();
+    expect(google.pedidosDeToken).toEqual([
+      { scope: "https://www.googleapis.com/auth/drive.readonly", noClique: true },
+    ]);
+    expect(google.vistas).toEqual(["folders"]);
+    // a subpasta foi listada, com o token
+    const listouExec = falso.chamadas.some(
+      (c) =>
+        c.url.searchParams.get("q")?.startsWith("'pasta-exec' in parents") &&
+        c.cabecalhos.Authorization === "Bearer tk",
+    );
+    expect(listouExec).toBe(true);
+  });
+
+  it("link de pasta privada: entrar e abrir a pasta lê a pasta do link com leitura, sem Picker", async () => {
+    ligarDrive();
+    drive(OBRA, { publico: false, token: "tk" });
+    const { user, dialogo } = await abrirDrive(LINK);
+    const login = await within(dialogo).findByRole("region", { name: "O Drive pede login" });
+    await user.click(
+      within(login).getByRole("button", { name: "Entrar com Google e abrir a pasta" }),
+    );
+
+    expect(await screen.findByRole("dialog", { name: "Obra PREDIO lida do SISTRUT" })).toBeTruthy();
+    expect(google.pedidosDeToken).toEqual([
+      { scope: "https://www.googleapis.com/auth/drive.readonly", noClique: true },
+    ]);
+    expect(google.pickerAbertoEm).toEqual([]);
   });
 
   it("link de arquivo privado: o Picker mostra só aquele arquivo", async () => {
@@ -239,7 +295,7 @@ describe("importar do Google Drive", () => {
     drive({ id: "raiz", name: "raiz", filhos: [OBRA, exec] }, { token: "tk" });
     const { user, dialogo } = await abrirDrive();
     google.escolhidos = MARCOU_TODOS;
-    await user.click(within(dialogo).getByRole("button", { name: "Escolher no Drive" }));
+    await user.click(within(dialogo).getByRole("button", { name: "Marcar arquivos no Drive" }));
     const marcados = await screen.findByRole("region", { name: "Arquivos marcados no Drive" });
     google.escolhidos = [
       {
@@ -273,7 +329,7 @@ describe("importar do Google Drive", () => {
     google.tokens = ["velho", "novo"];
     google.escolhidos = MARCOU_TODOS;
     const { user, dialogo } = await abrirDrive();
-    await user.click(within(dialogo).getByRole("button", { name: "Escolher no Drive" }));
+    await user.click(within(dialogo).getByRole("button", { name: "Marcar arquivos no Drive" }));
     const marcados = await screen.findByRole("region", { name: "Arquivos marcados no Drive" });
     // os marcados não precisam de chamada para entrar; o download, sim
     await user.click(
@@ -296,7 +352,7 @@ describe("importar do Google Drive", () => {
       { id: "doc", name: "Memorial", mimeType: "application/vnd.google-apps.document" },
     ];
     const { user, dialogo } = await abrirDrive();
-    await user.click(within(dialogo).getByRole("button", { name: "Escolher no Drive" }));
+    await user.click(within(dialogo).getByRole("button", { name: "Marcar arquivos no Drive" }));
     const marcados = await screen.findByRole("region", { name: "Arquivos marcados no Drive" });
     await user.click(
       within(marcados).getByRole("button", { name: "Importar os arquivos marcados" }),
