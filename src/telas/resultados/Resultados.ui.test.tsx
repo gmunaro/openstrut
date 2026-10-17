@@ -170,7 +170,7 @@ describe.each<NormaId>(["nb1-78", "nbr6118-2023"])("resultados pela %s", (norma)
     for (const bloco of pilares) {
       const linhas = conferePosicoes(bloco);
       expect(linhas.length).toBeGreaterThanOrEqual(2);
-      expect(bloco.textContent).toMatch(/Lance 1: Pavimento 1 · pé-direito 300 cm/);
+      expect(bloco.textContent).toMatch(/Lance 1: Pavimento 1 · pé-direito 3,00 m/);
       expect(bloco.textContent).toMatch(/sem traspasse/);
       expect(bloco.textContent).toMatch(/grampos/);
     }

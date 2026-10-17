@@ -58,12 +58,14 @@ describe("barra de pavimentos", () => {
 
     await user.clear(nome);
     await user.type(nome, "Pavimento 1{Enter}");
-    expect(screen.getByText('Já existe um pavimento "Pavimento 1".')).toBeTruthy();
+    expect(
+      screen.getByText('Já existe um pavimento "Pavimento 1". Escolha outro nome.'),
+    ).toBeTruthy();
     expect(nomes()).toEqual(["Cobertura", "Pavimento 1"]);
 
     await user.clear(nome);
     await user.type(nome, "   {Enter}");
-    expect(screen.getByText("O nome não pode ficar vazio.")).toBeTruthy();
+    expect(screen.getByText("Digite um nome para o pavimento.")).toBeTruthy();
 
     // Esc volta ao nome atual
     await user.keyboard("{Escape}");

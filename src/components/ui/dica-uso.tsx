@@ -62,7 +62,8 @@ export function DicaUso({
   const aberta = useDicaAberta(id);
   if (!aberta) return null;
   return (
-    <aside
+    // região nomeada pelo título (<section aria-label>); o leitor de tela a acha e a pula
+    <section
       aria-label={titulo}
       className={cn(
         "border-primary/40 bg-primary/10 text-foreground flex items-start gap-2 rounded-md border px-3 py-2 text-sm print:hidden",
@@ -83,6 +84,6 @@ export function DicaUso({
       >
         <X className="size-4" />
       </button>
-    </aside>
+    </section>
   );
 }

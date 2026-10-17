@@ -393,7 +393,7 @@ function tituloLance(d: DetalhamentoPilarObra, i: number) {
     .reduce((s, p) => s + p.quantidade, 0);
   return [
     `Lance ${i + 1}: ${l.nivel}`,
-    `pé-direito ${formatarNumero(l.peDireito, 0)} cm`,
+    `pé-direito ${formatarNumero(l.peDireito / 100)} m`,
     `${formatarNumero(l.b, 0)} × ${formatarNumero(l.h, 0)} cm`,
     `${l.porFaceX} barras por face de ${formatarNumero(l.h, 0)} e ${l.porFaceY} por face de ${formatarNumero(l.b, 0)}`,
     l.traspasse === null ? "sem traspasse" : `traspasse ${formatarNumero(l.traspasse, 0)} cm`,

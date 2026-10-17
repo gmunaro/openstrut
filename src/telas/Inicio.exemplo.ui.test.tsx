@@ -30,17 +30,17 @@ describe("primeiro uso", () => {
 
   it("fecha a dica de boas-vindas para sempre", async () => {
     const primeira = renderizarApp("/");
-    const dica = await screen.findByRole("complementary", { name: "Primeira vez no OpenStrut?" });
+    const dica = await screen.findByRole("region", { name: "Primeira vez no OpenStrut?" });
     expect(dica.textContent).toContain("obra-exemplo");
     await primeira.user.click(
       screen.getByRole("button", { name: 'Fechar a dica "Primeira vez no OpenStrut?"' }),
     );
-    expect(screen.queryByRole("complementary", { name: "Primeira vez no OpenStrut?" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Primeira vez no OpenStrut?" })).toBeNull();
 
     // outra visita à tela inicial (o localStorage guarda as dicas fechadas)
     await primeira.router.navigate({ to: "/obra" });
     await primeira.router.navigate({ to: "/" });
     await screen.findByRole("heading", { name: "OpenStrut V2" });
-    expect(screen.queryByRole("complementary", { name: "Primeira vez no OpenStrut?" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Primeira vez no OpenStrut?" })).toBeNull();
   });
 });

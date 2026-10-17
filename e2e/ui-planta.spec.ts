@@ -546,7 +546,9 @@ test("pavimentos: pé-direito e repetições inválidos mostram a mensagem no ca
   await peDireito.fill("0");
   await peDireito.press("Enter");
   await expect(peDireito).toHaveAttribute("aria-invalid", "true");
-  await expect(peDireito).toHaveAccessibleDescription("O pé-direito precisa ser maior que zero.");
+  await expect(peDireito).toHaveAccessibleDescription(
+    "O pé-direito precisa ser maior que zero, em metros (ex.: 2,80).",
+  );
 
   // texto que não é número: mensagem própria
   await peDireito.fill("abc");

@@ -85,7 +85,7 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
       vazio ||
       (await confirmar({
         titulo: `Substituir a planta de "${ativo.nome}"?`,
-        descricao: `A planta atual dá lugar à de "${origem.nome}". Dá para desfazer (Ctrl+Z).`,
+        descricao: `A planta atual será substituída pela de "${origem.nome}". Dá para desfazer (Ctrl+Z).`,
         acao: "Substituir planta",
         destrutiva: true,
       }));

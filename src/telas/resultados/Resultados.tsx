@@ -231,7 +231,7 @@ function ResultadosCalculados({
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
       <FiltroContexto value={filtro}>
-        <TabelasObra resultado={r} comMemoria ate={ate} naTela />
+        <TabelasObra resultado={r} comMemoria ate={ate} naTela={etapas > ETAPAS_DE_UMA_VEZ} />
       </FiltroContexto>
       {montando ? (
         <Montando feitos={ate} total={r.pavimentos.length} />

@@ -106,9 +106,9 @@ describe("ferramentas do editor", () => {
   it("a dica de primeiro uso da planta fecha e não volta", async () => {
     const { user } = await abrirEditor();
     const nome = "Como desenhar a planta";
-    expect(screen.getByRole("complementary", { name: nome })).toBeTruthy();
+    expect(screen.getByRole("region", { name: nome })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: `Fechar a dica "${nome}"` }));
-    expect(screen.queryByRole("complementary", { name: nome })).toBeNull();
+    expect(screen.queryByRole("region", { name: nome })).toBeNull();
     expect(localStorage.getItem("openstrut:dicas-fechadas")).toContain("planta");
   });
 });

@@ -32,9 +32,9 @@ export function adicionarPavimento(obra: Obra, indice = 0) {
  *  O nome identifica o pavimento na acumulação de cargas dos pilares, por isso é único. */
 export function problemaNomePavimento(obra: Obra, id: string, nome: string) {
   const n = nome.trim();
-  if (n === "") return "O nome não pode ficar vazio.";
+  if (n === "") return "Digite um nome para o pavimento.";
   if (obra.pavimentos.some((p) => p.id !== id && p.nome.trim() === n))
-    return `Já existe um pavimento "${n}".`;
+    return `Já existe um pavimento "${n}". Escolha outro nome.`;
   return null;
 }
 
@@ -45,7 +45,9 @@ export const renomearPavimento = (obra: Obra, id: string, nome: string) =>
 
 /** Problema com o pé-direito (m, > 0), ou null se serve. */
 export function problemaPeDireito(n: number) {
-  return !(n > 0) || !Number.isFinite(n) ? "O pé-direito precisa ser maior que zero." : null;
+  return !(n > 0) || !Number.isFinite(n)
+    ? "O pé-direito precisa ser maior que zero, em metros (ex.: 2,80)."
+    : null;
 }
 
 /** Problema com as repetições (inteiro ≥ 1), ou null se servem. */

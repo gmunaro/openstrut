@@ -669,14 +669,6 @@ function Editor({
       )}
 
       <DialogoAtalhos aberto={atalhos} aoMudarAberto={setAtalhos} />
-      {!compacto && (
-        <DicaUso id="planta" titulo="Como desenhar a planta" className="m-2 mb-0">
-          Escolha <strong>Laje</strong> (tecla L) e arraste de um canto ao outro; o cursor prende na
-          grade e nos bordos das outras lajes, e as vigas e os pilares nascem dos bordos. Clique num
-          elemento para editar no painel à direita. <strong>Medir</strong> (M) mede distâncias, e{" "}
-          <strong>?</strong> lista todos os atalhos.
-        </DicaUso>
-      )}
 
       <DialogoAdicionar
         pav={pav}
@@ -729,6 +721,20 @@ function Editor({
             )}
           </svg>
           {pav.lajes.length === 0 && !arrasto && <PavimentoVazio toque={compacto} />}
+          {!compacto && (
+            // por cima do desenho, no canto livre (a legenda fica à direita): não rouba
+            // altura da planta, e a escala da vista não muda ao fechar a dica
+            <DicaUso
+              id="planta"
+              titulo="Como desenhar a planta"
+              className="bg-background/95 absolute bottom-2 left-2 z-10 max-w-md shadow-md"
+            >
+              Escolha <strong>Laje</strong> (tecla L) e arraste de um canto ao outro; o cursor
+              prende na grade e nos bordos das outras lajes, e as vigas e os pilares nascem dos
+              bordos. Clique num elemento para editar no painel à direita. <strong>Medir</strong>{" "}
+              (M) mede distâncias, e <strong>?</strong> lista todos os atalhos.
+            </DicaUso>
+          )}
           {diag && <Legenda compacta={compacto} />}
         </div>
         {!compacto ? (

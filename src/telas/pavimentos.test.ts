@@ -40,7 +40,7 @@ describe("pavimentos", () => {
   it("renomeia só com nome não vazio e único", () => {
     const o = obraTres();
     const tipo = o.pavimentos[1]!;
-    expect(problemaNomePavimento(o, tipo.id, "  ")).toMatch(/vazio/);
+    expect(problemaNomePavimento(o, tipo.id, "  ")).toBe("Digite um nome para o pavimento.");
     expect(problemaNomePavimento(o, tipo.id, "Térreo")).toMatch(/Já existe/);
     expect(problemaNomePavimento(o, tipo.id, "Tipo")).toBeNull();
     expect(renomearPavimento(o, tipo.id, "Térreo")).toBe(o);

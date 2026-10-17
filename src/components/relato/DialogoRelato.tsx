@@ -384,7 +384,8 @@ function FilaRelatos() {
   return (
     <section className="grid gap-1 rounded-md border p-3 text-xs" aria-label="Relatos guardados">
       <p>
-        {itens.length} relato(s) guardado(s) neste aparelho, aguardando envio. Eles saem sozinhos
+        {itens.length} {itens.length === 1 ? "relato guardado" : "relatos guardados"} neste
+        aparelho, aguardando envio. {itens.length === 1 ? "Ele sai sozinho" : "Eles saem sozinhos"}{" "}
         quando há conexão.
       </p>
       {itens
@@ -447,7 +448,7 @@ function Resultado({
               <li>
                 {fase.copiado
                   ? "O print está na área de transferência: na issue, clique no texto e cole (Ctrl+V)."
-                  : `Não deu para copiar o print; arraste para a issue o arquivo ${nomes.print}.`}{" "}
+                  : `Não foi possível copiar o print; arraste para a issue o arquivo ${nomes.print}.`}{" "}
                 Ele também foi baixado como {nomes.print}.
               </li>
             )}

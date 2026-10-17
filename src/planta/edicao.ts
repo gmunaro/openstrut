@@ -61,7 +61,7 @@ const pilarNoPonto = (p: Pilar) =>
   `Já existe o pilar ${p.nome} neste ponto. Escolha outro ponto do eixo ou selecione o ${p.nome} para editá-lo.`;
 
 function validarNome(nome: string, outros: readonly { nome: string }[]) {
-  if (nome.trim() === "") return "O nome não pode ficar vazio.";
+  if (nome.trim() === "") return "Digite um nome para o elemento.";
   if (outros.some((o) => o.nome === nome))
     return `Já existe um elemento chamado ${nome} neste pavimento. Escolha outro nome.`;
   return undefined;

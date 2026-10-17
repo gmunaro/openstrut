@@ -65,7 +65,7 @@ describe("alterarLaje", () => {
     expect(erro(alterarLaje(p, id, { h: 0 }))).toMatch(/maior que zero/);
     expect(erro(alterarLaje(p, id, { sobrecarga: -1 }))).toMatch(/negativa/);
     expect(erro(alterarLaje(p, id, { nome: "L2" }))).toMatch(/Já existe/);
-    expect(erro(alterarLaje(p, id, { nome: " " }))).toMatch(/vazio/);
+    expect(erro(alterarLaje(p, id, { nome: " " }))).toBe("Digite um nome para o elemento.");
     expect(erro(alterarLaje(p, id, { h: Number.NaN }))).toBe(
       "Digite um número, com vírgula ou ponto decimal.",
     );
