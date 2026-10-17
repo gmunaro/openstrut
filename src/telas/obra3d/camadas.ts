@@ -221,4 +221,11 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
       "Materiais com luz de estúdio e sombras, nas cores da vista; path tracing opcional com a câmera parada.",
     carregar: () => import("./render/camada").then((m) => m.camada),
   },
+  {
+    id: "tour",
+    nome: "Tour",
+    descricao:
+      "Percorre o prédio, os níveis e as peças com falha; ou anda pela estrutura em primeira pessoa.",
+    carregar: () => import("./tour/camada").then((m) => m.camada),
+  },
 ];
