@@ -13,6 +13,7 @@ import {
   problemaNomePavimento,
   renomearPavimento,
 } from "./pavimentos";
+import { calcular } from "./calculo";
 
 function obraTres(): Obra {
   const obra = obraNova("Teste", "nb1-78");
@@ -142,5 +143,92 @@ describe("duplicarPavimento", () => {
   it("id que não existe não muda nada", () => {
     const o = obraTres();
     expect(duplicarPavimento(o, "x")).toEqual({ obra: o, pavimento: undefined });
+  });
+});
+
+describe("copiarPlanta com os dados do SISTRUT", () => {
+  /** Pavimento com L1 e L2 (4 × 5 m lado a lado), alvenaria sobre a L1, ocupação sobre a
+   *  L2, pilar-parede no P1, continuidade engastada na L1 e uma escolha de apoio. */
+  function obraCompleta(): Obra {
+    const base = obraNova("Cópia", "nb1-78");
+    let pav = pavimentoNovo("Tipo", 3, 1);
+    for (const r of [
+      { x: 0, y: 0, lx: 4, ly: 5 },
+      { x: 4, y: 0, lx: 4, ly: 5 },
+    ])
+      pav.lajes.push(lajeNova(pav, r));
+    pav = gerarEstrutura(pav);
+    const [l1, l2] = pav.lajes;
+    const [v1, v2] = pav.vigas;
+    const p1 = pav.pilares[0]!;
+    pav = {
+      ...pav,
+      vigas: pav.vigas.map((v) => (v.id === v1!.id ? { ...v, apoiaEm: [v2!.id] } : v)),
+      alvenarias: [{ inicio: { x: 1, y: 2.5 }, fim: { x: 3, y: 2.5 }, carga: 6 }],
+      cargasOcupacao: [
+        {
+          poligono: [
+            { x: 4, y: 0 },
+            { x: 8, y: 0 },
+            { x: 8, y: 5 },
+            { x: 4, y: 5 },
+          ],
+          total: 3,
+          acidental: 2,
+        },
+      ],
+      trechosPilares: [{ pilar: p1.id, inicio: { x: 0, y: 0 }, fim: { x: 0, y: 0.6 } }],
+      continuidadesLajes: [
+        { lajeA: l1!.id, ladoA: 0 },
+        { lajeA: l2!.id, ladoA: 2, lajeB: l1!.id, ladoB: 0 },
+      ],
+    };
+    return { ...base, pavimentos: [pav] };
+  }
+
+  it("os ids da cópia apontam para os elementos da cópia, com os mesmos nomes", () => {
+    const o = obraCompleta();
+    const { pavimento: c } = duplicarPavimento(o, o.pavimentos[0]!.id);
+    const orig = o.pavimentos[0]!;
+    const nomeDe = (lista: { id: string; nome: string }[], id: string | undefined) =>
+      lista.find((e) => e.id === id)?.nome;
+    const vOrig = orig.vigas.find((v) => v.apoiaEm)!;
+    const vCop = c!.vigas.find((v) => v.nome === vOrig.nome)!;
+    expect(nomeDe(c!.vigas, vCop.apoiaEm?.[0])).toBe(nomeDe(orig.vigas, vOrig.apoiaEm?.[0]));
+    expect(vCop.apoiaEm?.[0]).not.toBe(vOrig.apoiaEm?.[0]);
+    expect(nomeDe(c!.pilares, c!.trechosPilares?.[0]?.pilar)).toBe("P1");
+    const cont = c!.continuidadesLajes!;
+    expect(cont.map((x) => [nomeDe(c!.lajes, x.lajeA), nomeDe(c!.lajes, x.lajeB)])).toEqual([
+      ["L1", undefined],
+      ["L2", "L1"],
+    ]);
+    expect(c!.alvenarias).toEqual(orig.alvenarias);
+    expect(c!.alvenarias).not.toBe(orig.alvenarias);
+    expect(c!.cargasOcupacao).toEqual(orig.cargasOcupacao);
+  });
+
+  it("a cópia calcula igual ao original, laje por laje e viga por viga", () => {
+    const o = obraCompleta();
+    const dup = duplicarPavimento(o, o.pavimentos[0]!.id).obra;
+    const c = calcular(dup);
+    expect(c.tipo).toBe("ok");
+    if (c.tipo !== "ok") return;
+    const [copia, original] = c.resultado.pavimentos;
+    const resumo = (rp: typeof copia) => ({
+      lajes: rp!.lajes.map((l) => [l.laje.nome, l.esforcos.mx, l.esforcos.my, l.esforcos.reacoes]),
+      vigas: rp!.vigas.map((v) => [
+        v.viga.nome,
+        v.analise.ok && v.analise.tramos.map((t) => [t.mPos, t.mNegEsq, t.mNegDir, t.vEsq, t.vDir]),
+      ]),
+    });
+    expect(resumo(copia)).toEqual(resumo(original));
+
+    // a alvenaria pesa no resultado: sem ela a cópia daria outro número (o teste vê a perda)
+    const semAlvenaria = calcular({
+      ...dup,
+      pavimentos: dup.pavimentos.map((p, i) => (i === 0 ? { ...p, alvenarias: [] } : p)),
+    });
+    if (semAlvenaria.tipo !== "ok") throw new Error("sem cálculo");
+    expect(resumo(semAlvenaria.resultado.pavimentos[0])).not.toEqual(resumo(original));
   });
 });

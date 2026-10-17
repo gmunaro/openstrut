@@ -85,18 +85,59 @@ export function apagarPavimento(obra: Obra, id: string) {
   return { ...obra, pavimentos: obra.pavimentos.filter((p) => p.id !== id) };
 }
 
-/** Substitui a planta (lajes, vigas, pilares e pilares removidos) do destino por uma cópia da planta
- *  da origem, com ids novos. Nome, pé-direito e repetições do destino ficam. */
+/**
+ * Substitui a planta do destino por uma cópia da planta da origem, com ids novos: lajes,
+ * vigas, pilares, pilares removidos e os dados do SISTRUT (cargas de ocupação,
+ * alvenarias, trechos de pilar-parede e continuidades das lajes). As referências por id
+ * (Viga.apoiaEm, TrechoPilar.pilar, ContinuidadeLajes.lajeA/lajeB) passam a apontar para
+ * os elementos da cópia. Nome, pé-direito e repetições do destino ficam.
+ */
 export function copiarPlanta(obra: Obra, origemId: string, destinoId: string) {
   const origem = obra.pavimentos.find((p) => p.id === origemId);
   if (!origem || origemId === destinoId) return obra;
-  return trocarPavimento(obra, destinoId, (p) => ({
-    ...p,
-    lajes: origem.lajes.map((l) => ({ ...l, vinculos: { ...l.vinculos }, id: novoId() })),
-    vigas: origem.vigas.map((v) => ({ ...v, id: novoId() })),
-    pilares: origem.pilares.map((x) => ({ ...x, id: novoId() })),
-    pilaresRemovidos: origem.pilaresRemovidos.map((r) => ({ ...r })),
-  }));
+  const ids = new Map<string, string>();
+  /** Cópia profunda do elemento com id novo, guardando o par antigo → novo. */
+  const copia = <T extends { id: string }>(e: T): T => {
+    const id = novoId();
+    ids.set(e.id, id);
+    return { ...structuredClone(e), id };
+  };
+  const lajes = origem.lajes.map(copia);
+  const pilares = origem.pilares.map(copia);
+  const vigas = origem.vigas.map(copia);
+  const novoDe = (antigo: string) => ids.get(antigo) ?? antigo;
+  const extras: Partial<Pavimento> = {};
+  if (origem.cargasOcupacao) extras.cargasOcupacao = structuredClone(origem.cargasOcupacao);
+  if (origem.alvenarias) extras.alvenarias = structuredClone(origem.alvenarias);
+  if (origem.trechosPilares)
+    extras.trechosPilares = origem.trechosPilares.map((t) => ({
+      ...structuredClone(t),
+      pilar: novoDe(t.pilar),
+    }));
+  if (origem.continuidadesLajes)
+    extras.continuidadesLajes = origem.continuidadesLajes.map((c) => ({
+      ...c,
+      lajeA: novoDe(c.lajeA),
+      ...(c.lajeB === undefined ? {} : { lajeB: novoDe(c.lajeB) }),
+    }));
+  return trocarPavimento(obra, destinoId, (p) => {
+    // a planta do destino sai inteira, inclusive os dados do SISTRUT dela
+    const {
+      cargasOcupacao: _ocupacao,
+      alvenarias: _alvenarias,
+      trechosPilares: _trechos,
+      continuidadesLajes: _continuidades,
+      ...resto
+    } = p;
+    return {
+      ...resto,
+      lajes,
+      vigas: vigas.map((v) => (v.apoiaEm ? { ...v, apoiaEm: v.apoiaEm.map(novoDe) } : v)),
+      pilares,
+      pilaresRemovidos: structuredClone(origem.pilaresRemovidos),
+      ...extras,
+    };
+  });
 }
 
 /** Nome livre para a cópia de um pavimento: "<nome> (cópia)", "<nome> (cópia 2)"… */
