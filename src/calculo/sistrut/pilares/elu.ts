@@ -40,8 +40,8 @@ export interface AtuanteCaso {
   lambda2a: number;
 }
 
-/** Testa o equilíbrio: |Ns − Nk + Nc|/|Nk| > 0,5 % (PILAR.BAS:5078, 5147). O
- *  PILAREDI divide por Nk com sinal (PILAREDI.BAS:5105). Corrigido: max(|Nk|, 1). */
+/** Testa o equilíbrio: |Ns − Nk + Nc|/|Nk| > 0,5 % (PILAR.BAS:5222, 5293). O
+ *  PILAREDI divide por Nk com sinal (PILAREDI.BAS:5300, 5385). Corrigido: max(|Nk|, 1). */
 function foraDoEquilibrio(ctx: Contexto, est: Estado, nk: number, comSinal: boolean) {
   if (ctx.integracoes > LIMITE_INTEGRACOES) throw naoConverge();
   const div = ctx.modo === "corrigido" ? Math.max(Math.abs(nk), 1) : comSinal ? nk : Math.abs(nk);

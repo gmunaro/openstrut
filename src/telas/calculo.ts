@@ -55,6 +55,10 @@ export function calcular(obra: Obra): Calculo {
 export const mensagemSemNorma = (norma: NormaId) =>
   `Cálculo pela ${NOME_NORMA[norma]} ainda não disponível. Escolha a NB-1/78 nos dados da obra para calcular.`;
 
+/** Quem emitiu o aviso: o cálculo (o motor), o detalhamento das barras da V2
+ *  (telas/detalhamento.ts, regras da própria V2) ou a importação de arquivos. */
+export type FonteAviso = "calculo" | "detalhamento" | "importacao";
+
 export interface Aviso {
   /** Pavimento ou nível ("" para avisos da obra inteira). */
   local: string;
@@ -63,6 +67,9 @@ export interface Aviso {
   texto: string;
   /** O aviso tem uma opção no elemento (ResultadoObra.avisosComOpcao): a tela põe o botão. */
   opcao?: AvisoComOpcao;
+  /** Origem do aviso. Ausente: a lista deduz (o elemento "Vx (detalhamento)" que
+   *  `coletarAvisos` dá é do detalhamento; o resto, do cálculo). */
+  fonte?: FonteAviso;
 }
 
 /** A opção de um aviso, pelo texto: o motor dá o mesmo texto na lista do elemento ou nas

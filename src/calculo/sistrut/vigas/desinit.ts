@@ -29,7 +29,12 @@ import { type Comum, qb } from "./desinitComum";
 import { apoiosComNegativo, cortaBarras } from "./desinitCorte";
 import { analisaDescalc } from "./desinitDescalc";
 import { detalhaLongitudinal, estribos, faces, portaEstribos, qbVal } from "./desinitBarras";
-import { aplicaEdicao, conferenciaAsEditada, motivosEdicaoNaoServe } from "./desinitEdicao";
+import {
+  aplicaEdicao,
+  comprimentoMudou,
+  conferenciaAsEditada,
+  motivosEdicaoNaoServe,
+} from "./desinitEdicao";
 
 type TramoParaDetalhe = DimensionamentoParaDetalhe["tramos"][number];
 type FlexaoParaDetalhe = DimensionamentoParaDetalhe["apoios"][number];
@@ -433,7 +438,7 @@ export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras 
   const memoria: Etapa[] = [];
   const edicao = extras.armaduraEditada;
   // reabertura da viga editada (DESEDITA → DESINIT): sem DESDIM, o DESINIT só refaz as
-  // faces (S_30132) e o quadro com os arrays do .EDV (DESINIT.BAS:84-100)
+  // faces (S_30132) e o quadro com os arrays do .EDV (DESINIT.BAS:114-140)
   const reabre = extras.reabreEdicao === true && edicao !== undefined;
   const c = reabre
     ? analisaDescalc(entrada, modo)
@@ -456,20 +461,29 @@ export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras 
     portaEstribos(c);
   }
   if (edicao) {
+    const arquivo = nomeArquivoEdv(edicao.registro, edicao.pavimento);
     const motivos = motivosEdicaoNaoServe(c, edicao);
+    // comprimento: o original não confere (DESEDITA.BAS:747) e aplica a edição sobre a
+    // viga atual; o corrigido descarta a edição que não é da viga atual
+    const comprimento = comprimentoMudou(c, edicao);
+    if (comprimento && modo === "corrigido") motivos.push(comprimento);
     if (motivos.length > 0 && reabre)
       throw new Error(
-        `a armadura editada no SISTRUT (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}) não serve à viga, que mudou depois da edição (${motivos.join("; ")})`,
+        `a armadura editada no SISTRUT (${arquivo}) não serve à viga, que mudou depois da edição (${motivos.join("; ")})`,
       );
     if (motivos.length > 0) {
       avisos.push(
-        `${entrada.viga.nome}: a armadura editada no SISTRUT (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}) foi descartada porque a viga mudou depois da edição (${motivos.join("; ")}); valem o detalhamento e o quadro automáticos.`,
+        `${entrada.viga.nome}: a armadura editada no SISTRUT (${arquivo}) foi descartada porque a viga mudou depois da edição (${motivos.join("; ")}); valem o detalhamento e o quadro automáticos.`,
       );
     } else {
       aplicaEdicao(c, edicao);
+      if (comprimento)
+        avisos.push(
+          `${entrada.viga.nome}: a viga mudou depois da edição (${comprimento}); como o original, que não confere o comprimento ao reabrir a viga editada (DESEDITA.BAS:747), a armadura editada no SISTRUT (${arquivo}) foi aplicada à viga atual. Confira se as barras ainda alcançam os apoios.`,
+        );
       memoria.push({
-        descricao: `Armadura editada no DESEDCAO (${nomeArquivoEdv(edicao.registro, edicao.pavimento)}) no lugar da automática: ${edicao.negativas.length} negativas, ${edicao.positivas.length} positivas, ${edicao.portaEstribos.length} porta-estribos, ${edicao.estribos.length} trechos de estribo`,
-        ref: "DESINIT.BAS:96-104, 404-966 (S_202b9 com os arrays do DESEDCAO)",
+        descricao: `Armadura editada no DESEDCAO (${arquivo}) no lugar da automática: ${edicao.negativas.length} negativas, ${edicao.positivas.length} positivas, ${edicao.portaEstribos.length} porta-estribos, ${edicao.estribos.length} trechos de estribo`,
+        ref: "DESINIT.BAS:132-140, 404-966 (S_202b9 com os arrays do DESEDCAO)",
       });
       if (modo === "corrigido" && !reabre)
         avisos.push(...conferenciaAsEditada(c, edicao, dimensionamento));

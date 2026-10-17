@@ -11,7 +11,7 @@
 // - cada continuidade é processada pelas duas lajes, e vale a última (o código da
 //   primeira, negativo, não conta como imposto).
 // Defeito R2: o original só recalcula o vizinho se o lado dele tem número diferente
-// do lado atual (LAJEPROC.BAS:836, `V_16a8 <> V_0efc`); o corrigido sempre recalcula.
+// do lado atual (LAJEPROC.BAS:874, `V_16a8 <> V_0efc`); o corrigido sempre recalcula.
 import type { Etapa } from "../../tipos";
 import { atribuicao } from "../base/f32";
 import type {
@@ -130,6 +130,7 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
       const bordoVizinho = ladoA ? (c.lajeB === null ? c.bordoA : c.bordoB) : c.bordoA;
       // R2: o original pula o vizinho quando o lado dele tem o mesmo número.
       const recalculaVizinho = vizinho !== null && (modo === "corrigido" || bordoVizinho !== bordo);
+      const naoRecalculado = vizinho !== null && !recalculaVizinho ? vizinho : undefined;
       if (vizinho !== null && !recalculaVizinho) {
         avisos.push(
           `${laje.nome}, lado ${bordo + 1}: o vizinho ${vizinho} tem o mesmo número de lado e não foi ` +
@@ -137,7 +138,7 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
         );
         memoria.push({
           descricao: `${laje.nome}, lado ${bordo + 1}: vizinho ${vizinho} não recalculado (R2)`,
-          ref: "LAJEPROC.BAS:836, 855",
+          ref: "LAJEPROC.BAS:843-874",
         });
       }
       if (recalculaVizinho) {
@@ -189,6 +190,7 @@ export const lajeproc: Lajeproc = (esforcos, materiais, parametros, modo) => {
         as,
         barra,
         continuidade: { ...c, armaduraImposta: codigosNegativos[indice] ?? 0 },
+        ...(naoRecalculado ? { vizinhoNaoRecalculado: naoRecalculado } : {}),
       };
       memoria.push({
         descricao: `${laje.nome}, negativa com ${vizinho ?? "engaste"}: ${barra.ok ? textoBarraLaje(barra) : "*"}`,

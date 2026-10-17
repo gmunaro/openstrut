@@ -1,0 +1,89 @@
+{
+  "versao": 3,
+  "nome": "Transicao original",
+  "norma": "nb1-78",
+  "modoCalculo": "original",
+  "materiais": {
+    "fck": 15,
+    "aco": "CA-50",
+    "acoEstribo": "CA-50",
+    "classeAco": "B",
+    "caa": 1,
+    "cobrimentoLaje": 1.5,
+    "cobrimentoViga": 2,
+    "cobrimentoPilar": 2
+  },
+  "pavimentos": [
+    {
+      "repeticoes": 1,
+      "lajes": [],
+      "pilaresRemovidos": [],
+      "peDireito": 3,
+      "id": "CIMA",
+      "nome": "CIMA",
+      "vigas": [],
+      "pilares": [
+        {
+          "id": "CIMA/PB",
+          "nome": "PB",
+          "x": 4.1,
+          "y": 0,
+          "b": 20,
+          "h": 20,
+          "cargaTopo": {
+            "normal": 98.06649999999999,
+            "momentos": []
+          }
+        }
+      ]
+    },
+    {
+      "repeticoes": 1,
+      "lajes": [],
+      "pilaresRemovidos": [],
+      "peDireito": 3,
+      "id": "BAIXO",
+      "nome": "BAIXO",
+      "vigas": [
+        {
+          "id": "BAIXO/V1",
+          "nome": "V1",
+          "x1": 0,
+          "y1": 0,
+          "x2": 4.1,
+          "y2": 0,
+          "bw": 20,
+          "h": 50,
+          "cargaLinear": 0,
+          "somenteCargasProprias": true,
+          "cargas": [
+            {
+              "tipo": "concentrada",
+              "trecho": 1,
+              "posicao": 0.1,
+              "total": 98.06649999999999
+            }
+          ]
+        }
+      ],
+      "pilares": [
+        {
+          "id": "BAIXO/PA",
+          "nome": "PA",
+          "x": 0,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        },
+        {
+          "id": "BAIXO/PB",
+          "nome": "PB",
+          "x": 4,
+          "y": 0,
+          "b": 20,
+          "h": 20
+        }
+      ]
+    }
+  ]
+}

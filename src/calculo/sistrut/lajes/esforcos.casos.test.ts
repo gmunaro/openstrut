@@ -250,7 +250,7 @@ describe("v2par_laje_r3: otimização que não converge (piso 0,35)", () => {
   it("o laço do original (mesmo bordo refeito com o código 5) vira ErroNaoConverge", () => {
     const vistos: number[] = [];
     const roda = esforcosDoPainelCom((esforcos, recalcula) => {
-      // LAJECALC.BAS:2113-2145: coef = max(INT(100·c·M2/M1)/100; 0,35) = 0,35 em SINGLE,
+      // LAJECALC.BAS:2176-2195: coef = max(INT(100·c·M2/M1)/100; 0,35) = 0,35 em SINGLE,
       // gravado como CINT(0,35·10 + 2) = 5 (0,30); o lado continua > 10 % maior e é refeito
       const l1 = esforcos.lajes.find((l) => l.nome === "L1");
       if (!l1) throw new Error("sem L1");

@@ -26,6 +26,12 @@ import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
 import { type Filtro, FiltroContexto, filtroDeTexto, MOSTRA_TUDO, useFiltro } from "./filtro";
+import {
+  BlocoErrosOriginal,
+  ErrosOriginalContexto,
+  errosPorElemento,
+  useErrosDoOriginal,
+} from "./errosOriginal";
 import { TabelasLajes } from "./lajes";
 import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "./motorSistrut";
 import { TabelaPilares } from "./pilares";
@@ -113,9 +119,10 @@ export function TabelasObra({
               {rp.pavimento.repeticoes > 1 ? ` · repete ${rp.pavimento.repeticoes}×` : ""}
             </span>
           </h2>
-          <TabelasLajes lajes={rp.lajes} comMemoria={comMemoria} />
+          <TabelasLajes lajes={rp.lajes} comMemoria={comMemoria} pavimento={rp.pavimento.nome} />
           <TabelaVigas
             vigas={rp.vigas}
+            pavimento={rp.pavimento.nome}
             interrompidas={vigasInterrompidas(resultado, rp.pavimento.id)}
             naoCalculadas={rp.montagem.naoCalculadas}
             gamaF={gamaF}
@@ -143,6 +150,8 @@ export function TabelasObra({
 export function Resultados({ calculo }: { calculo: Calculo }) {
   const obra = useObra((e) => e.obra);
   const detalhamento = useContext(DetalhamentoContexto);
+  const erros = useErrosDoOriginal(calculo, obra);
+  const porElemento = useMemo(() => errosPorElemento(erros), [erros]);
   if (calculo.tipo !== "ok") return <SemCalculo calculo={calculo} />;
   // obra vazia: sem "Nenhum aviso" nem tabelas vazias, que sugerem uma verificação que não houve
   if (obra && obraSemElementos(obra))
@@ -152,7 +161,16 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
       </p>
     );
   const r = calculo.resultado;
-  return <ResultadosCalculados r={r} obra={obra} detalhamento={detalhamento} />;
+  return (
+    <ResultadosCalculados
+      r={r}
+      obra={obra}
+      detalhamento={detalhamento}
+      calculo={calculo}
+      erros={erros}
+      porElemento={porElemento}
+    />
+  );
 }
 
 /** Resultados da obra calculada, com a barra de filtro. */
@@ -160,10 +178,16 @@ function ResultadosCalculados({
   r,
   obra,
   detalhamento,
+  calculo,
+  erros,
+  porElemento,
 }: {
   r: ResultadoObra;
   obra: Obra | null;
   detalhamento: DetalhamentoObra | null;
+  calculo: Calculo;
+  erros: ReturnType<typeof useErrosDoOriginal>;
+  porElemento: ReturnType<typeof errosPorElemento>;
 }) {
   const [texto, setTexto] = useState("");
   // a digitação não espera as tabelas redesenharem
@@ -226,14 +250,18 @@ function ResultadosCalculados({
         )}
       </p>
       <ListaFalhas falhas={coletarFalhas(r)} comOpcoes />
+      <BlocoErrosOriginal erros={erros} calculo={calculo} />
       <ListaAvisos
         avisos={avisosDoFiltro(semMarcasDuplicadas(coletarAvisos(r, detalhamento), r), filtro)}
         vazio={filtro === MOSTRA_TUDO ? vazioComMarcas(r) : "Nenhum aviso nos elementos do filtro."}
         comOpcoes
+        modo={r.sistrut?.modo}
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
       <FiltroContexto value={filtro}>
-        <TabelasObra resultado={r} comMemoria ate={ate} naTela={etapas > ETAPAS_DE_UMA_VEZ} />
+        <ErrosOriginalContexto.Provider value={porElemento}>
+          <TabelasObra resultado={r} comMemoria ate={ate} naTela={etapas > ETAPAS_DE_UMA_VEZ} />
+        </ErrosOriginalContexto.Provider>
       </FiltroContexto>
       {montando ? (
         <Montando feitos={ate} total={r.pavimentos.length} />

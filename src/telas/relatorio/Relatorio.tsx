@@ -22,6 +22,12 @@ import { formatarGrandeza, formatarNumero, unidade } from "../formato";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "../marca";
 import { ListaAvisos, ListaFalhas } from "../resultados/avisos";
 import { DetalhamentoContexto, detalharObra } from "../detalhamento";
+import {
+  BlocoErrosOriginal,
+  ErrosOriginalContexto,
+  errosPorElemento,
+  useErrosDoOriginal,
+} from "../resultados/errosOriginal";
 import { TabelaQuantitativos, TabelasAco } from "../resultados/quantitativos";
 import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "../resultados/motorSistrut";
 import { SemCalculo, TabelasObra } from "../resultados/Resultados";
@@ -44,6 +50,8 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
     () => doContexto ?? (calculo.tipo === "ok" ? detalharObra(calculo.resultado, obra) : null),
     [doContexto, obra, calculo],
   );
+  const erros = useErrosDoOriginal(calculo, obra);
+  const porElemento = useMemo(() => errosPorElemento(erros), [erros]);
   const data = new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
 
   return (
@@ -205,6 +213,12 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
                   </section>
                 </div>
 
+                {calculo.tipo === "ok" && !obraSemElementos(obra) && (
+                  <div className="relatorio-secao">
+                    <BlocoErrosOriginal erros={erros} calculo={calculo} />
+                  </div>
+                )}
+
                 <section className="mt-6">
                   <h2 className="border-b pb-1 text-base font-semibold">Avisos</h2>
                   <div className="mt-2">
@@ -222,6 +236,8 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
                               ? AVISOS_OBRA_VAZIA
                               : vazioComMarcas(calculo.resultado)
                           }
+                          modo={calculo.resultado.sistrut?.modo}
+                          expandido
                         />
                         {!obraSemElementos(obra) && (
                           <BlocoMotorSistrut resultado={calculo.resultado} />
@@ -235,7 +251,9 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
 
                 {calculo.tipo === "ok" && (
                   <div className="relatorio-obra">
-                    <TabelasObra resultado={calculo.resultado} comMemoria={false} />
+                    <ErrosOriginalContexto.Provider value={porElemento}>
+                      <TabelasObra resultado={calculo.resultado} comMemoria={false} />
+                    </ErrosOriginalContexto.Provider>
                   </div>
                 )}
 

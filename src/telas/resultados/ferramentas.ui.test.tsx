@@ -43,11 +43,14 @@ const tabelaDe = (titulo: string) => {
   if (!t) throw new Error(`tabela ${titulo} não achada`);
   return t;
 };
+// nome do elemento sem as marcas (contagem de avisos, erro do original), como na cópia
 const nomesDasLinhas = (t: HTMLTableElement) =>
-  Array.from(
-    t.querySelectorAll("tbody > tr"),
-    (r) => r.querySelector("td")?.textContent?.trim() ?? "",
-  );
+  Array.from(t.querySelectorAll("tbody > tr"), (r) => {
+    const td = r.querySelector("td")?.cloneNode(true);
+    if (!(td instanceof HTMLElement)) return "";
+    for (const el of td.querySelectorAll("[data-sem-copia]")) el.remove();
+    return td.textContent?.trim() ?? "";
+  });
 
 describe("filtro de elementos", () => {
   it("L2 deixa só a L2; vigas, pilares, equilíbrio e resumo saem", async () => {

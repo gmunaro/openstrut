@@ -165,7 +165,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
   }
 
   // Asw de cada lado e bitolas da viga. ρ do ψ: no original a coluna 5 de A_128e, que
-  // o DESAUXDI só grava depois do dimensionamento (DESDIM.BAS:5004), ainda é 0 e ρ fica
+  // o DESAUXDI só grava depois do dimensionamento (DESDIM.BAS:5048, 5053), ainda é 0 e ρ fica
   // no piso 0,001 (defeito D-ψ, T7). Corrigido: ρ = As/(3·bw·h) com a As de flexão do
   // tramo (o terço da positiva que chega ao apoio) ou, no balanço, a do apoio vizinho
   // (NB-1/78: τc = ψ·√fck cresce com a taxa da armadura longitudinal de tração;
@@ -174,8 +174,8 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
     const r = flexaoSecao(m, sec, materiais, mult, modo);
     return Math.max(r.as, taxaMin * sec.bw * sec.h);
   };
-  const asRhoDo = (t: EsforcosTramoDesdim, sec: SecaoCalculo) => {
-    if (modo === "original") return 0;
+  /** As do ρ sem o defeito D-ψ (a do corrigido). */
+  const asRhoReal = (t: EsforcosTramoDesdim, sec: SecaoCalculo) => {
     if (t.indice >= 1 && t.indice <= n)
       return asDeFlexao(t.mPositivo * 100 * p.coeficienteMedida * p.coeficienteForca, sec);
     const mApoio = esforcos.momentosApoio[t.indice === 0 ? 0 : n] ?? 0;
@@ -185,11 +185,27 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
   };
   const aswDos = (t: EsforcosTramoDesdim) => {
     const sec = secaoCalculo(secaoDoTramo(entrada, t.indice));
-    const asRho = asRhoDo(t, sec);
+    const asRho = modo === "original" ? 0 : asRhoReal(t, sec);
+    const asw = (v: number, a: number) =>
+      aswCortante(v, sec, a, materiais, p, p.coeficienteForca, modo);
+    // original: também o Asw com o ρ da armadura de flexão, para mostrar o efeito do D-ψ;
+    // é conta à parte, que o original não faz aqui: se ela falhar, fica sem a comparação
+    let real: number | undefined;
+    if (modo === "original")
+      try {
+        real = asRhoReal(t, sec);
+      } catch {
+        real = undefined;
+      }
     return {
       sec,
-      aswEsquerda: aswCortante(t.vkEsquerda, sec, asRho, materiais, p, p.coeficienteForca, modo),
-      aswDireita: aswCortante(t.vkDireita, sec, asRho, materiais, p, p.coeficienteForca, modo),
+      aswEsquerda: asw(t.vkEsquerda, asRho),
+      aswDireita: asw(t.vkDireita, asRho),
+      ...(real === undefined
+        ? {}
+        : {
+            semDefeitoPsi: { esquerda: asw(t.vkEsquerda, real), direita: asw(t.vkDireita, real) },
+          }),
     };
   };
   const bitolas = bitolasEstriboViga(
@@ -313,7 +329,7 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
   let balancoEsquerdo: TramoDimensionado | undefined;
   let balancoDireito: TramoDimensionado | undefined;
   for (const t of esforcos.tramos) {
-    const { sec, aswEsquerda, aswDireita } = aswDos(t);
+    const { sec, aswEsquerda, aswDireita, semDefeitoPsi } = aswDos(t);
     const interno = t.indice >= 1 && t.indice <= n;
     let flexao: FlexaoViga = SEM_FLEXAO;
     let m = 0;
@@ -365,6 +381,17 @@ export const dimensionaViga: DimensionaViga = (entrada, modo, alteracoes) => {
       estriboEsquerda: temEsquerda ? esq : { ...esq, texto: "" },
       estriboDireita: temDireita ? dir : { ...dir, texto: "" },
     };
+    if (semDefeitoPsi)
+      cisalhamento.semDefeitoPsi = {
+        aswEsquerda: temEsquerda ? semDefeitoPsi.esquerda : 0,
+        aswDireita: temDireita ? semDefeitoPsi.direita : 0,
+        estriboEsquerda: temEsquerda
+          ? estriboLado(semDefeitoPsi.esquerda, sec, bitolas, p, modo).texto
+          : "",
+        estriboDireita: temDireita
+          ? estriboLado(semDefeitoPsi.direita, sec, bitolas, p, modo).texto
+          : "",
+      };
 
     let flecha = 0;
     let flechaTexto = "";

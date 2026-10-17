@@ -1,7 +1,7 @@
 // Armadura editada à mão no DESEDCAO (o .EDV, `ExtrasDesinit.armaduraEditada`) no lugar da
 // automática. No original, ao voltar do DESEDCAO o controle passa ao DESINIT, que refaz o
 // quadro de ferros com os arrays editados do COMMON e regrava o .TAB (S_202b9,
-// DESINIT.BAS:96-104 e 404-966); o DESEDITA, ao reabrir a viga, lê o .EDV para os mesmos
+// DESINIT.BAS:132-140 e 404-966); o DESEDITA, ao reabrir a viga, lê o .EDV para os mesmos
 // arrays (DESEDITA.BAS:745-880). `aplicaEdicao` faz a mesma troca no `Comum` depois do
 // detalhamento automático e antes do quadro (`posicoesDoQuadro` em desinit.ts).
 import type { EdicaoVigaSistrut } from "../../../dominio/edicaoViga";
@@ -23,9 +23,11 @@ export function comprimentoDaViga(c: Comum) {
   );
 }
 
-/** Por que a edição não serve mais à viga (nº de tramos, balanços ou comprimento com mais
- *  de 1 cm de diferença); lista vazia = serve. O original não confere: o DESEDITA lê o
- *  .EDV sobre a viga que estiver no registro. */
+/** Por que a edição não serve à viga: nº de tramos ou balanços diferentes; lista vazia =
+ *  serve. O original não confere: o DESEDITA lê tramos e balanços do próprio .EDV
+ *  (DESEDITA.BAS:757-759) e a geometria do .SEC/.FOR atual, e o DESINIT refaz o quadro
+ *  com essa mistura. A V2 descarta a edição nos dois modos, porque a armadura de outro
+ *  número de tramos não tem como ser posta na viga. */
 export function motivosEdicaoNaoServe(c: Comum, e: EdicaoVigaSistrut): string[] {
   const motivos: string[] = [];
   if (e.tramos !== c.v0ddc) motivos.push(`${e.tramos} tramos na edição e ${c.v0ddc} na viga`);
@@ -38,12 +40,18 @@ export function motivosEdicaoNaoServe(c: Comum, e: EdicaoVigaSistrut): string[] 
     motivos.push(
       `balanço direito: ${bal(e.balancoDireito)} na edição e ${bal(c.v0de4 === 1)} na viga`,
     );
-  const comp = comprimentoDaViga(c);
-  if (Math.abs(e.comprimento - comp) > 1)
-    motivos.push(
-      `comprimento de ${numAte(e.comprimento, 1)} cm na edição e ${numAte(comp, 1)} cm na viga`,
-    );
   return motivos;
+}
+
+/** A diferença de comprimento entre a edição (linha 2 do .EDV, DESEDCAO.BAS:466) e a viga,
+ *  quando passa de 1 cm; `undefined` = mesmo comprimento. O original não confere: o
+ *  DESEDITA lê a linha 2 para uma variável que descarta (DESEDITA.BAS:747) e aplica a
+ *  edição sobre a viga atual. No modo original a V2 faz o mesmo e avisa; no corrigido
+ *  descarta a edição. */
+export function comprimentoMudou(c: Comum, e: EdicaoVigaSistrut): string | undefined {
+  const comp = comprimentoDaViga(c);
+  if (Math.abs(e.comprimento - comp) <= 1) return undefined;
+  return `comprimento de ${numAte(e.comprimento, 1)} cm na edição e ${numAte(comp, 1)} cm na viga`;
 }
 
 /** A bitola da tabela do .DSP igual a `phi` em SINGLE, ou `phi`. O .EDV grava a bitola

@@ -19,7 +19,7 @@ export function estribosLadoALado(bw: number, parametros: ParametrosDsp) {
 /** Asw (cm²/m) para o cortante v (t) (L_15789, DESDIM.BAS:3176-3207; U03-026, U03-027):
  *  ψ = 0,225 + 15ρ com ρ = max(0,001; min(0,015; As/(3·bw·h)));
  *  Asw = (|V|/(bw·d)·γs·γf − ψ·√(1000·fck)/1000)/fyk·bw·100·γs, no mínimo min(bw, d)·taxa.
- *  `asRho` é a coluna 5 de A_128e, que só o DESAUXDI grava (DESDIM.BAS:5004), depois do
+ *  `asRho` é a coluna 5 de A_128e, que só o DESAUXDI grava (DESDIM.BAS:5048, 5053), depois do
  *  dimensionamento: na impressão do original ela vale 0 e ρ = 0,001. */
 export function aswCortante(
   v: number,

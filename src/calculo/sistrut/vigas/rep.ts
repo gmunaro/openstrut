@@ -3,7 +3,7 @@
 // L_195e8 e a gravação em 2545-2557); especificação em
 // v2-paridade/apoio/livros_viga_pilar.md 1.4 e 3.1 (U61-022..025).
 //
-// Modo "original": cada parcela é INT(R·100)/100 (VIGA.BAS:2413), e o total, a soma
+// Modo "original": cada parcela é INT(R·100)/100 (VIGA.BAS:2499), e o total, a soma
 // em SINGLE das parcelas truncadas (caso b, P5: 6,93 + 10,44 = 17,37). Modo
 // "corrigido" (R5, PLANO.md 4.2): soma as reações sem truncar; o .REP grava o total
 // em 2 casas, e o pilar recebe a soma com todas as casas (D-21).
@@ -57,7 +57,7 @@ export const somaReacoesPilares: SomaReacoesPilares = (analises, vigas, parametr
       const r = parametros.reacaoNoPilar === "maxima" ? apoio.rMax : apoio.r;
       const valor = modo === "original" ? s(qbInt(r * 100) / 100) : r;
       linha.total = s(linha.total + valor);
-      linha.parcelas.push({ viga: viga.nome, valor, texto: textoDoRep(valor, modo) });
+      linha.parcelas.push({ viga: viga.nome, valor, texto: textoDoRep(valor, modo), semCorte: r });
       const [mEsq, mDir] = analise.momentosPilar;
       if (mEsq !== 0 && k === 0) {
         linha.momentos.push(momento(viga, mEsq, 1, viga.tramos[0]?.vao ?? 0, modo));

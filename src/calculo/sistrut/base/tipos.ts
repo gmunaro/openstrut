@@ -537,8 +537,9 @@ export interface PosicaoLajeproc {
  *  mesmo com lado de mesmo número. E2E L1: # 6.3 c/ 20, c/ 20, c/12.5, c/17.5. */
 export interface ResultadoLajeproc extends ComMemoria {
   positivas: Record<string, { principal: PosicaoLajeproc; secundaria: PosicaoLajeproc }>;
-  /** Mesmo índice de `esforcos.continuidades`. */
-  negativas: (PosicaoLajeproc & { continuidade: Continuidade })[];
+  /** Mesmo índice de `esforcos.continuidades`. `vizinhoNaoRecalculado`: só no original, o
+   *  vizinho que o LAJEPROC pulou por ter o lado de mesmo número (R2, LAJEPROC.BAS:843-874). */
+  negativas: (PosicaoLajeproc & { continuidade: Continuidade; vizinhoNaoRecalculado?: string })[];
 }
 export type Lajeproc = (
   esforcos: EsforcosLajes,
@@ -835,7 +836,7 @@ export type AnalisaVigas = (
   modo: ModoSistrut,
 ) => AnaliseDeVigas;
 
-/** Uma linha do .REP por pilar (VIGA.BAS:2412-2420, 2545). Caso b: P5 17,37 =
+/** Uma linha do .REP por pilar (VIGA.BAS:2498-2501, 2545). Caso b: P5 17,37 =
  *  6,93 (V2) + 10,44 (V5); P7 momentos "-.64@1 [4]" (V1) e "-1.22@2 [5]" (V4). */
 export interface LinhaRep {
   pilar: string;
@@ -844,8 +845,9 @@ export interface LinhaRep {
   /** Parcela = INT(R·100)/100 no original (R estática ou máxima); sem truncar no
    *  corrigido (R5). `texto` = a forma gravada no .REP depois do "*": no original, STR$
    *  cortado 2 casas depois do ponto (VIGA.BAS:2415; sem ponto, sinal e 1º dígito, D-21);
-   *  no corrigido, o número com até 2 casas (`textoDoRep`). */
-  parcelas: { viga: string; valor: number; texto: string }[];
+   *  no corrigido, o número com até 2 casas (`textoDoRep`). `semCorte` = a reação R antes
+   *  do INT (igual a `valor` no corrigido): no original, R − valor é o que o R5 tira. */
+  parcelas: { viga: string; valor: number; texto: string; semCorte?: number }[];
   /** Momento de extremidade (VIGA.BAS:2416-2419): `valor` = A_0fc4 com 4 casas (tm,
    *  ex.: −0,6481); `texto` = o que vai ao .REP: no original, STR$(valor) cortado 2 casas
    *  depois do ponto ("-.64"), que o PILGEEDI lê como ABS(VAL(texto)) (PILGEEDI.BAS:606);
@@ -1001,6 +1003,16 @@ export interface CisalhamentoViga {
   /** Estribo de cada lado: bitola mínima ou máxima da viga, espaçamento e texto. */
   estriboEsquerda: EstriboLado;
   estriboDireita: EstriboLado;
+  /** Só no modo original: o Asw (cm²/m) e o texto do estribo de cada lado com o ρ do ψ
+   *  tirado da armadura de flexão, como no corrigido, e o resto igual ao original. É o
+   *  que o original daria sem o defeito D-ψ (DESDIM.BAS:3194-3208); serve ao painel de erros
+   *  do original (`calculo/defeitosOriginal.ts`). */
+  semDefeitoPsi?: {
+    aswEsquerda: number;
+    aswDireita: number;
+    estriboEsquerda: string;
+    estriboDireita: string;
+  };
 }
 
 export interface TramoDimensionado {
@@ -1166,11 +1178,11 @@ export interface ExtrasDesinit {
   comprimidaApoios?: string[];
   /** Armadura editada no DESEDCAO (o .EDV, `Viga.armaduraEditada`): substitui barras,
    *  grampos, porta-estribos, pele e estribos antes do quadro de ferros, como o DESINIT
-   *  ao voltar do DESEDCAO (S_202b9, DESINIT.BAS:96-104, 404-966). Descartada com aviso
+   *  ao voltar do DESEDCAO (S_202b9, DESINIT.BAS:132-140, 404-966). Descartada com aviso
    *  se os tramos, os balanços ou o comprimento (1 cm) não batem com a viga. */
   armaduraEditada?: EdicaoVigaSistrut;
   /** Viga editada reaberta no DESEDITA: o DESINIT não refaz o detalhamento automático (vindo
-   *  do DESEDITA, DESINIT.BAS:84-100 só chama S_30132), e o quadro sai das faces e de
+   *  do DESEDITA, DESINIT.BAS:114-140 só chama S_30132), e o quadro sai das faces e de
    *  `armaduraEditada`; `dimensionamento` não é usado. Serve à viga cujo DESDIM a V2 não
    *  conclui (parâmetros do .DSP do usuário que não vieram). Edição que não serve à viga
    *  é erro. */

@@ -33,6 +33,7 @@ import {
   type ArquivoEntrada,
   type ResultadoImportacaoSistrut,
 } from "./InicioSistrut";
+import { ListaAvisosImportacao } from "./resultados/avisos";
 import { doDisco, lerSelecao, type Escolhido } from "./selecao";
 
 /** Arquivos de uma entrada arrastada: o arquivo ou, numa pasta, todos os de dentro. Uma
@@ -573,11 +574,7 @@ function ResumoObra({
       {avisos.length > 0 && (
         <section aria-label="Avisos da importação" className="text-xs">
           <h3 className="mb-1 font-semibold uppercase tracking-wide">Avisos</h3>
-          <ul className="list-disc pl-5">
-            {avisos.map((a, i) => (
-              <li key={i}>{a}</li>
-            ))}
-          </ul>
+          <ListaAvisosImportacao avisos={avisos} />
         </section>
       )}
     </>

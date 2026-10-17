@@ -400,7 +400,7 @@ describe("fontes dos JSONs de __desdim__", () => {
   }
 });
 
-describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado de 4 m, q = 8 t/m", () => {
+describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:3194-3208), tramo biapoiado de 4 m, q = 8 t/m", () => {
   // Vk com alívio = qL/2 − q·h/2 = 16 − 8·0,25 = 14 t; bw 20, h 50, d 46; fck 0,15, fyk 5.
   // Asw = (Vk/(bw·d)·γs·γf − ψ·√(1000·fck)/1000)/fyk·bw·100·γs (DESDIM.BAS:3176-3207).
   const asw = (rho: number) =>
@@ -414,6 +414,18 @@ describe("ρ do ψ no cortante (defeito D-ψ, DESDIM.BAS:5004), tramo biapoiado 
     const r = dimensionaViga({ ...entrada, parametros: emSingle(PARAMETROS_DSP) }, "original");
     expect(r.tramos[0]!.cisalhamento.aswEsquerda).toBeCloseTo(asw(0.001), 2);
     expect(asw(0.001)).toBeCloseTo(9.918, 3);
+  });
+
+  it("original: semDefeitoPsi é o Asw com ρ = As/(3·bw·h) da As de flexão do próprio original", () => {
+    const r = dimensionaViga({ ...entrada, parametros: emSingle(PARAMETROS_DSP) }, "original");
+    const as = r.tramos[0]!.flexao.as;
+    const rho = Math.min(0.015, Math.max(0.001, as / (3 * 20 * 50)));
+    const x = r.tramos[0]!.cisalhamento.semDefeitoPsi!;
+    expect(x.aswEsquerda).toBeCloseTo(asw(rho), 2);
+    expect(x.aswEsquerda).toBeLessThan(r.tramos[0]!.cisalhamento.aswEsquerda - 0.1);
+    expect(dimensionaViga(entrada, "corrigido").tramos[0]!.cisalhamento.semDefeitoPsi).toBe(
+      undefined,
+    );
   });
 
   it("corrigido: ρ = As/(3·bw·h) com a As de flexão do tramo, ψ maior e Asw menor", () => {

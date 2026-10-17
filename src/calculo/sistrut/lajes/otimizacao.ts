@@ -43,7 +43,7 @@ export interface LadoOtimizacao {
 
 /** Ponto em que o SISTRUT original entra em laço (defeito R3): a relação nova grava o
  *  mesmo código, o momento não muda e o mesmo bordo se repete sem fim
- *  (LAJECALC.BAS:2113-2145, 2199-2207). É o `estado` do `ErroNaoConverge` que a
+ *  (LAJECALC.BAS:2176-2195, 2199-2207). É o `estado` do `ErroNaoConverge` que a
  *  otimização lança: o que a tela mostra parada. */
 export interface OtimizacaoParada {
   laje: string;

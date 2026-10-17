@@ -27,8 +27,8 @@ import { continuidadeAutomatica } from "./continuidade";
 import { coeficientesDosBordos, direcaoMu, momentosComCoeficiente } from "./momentos";
 
 /** Recálculos por laje antes de declarar que a otimização não converge
- *  (`ErroNaoConverge`): no original é o laço sem fim do defeito R3 (LAJECALC.BAS:2113,
- *  2123, 2145; v2par_laje_r3, piso 0,35). No
+ *  (`ErroNaoConverge`): no original é o laço sem fim do defeito R3 (LAJECALC.BAS:2176, 2186,
+ *  2195; v2par_laje_r3, piso 0,35). No
  *  v2par_laje_otim a L1 converge em 4 (código 22 → 7 → 6 → 5). */
 export const LIMITE_RECALCULOS = 100;
 

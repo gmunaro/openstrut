@@ -17,7 +17,7 @@
 // O registro guarda os arrays do COMMON do DESENHO que o DESINIT monta e o DESEDCAO edita
 // (os nomes das colunas são os de `calculo/sistrut/vigas/desinitComum.ts`). Ao voltar do
 // DESEDCAO, o DESINIT refaz com eles o quadro de ferros e regrava o .TAB (S_202b9,
-// DESINIT.BAS:404-966, chamado em DESINIT.BAS:96-104): a edição muda o desenho e o
+// DESINIT.BAS:404-966, chamado em DESINIT.BAS:132-140): a edição muda o desenho e o
 // quantitativo da viga no original.
 //
 // Unidades do original: posições e comprimentos em cm a partir da ponta esquerda da viga,
@@ -502,7 +502,7 @@ export function aplicarEdv(
     return `${p?.nome ?? pav} ${n.join(", ")}`;
   });
   avisos.push(
-    `Armadura editada no DESEDCAO (.EDV) em ${nomes.join("; ")}: o detalhamento e o quadro de ferros dessas vigas saem da armadura editada, como no original. Se a viga mudar (tramos, balanços ou comprimento), a edição é descartada com aviso.`,
+    `Armadura editada no DESEDCAO (.EDV) em ${nomes.join("; ")}: o detalhamento e o quadro de ferros dessas vigas saem da armadura editada, como no original. Se a viga mudar de tramos ou de balanços, a edição é descartada com aviso. Se só o comprimento mudar, o modo original aplica a edição à viga atual, como o SISTRUT, e o corrigido a descarta, os dois com aviso.`,
   );
   return {
     obra: {

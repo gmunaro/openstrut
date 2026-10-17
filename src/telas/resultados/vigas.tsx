@@ -23,6 +23,7 @@ import { EsquemaViga } from "./desenhos";
 import { MOSTRA_TUDO, useFiltro } from "./filtro";
 import { LinhaElemento, Memoria, type GrupoMemoria } from "./memoria";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
+import { NomeComMarca } from "./errosOriginal";
 
 const COLUNAS = 18;
 
@@ -76,6 +77,7 @@ export function TabelaVigas({
   gamaF,
   comMemoria,
   interrompidas,
+  pavimento = "",
 }: {
   vigas: ResultadoViga[];
   naoCalculadas: VigaMontada[];
@@ -83,6 +85,8 @@ export function TabelaVigas({
   comMemoria: boolean;
   /** Nomes das vigas que o motor SISTRUT parou no DESDIM (modo original). */
   interrompidas?: ReadonlySet<string> | undefined;
+  /** Nome do pavimento, para a marca de erro do SISTRUT original no nome da viga. */
+  pavimento?: string;
 }) {
   const s = useUnidades();
   const uM = unidade("momento", s);
@@ -179,7 +183,7 @@ export function TabelaVigas({
               return (
                 <LinhaElemento
                   key={r.viga.id}
-                  nome={r.viga.nome}
+                  nome={<NomeComMarca nome={r.viga.nome} local={pavimento} />}
                   avisos={avisosViga(r)}
                   memoria={[{ titulo: `Viga contínua ${r.viga.nome}`, etapas: r.analise.memoria }]}
                   colunas={COLUNAS}
@@ -203,7 +207,7 @@ export function TabelaVigas({
               return (
                 <LinhaElemento
                   key={`${r.viga.id}-${i}`}
-                  nome={i === 0 ? r.viga.nome : ""}
+                  nome={i === 0 ? <NomeComMarca nome={r.viga.nome} local={pavimento} /> : ""}
                   avisos={avisosDoTramo(r, i)}
                   memoria={memoriaDoTramo(r, i)}
                   colunas={COLUNAS}
