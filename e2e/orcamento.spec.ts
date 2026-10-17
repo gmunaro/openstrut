@@ -51,14 +51,19 @@ test("orçamento: SINAPI, composição, BDI, importação, comparação e export
   await expect(painel.getByLabel("Tabela", { exact: true })).toHaveValue("sinapi-2026-09-sp-nd");
   await expect(painel.getByText("referência 09/2026, UF SP, sem desoneração")).toBeVisible();
 
-  // fck 15: a SINAPI não tem concreto usinado C15 → total parcial
-  await expect(painel.getByRole("alert").filter({ hasText: "Total parcial" })).toContainText(
-    "Concreto fck 15 MPa",
-  );
+  // fck 15 e CA-50 φ 5: a SINAPI não tem concreto usinado C15 nem CA-50 de 5 mm (o 5,0
+  // dela é CA-60) → total parcial, até o usuário escolher os itens
+  const parcial = painel.getByRole("alert").filter({ hasText: "Total parcial" });
+  await expect(parcial).toContainText("Concreto fck 15 MPa");
+  await expect(parcial).toContainText("Aço CA-50 φ 5 mm");
   const comp = painel.getByLabel("Composição de Concreto fck 15 MPa");
   await expect(comp).toHaveValue("");
   await comp.fill("1524");
   await comp.press("Enter");
+  await expect(parcial).not.toContainText("Concreto fck 15 MPa");
+  const aco5 = painel.getByLabel("Composição de Aço CA-50 φ 5 mm");
+  await aco5.fill("43059");
+  await aco5.press("Enter");
   await expect(painel.getByRole("alert").filter({ hasText: "Total parcial" })).toHaveCount(0);
   await expect(painel.locator('[data-papel="concreto:15"]')).toContainText("C20");
 
@@ -74,9 +79,13 @@ test("orçamento: SINAPI, composição, BDI, importação, comparação e export
   await expect(painel.getByRole("heading", { name: "Quanto custa o erro do original" })).toBeVisible();
   await expect(celula(page, "diferenca-carga")).not.toHaveText("—");
 
-  await page.screenshot({ path: path.join(PASTA, "desktop-1366.png"), fullPage: true });
-  await painel.getByRole("heading", { name: "Quanto custa o erro do original" }).scrollIntoViewIfNeeded();
-  await page.screenshot({ path: path.join(PASTA, "desktop-1366-comparacao.png") });
+  await page.screenshot({ path: path.join(PASTA, "desktop-1366.png") });
+  // o painel rola por dentro: uma captura por bloco
+  const titulos = painel.getByRole("heading");
+  for (let i = 0, n = await titulos.count(); i < n; i++) {
+    await titulos.nth(i).evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: path.join(PASTA, `desktop-1366-${String(i).padStart(2, "0")}.png`) });
+  }
 
   // exportação
   const [xlsx] = await Promise.all([
@@ -105,7 +114,10 @@ test("orçamento: SINAPI, composição, BDI, importação, comparação e export
   await painel.getByRole("button", { name: "Importar", exact: true }).click();
   await expect(painel.getByRole("status")).toContainText("1 item importado");
   await expect(painel.getByLabel("Tabela", { exact: true })).not.toHaveValue("sinapi-2026-09-sp-nd");
-  await expect(painel.locator('[data-papel="concreto:15"]')).toContainText("600");
+  await expect(
+    painel.locator('[data-papel="concreto:15"]').getByLabel("Preço de 1524"),
+  ).toHaveValue("600,00");
+  await expect(painel.locator('[data-papel="concreto:15"]')).toContainText("Concreto C20 da usina");
   await expect(painel.getByRole("alert").filter({ hasText: "Total parcial" })).toBeVisible();
 
   // volta à SINAPI: a tabela importada fica guardada no navegador, a configuração também

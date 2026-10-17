@@ -794,7 +794,7 @@ function PrecosDaTabela({
   return (
     <details className="mt-4">
       <summary className="cursor-pointer text-sm font-semibold">
-        Preços da tabela ({tabela.itens.length} itens)
+        Preços da tabela ({tabela.itens.length} {tabela.itens.length === 1 ? "item" : "itens"})
       </summary>
       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
         <Input
@@ -807,7 +807,7 @@ function PrecosDaTabela({
         <span className="text-muted-foreground text-xs">
           {itens.length > LIMITE_LINHAS
             ? `mostrando ${LIMITE_LINHAS} de ${itens.length}`
-            : `${itens.length} itens`}
+            : `${itens.length} ${itens.length === 1 ? "item" : "itens"}`}
         </span>
       </div>
       <Tabela className="mt-1 w-auto">
