@@ -12,5 +12,12 @@ export default defineConfig({
     command: `bun run build && bun run preview --port ${porta} --strictPort`,
     port: porta,
     reuseExistingServer: true,
+    // a importação pelo Google Drive só aparece ligada com as duas variáveis; no e2e as
+    // chamadas ao Google são interceptadas (e2e/drive.spec.ts), então valem valores falsos
+    env: {
+      VITE_GOOGLE_CLIENT_ID:
+        process.env.VITE_GOOGLE_CLIENT_ID ?? "123456789012-e2e.apps.googleusercontent.com",
+      VITE_GOOGLE_API_KEY: process.env.VITE_GOOGLE_API_KEY ?? "chave-e2e",
+    },
   },
 });

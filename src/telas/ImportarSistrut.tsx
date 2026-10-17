@@ -9,6 +9,10 @@
 // têm como ser escolhidos sozinhos. Uma pasta só de parâmetros (.DSP, .PIP, .LAP, .INI,
 // como a EXEC40 do SISTRUT) vai junto com a obra. Com vários .DSP e nada que diga qual a
 // obra usou, a tela pergunta qual. Só os arquivos que a importação lê vão para a memória.
+//
+// A pasta do Google Drive (ImportarDrive.tsx) entra pelo mesmo caminho: a listagem vira
+// a mesma lista de arquivos com caminho, e o conteúdo só é baixado na leitura, com o
+// progresso num diálogo que dá para cancelar.
 import { FolderInput, Import } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,20 +25,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Obra } from "../dominio/obra";
+import { ImportarDrive } from "./ImportarDrive";
 import {
   dspsAEscolher,
   extensaoDoSistrut,
-  extensaoLida,
   importarObraSistrut,
   type ArquivoEntrada,
   type ResultadoImportacaoSistrut,
 } from "./InicioSistrut";
-
-/** Um arquivo escolhido, com o caminho dentro da seleção ("OBRA/COB.LAJ"). */
-interface Escolhido {
-  arquivo: File;
-  caminho: string;
-}
+import { doDisco, lerSelecao, type Escolhido } from "./selecao";
 
 /** Arquivos de uma entrada arrastada: o arquivo ou, numa pasta, todos os de dentro. Uma
  *  entrada que não abre vai para `falhas` e não derruba as outras. */
@@ -45,7 +44,7 @@ async function arquivosDaEntrada(entrada: FileSystemEntry, falhas: string[]): Pr
       const arquivo = await new Promise<File>((ok, falha) =>
         (entrada as FileSystemFileEntry).file(ok, falha),
       );
-      return [{ arquivo, caminho }];
+      return [doDisco(arquivo, caminho)];
     }
     if (!entrada.isDirectory) return [];
     const leitor = (entrada as FileSystemDirectoryEntry).createReader();
@@ -71,7 +70,7 @@ async function arquivosSoltos(e: DragEvent, falhas: string[]): Promise<Escolhido
     .map((i) => i.webkitGetAsEntry?.())
     .filter((x): x is FileSystemEntry => !!x);
   if (entradas.length === 0)
-    return Array.from(e.dataTransfer.files).map((arquivo) => ({ arquivo, caminho: arquivo.name }));
+    return Array.from(e.dataTransfer.files).map((arquivo) => doDisco(arquivo, arquivo.name));
   return (await Promise.all(entradas.map((x) => arquivosDaEntrada(x, falhas)))).flat();
 }
 
@@ -94,12 +93,12 @@ function porPasta(escolhidos: readonly Escolhido[]) {
   }
   const todas = [...pastas]
     .map(([pasta, arquivos]) => {
-      const doSistrut = arquivos.filter((a) => extensaoDoSistrut(a.arquivo.name));
+      const doSistrut = arquivos.filter((a) => extensaoDoSistrut(a.nome));
       return {
         pasta,
         arquivos,
         doSistrut: doSistrut.length,
-        soParametros: doSistrut.every((a) => PARAMETROS.has(extensao(a.arquivo.name))),
+        soParametros: doSistrut.every((a) => PARAMETROS.has(extensao(a.nome))),
       };
     })
     .filter((p) => p.doSistrut > 0)
@@ -117,7 +116,7 @@ function parametrosEmConflito(parametros: readonly { arquivos: Escolhido[] }[]) 
   const vistos = new Map<string, number>();
   parametros.forEach((p, i) => {
     for (const a of p.arquivos) {
-      const nome = a.arquivo.name.toUpperCase();
+      const nome = a.nome.toUpperCase();
       const antes = vistos.get(nome);
       if (antes !== undefined && antes !== i) vistos.set(nome, -1);
       else if (antes === undefined) vistos.set(nome, i);
@@ -133,12 +132,12 @@ function comParametros(
   parametros: readonly { arquivos: Escolhido[] }[],
   falhas: string[],
 ): Escolhido[] {
-  const nomes = new Set(obra.map((a) => a.arquivo.name.toUpperCase()));
+  const nomes = new Set(obra.map((a) => a.nome.toUpperCase()));
   const extras = parametros.flatMap((p) => p.arquivos);
   for (const e of extras)
-    if (nomes.has(e.arquivo.name.toUpperCase()))
-      falhas.push(`${e.caminho}: a pasta da obra já tem um ${e.arquivo.name}; valeu o da obra.`);
-  return [...obra, ...extras.filter((e) => !nomes.has(e.arquivo.name.toUpperCase()))];
+    if (nomes.has(e.nome.toUpperCase()))
+      falhas.push(`${e.caminho}: a pasta da obra já tem um ${e.nome}; valeu o da obra.`);
+  return [...obra, ...extras.filter((e) => !nomes.has(e.nome.toUpperCase()))];
 }
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
@@ -163,9 +162,15 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     falhas: string[];
   } | null>(null);
   const [lendo, setLendo] = useState(false);
+  /** Arquivos lidos (ou baixados) de quantos a importação lê, durante a leitura. */
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
+  /** A seleção veio do Drive: o progresso aparece num diálogo, com Cancelar. */
+  const [doDrive, setDoDrive] = useState(false);
   const [sobre, setSobre] = useState(false);
   /** A leitura mais recente: o resultado de uma anterior que termina depois é descartado. */
   const leitura = useRef(0);
+  /** Interrompe os downloads da leitura em andamento (Cancelar, outra seleção). */
+  const interromper = useRef<AbortController | null>(null);
 
   /** Lê os arquivos de uma pasta e importa. */
   const importar = async (escolhidos: readonly Escolhido[], falhasAntes: string[]) => {
@@ -176,32 +181,32 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setPerguntaParametros(null);
     setFalhas(falhasAntes);
     setLendo(true);
-    const falhasLeitura = [...falhasAntes];
+    interromper.current?.abort();
+    const controle = new AbortController();
+    interromper.current = controle;
     try {
-      const lidos: ArquivoEntrada[] = await Promise.all(
-        escolhidos.map(async ({ arquivo, caminho }) => {
-          // o que a importação não lê só entra no resumo: não carrega o conteúdo
-          if (!extensaoLida(arquivo.name))
-            return { nome: arquivo.name, caminho, dados: new Uint8Array() };
-          try {
-            return {
-              nome: arquivo.name,
-              caminho,
-              dados: new Uint8Array(await arquivo.arrayBuffer()),
-            };
-          } catch (erro) {
-            falhasLeitura.push(`${caminho}: não foi possível ler (${String(erro)}).`);
-            return undefined;
-          }
-        }),
-      ).then((x) => x.filter((a) => a !== undefined));
+      // o que a importação não lê só entra no resumo: não carrega nem baixa o conteúdo
+      const { lidos, falhas: falhasLeitura } = await lerSelecao(
+        escolhidos,
+        (feitos, total) => {
+          if (minha === leitura.current) setProgresso({ feitos, total });
+        },
+        controle.signal,
+      );
       if (minha !== leitura.current) return;
-      setFalhas(falhasLeitura);
+      setFalhas([...falhasAntes, ...falhasLeitura]);
       const dsps = dspsAEscolher(lidos);
       if (dsps) setPerguntaDsp({ lidos, dsps });
       else setResultado(importarObraSistrut(lidos));
+    } catch (erro) {
+      // só a interrupção chega aqui (Cancelar ou outra seleção), e quem interrompeu já
+      // limpou a tela
+      if (!controle.signal.aborted) throw erro;
     } finally {
-      if (minha === leitura.current) setLendo(false);
+      if (minha === leitura.current) {
+        setLendo(false);
+        setProgresso(null);
+      }
     }
   };
 
@@ -240,11 +245,9 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
   };
 
   const escolhidos = (e: ChangeEvent<HTMLInputElement>) => {
-    const arquivos = Array.from(e.target.files ?? []).map((arquivo) => ({
-      arquivo,
-      caminho: arquivo.webkitRelativePath || arquivo.name,
-    }));
+    const arquivos = Array.from(e.target.files ?? []).map((arquivo) => doDisco(arquivo));
     e.target.value = ""; // permite escolher os mesmos arquivos de novo
+    setDoDrive(false);
     separar(arquivos, []);
   };
 
@@ -253,12 +256,16 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setSobre(false);
     if (lendo) return; // uma leitura de cada vez
     const falhasSoltos: string[] = [];
+    setDoDrive(false);
     void arquivosSoltos(e, falhasSoltos).then((x) => separar(x, falhasSoltos));
   };
 
   const fechar = () => {
     leitura.current++;
+    interromper.current?.abort();
+    interromper.current = null;
     setLendo(false);
+    setProgresso(null);
     setResultado(null);
     setFalhas([]);
     setEscolha(null);
@@ -266,7 +273,10 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setPerguntaParametros(null);
   };
   const pergunta = escolha !== null || perguntaDsp !== null || perguntaParametros !== null;
-  const aberto = resultado !== null || pergunta || (!lendo && falhas.length > 0);
+  const baixando = lendo && doDrive;
+  const aberto = resultado !== null || pergunta || baixando || (!lendo && falhas.length > 0);
+  const contagem =
+    progresso && progresso.total > 0 ? ` ${progresso.feitos} de ${progresso.total}` : "";
 
   return (
     <>
@@ -305,6 +315,13 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
         className="hidden"
         onChange={escolhidos}
       />
+      <ImportarDrive
+        desabilitado={lendo}
+        aoEscolher={(arquivos, notas) => {
+          setDoDrive(true);
+          separar(arquivos, notas);
+        }}
+      />
       <div
         role="region"
         aria-label="Soltar arquivos do SISTRUT"
@@ -319,13 +336,28 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
         className={`text-muted-foreground mt-2 rounded-md border border-dashed p-3 text-center text-xs ${sobre ? "border-primary bg-primary/5" : ""}`}
       >
         {lendo
-          ? "Lendo os arquivos…"
+          ? `Lendo os arquivos…${contagem}`
           : "Ou arraste para cá os arquivos ou a pasta da obra do SISTRUT"}
       </div>
 
       <Dialog open={aberto} onOpenChange={(a) => !a && fechar()}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
-          {escolha ? (
+          {baixando ? (
+            <DialogHeader>
+              <DialogTitle>Baixando do Google Drive</DialogTitle>
+              <DialogDescription>
+                {progresso && progresso.total > 0
+                  ? `${progresso.feitos} de ${plural(progresso.total, "arquivo", "arquivos")}. Só os arquivos que a importação lê são baixados.`
+                  : "Preparando o download…"}
+              </DialogDescription>
+              <progress
+                aria-label="Arquivos baixados"
+                className="w-full"
+                max={progresso?.total || 1}
+                value={progresso?.feitos ?? 0}
+              />
+            </DialogHeader>
+          ) : escolha ? (
             <>
               <DialogHeader>
                 <DialogTitle>Qual obra importar?</DialogTitle>
@@ -418,7 +450,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               <DialogDescription>Nada foi aberto. Veja o motivo abaixo.</DialogDescription>
             </DialogHeader>
           )}
-          {!pergunta && (falhas.length > 0 || (resultado && !resultado.ok)) && (
+          {!pergunta && !baixando && (falhas.length > 0 || (resultado && !resultado.ok)) && (
             <ul
               role="alert"
               className={`list-disc pl-5 text-sm ${resultado?.ok ? "text-aviso" : "text-destructive"}`}
@@ -442,7 +474,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               </Button>
             )}
             <Button variant="ghost" onClick={fechar}>
-              {resultado?.ok && !pergunta ? "Cancelar" : "Voltar"}
+              {(resultado?.ok && !pergunta) || baixando ? "Cancelar" : "Voltar"}
             </Button>
           </DialogFooter>
         </DialogContent>
