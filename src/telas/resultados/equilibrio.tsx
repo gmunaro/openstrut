@@ -17,7 +17,7 @@ export function TabelaEquilibrio({
   const u = unidade("forca", s);
   return (
     <>
-      <TituloBloco>Equilíbrio</TituloBloco>
+      <TituloBloco copiar="Equilíbrio">Equilíbrio</TituloBloco>
       <Tabela className="w-auto">
         <Cabecalho>
           <Linha>

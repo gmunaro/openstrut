@@ -1,9 +1,11 @@
 // Aba Resultados: falhas dos pavimentos (em vermelho) e avisos da obra; por
 // pavimento, as tabelas de lajes, vigas e equilíbrio; depois os pilares por
-// nível. Cada elemento abre a memória.
-import { CircleAlert, Info } from "lucide-react";
-import { useContext, useMemo } from "react";
+// nível. Cada elemento abre a memória. A barra do topo filtra os elementos por nome
+// (filtro.ts); os cabeçalhos ordenam e o botão Copiar leva a tabela para o Excel.
+import { CircleAlert, Info, Search, X } from "lucide-react";
+import { useContext, useDeferredValue, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { DicaUso } from "@/components/ui/dica-uso";
 import type { ResultadoObra } from "../../calculo/fluxo";
 import { calcularQuantitativos } from "../../calculo/quantitativos";
 import type { Obra } from "../../dominio/obra";
@@ -17,10 +19,11 @@ import {
   SELO_MODO_ORIGINAL,
   type Calculo,
 } from "../calculo";
-import { DetalhamentoContexto } from "../detalhamento";
+import { DetalhamentoContexto, type DetalhamentoObra } from "../detalhamento";
 import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
+import { FiltroContexto, filtroDeTexto, MOSTRA_TUDO, useFiltro } from "./filtro";
 import { TabelasLajes } from "./lajes";
 import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "./motorSistrut";
 import { TabelaPilares } from "./pilares";
@@ -70,9 +73,21 @@ export function TabelasObra({
   comMemoria: boolean;
 }) {
   const gamaF = Math.max(resultado.norma.gamaG, resultado.norma.gamaQ);
+  const mostra = useFiltro();
+  const filtrando = mostra !== MOSTRA_TUDO;
+  // com filtro, o pavimento sem laje nem viga do filtro some inteiro
+  const pavimentos = filtrando
+    ? resultado.pavimentos.filter(
+        (rp) =>
+          rp.lajes.some((l) => mostra(l.laje.nome)) ||
+          rp.vigas.some((v) => mostra(v.viga.nome)) ||
+          rp.montagem.naoCalculadas.some((v) => mostra(v.nome)),
+      )
+    : resultado.pavimentos;
+  const comPilares = !filtrando || resultado.pilares.some((p) => mostra(p.pilar.nome));
   return (
     <>
-      {resultado.pavimentos.map((rp) => (
+      {pavimentos.map((rp) => (
         <section key={rp.pavimento.id} className="mt-6 break-inside-auto">
           <h2 className="border-b pb-1 text-base font-semibold">
             {rp.pavimento.nome}
@@ -89,13 +104,21 @@ export function TabelasObra({
             gamaF={gamaF}
             comMemoria={comMemoria}
           />
-          <TabelaEquilibrio equilibrio={rp.equilibrio} comMemoria={comMemoria} />
+          {!filtrando && <TabelaEquilibrio equilibrio={rp.equilibrio} comMemoria={comMemoria} />}
         </section>
       ))}
-      <section className="mt-6">
-        <h2 className="border-b pb-1 text-base font-semibold">Pilares</h2>
-        <TabelaPilares resultado={resultado} comMemoria={comMemoria} />
-      </section>
+      {comPilares && (
+        <section className="mt-6">
+          <h2 className="border-b pb-1 text-base font-semibold">Pilares</h2>
+          <TabelaPilares resultado={resultado} comMemoria={comMemoria} />
+        </section>
+      )}
+      {filtrando && pavimentos.length === 0 && !comPilares && (
+        <p role="status" className="text-muted-foreground mt-6 text-sm">
+          Nenhum elemento com esse nome. Use os nomes da planta (V1, P3, L2) ou só a letra (V, P, L)
+          para ver todos de um tipo.
+        </p>
+      )}
     </>
   );
 }
@@ -112,8 +135,61 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
       </p>
     );
   const r = calculo.resultado;
+  return <ResultadosCalculados r={r} obra={obra} detalhamento={detalhamento} />;
+}
+
+/** Resultados da obra calculada, com a barra de filtro. */
+function ResultadosCalculados({
+  r,
+  obra,
+  detalhamento,
+}: {
+  r: ResultadoObra;
+  obra: Obra | null;
+  detalhamento: DetalhamentoObra | null;
+}) {
+  const [texto, setTexto] = useState("");
+  // a digitação não espera as tabelas redesenharem
+  const adiado = useDeferredValue(texto);
+  const filtro = useMemo(() => filtroDeTexto(adiado), [adiado]);
   return (
     <div className="pb-8">
+      <DicaUso id="resultados" titulo="Como ler os resultados" className="mb-3">
+        A seta ao lado do nome abre a memória de cálculo, com a fórmula e o item da norma de cada
+        etapa. Filtre por elemento (V1, P3, ou V para todas as vigas), clique no título de uma
+        coluna para ordenar e use <strong>Copiar</strong> para colar a tabela no Excel.
+      </DicaUso>
+      <div className="bg-background/95 sticky top-0 z-20 -mx-1 mb-2 flex flex-wrap items-center gap-2 px-1 py-1.5 backdrop-blur print:hidden">
+        <label className="relative flex min-w-0 flex-1 items-center sm:max-w-sm">
+          <span className="sr-only">Filtrar elementos</span>
+          <Search
+            aria-hidden
+            className="text-muted-foreground pointer-events-none absolute left-2 size-4"
+          />
+          <input
+            type="search"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Filtrar: V1, P3 ou V (todas as vigas)"
+            className="border-input bg-background focus-visible:ring-ring/50 focus-visible:border-ring h-8 w-full rounded-md border pr-8 pl-8 text-sm outline-none focus-visible:ring-[3px]"
+          />
+          {texto && (
+            <button
+              type="button"
+              aria-label="Limpar o filtro"
+              onClick={() => setTexto("")}
+              className="text-muted-foreground hover:text-foreground absolute right-1.5 rounded p-0.5"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </label>
+        {adiado.trim() && (
+          <span role="status" className="text-muted-foreground text-xs">
+            Filtro: {adiado.trim()} · equilíbrio e resumo da obra ficam de fora
+          </span>
+        )}
+      </div>
       <p className="text-muted-foreground mb-3 flex flex-wrap items-center gap-2 text-xs">
         <span>
           Calculado pela {r.norma.nome}. Clique na seta ao lado do nome para ver a memória de
@@ -132,8 +208,10 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
         comOpcoes
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
-      <TabelasObra resultado={r} comMemoria />
-      {obra && <BlocoQuantitativos obra={obra} resultado={r} />}
+      <FiltroContexto value={filtro}>
+        <TabelasObra resultado={r} comMemoria />
+      </FiltroContexto>
+      {obra && filtro === MOSTRA_TUDO && <BlocoQuantitativos obra={obra} resultado={r} />}
     </div>
   );
 }

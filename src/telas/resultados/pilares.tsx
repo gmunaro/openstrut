@@ -14,17 +14,32 @@ import {
   unidade,
 } from "../formato";
 import { useUnidades } from "../sessao";
+import { useFiltro } from "./filtro";
 import { LinhaElemento } from "./memoria";
 import { textoErro } from "./motorSistrut";
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "./tabela";
+import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
 import { AvisosDetalhamento, MemoriaDetalhamento, TabelaPosicoes } from "./vigas";
 
 const COLUNAS = 14;
 
-/** Pilares agrupados por nível, na ordem do motor (topo → base). */
-function porNivel(r: ResultadoObra) {
+type ColunaPilar = "nome" | "nk" | "nd" | "lx" | "ly" | "as" | "taxa";
+
+/** Valor de cada coluna ordenável da tabela de pilares; sem dimensionamento, os valores
+ *  do cálculo ficam null (vão para o fim). */
+function valorPilar(p: ResultadoPilar, k: ColunaPilar) {
+  if (k === "nome") return p.pilar.nome;
+  if (k === "nk") return p.nk;
+  if (k === "nd") return p.resultado.nd;
+  if (motivoNaoDimensionado(p.resultado) !== null) return null;
+  const r = p.resultado;
+  return k === "lx" ? r.lambdaX : k === "ly" ? r.lambdaY : k === "as" ? r.asNecessaria : r.taxa;
+}
+
+/** Pilares (os que `mostra` deixa) agrupados por nível, na ordem do motor (topo → base). */
+function porNivel(r: ResultadoObra, mostra: (nome: string) => boolean) {
   const grupos = new Map<string, ResultadoPilar[]>();
   for (const p of r.pilares) {
+    if (!mostra(p.pilar.nome)) continue;
     const nivel = rotuloNivel(r, p);
     const lista = grupos.get(nivel);
     if (lista) lista.push(p);
@@ -52,6 +67,11 @@ export function TabelaPilares({
   comMemoria: boolean;
 }) {
   const s = useUnidades();
+  const mostra = useFiltro();
+  const ord = useOrdenacao<ColunaPilar>();
+  const niveis = porNivel(resultado, mostra);
+  if (resultado.pilares.length > 0 && niveis.length === 0)
+    return <p className="text-muted-foreground mt-2 text-xs">Nenhum pilar com esse nome.</p>;
   if (resultado.pilares.length === 0)
     return (
       <>
@@ -64,9 +84,11 @@ export function TabelaPilares({
   return (
     <>
       <TituloBloco
+        copiar="Pilares por nível"
         extra={
           <span className="text-muted-foreground text-xs">
-            Nk acumulada na base do lance; Md na seção crítica
+            Nk acumulada na base do lance; Md na seção crítica; a ordenação vale dentro de cada
+            nível
           </span>
         }
       >
@@ -75,32 +97,36 @@ export function TabelaPilares({
       <Tabela>
         <Cabecalho>
           <Linha>
-            <Th>Pilar</Th>
+            <Th ordenar={ord.coluna("nome", false)}>Pilar</Th>
             <Th num unidade="cm">
               b × h
             </Th>
-            <Th num unidade={uF}>
+            <Th num unidade={uF} ordenar={ord.coluna("nk")}>
               Nk
             </Th>
-            <Th num unidade={uF}>
+            <Th num unidade={uF} ordenar={ord.coluna("nd")}>
               Nd
             </Th>
-            <Th num>λx</Th>
-            <Th num>λy</Th>
+            <Th num ordenar={ord.coluna("lx")}>
+              λx
+            </Th>
+            <Th num ordenar={ord.coluna("ly")}>
+              λy
+            </Th>
             <Th num unidade={uM}>
               Mdx
             </Th>
             <Th num unidade={uM}>
               Mdy
             </Th>
-            <Th num unidade="cm²">
+            <Th num unidade="cm²" ordenar={ord.coluna("as")}>
               As nec.
             </Th>
             <Th num unidade="cm²">
               As ef.
             </Th>
             <Th>Barras</Th>
-            <Th num unidade="%">
+            <Th num unidade="%" ordenar={ord.coluna("taxa")}>
               Taxa
             </Th>
             <Th>Estribo</Th>
@@ -110,14 +136,14 @@ export function TabelaPilares({
           </Linha>
         </Cabecalho>
         <Corpo>
-          {porNivel(resultado).map(([nivel, pilares]) => (
+          {niveis.map(([nivel, pilares]) => (
             <Fragment key={nivel}>
               <Linha className="bg-muted/40 hover:bg-muted/40">
                 <Td colSpan={COLUNAS} className="font-semibold">
                   {nivel}
                 </Td>
               </Linha>
-              {pilares.map((p) => {
+              {ord.ordenar(pilares, valorPilar).map((p) => {
                 const r = p.resultado;
                 const pe = resultado.pavimentos.find((rp) => rp.pavimento.nome === p.pavimento)
                   ?.pavimento.peDireito;
@@ -347,10 +373,13 @@ export function PredimensionamentosPilares({ resultado }: { resultado: Resultado
 /** Blocos "Detalhamento" de cada pilar (todos os lances), do DetalhamentoContexto. */
 function DetalhamentosPilares({ comMemoria }: { comMemoria: boolean }) {
   const det = useContext(DetalhamentoContexto);
+  const mostra = useFiltro();
   if (!det) return null;
-  return det.pilares.pilares.map((d) => (
-    <BlocoPilar key={`${d.chave}|${d.lances[0]?.nivel}`} d={d} comMemoria={comMemoria} />
-  ));
+  return det.pilares.pilares
+    .filter((d) => mostra(d.nome))
+    .map((d) => (
+      <BlocoPilar key={`${d.chave}|${d.lances[0]?.nivel}`} d={d} comMemoria={comMemoria} />
+    ));
 }
 
 /** Título do lance na tabela de posições: nível, pé-direito, seção, barras por
@@ -379,8 +408,8 @@ function BlocoPilar({ d, comMemoria }: { d: DetalhamentoPilarObra; comMemoria: b
       <TituloBloco
         extra={
           <span className="text-muted-foreground text-xs">
-            {d.lances.length} lance(s), da base para o topo · cobrimento{" "}
-            {formatarNumero(d.cobrimento, 1)} cm · quantidades de cada lance
+            {d.lances.length} {d.lances.length === 1 ? "lance" : "lances"}, da base para o topo ·
+            cobrimento {formatarNumero(d.cobrimento, 1)} cm · quantidades de cada lance
           </span>
         }
       >

@@ -18,13 +18,13 @@ function renderLinha(avisos: string[]) {
 describe("LinhaElemento", () => {
   it("mostra a contagem de avisos como texto visível", () => {
     renderLinha(["P2: PILAREDI recusa o pilar.", "A seção não suporta os esforços."]);
-    expect(screen.getByText("2 aviso(s)")).toBeTruthy();
+    expect(screen.getByText("2 avisos")).toBeTruthy();
   });
 
   it("o ícone de aviso é decorativo; o texto é que se lê", () => {
     const { container } = renderLinha(["um aviso"]);
     expect(container.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
-    expect(screen.getByText("1 aviso(s)")).toBeTruthy();
+    expect(screen.getByText("1 aviso")).toBeTruthy();
   });
 
   it("não mostra contagem quando o elemento não tem aviso", () => {

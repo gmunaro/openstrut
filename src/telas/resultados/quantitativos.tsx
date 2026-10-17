@@ -161,6 +161,7 @@ export function ResumoQuantitativos({ quant, obra }: { quant: Quantitativos; obr
     <section className="mt-6">
       <h2 className="border-b pb-1 text-base font-semibold">Resumo de aço e concreto</h2>
       <TituloBloco
+        copiar="Total da obra"
         extra={<span className="text-muted-foreground text-xs">{quant.definicaoAco}</span>}
       >
         Total da obra
@@ -243,7 +244,10 @@ export function BlocoTabelaAco({
   const perda = `${formatarNumero(tabela.perda * 100, 0)} %`;
   return (
     <>
-      <TituloBloco extra={<span className="text-muted-foreground text-xs">{nota}</span>}>
+      <TituloBloco
+        copiar={titulo}
+        extra={<span className="text-muted-foreground text-xs">{nota}</span>}
+      >
         {titulo}
       </TituloBloco>
       <Tabela className="w-auto">

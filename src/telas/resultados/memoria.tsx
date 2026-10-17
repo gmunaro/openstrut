@@ -104,11 +104,12 @@ export function LinhaElemento({
               // Contagem visível (sai na impressão e é lida por leitor de tela); o texto
               // completo fica na memória aberta e no bloco de avisos.
               <span
+                data-sem-copia
                 title={avisos.join("\n")}
                 className="text-aviso inline-flex items-center gap-0.5 text-[11px] font-normal whitespace-nowrap"
               >
                 <TriangleAlert aria-hidden className="size-3.5" />
-                {avisos.length} aviso(s)
+                {avisos.length} {avisos.length === 1 ? "aviso" : "avisos"}
               </span>
             )}
           </span>
@@ -116,7 +117,7 @@ export function LinhaElemento({
         {children}
       </Linha>
       {aberta && (
-        <Linha className="hover:bg-transparent">
+        <Linha data-sem-copia className="hover:bg-transparent">
           <Td colSpan={colunas} className="bg-muted/30 whitespace-normal">
             {temAviso && (
               <ul className="text-aviso mb-1 list-disc pl-5 text-xs">

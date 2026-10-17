@@ -9,8 +9,9 @@ import { avisosLaje } from "../calculo";
 import { DetalhamentoContexto, type DetalhamentoLajeObra } from "../detalhamento";
 import { formatarBarraEspacada, formatarGrandeza, formatarNumero, unidade } from "../formato";
 import { useUnidades } from "../sessao";
+import { useFiltro } from "./filtro";
 import { LinhaElemento } from "./memoria";
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "./tabela";
+import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
 import {
   AvisosDetalhamento,
   MemoriaDetalhamento,
@@ -26,19 +27,41 @@ const ABREV: Record<Bordo, string> = {
 };
 const LETRA_VINCULO: Record<Vinculo, string> = { engastado: "E", apoiado: "A", livre: "L" };
 
+type ColunaLaje = "nome" | "lx" | "ly" | "h" | "mx" | "my" | "flecha";
+
+/** Valor de cada coluna ordenável da tabela de lajes. */
+const valorLaje = (r: ResultadoLaje, k: ColunaLaje) =>
+  k === "nome"
+    ? r.laje.nome
+    : k === "mx"
+      ? r.esforcos.mx
+      : k === "my"
+        ? r.esforcos.my
+        : k === "flecha"
+          ? r.esforcos.flecha
+          : r.entrada[k];
+
 const memoriaLaje = (r: ResultadoLaje) => [
   { titulo: "Esforços", etapas: r.esforcos.memoria },
   { titulo: "Armaduras", etapas: r.armadura.memoria },
 ];
 
 export function TabelasLajes({
-  lajes,
+  lajes: todas,
   comMemoria,
 }: {
   lajes: ResultadoLaje[];
   comMemoria: boolean;
 }) {
   const s = useUnidades();
+  const mostra = useFiltro();
+  const ord = useOrdenacao<ColunaLaje>();
+  const lajes = ord.ordenar(
+    todas.filter((r) => mostra(r.laje.nome)),
+    valorLaje,
+  );
+  // filtro sem laje deste pavimento: o bloco some (a tabela vazia não diz nada)
+  if (todas.length > 0 && lajes.length === 0) return null;
   if (lajes.length === 0)
     return (
       <>
@@ -51,6 +74,7 @@ export function TabelasLajes({
   return (
     <>
       <TituloBloco
+        copiar="Lajes: esforços"
         extra={
           <span className="text-muted-foreground text-xs">
             valores característicos; vínculos E engastado, A apoiado, L livre (esq, inf, dir, sup)
@@ -62,14 +86,16 @@ export function TabelasLajes({
       <Tabela>
         <Cabecalho>
           <Linha>
-            <Th rowSpan={2}>Laje</Th>
-            <Th rowSpan={2} num unidade="m">
+            <Th rowSpan={2} ordenar={ord.coluna("nome", false)}>
+              Laje
+            </Th>
+            <Th rowSpan={2} num unidade="m" ordenar={ord.coluna("lx")}>
               lx
             </Th>
-            <Th rowSpan={2} num unidade="m">
+            <Th rowSpan={2} num unidade="m" ordenar={ord.coluna("ly")}>
               ly
             </Th>
-            <Th rowSpan={2} num unidade="cm">
+            <Th rowSpan={2} num unidade="cm" ordenar={ord.coluna("h")}>
               h
             </Th>
             <Th rowSpan={2} num unidade={unidade("cargaArea", s)}>
@@ -79,10 +105,10 @@ export function TabelasLajes({
               q
             </Th>
             <Th rowSpan={2}>Vínculos</Th>
-            <Th rowSpan={2} num unidade={uMl}>
+            <Th rowSpan={2} num unidade={uMl} ordenar={ord.coluna("mx")}>
               mx
             </Th>
-            <Th rowSpan={2} num unidade={uMl}>
+            <Th rowSpan={2} num unidade={uMl} ordenar={ord.coluna("my")}>
               my
             </Th>
             <Th colSpan={4} className="text-center">
@@ -91,7 +117,7 @@ export function TabelasLajes({
             <Th colSpan={4} className="text-center">
               Reação na viga ({unidade("cargaLinear", s)})
             </Th>
-            <Th rowSpan={2} num unidade="cm">
+            <Th rowSpan={2} num unidade="cm" ordenar={ord.coluna("flecha")}>
               Flecha
             </Th>
             <Th rowSpan={2} num unidade="cm">
@@ -156,7 +182,14 @@ export function TabelasLajes({
         </Corpo>
       </Tabela>
 
-      <TituloBloco>Lajes: armaduras</TituloBloco>
+      <TituloBloco
+        copiar="Lajes: armaduras"
+        extra={
+          <span className="text-muted-foreground text-xs">na ordem da tabela de esforços</span>
+        }
+      >
+        Lajes: armaduras
+      </TituloBloco>
       <Tabela>
         <Cabecalho>
           <Linha>
@@ -222,9 +255,10 @@ function DetalhamentosLajes({
   comMemoria: boolean;
 }) {
   const det = useContext(DetalhamentoContexto);
+  const mostra = useFiltro();
   if (!det) return null;
-  const doPavimento = lajes.flatMap(
-    (r) => det.lajes.lajes.find((d) => d.lajeId === r.laje.id) ?? [],
+  const doPavimento = lajes.flatMap((r) =>
+    mostra(r.laje.nome) ? (det.lajes.lajes.find((d) => d.lajeId === r.laje.id) ?? []) : [],
   );
   return doPavimento.map((d) => <BlocoLaje key={d.lajeId} d={d} comMemoria={comMemoria} />);
 }

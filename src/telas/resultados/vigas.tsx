@@ -20,8 +20,9 @@ import {
   unidade,
 } from "../formato";
 import { useUnidades } from "../sessao";
+import { useFiltro } from "./filtro";
 import { LinhaElemento, Memoria, type GrupoMemoria } from "./memoria";
-import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "./tabela";
+import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco, useOrdenacao } from "./tabela";
 
 const COLUNAS = 18;
 
@@ -49,13 +50,28 @@ function memoriaDoTramo(r: ResultadoViga, i: number): GrupoMemoria[] {
   return grupos;
 }
 
+type ColunaViga = "nome" | "vao" | "mPos" | "mNeg" | "v";
+
+/** Valor de cada coluna ordenável da tabela de vigas: o maior entre os tramos (a viga
+ *  inteira se move, com os tramos juntos). Sem análise, null (vai para o fim). */
+function valorViga(r: ResultadoViga, k: ColunaViga) {
+  if (k === "nome") return r.viga.nome;
+  const t = r.analise.ok ? r.analise.tramos : [];
+  if (t.length === 0) return null;
+  const maior = (f: (x: (typeof t)[number]) => number) => Math.max(...t.map(f));
+  if (k === "vao") return maior((x) => x.comprimento);
+  if (k === "mPos") return maior((x) => x.mPos);
+  if (k === "mNeg") return maior((x) => Math.max(Math.abs(x.mNegEsq), Math.abs(x.mNegDir)));
+  return maior((x) => Math.max(x.vEsq, x.vDir));
+}
+
 const asSecao = (s: SecaoViga) => (s.flexao ? formatarNumero(s.flexao.as) : "—");
 const barrasSecao = (s: SecaoViga) =>
   s.flexao ? `${formatarBarras(s.barras)}${s.barras && !s.barras.cabe ? " *" : ""}` : "—";
 
 export function TabelaVigas({
-  vigas,
-  naoCalculadas,
+  vigas: todas,
+  naoCalculadas: todasNaoCalculadas,
   gamaF,
   comMemoria,
   interrompidas,
@@ -69,6 +85,15 @@ export function TabelaVigas({
 }) {
   const s = useUnidades();
   const uM = unidade("momento", s);
+  const mostra = useFiltro();
+  const ord = useOrdenacao<ColunaViga>();
+  const vigas = ord.ordenar(
+    todas.filter((r) => mostra(r.viga.nome)),
+    valorViga,
+  );
+  const naoCalculadas = todasNaoCalculadas.filter((v) => mostra(v.nome));
+  const haviaVigas = todas.length + todasNaoCalculadas.length > 0;
+  if (haviaVigas && vigas.length + naoCalculadas.length === 0) return null;
   if (vigas.length === 0 && naoCalculadas.length === 0)
     return (
       <>
@@ -79,6 +104,7 @@ export function TabelaVigas({
   return (
     <>
       <TituloBloco
+        copiar="Vigas"
         extra={
           <span className="text-muted-foreground text-xs">
             M e V característicos (envoltória); As com γf = {formatarNumero(gamaF, 2)}; * = barras
@@ -91,7 +117,9 @@ export function TabelaVigas({
       <Tabela>
         <Cabecalho>
           <Linha>
-            <Th rowSpan={2}>Viga</Th>
+            <Th rowSpan={2} ordenar={ord.coluna("nome", false)}>
+              Viga
+            </Th>
             <Th rowSpan={2} num>
               Tramo
             </Th>
@@ -101,19 +129,19 @@ export function TabelaVigas({
             <Th rowSpan={2} num unidade="cm">
               d
             </Th>
-            <Th rowSpan={2} num unidade="m">
+            <Th rowSpan={2} num unidade="m" ordenar={ord.coluna("vao")}>
               Vão
             </Th>
-            <Th rowSpan={2} num unidade={uM}>
+            <Th rowSpan={2} num unidade={uM} ordenar={ord.coluna("mPos")}>
               M+
             </Th>
-            <Th rowSpan={2} num unidade={uM}>
+            <Th rowSpan={2} num unidade={uM} ordenar={ord.coluna("mNeg")}>
               M− esq
             </Th>
             <Th rowSpan={2} num unidade={uM}>
               M− dir
             </Th>
-            <Th rowSpan={2} num unidade={unidade("forca", s)}>
+            <Th rowSpan={2} num unidade={unidade("forca", s)} ordenar={ord.coluna("v")}>
               V máx
             </Th>
             <Th colSpan={2} className="text-center">
@@ -181,7 +209,7 @@ export function TabelaVigas({
                 >
                   <Td num>
                     {i + 1}
-                    {a?.balanco ? " (bal.)" : ""}
+                    {a?.balanco ? " (balanço)" : ""}
                   </Td>
                   <Td num>{i === 0 ? secao : ""}</Td>
                   <Td num>{i === 0 ? formatarNumero(r.d, 1) : ""}</Td>
@@ -241,6 +269,7 @@ function DetalhamentosDoPavimento({
 }) {
   const det = useContext(DetalhamentoContexto);
   if (!det) return null;
+  // `vigas` já vem filtrada e ordenada pela tabela
   const doPavimento = vigas.flatMap((r) => det.vigas.find((d) => d.vigaId === r.viga.id) ?? []);
   return doPavimento.map((d) => (
     <BlocoDetalhamento
