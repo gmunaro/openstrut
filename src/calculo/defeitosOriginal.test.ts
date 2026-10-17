@@ -45,7 +45,7 @@ describe("P-b: pilar sobre viga de transição com a carga dele", () => {
   it("as 4 partes, com os números da conta à mão: 20,25 t no SISTRUT, 10,25 t sem o erro", () => {
     const [e, ...resto] = erros(obraTransicao()).filter((x) => x.id === "P-b");
     expect(resto).toEqual([]);
-    expect(e!.mecanismo).toMatch(/duas vezes: pela coluna e pela reação da viga/);
+    expect(e!.mecanismo).toMatch(/duas vezes: pelo pilar de baixo e pela reação da viga/);
     expect(e!.linhas).toEqual([
       {
         local: "CIMA",
@@ -57,10 +57,12 @@ describe("P-b: pilar sobre viga de transição com a carga dele", () => {
     ]);
     // 10 / 10,25 = 97,6 %
     expect(e!.impacto).toContain(
-      "PB, que nasce na viga V1 do BAIXO: fundação com 20,25 t no SISTRUT contra 10,25 t sem a dupla contagem; superdimensionamento de 10,00 t (98 %)",
+      "PB, que nasce na viga V1 do BAIXO: fundação com 20,25 t no SISTRUT contra 10,25 t sem a dupla contagem, 10,00 t a mais (98 % acima da carga certa)",
     );
     expect(e!.sentido).toBe("a favor");
     expect(e!.v2Faz).toMatch(/^Modo ativo: Como o SISTRUT original\. A V2 reproduz/);
+    // a parte 3 traz o valor do outro modo
+    expect(e!.v2Faz).toMatch(/No PB: 20,25 t no SISTRUT e 10,25 t no modo corrigido\.$/);
     expect(e!.oQueFazer).toMatch(/a favor da segurança/);
     expect(e!.elementos).toEqual([
       { local: "CIMA", elemento: "PB" },
@@ -70,7 +72,7 @@ describe("P-b: pilar sobre viga de transição com a carga dele", () => {
 
   it("no modo corrigido ativo, o mesmo erro com o texto do corrigido", () => {
     const e = erros(obraTransicao(), "corrigido").find((x) => x.id === "P-b");
-    expect(e?.v2Faz).toMatch(/^Modo ativo: corrigido\. A V2 não continua a coluna/);
+    expect(e?.v2Faz).toMatch(/^Modo ativo: corrigido\. A V2 não continua o pilar de baixo/);
     expect(e?.linhas[0]?.corrigido).toBe("10,25 t");
   });
 
@@ -123,14 +125,14 @@ describe("R2 e R3: lajes do oráculo", () => {
     expect(e.elementos.map((x) => x.elemento)).toEqual(["L1", "L2"]);
   });
 
-  it("R3 (otim com piso 0,35): a otimização trava na L1, lado 3, código 5; o corrigido converge", () => {
+  it("R3 (otim com piso 0,35): a otimização trava na L1, lado 3, código 5; no corrigido termina", () => {
     const obra = doLaj("v2par_laje_otim", { parametrosLaje: { relacaoNegPosMin: 0.35 } });
     const e = erros(obra).find((x) => x.id === "R3")!;
     expect(e.linhas).toEqual([
       expect.objectContaining({
         elemento: "L1",
         original: expect.stringMatching(/^trava no lado 3 \(relação .*, código 5\)$/),
-        corrigido: "converge",
+        corrigido: "termina",
       }),
     ]);
   });
@@ -164,9 +166,12 @@ describe("D-ψ e R1 no E2E", () => {
     const e = errosDoOriginal(original, corrigido, "original").find((x) => x.id === "R1")!;
     expect(e.linhas.map((l) => l.elemento)).toEqual(acima);
     expect(e.linhas.every((l) => l.original === "não verificada")).toBe(true);
-    expect(e.linhas[0]!.semErro).toMatch(/ > limite 1,33 cm$/);
-    // com 7 cm a flecha atende: é a espessura mínima do corrigido
-    expect(e.linhas[0]!.corrigido).toBe("aviso; espessura mínima 7 cm (a obra tem 6 cm)");
+    // a flecha só existe no corrigido e fica na coluna dele; com 7 cm ela atende, e é a
+    // espessura mínima do corrigido
+    expect(e.linhas[0]!.semErro).toBe("—");
+    expect(e.linhas[0]!.corrigido).toMatch(
+      / > limite 1,33 cm; espessura mínima 7 cm \(a obra tem 6 cm\)$/,
+    );
     expect(e.sentido).toBe("contra");
   });
 
@@ -208,7 +213,9 @@ describe("D-3: caso de pilar com Nk nulo", () => {
         original: `caso ${lance.dimensionamento!.casos[0]!.rotulo}: sem resultado`,
       }),
     ]);
-    expect(e.v2Faz).toMatch(/max\(\|Nk\|, 1\)/);
+    expect(e.v2Faz).toMatch(/o maior entre \|Nk\| e 1 t/);
+    // o mesmo caso no corrigido sai calculado (no E2E, Nk > 0)
+    expect(e.linhas[0]!.corrigido).toMatch(/^calculado: /);
   });
 });
 

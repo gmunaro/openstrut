@@ -30,7 +30,8 @@ const NOME_CURTO: Record<(typeof DEFEITOS_CONFERIDOS)[number], string> = {
 const SENTIDO: Record<SentidoDefeito, { rotulo: string; classe: string }> = {
   "a favor": { rotulo: "a favor da segurança", classe: "border-ok/60 text-ok" },
   contra: { rotulo: "contra a segurança", classe: "border-destructive/60 text-destructive" },
-  neutro: { rotulo: "sem perda de segurança", classe: "border-muted-foreground/60" },
+  neutro: { rotulo: "sem efeito na segurança", classe: "border-muted-foreground/60" },
+  "a conferir": { rotulo: "efeito na segurança a conferir", classe: "border-aviso/60 text-aviso" },
 };
 
 /** Âncora da explicação de um erro (a marca do elemento leva a ela). */
