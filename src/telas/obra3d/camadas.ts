@@ -274,4 +274,11 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Mostra a obra etapa por etapa (fundação, pilares, vigas e lajes), com datas.",
     carregar: () => import("./sequencia/camada").then((m) => m.camada),
   },
+  {
+    id: "comparar",
+    nome: "Original × Corrigido",
+    descricao:
+      "Calcula a obra no outro modo da NB-1/78 e pinta as peças em que o SISTRUT original difere do corrigido.",
+    carregar: () => import("./comparar/camada").then((m) => m.camada),
+  },
 ];
