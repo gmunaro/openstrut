@@ -110,6 +110,22 @@ function porPasta(escolhidos: readonly Escolhido[]) {
   };
 }
 
+/** Duas pastas de parâmetros com arquivos de mesmo nome (duas instalações, ou duas cópias
+ *  da EXEC40): juntas, a importação recusaria os nomes repetidos. */
+function parametrosEmConflito(parametros: readonly { arquivos: Escolhido[] }[]) {
+  if (parametros.length < 2) return false;
+  const vistos = new Map<string, number>();
+  parametros.forEach((p, i) => {
+    for (const a of p.arquivos) {
+      const nome = a.arquivo.name.toUpperCase();
+      const antes = vistos.get(nome);
+      if (antes !== undefined && antes !== i) vistos.set(nome, -1);
+      else if (antes === undefined) vistos.set(nome, i);
+    }
+  });
+  return [...vistos.values()].includes(-1);
+}
+
 /** Os arquivos da obra com os das pastas de parâmetros. Um parâmetro com o nome de um
  *  arquivo da obra fica de fora (vale o da obra), com a nota em `falhas`. */
 function comParametros(
@@ -140,6 +156,12 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     lidos: ArquivoEntrada[];
     dsps: string[];
   } | null>(null);
+  /** A obra escolhida à espera da pasta de parâmetros, quando duas têm os mesmos nomes. */
+  const [perguntaParametros, setPerguntaParametros] = useState<{
+    obra: Escolhido[];
+    pastas: ReturnType<typeof porPasta>["parametros"];
+    falhas: string[];
+  } | null>(null);
   const [lendo, setLendo] = useState(false);
   const [sobre, setSobre] = useState(false);
   /** A leitura mais recente: o resultado de uma anterior que termina depois é descartado. */
@@ -151,6 +173,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setResultado(null);
     setEscolha(null);
     setPerguntaDsp(null);
+    setPerguntaParametros(null);
     setFalhas(falhasAntes);
     setLendo(true);
     const falhasLeitura = [...falhasAntes];
@@ -182,6 +205,24 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     }
   };
 
+  /** Importa a obra com as pastas de parâmetros; se duas têm os mesmos nomes, pergunta
+   *  qual usar. */
+  const seguir = (
+    obra: Escolhido[],
+    parametros: ReturnType<typeof porPasta>["parametros"],
+    falhasAntes: string[],
+  ) => {
+    if (parametrosEmConflito(parametros)) {
+      setResultado(null);
+      setEscolha(null);
+      setFalhas(falhasAntes);
+      setPerguntaParametros({ obra, pastas: parametros, falhas: falhasAntes });
+      return;
+    }
+    const falhas = [...falhasAntes];
+    void importar(comParametros(obra, parametros, falhas), falhas);
+  };
+
   /** Com uma obra só (ou nenhuma do SISTRUT), importa; com várias, pergunta qual. As
    *  pastas só de parâmetros vão junto com a obra. */
   const separar = (escolhidos: readonly Escolhido[], falhasAntes: string[]) => {
@@ -194,13 +235,8 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       return;
     }
     const obra = pastas.obras[0]?.arquivos;
-    const falhas = [...falhasAntes];
-    void importar(
-      obra || pastas.parametros.length > 0
-        ? comParametros(obra ?? [], pastas.parametros, falhas)
-        : escolhidos,
-      falhas,
-    );
+    if (obra || pastas.parametros.length > 0) seguir(obra ?? [], pastas.parametros, falhasAntes);
+    else void importar(escolhidos, falhasAntes);
   };
 
   const escolhidos = (e: ChangeEvent<HTMLInputElement>) => {
@@ -227,8 +263,9 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setFalhas([]);
     setEscolha(null);
     setPerguntaDsp(null);
+    setPerguntaParametros(null);
   };
-  const pergunta = escolha !== null || perguntaDsp !== null;
+  const pergunta = escolha !== null || perguntaDsp !== null || perguntaParametros !== null;
   const aberto = resultado !== null || pergunta || (!lendo && falhas.length > 0);
 
   return (
@@ -305,9 +342,35 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
                     <Button
                       variant="outline"
                       className="w-full justify-between"
+                      onClick={() => seguir(p.arquivos, escolha.parametros, falhas)}
+                    >
+                      <span>{p.pasta || "(arquivos soltos)"}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {plural(p.doSistrut, "arquivo do SISTRUT", "arquivos do SISTRUT")}
+                      </span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : perguntaParametros ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Quais parâmetros usar?</DialogTitle>
+                <DialogDescription>
+                  Há arquivos de parâmetros com o mesmo nome em {perguntaParametros.pastas.length}{" "}
+                  pastas. Escolha a pasta da instalação que a obra usou; as outras ficam de fora.
+                </DialogDescription>
+              </DialogHeader>
+              <ul aria-label="Pastas de parâmetros" className="grid gap-2">
+                {perguntaParametros.pastas.map((p) => (
+                  <li key={p.pasta}>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
                       onClick={() => {
-                        const f = [...falhas];
-                        void importar(comParametros(p.arquivos, escolha.parametros, f), f);
+                        const { obra, falhas: f } = perguntaParametros;
+                        seguir(obra, [p], f);
                       }}
                     >
                       <span>{p.pasta || "(arquivos soltos)"}</span>

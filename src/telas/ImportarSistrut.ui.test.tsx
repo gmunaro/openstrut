@@ -226,6 +226,29 @@ describe("importar obra do SISTRUT: a pasta EXEC40 junto com a obra", () => {
     ).toBeTruthy();
   });
 
+  it("duas pastas de parâmetros com os mesmos nomes: pergunta qual, e só ela entra", async () => {
+    const { user } = renderizarApp("/");
+    const pasta = await screen.findByLabelText("Pasta da obra do SISTRUT");
+    await user.upload(pasta, [
+      ...obra,
+      ...exec40,
+      naPasta("OUTRA/EXEC40", sistrut),
+      naPasta("OUTRA/EXEC40", esc),
+    ]);
+    const pergunta = await screen.findByRole("dialog", { name: "Quais parâmetros usar?" });
+    const pastas = within(pergunta).getByRole("list", { name: "Pastas de parâmetros" });
+    expect(
+      within(pastas)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["OUTRA/EXEC402 arquivos do SISTRUT", "SISTRUT/EXEC402 arquivos do SISTRUT"]);
+    await user.click(within(pastas).getByRole("button", { name: /^SISTRUT\/EXEC40/ }));
+    // dois .DSP e nada que diga qual: a pergunta seguinte é a do .DSP
+    expect(
+      await screen.findByRole("dialog", { name: "Qual parametrização do desenho?" }),
+    ).toBeTruthy();
+  });
+
   it("com o DESENHO.INI na EXEC40, vale o .DSP dele, sem perguntar", async () => {
     const { user } = renderizarApp("/");
     const ini: ArquivoEntrada = {
