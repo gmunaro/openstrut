@@ -279,8 +279,15 @@ function BotaoCopiar({ nome }: { nome: string }) {
       ) : (
         <Copy aria-hidden className="size-3.5" />
       )}
-      <span role="status">
+      <span>
         {estado === "ok" ? "Copiada" : estado === "erro" ? "Não foi possível copiar" : "Copiar"}
+      </span>
+      <span role="status" className="sr-only">
+        {estado === "ok"
+          ? `Tabela ${nome} copiada`
+          : estado === "erro"
+            ? `Não foi possível copiar a tabela ${nome}`
+            : ""}
       </span>
     </button>
   );

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { obraNova } from "../../dominio/criar";
 import { acrescentarLaje, substituirPavimento } from "../../planta/edicao";
 import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
+import { adicionarPavimento, copiarPlanta } from "../pavimentos";
 import { tsvDaTabela } from "./tabela";
 
 /** Obra com L1 de 3 × 5 m e L2 de 5 × 5 m lado a lado (para a ordenação por lx). */
@@ -150,4 +151,31 @@ describe("tsvDaTabela", () => {
       ["Viga\tPositiva (cm²)\t", "\tAs\tBarras", "V1\t1,20\t2 φ 10"].join("\n"),
     );
   });
+});
+
+describe("montagem gradual", () => {
+  it(
+    "obra com 4 pavimentos: abre com o progresso e termina nos pilares e no resumo",
+    { timeout: 120_000 },
+    async () => {
+      let obra = obraDuasLajes("nb1-78");
+      for (let i = 0; i < 3; i++) {
+        const r = adicionarPavimento(obra, 0);
+        obra = copiarPlanta(r.obra, obra.pavimentos.at(-1)!.id, r.pavimento.id);
+      }
+      expect(obra.pavimentos).toHaveLength(4);
+      abrirObra(obra);
+      const { user } = renderizarApp("/obra");
+      await user.click(await screen.findByRole("tab", { name: "Resultados" }));
+      await screen.findByText(/Calculado pela/);
+      // a barra de progresso aparece enquanto faltam pavimentos ou os pilares
+      expect(screen.getByRole("progressbar", { name: "Progresso da montagem dos resultados" }));
+      // no happy-dom cada pavimento leva alguns segundos para montar
+      const prazo = { timeout: 60_000 };
+      await screen.findByRole("heading", { name: "Pilares por nível" }, prazo);
+      await screen.findByRole("heading", { name: "Resumo de aço e concreto" }, prazo);
+      expect(screen.queryByRole("progressbar")).toBeNull();
+      expect(screen.getAllByRole("heading", { name: /^Pavimento \d/, level: 2 })).toHaveLength(4);
+    },
+  );
 });

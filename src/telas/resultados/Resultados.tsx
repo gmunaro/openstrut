@@ -3,8 +3,9 @@
 // nível. Cada elemento abre a memória. A barra do topo filtra os elementos por nome
 // (filtro.ts); os cabeçalhos ordenam e o botão Copiar leva a tabela para o Excel.
 import { CircleAlert, Info, Search, X } from "lucide-react";
-import { useContext, useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useContext, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { DicaUso } from "@/components/ui/dica-uso";
 import type { ResultadoObra } from "../../calculo/fluxo";
 import { calcularQuantitativos } from "../../calculo/quantitativos";
@@ -64,13 +65,23 @@ const vigasInterrompidas = (r: ResultadoObra, pavimentoId: string) =>
       .map((v) => v.nome),
   );
 
-/** Tabelas de todos os pavimentos e dos pilares (também usadas no relatório). */
+/** Seções fora da tela não passam por layout nem pintura até chegarem perto dela
+ *  (content-visibility), com uma altura estimada para a barra de rolagem não pular. */
+const SECAO_LEVE = "[content-visibility:auto] [contain-intrinsic-size:auto_1200px]";
+
+/** Tabelas de todos os pavimentos e dos pilares (também usadas no relatório).
+ *  Na aba Resultados: `ate` é quantas etapas já aparecem (uma por pavimento e, por
+ *  último, a dos pilares) e `naTela` deixa as seções fora da vista sem layout. */
 export function TabelasObra({
   resultado,
   comMemoria,
+  ate,
+  naTela = false,
 }: {
   resultado: ResultadoObra;
   comMemoria: boolean;
+  ate?: number;
+  naTela?: boolean;
 }) {
   const gamaF = Math.max(resultado.norma.gamaG, resultado.norma.gamaQ);
   const mostra = useFiltro();
@@ -84,11 +95,14 @@ export function TabelasObra({
           rp.montagem.naoCalculadas.some((v) => mostra(v.nome)),
       )
     : resultado.pavimentos;
-  const comPilares = !filtrando || resultado.pilares.some((p) => mostra(p.pilar.nome));
+  const todosNaTela = ate === undefined || ate > resultado.pavimentos.length;
+  const comPilares =
+    todosNaTela && (!filtrando || resultado.pilares.some((p) => mostra(p.pilar.nome)));
+  const secao = naTela ? SECAO_LEVE : undefined;
   return (
     <>
-      {pavimentos.map((rp) => (
-        <section key={rp.pavimento.id} className="mt-6 break-inside-auto">
+      {pavimentos.slice(0, ate).map((rp) => (
+        <section key={rp.pavimento.id} className={cn("mt-6 break-inside-auto", secao)}>
           <h2 className="border-b pb-1 text-base font-semibold">
             {rp.pavimento.nome}
             <span className="text-muted-foreground ml-3 text-xs font-normal">
@@ -108,12 +122,12 @@ export function TabelasObra({
         </section>
       ))}
       {comPilares && (
-        <section className="mt-6">
+        <section className={cn("mt-6", secao)}>
           <h2 className="border-b pb-1 text-base font-semibold">Pilares</h2>
           <TabelaPilares resultado={resultado} comMemoria={comMemoria} />
         </section>
       )}
-      {filtrando && pavimentos.length === 0 && !comPilares && (
+      {filtrando && todosNaTela && pavimentos.length === 0 && !comPilares && (
         <p role="status" className="text-muted-foreground mt-6 text-sm">
           Nenhum elemento com esse nome. Use os nomes da planta (V1, P3, L2) ou só a letra (V, P, L)
           para ver todos de um tipo.
@@ -152,6 +166,10 @@ function ResultadosCalculados({
   // a digitação não espera as tabelas redesenharem
   const adiado = useDeferredValue(texto);
   const filtro = useMemo(() => filtroDeTexto(adiado), [adiado]);
+  // etapas: uma por pavimento e a dos pilares
+  const etapas = r.pavimentos.length + 1;
+  const ate = useMontagemGradual(etapas);
+  const montando = ate < etapas;
   return (
     <div className="pb-8">
       <DicaUso id="resultados" titulo="Como ler os resultados" className="mb-3">
@@ -209,9 +227,56 @@ function ResultadosCalculados({
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
       <FiltroContexto value={filtro}>
-        <TabelasObra resultado={r} comMemoria />
+        <TabelasObra resultado={r} comMemoria ate={ate} naTela />
       </FiltroContexto>
-      {obra && filtro === MOSTRA_TUDO && <BlocoQuantitativos obra={obra} resultado={r} />}
+      {montando ? (
+        <Montando feitos={ate} total={r.pavimentos.length} />
+      ) : (
+        obra && filtro === MOSTRA_TUDO && <BlocoQuantitativos obra={obra} resultado={r} />
+      )}
+    </div>
+  );
+}
+
+/** Obras com até este número de etapas (pavimentos + pilares) aparecem de uma vez. */
+const ETAPAS_DE_UMA_VEZ = 3;
+
+/**
+ * Quantas etapas da aba Resultados já aparecem. Obra pequena: todas. Obra grande:
+ * uma por vez, cada uma numa tarefa separada (startTransition depois de um setTimeout),
+ * para a aba abrir na hora e a página responder enquanto as tabelas entram.
+ */
+function useMontagemGradual(total: number) {
+  const [ate, setAte] = useState(() => (total <= ETAPAS_DE_UMA_VEZ ? total : 1));
+  // obra trocada ou recalculada com outro número de pavimentos: recomeça
+  const [totalAntes, setTotalAntes] = useState(total);
+  if (total !== totalAntes) {
+    setTotalAntes(total);
+    setAte(total <= ETAPAS_DE_UMA_VEZ ? total : Math.min(ate, total));
+  }
+  useEffect(() => {
+    if (ate >= total) return;
+    const t = setTimeout(() => startTransition(() => setAte((n) => n + 1)), 0);
+    return () => clearTimeout(t);
+  }, [ate, total]);
+  return Math.min(ate, total);
+}
+
+/** Aviso de progresso enquanto os pavimentos entram na aba Resultados. */
+function Montando({ feitos, total }: { feitos: number; total: number }) {
+  return (
+    <div role="status" className="text-muted-foreground mt-6 grid max-w-sm gap-1.5 text-xs">
+      <span>
+        {feitos < total
+          ? `Montando as tabelas: ${feitos} de ${total} pavimentos; depois, os pilares.`
+          : "Montando as tabelas dos pilares."}
+      </span>
+      <progress
+        max={total + 1}
+        value={feitos}
+        aria-label="Progresso da montagem dos resultados"
+        className="accent-primary h-1.5 w-full"
+      />
     </div>
   );
 }
