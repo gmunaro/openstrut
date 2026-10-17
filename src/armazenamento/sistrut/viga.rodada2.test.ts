@@ -557,7 +557,7 @@ describe("peso próprio das vigas tirado do .VIG (o .LAJ não grava o peso do LA
     expect(vigas.some((v) => v.somenteCargasProprias)).toBe(false);
     expect(r.avisos.filter((a) => /diferentes das da montagem/.test(a))).toEqual([]);
     expect(r.avisos).toContain(
-      "Peso próprio de 120 kg/m nas vigas V1, V2, V3, tirado das cargas do .VIG: o .LAJ não grava o peso que o usuário digita no LAJEMONT.",
+      "Peso próprio de 120 kg/m nas vigas V1, V2, V3, tomado da parcela uniforme das cargas do .VIG (o .LAJ não grava o peso que o usuário digita no LAJEMONT). Se essa parcela for outra carga, como uma alvenaria lançada igual em toda a viga, corrija o peso próprio.",
     );
   });
 
@@ -578,6 +578,13 @@ describe("peso próprio das vigas tirado do .VIG (o .LAJ não grava o peso do LA
           ),
         ),
       );
+  });
+
+  it("reimportar refaz o peso próprio: um valor trocado à mão volta ao do .VIG", () => {
+    const mexida = structuredClone(r.obra);
+    mexida.pavimentos[0]!.vigas.find((v) => v.nome === "V1")!.pesoProprio = 5;
+    const de_novo = importa([{ nome: "E2E.VIG", dados: vigF }], mexida);
+    expect(de_novo.obra).toEqual(r.obra);
   });
 
   it("a mesma seção da montagem do original: nenhum peso gravado", () => {

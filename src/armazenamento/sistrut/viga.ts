@@ -1003,6 +1003,7 @@ const CAMPOS_DA_IMPORTACAO = [
   "apoiosDesconsiderados",
   "secoes",
   "forma",
+  "pesoProprio",
 ] as const satisfies readonly (keyof Viga)[];
 
 /** Completa o pavimento: casa as vigas pelo nome e põe só o que difere do que a montagem
@@ -1023,6 +1024,8 @@ function completar(
   if (!pav) throw new ErroImportacao(`Pavimento ${pavimentoId ?? ""} não existe na obra.`);
   // reimportação: a entrada de viga de antes sai, e a montagem é a da planta
   let limpou = false;
+  /** O peso próprio de antes da limpeza, kN/m: volta igual se o .VIG der o mesmo kg/m. */
+  const ppAntes = new Map(pav.vigas.map((v) => [v.nome, v.pesoProprio]));
   for (const v of pav.vigas)
     if (registros.some((r) => r.nome === v.nome))
       for (const campo of CAMPOS_DA_IMPORTACAO)
@@ -1091,11 +1094,19 @@ function completar(
     const indexadaEm = (i: number, d: number) => indexadas(i).some((x) => igual(x, d));
     const ppMontagem = m.alvenariasSobreViga?.[0]?.peso;
     const kg = kgDa(reg.nome);
+    const antes = ppAntes.get(reg.nome);
     let dp = 0;
-    if (kg !== undefined && ppMontagem !== undefined && kg !== Math.round(ppMontagem * 1000)) {
+    if (kg !== undefined && ppMontagem !== undefined && kg !== Math.round(ppMontagem * 1000))
       dp = kg / 1000 - ppMontagem;
-      viga.pesoProprio = tPorMParaKnPorM(kg / 1000);
-      pesosDoVig.set(kg, [...(pesosDoVig.get(kg) ?? []), reg.nome]);
+    if (
+      kg !== undefined &&
+      antes !== undefined &&
+      Math.round((antes / tPorMParaKnPorM(1)) * 1000) === kg
+    )
+      viga.pesoProprio = antes;
+    else if (dp !== 0) {
+      viga.pesoProprio = tPorMParaKnPorM(kg! / 1000);
+      pesosDoVig.set(kg!, [...(pesosDoVig.get(kg!) ?? []), reg.nome]);
     }
     const mesmasCargas = td.every(({ t }, i) => {
       const a = t.divisoes;
@@ -1140,7 +1151,7 @@ function completar(
   for (const [kg, vigas] of pesosDoVig) {
     const lista = [...vigas].sort((a, b) => nomes.indexOf(a) - nomes.indexOf(b));
     avisos.push(
-      `Peso próprio de ${kg} kg/m ${lista.length === registros.length ? "em todas as vigas" : `nas vigas ${lista.join(", ")}`}, tirado das cargas do .VIG: o .LAJ não grava o peso que o usuário digita no LAJEMONT.`,
+      `Peso próprio de ${kg} kg/m ${lista.length === registros.length ? "em todas as vigas" : `nas vigas ${lista.join(", ")}`}, tomado da parcela uniforme das cargas do .VIG (o .LAJ não grava o peso que o usuário digita no LAJEMONT). Se essa parcela for outra carga, como uma alvenaria lançada igual em toda a viga, corrija o peso próprio.`,
     );
   }
   return nova;
