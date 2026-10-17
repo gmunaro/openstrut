@@ -145,7 +145,7 @@ Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original ×
 
 Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel` (as declarações estão em "Tipos", abaixo). Ela entra na barra por uma `DefinicaoCamada` no array `CAMADAS` de `src/telas/obra3d/camadas.ts`, com `id`, `nome` (texto do botão), `descricao` (dica do botão) e `carregar`, que faz o import dinâmico do arquivo dela. O arquivo da camada fica em `src/telas/obra3d/<recurso>/` e importa os tipos de `../api`.
 
-`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum, montado na seção "Camadas" do painel lateral, logo abaixo dos botões, enquanto a camada está ligada. Ele recebe só `{ ctx }` e some quando a camada desliga. O painel lateral já usa texto `text-xs` e tem 20 a 24 rem de largura (no celular, a largura da tela); o Painel não precisa de título, porque o botão da camada fica logo acima. Use as classes do Tailwind e os componentes do app (`@/components/ui/button`, `@/components/ui/switch` e outros de `src/components/ui/`), que já estão no pacote principal. Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
+`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum, montado na seção "Camadas" do painel lateral, logo abaixo dos botões, enquanto a camada está ligada. Ele recebe só `{ ctx }` e some quando a camada desliga. O painel lateral já usa texto `text-xs` e tem 20 a 24 rem de largura (no celular, a largura da tela); o Painel não precisa de título, porque o botão da camada fica logo acima. Use as classes do Tailwind e os componentes do app de `src/components/ui/`, que já estão no pacote principal. O mais usado é o botão: `import { Button } from "@/components/ui/button";`, com `variant` `"default"`, `"outline"`, `"secondary"`, `"ghost"`, `"destructive"` ou `"link"` e `size` `"xs"`, `"sm"`, `"default"`, `"lg"`, `"icon"`, `"icon-xs"`, `"icon-sm"` ou `"icon-lg"`; os botões da vista usam `size="xs"`. Para listas, a vista usa `<select>` nativo com `className="border-input bg-background h-9 rounded-md border px-2"`. Erros e mensagens para o usuário vão no próprio Painel (não há canal de log da vista). Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
 
 ### Objetos da camada
 
@@ -164,7 +164,7 @@ Importe as classes do pacote `three` (`import { Mesh, SphereGeometry, MeshBasicM
 
 Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
 
-`src/telas/obra3d/camadas.ts` (em `api.ts`: `Camada, ContextoVista, DefinicaoCamada, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
+`src/telas/obra3d/camadas.ts` (em `api.ts`: `Camada, ContextoVista, DefinicaoCamada, DetalhamentoElemento, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
 
 ```ts
 export interface Camada {
@@ -191,6 +191,17 @@ export interface ContextoVista {
   readonly calculo: Calculo;
   /** Dados do cálculo por chave de elemento (situação, resultado principal). */
   readonly dados: ReadonlyMap<string, DadosElemento>;
+  /** Detalhamento de armadura da obra calculada; null sem cálculo. */
+  readonly detalhamento: DetalhamentoObra | null;
+  /** Detalhamento da peça; undefined sem cálculo, para peça sem detalhamento (viga que
+   *  não foi calculada ou parou no "Continuo… S/N" do original) e para o lance visual da
+   *  escada. Unidades das posições: cm e mm (bitolas). */
+  detalhamentoDe(chave: string): DetalhamentoElemento | undefined;
+  /** Ponto da cena no eixo da face de cima da viga (ou da viga da escada) na abscissa
+   *  `xCm` das posições do detalhamento (cm a partir do primeiro nó), com o explodido
+   *  desenhado agora. A abscissa é proporcional entre o primeiro e o último nó, o que
+   *  vale também para a viga inclinada da escada. Undefined se a peça não é viga. */
+  pontoDaViga(chave: string, xCm: number): Vector3 | undefined;
   /** Chave do elemento selecionado. */
   readonly selecao: string | null;
   selecionar(chave: string | null): void;
@@ -268,6 +279,23 @@ export interface DefinicaoCamada {
   descricao: string;
   carregar: () => Promise<Camada>;
 }
+
+/** Detalhamento de armadura de uma peça (o mesmo das abas Resultados e Relatório e do
+ *  DXF de armação). Viga e escada: o da viga, igual em todas as repetições do pavimento.
+ *  Laje: o da laje. Pilar e fundação: o da coluna inteira, com `lance` = índice deste
+ *  lance em `pilar.lances` (0 = o de baixo), `niveis` = o índice em `modelo.niveis` de
+ *  cada lance e `cotaBase` = a cota do piso do lance de baixo, m (a origem das cotas das
+ *  posições do pilar). */
+export type DetalhamentoElemento =
+  | { tipo: "viga"; viga: DetalhamentoVigaObra }
+  | { tipo: "laje"; laje: DetalhamentoLajeObra }
+  | {
+      tipo: "pilar";
+      pilar: DetalhamentoPilarObra;
+      lance: number;
+      niveis: number[];
+      cotaBase: number;
+    };
 
 export type EventoVista =
   /** Seleção mudou (ctx.selecao). */
@@ -419,6 +447,165 @@ export type Calculo =
   | { tipo: "erro"; mensagem: string };
 ```
 
+`src/telas/detalhamento.ts` (em `api.ts`: `DetalhamentoLajeObra, DetalhamentoObra, DetalhamentoPilarObra, DetalhamentoVigaObra, LanceDetalhadoObra`):
+
+```ts
+export interface DetalhamentoLajeObra {
+  pavimentoId: string;
+  pavimento: string;
+  repeticoes: number;
+  lajeId: string;
+  nome: string;
+  /** Vãos teóricos, m; espessura e cobrimento, cm. */
+  lx: number;
+  ly: number;
+  h: number;
+  cobrimento: number;
+  /** Bordos cuja negativa saiu no detalhamento da laje vizinha. */
+  negativoNaVizinha: Bordo[];
+  detalhamento: LajeDetalhamento;
+}
+
+/** Detalhamento da obra inteira: estende o das vigas (o DXF de armação usa só
+ *  ele) com o das lajes, o dos pilares e a tabela de aço das três origens. */
+export interface DetalhamentoObra extends DetalhamentoVigasObra {
+  lajes: DetalhamentoLajesObra;
+  pilares: DetalhamentoPilaresObra;
+  /** Tabela de aço da obra inteira: vigas + lajes + pilares (perda padrão). */
+  tabelaObra: TabelaAco;
+}
+
+export interface DetalhamentoPilarObra {
+  /** Posição do pilar na planta ("x;y", m), a mesma em todos os níveis. */
+  chave: string;
+  nome: string;
+  cobrimento: number;
+  /** Da base para o topo; o índice é o `tramo` das posições. */
+  lances: LanceDetalhadoObra[];
+  detalhamento: PilarDetalhamento;
+}
+
+export interface DetalhamentoVigaObra {
+  pavimentoId: string;
+  pavimento: string;
+  repeticoes: number;
+  vigaId: string;
+  nome: string;
+  /** Seção e cobrimento, cm. */
+  bw: number;
+  h: number;
+  cobrimento: number;
+  /** Abscissa de cada nó a partir do primeiro, cm (a mesma origem dos x das posições). */
+  nos: number[];
+  /** Largura de cada apoio na direção da viga, cm (0 na ponta livre). */
+  larguraApoios: number[];
+  detalhamento: VigaDetalhamento;
+}
+
+export interface LanceDetalhadoObra {
+  /** Rótulo do nível, como na tabela de pilares ("Tipo (2/3)"). */
+  nivel: string;
+  pavimentoId: string;
+  repeticao: number;
+  /** Pé-direito do lance e seção, cm. */
+  peDireito: number;
+  b: number;
+  h: number;
+  /** Barras em cada face de comprimento h (porFaceX) e b (porFaceY), cantos
+   *  incluídos, como o detalhamento usou. */
+  porFaceX: number;
+  porFaceY: number;
+  /** De onde veio o número de barras por face: do arranjo que o cálculo do pilar
+   *  verificou ou, se ele não fecha com n, da distribuição padrão do motor
+   *  (arranjoBarras da V1). */
+  arranjo: "resultado" | "padrao";
+  /** Quanto as barras deste lance passam do topo dele (traspasse com o lance de
+   *  cima, já arredondado), cm; null no último lance ou sem barras. */
+  traspasse: number | null;
+}
+```
+
+`src/calculo/detalhamento/vigas.ts` (em `api.ts`: `PosicaoArmadura, TipoPosicao, VigaDetalhamento`):
+
+```ts
+export interface PosicaoArmadura {
+  numero: number;
+  /** "N1", "N2"… */
+  nome: string;
+  tipo: TipoPosicao;
+  /** Tramo (0 = primeiro) em que a posição é listada; o negativo de um apoio
+   *  interno fica no tramo à esquerda do apoio, como na V1. */
+  tramo: number;
+  /** mm */
+  phi: number;
+  quantidade: number;
+  aco: Aco;
+  /** Comprimento de cada barra, cm, inteiro: reto + ganchos. */
+  comprimento: number;
+  /** Trecho reto e ganchos no início e no fim (0 = sem gancho), cm, inteiros
+   *  (cada parcela arredondada para cima). Estribo: perímetro e ganchos somados em `reto`. */
+  reto: number;
+  ganchoInicio: number;
+  ganchoFim: number;
+  /** Abscissas do trecho reto (estribos: da região estribada) ao longo do eixo,
+   *  cm, a partir do primeiro nó da viga. */
+  xInicio: number;
+  xFim: number;
+  /** Espaçamento dos estribos, cm; null nas barras longitudinais. */
+  espacamento: number | null;
+}
+
+export type TipoPosicao = "positiva" | "negativa" | "porta-estribos" | "construtiva" | "estribo";
+
+export interface VigaDetalhamento extends ComMemoria {
+  nome: string;
+  posicoes: PosicaoArmadura[];
+}
+```
+
+`src/calculo/detalhamento/lajes.ts` (em `api.ts`: `LajeDetalhamento, PosicaoLaje, TipoPosicaoLaje`):
+
+```ts
+export interface LajeDetalhamento extends ComMemoria {
+  nome: string;
+  /** Também servem de itens para tabelaAco(). */
+  posicoes: PosicaoLaje[];
+}
+
+/** Posição de laje: o formato de PosicaoArmadura (vigas.ts), com a direção das
+ *  barras e o bordo das negativas. `tramo` = 0; `xInicio`/`xFim` = abscissas
+ *  do trecho reto ao longo da barra, cm, a partir do eixo do bordo esquerdo
+ *  (barras em x) ou inferior (barras em y); `espacamento` = s das barras. */
+export interface PosicaoLaje extends Omit<PosicaoArmadura, "tipo"> {
+  tipo: TipoPosicaoLaje;
+  /** Direção das barras. */
+  direcao: "x" | "y";
+  /** Bordo da negativa e da distribuição; null nas positivas. */
+  bordo: Bordo | null;
+}
+
+export type TipoPosicaoLaje = Extract<TipoPosicao, "positiva" | "negativa"> | "distribuicao";
+```
+
+`src/calculo/detalhamento/pilares.ts` (em `api.ts`: `PilarDetalhamento, PosicaoPilar, TipoPosicaoPilar`):
+
+```ts
+export interface PilarDetalhamento extends ComMemoria {
+  nome: string;
+  /** Também servem de itens para tabelaAco(). */
+  posicoes: PosicaoPilar[];
+}
+
+/** Posição de pilar: o formato de PosicaoArmadura (vigas.ts). `tramo` = índice
+ *  do lance (0 = o de baixo); `xInicio`/`xFim` = cotas, cm, a partir da base do
+ *  primeiro lance (estribos e grampos: da região estribada). */
+export interface PosicaoPilar extends Omit<PosicaoArmadura, "tipo"> {
+  tipo: TipoPosicaoPilar;
+}
+
+export type TipoPosicaoPilar = Extract<TipoPosicao, "estribo"> | "longitudinal" | "grampo";
+```
+
 `src/telas/obra3d/cores.ts` (em `api.ts`: `COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA`):
 
 ```ts
@@ -555,6 +742,35 @@ Os valores padrão estão em `materiaisPadrao`, `LUZES`, `FUNDO` e `COR_SELECAO`
 
 Só uma animação de câmera corre por vez: `moverCamera` e `enquadrarEm` cancelam a que estava em curso, e a Promise dela resolve `"cancelada"`. Isso inclui as chamadas da própria vista (botões de vista, Enquadrar, trilha e escolha de parte) e de outras camadas. Uma camada que encadeia paradas (tour) deve tratar `"cancelada"` como "outra coisa assumiu a câmera" e decidir se segue ou para, sem repetir a chamada em laço. O explodido não mexe na câmera: ele só sobe os níveis. Para manter um nível enquadrado durante o explodido, reenquadre uma vez quando `explodidoEmAnimacao` ficar `false` no aviso de `"explodido"`; chamar `enquadrarEm` a cada quadro da animação cancela a si mesmo e a câmera não chega.
 
+### Armadura e detalhamento
+
+A camada de armadura desenha as barras do detalhamento calculado, não um esquema. `ctx.detalhamento` é o `DetalhamentoObra` da obra, o mesmo das abas Resultados e Relatório e do DXF de armação (`src/telas/detalhamento.ts`, `detalharObra`). `ctx.detalhamentoDe(chave)` devolve o da peça (`DetalhamentoElemento`, em "Referência da API"). As posições (`PosicaoArmadura`, `PosicaoLaje`, `PosicaoPilar`) trazem bitola (`phi`, mm), quantidade, comprimento, trecho reto e ganchos (cm), espaçamento dos estribos (cm) e as abscissas `xInicio` e `xFim` (cm). O referencial de cada tipo está no comentário da declaração:
+
+- **Viga** (e as vigas da escada): `xInicio` e `xFim` ao longo do eixo, a partir do primeiro nó da viga. `viga.nos` dá a abscissa de cada nó e `viga.bw`, `viga.h` e `viga.cobrimento` a seção e o cobrimento (cm). `ctx.pontoDaViga(chave, xCm)` converte a abscissa em ponto da cena, na face de cima, no centro da largura, já com o explodido. A face de baixo fica `h/100` m abaixo; uma barra positiva fica a `(cobrimento + φestribo + φ/2)/100` m da face de baixo.
+- **Laje**: `xInicio` e `xFim` ao longo da barra, a partir do eixo do bordo esquerdo (barras em x) ou inferior (barras em y) da laje, que são `laje.x` e `laje.y` do retângulo da laje na obra. `direcao` e `bordo` dizem a direção e o bordo da negativa.
+- **Pilar**: `xInicio` e `xFim` são cotas, cm, a partir do piso do lance de baixo do grupo, que é `cotaBase` (m) em `detalhamentoDe`. `tramo` é o índice do lance, e `niveis[tramo]` é o nível dele em `ctx.modelo.niveis`. A seção de cada lance está em `pilar.lances[i].b` e `.h` (cm). O detalhamento junta os lances pela posição exata: um pilar deslocado (como o P3 da Alpha1, 10,5 cm no térreo) sai em dois grupos, e `pilar.lances` cobre só os lances daquele grupo.
+
+O que existe em cada caso:
+
+- **Sem cálculo** (`ctx.calculo.tipo` `"semNorma"` ou `"erro"`): `ctx.detalhamento` é `null` e `detalhamentoDe` devolve `undefined` para tudo.
+- **Modo corrigido e modo original**: o detalhamento é o da V2 sobre o resultado do modo da obra; os dois têm a mesma forma. No original, o quadro do DESENHO do SISTRUT fica à parte, em `ctx.calculo.resultado.sistrut.quadros`.
+- **Peça sem detalhamento**: viga que não foi calculada ou que parou no "Continuo com o processamento desta Viga S/N" do original, o lance visual da escada e a fundação sem pilar calculado devolvem `undefined`. Na Alpha1, 5 das 32 vigas não têm detalhamento.
+- **Escada**: as vigas da escada têm detalhamento como as outras, e `pontoDaViga` segue a inclinação delas. A placa visual do lance não tem.
+
+### Como verificar uma camada
+
+A lógica pura (achar peças, montar posições, contas de geometria) fica em funções que recebem o modelo e os dados, testadas com Vitest como `src/telas/obra3d/modelo.test.ts`: `montarModelo(obra)` dá o modelo de uma obra montada no teste, e `calcular(obra)` (`src/telas/calculo.ts`) com `dadosDosElementos` dá os dados. A integração com a vista se confere no Playwright: a vista expõe o contexto em `window.__vista3d` enquanto está aberta, só para leitura em teste. O e2e `e2e/vista3d.spec.ts` liga a camada de corte pelo botão e confere o detalhamento e o filtro por esse objeto, por exemplo:
+
+```ts
+await page.getByRole("button", { name: "Corte por pavimento" }).click();
+const visivel = await page.evaluate(
+  (k) => (window as unknown as { __vista3d: { estaVisivel(k: string): boolean } }).__vista3d.estaVisivel(k),
+  chave,
+);
+```
+
+Rode com `PORT=4407 bun x playwright test e2e/vista3d.spec.ts` e confira que o console não tem erro (o spec tem `vigiarErros`).
+
 ### Exemplo: sequência construtiva 4D mínima
 
 A camada abaixo mostra o prédio sendo construído nível por nível, com um controle deslizante de etapa e um botão de reprodução. A fundação aparece na etapa 0. A escada aparece junto com o nível de cima dela.
@@ -663,8 +879,8 @@ O corte por pavimento (`camadas/corte.tsx`) é uma camada real e mais curta. Ela
 ## Testes
 
 - `src/telas/obra3d/modelo.test.ts` (21 testes, com conta à mão ou referência independente): cotas com repetições (a repetição 1 é a mais alta), seção girada 90° e 30°, circular, poligonal horário, colunas com pilar deslocado e de transição, bloco de fundação, seção por trecho e mesa T, laje rebaixada, normais para fora, reações da escada, posição da escada pelas cargas e fora do prédio, vizinhos, eixo, trilha e o Nk do pavimento-tipo crescendo para baixo.
-- `src/telas/obra3d/api.test.ts` (18 testes): a seção "Tipos" deste documento é igual às declarações do código, e `api.ts` exporta todas.
-- `e2e/vista3d.spec.ts` (5 testes, `PORT=4407 bun x playwright test e2e/vista3d.spec.ts`): obra de 3 pavimentos (girar, selecionar, filtro de camada que esconde e tira a seleção, ocultar, explodido, teclado, ver na planta), obra do oráculo de vários pavimentos importada (todo, partes, trilha, camada de corte, mapa de Nk, PNG e glTF), 360 × 800 com toque, 3840 × 2160 e o desempenho de 20 pavimentos. Todos conferem que o console não tem erro nem aviso.
+- `src/telas/obra3d/api.test.ts`: a seção "Referência da API" deste documento é igual às declarações que `api.ts` exporta (um teste por declaração).
+- `e2e/vista3d.spec.ts` (5 testes, `PORT=4407 bun x playwright test e2e/vista3d.spec.ts`): obra de 3 pavimentos (girar, selecionar, detalhamento e `pontoDaViga` pela API, filtro de camada que esconde e tira a seleção, ocultar, explodido, teclado, ver na planta), obra do oráculo de vários pavimentos importada (todo, partes, trilha, camada de corte, mapa de Nk, PNG e glTF), 360 × 800 com toque, 3840 × 2160 e o desempenho de 20 pavimentos. Todos conferem que o console não tem erro nem aviso.
 
 ## Limitações
 

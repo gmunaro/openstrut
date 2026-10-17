@@ -557,20 +557,22 @@ function ObraAberta({ obra }: { obra: Obra }) {
         </DetalhamentoContexto>
       </TabsContent>
       <TabsContent value="3d" className="flex min-h-0 flex-1 print:hidden">
-        <AbaVista3D
-          obra={obra}
-          calculo={calculo}
-          foco={foco3d}
-          aoVerNaPlanta={(v) => {
-            selecionarPavimento(v.pavimentoId);
-            selecionar({ tipo: v.tipo, id: v.id });
-            setAba("planta");
-          }}
-          aoVerNosResultados={(v) => {
-            selecionarPavimento(v.pavimentoId);
-            setAba("resultados");
-          }}
-        />
+        <DetalhamentoContexto value={detalhamento}>
+          <AbaVista3D
+            obra={obra}
+            calculo={calculo}
+            foco={foco3d}
+            aoVerNaPlanta={(v) => {
+              selecionarPavimento(v.pavimentoId);
+              selecionar({ tipo: v.tipo, id: v.id });
+              setAba("planta");
+            }}
+            aoVerNosResultados={(v) => {
+              selecionarPavimento(v.pavimentoId);
+              setAba("resultados");
+            }}
+          />
+        </DetalhamentoContexto>
       </TabsContent>
 
       <DialogoMateriais

@@ -17,9 +17,32 @@ import type {
 } from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Obra } from "../../dominio/obra";
+import type {
+  DetalhamentoLajeObra,
+  DetalhamentoObra,
+  DetalhamentoPilarObra,
+  DetalhamentoVigaObra,
+} from "../detalhamento";
 import type { Calculo } from "../calculo";
 import type { DadosElemento } from "./dados";
 import type { Elemento3D, Modelo3D } from "./modelo";
+
+/** Detalhamento de armadura de uma peça (o mesmo das abas Resultados e Relatório e do
+ *  DXF de armação). Viga e escada: o da viga, igual em todas as repetições do pavimento.
+ *  Laje: o da laje. Pilar e fundação: o da coluna inteira, com `lance` = índice deste
+ *  lance em `pilar.lances` (0 = o de baixo), `niveis` = o índice em `modelo.niveis` de
+ *  cada lance e `cotaBase` = a cota do piso do lance de baixo, m (a origem das cotas das
+ *  posições do pilar). */
+export type DetalhamentoElemento =
+  | { tipo: "viga"; viga: DetalhamentoVigaObra }
+  | { tipo: "laje"; laje: DetalhamentoLajeObra }
+  | {
+      tipo: "pilar";
+      pilar: DetalhamentoPilarObra;
+      lance: number;
+      niveis: number[];
+      cotaBase: number;
+    };
 
 /** Como uma peça aparece pelo foco e pela visibilidade por tipo e pavimento: sólida,
  *  transparente (contexto) ou oculta. Filtros e planos de corte não entram aqui. */
@@ -62,6 +85,17 @@ export interface ContextoVista {
   readonly calculo: Calculo;
   /** Dados do cálculo por chave de elemento (situação, resultado principal). */
   readonly dados: ReadonlyMap<string, DadosElemento>;
+  /** Detalhamento de armadura da obra calculada; null sem cálculo. */
+  readonly detalhamento: DetalhamentoObra | null;
+  /** Detalhamento da peça; undefined sem cálculo, para peça sem detalhamento (viga que
+   *  não foi calculada ou parou no "Continuo… S/N" do original) e para o lance visual da
+   *  escada. Unidades das posições: cm e mm (bitolas). */
+  detalhamentoDe(chave: string): DetalhamentoElemento | undefined;
+  /** Ponto da cena no eixo da face de cima da viga (ou da viga da escada) na abscissa
+   *  `xCm` das posições do detalhamento (cm a partir do primeiro nó), com o explodido
+   *  desenhado agora. A abscissa é proporcional entre o primeiro e o último nó, o que
+   *  vale também para a viga inclinada da escada. Undefined se a peça não é viga. */
+  pontoDaViga(chave: string, xCm: number): Vector3 | undefined;
   /** Chave do elemento selecionado. */
   readonly selecao: string | null;
   selecionar(chave: string | null): void;

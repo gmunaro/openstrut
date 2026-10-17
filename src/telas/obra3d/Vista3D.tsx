@@ -14,9 +14,18 @@ import {
   MoveVertical,
   X,
 } from "lucide-react";
-import { type ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ComponentType,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DetalhamentoContexto } from "../detalhamento";
 import { useSessao } from "../sessao";
 import type { PropsVista3D } from "./AbaVista3D";
 import { CAMADAS, type Camada, type ContextoVista } from "./camadas";
@@ -80,6 +89,7 @@ export default function Vista3D({
   aoVerNosResultados,
 }: PropsVista3D) {
   const unidades = useSessao((s) => s.unidades);
+  const detalhamento = useContext(DetalhamentoContexto);
   const modelo = useMemo(() => montarModelo(obra), [obra]);
   const dados = useMemo(
     () => dadosDosElementos(modelo, calculo, obra, unidades),
@@ -102,7 +112,14 @@ export default function Vista3D({
     if (!caixa.current) return;
     let c: Cena3D;
     try {
-      c = new Cena3D(caixa.current, { obra, calculo, modelo, dados, fundoEscuro: fundoEscuro() });
+      c = new Cena3D(caixa.current, {
+        obra,
+        calculo,
+        modelo,
+        dados,
+        detalhamento,
+        fundoEscuro: fundoEscuro(),
+      });
     } catch (e) {
       setErro(
         `Não foi possível iniciar a vista 3D (${e instanceof Error ? e.message : String(e)}).`,
@@ -126,8 +143,8 @@ export default function Vista3D({
   }, []);
 
   useEffect(() => {
-    cenaRef.current?.atualizar({ obra, calculo, modelo, dados });
-  }, [obra, calculo, modelo, dados]);
+    cenaRef.current?.atualizar({ obra, calculo, modelo, dados, detalhamento });
+  }, [obra, calculo, modelo, dados, detalhamento]);
 
   /** Muda o estado visual na cena (a fonte) e espelha na tela. */
   const mudarEstado = useCallback((p: Partial<EstadoVisual>, enquadrar = false) => {

@@ -216,6 +216,34 @@ test("obra de 3 pavimentos: gira, seleciona, oculta e explode, sem erro no conso
   await clicarElemento(page, laje!.chave);
   await expect(cartao.getByRole("heading", { name: "Laje L4" })).toBeVisible();
 
+  // detalhamento pela API das camadas (o mesmo de Resultados): a V1 do primeiro nível vai de
+  // x = 0 a 8 m, e o pilar P1 tem os 3 lances, do nível 0 ao 2, com a base na cota 0
+  const det = await page.evaluate(() => {
+    type Api = {
+      modelo: { elementos: { chave: string; tipo: string; nome: string; nivel: number }[] };
+      detalhamentoDe: (k: string) =>
+        | { tipo: "viga"; viga: { nos: number[]; detalhamento: { posicoes: unknown[] } } }
+        | { tipo: "pilar"; lance: number; niveis: number[]; cotaBase: number }
+        | { tipo: "laje" }
+        | undefined;
+      pontoDaViga: (k: string, x: number) => { distanceTo: (o: unknown) => number } | undefined;
+    };
+    const c = (window as unknown as { __vista3d: Api }).__vista3d;
+    const v1 = c.modelo.elementos.find((e) => e.tipo === "viga" && e.nivel === 0 && e.nome === "V1")!;
+    const p1 = c.modelo.elementos.find((e) => e.tipo === "pilar" && e.nivel === 1 && e.nome === "P1")!;
+    const dv = c.detalhamentoDe(v1.chave);
+    const dp = c.detalhamentoDe(p1.chave);
+    const fim = dv?.tipo === "viga" ? (dv.viga.nos.at(-1) ?? 0) : 0;
+    return {
+      posicoes: dv?.tipo === "viga" ? dv.viga.detalhamento.posicoes.length : 0,
+      comprimento: c.pontoDaViga(v1.chave, 0)!.distanceTo(c.pontoDaViga(v1.chave, fim)),
+      pilar: dp?.tipo === "pilar" ? { lance: dp.lance, niveis: dp.niveis, cotaBase: dp.cotaBase } : null,
+    };
+  });
+  expect(det.posicoes).toBeGreaterThan(0);
+  expect(det.comprimento).toBeCloseTo(8, 2);
+  expect(det.pilar).toEqual({ lance: 1, niveis: [0, 1, 2], cotaBase: 0 });
+
   // ocultar as lajes: a malha sólida das lajes some
   await page.getByRole("button", { name: "Lajes", exact: true }).click();
   await expect(page.getByRole("button", { name: "Lajes", exact: true })).toHaveAttribute("aria-pressed", "false");

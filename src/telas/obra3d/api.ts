@@ -4,6 +4,7 @@ export type {
   Camada,
   ContextoVista,
   DefinicaoCamada,
+  DetalhamentoElemento,
   EventoVista,
   Exibicao,
   FabricaMateriais,
@@ -22,6 +23,29 @@ export type {
 } from "./modelo";
 export type { Ponto } from "../../dominio/obra";
 export type { Calculo } from "../calculo";
+// Detalhamento de armadura (cm, mm), o mesmo de Resultados, Relatório e DXF de armação.
+export type {
+  DetalhamentoLajeObra,
+  DetalhamentoObra,
+  DetalhamentoPilarObra,
+  DetalhamentoVigaObra,
+  LanceDetalhadoObra,
+} from "../detalhamento";
+export type {
+  PosicaoArmadura,
+  TipoPosicao,
+  VigaDetalhamento,
+} from "../../calculo/detalhamento/vigas";
+export type {
+  LajeDetalhamento,
+  PosicaoLaje,
+  TipoPosicaoLaje,
+} from "../../calculo/detalhamento/lajes";
+export type {
+  PilarDetalhamento,
+  PosicaoPilar,
+  TipoPosicaoPilar,
+} from "../../calculo/detalhamento/pilares";
 
 // Cores da vista, para marcas e legendas das camadas combinarem com as da vista e da planta.
 export { COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA } from "./cores";

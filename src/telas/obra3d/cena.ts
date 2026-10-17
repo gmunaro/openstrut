@@ -34,8 +34,10 @@ import {
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Obra } from "../../dominio/obra";
 import type { Calculo } from "../calculo";
+import type { DetalhamentoObra } from "../detalhamento";
 import type {
   ContextoVista,
+  DetalhamentoElemento,
   EventoVista,
   Exibicao,
   FabricaMateriais,
@@ -146,6 +148,7 @@ export interface OpcoesCena {
   calculo: Calculo;
   modelo: Modelo3D;
   dados: ReadonlyMap<string, DadosElemento>;
+  detalhamento: DetalhamentoObra | null;
   fundoEscuro: boolean;
 }
 
@@ -182,6 +185,7 @@ export class Cena3D implements ContextoVista {
   calculo: Calculo;
   modelo: Modelo3D;
   dados: ReadonlyMap<string, DadosElemento>;
+  detalhamento: DetalhamentoObra | null;
   /** A vista atual (para os botões). */
   vista: Vista = "perspectiva";
 
@@ -193,6 +197,7 @@ export class Cena3D implements ContextoVista {
     this.calculo = opcoes.calculo;
     this.modelo = opcoes.modelo;
     this.dados = opcoes.dados;
+    this.detalhamento = opcoes.detalhamento;
     this.renderer = new WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.localClippingEnabled = false;
@@ -665,6 +670,72 @@ export class Cena3D implements ContextoVista {
     this.aplicarDeslocamentos();
     this.sujo = true;
     this.emitir("explodido");
+  }
+
+  detalhamentoDe(chave: string): DetalhamentoElemento | undefined {
+    const e = this.porChave.get(chave);
+    const d = this.detalhamento;
+    if (!e || !d) return undefined;
+    if (e.tipo === "viga" || e.tipo === "escada") {
+      const viga = d.vigas.find((v) => v.pavimentoId === e.pavimentoId && v.vigaId === e.id);
+      return viga && { tipo: "viga", viga };
+    }
+    if (e.tipo === "laje") {
+      const laje = d.lajes.lajes.find((l) => l.pavimentoId === e.pavimentoId && l.lajeId === e.id);
+      return laje && { tipo: "laje", laje };
+    }
+    // pilar e fundação: o detalhamento é da coluna, achada pela posição e pelo lance
+    const p = this.obra.pavimentos
+      .find((q) => q.id === e.pavimentoId)
+      ?.pilares.find((q) => q.id === e.id);
+    const nivel = this.modelo.niveis[e.nivel];
+    if (!p || !nivel) return undefined;
+    const posicao = `${p.x.toFixed(3)};${p.y.toFixed(3)}`;
+    const doLance = (l: { pavimentoId: string; repeticao: number }) =>
+      l.pavimentoId === nivel.pavimentoId && l.repeticao === nivel.repeticao;
+    const pilar = d.pilares.pilares.find((q) => q.chave === posicao && q.lances.some(doLance));
+    if (!pilar) return undefined;
+    const niveis = pilar.lances.map((l) =>
+      this.modelo.niveis.findIndex(
+        (n) => n.pavimentoId === l.pavimentoId && n.repeticao === l.repeticao,
+      ),
+    );
+    return {
+      tipo: "pilar",
+      pilar,
+      lance: pilar.lances.findIndex(doLance),
+      niveis,
+      cotaBase: this.modelo.niveis[niveis[0] ?? -1]?.cotaPiso ?? nivel.cotaPiso,
+    };
+  }
+
+  pontoDaViga(chave: string, xCm: number): Vector3 | undefined {
+    const e = this.porChave.get(chave);
+    if (!e || (e.tipo !== "viga" && e.tipo !== "escada")) return undefined;
+    const barras = e.solidos.filter((s) => s.tipo === "barra");
+    const s0 = barras[0];
+    const s1 = barras.at(-1);
+    if (s0?.tipo !== "barra" || s1?.tipo !== "barra") return undefined;
+    // o primeiro nó do detalhamento é a ponta de menor x (viga horizontal) ou de menor y
+    // (vertical); a escada vai de a (embaixo) a b
+    let [ini, fim] = [s0.a, s1.b];
+    const horizontal = Math.abs(fim.y - ini.y) < 1e-6;
+    const vertical = Math.abs(fim.x - ini.x) < 1e-6;
+    if ((horizontal && fim.x < ini.x) || (vertical && fim.y < ini.y)) [ini, fim] = [fim, ini];
+    const det = this.detalhamentoDe(chave);
+    const total =
+      (det?.tipo === "viga" ? det.viga.nos.at(-1) : undefined) ??
+      Math.hypot(fim.x - ini.x, fim.y - ini.y) * 100;
+    const t = total > 0 ? xCm / total : 0;
+    const ponto = new Vector3(
+      ...paraCena(
+        ini.x + (fim.x - ini.x) * t,
+        ini.y + (fim.y - ini.y) * t,
+        ini.z + (fim.z - ini.z) * t,
+      ),
+    );
+    ponto.y += this.deslocamentos[e.nivel] ?? 0;
+    return ponto;
   }
 
   /** Caixa das lajes, vigas e pilares do nível na cena, com o explodido desenhado agora
