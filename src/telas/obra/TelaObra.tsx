@@ -255,8 +255,8 @@ function ObraAberta({ obra }: { obra: Obra }) {
       className={
         compacto
           ? paisagem
-            ? "h-auto! shrink-0 p-0 print:hidden [&>button]:min-h-11"
-            : "h-auto! w-full shrink-0 border-b px-1 py-0.5 print:hidden [&>button]:min-h-11"
+            ? "h-auto! shrink-0 p-0 print:hidden [&>button]:min-h-11 [&>button]:min-w-11"
+            : "h-auto! w-full shrink-0 border-b px-1 py-0.5 print:hidden [&>button]:min-h-11 [&>button]:min-w-11"
           : "mx-4 mt-2 print:hidden"
       }
     >
