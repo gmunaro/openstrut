@@ -214,4 +214,10 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Corta o prédio na horizontal acima de um pavimento, como a planta de fôrma.",
     carregar: () => import("./camadas/corte").then((m) => m.camada),
   },
+  {
+    id: "sequencia",
+    nome: "Sequência construtiva 4D",
+    descricao: "Mostra a obra etapa por etapa (fundação, pilares, vigas e lajes), com datas.",
+    carregar: () => import("./sequencia/camada").then((m) => m.camada),
+  },
 ];
