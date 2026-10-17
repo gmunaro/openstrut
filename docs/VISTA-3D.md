@@ -77,7 +77,7 @@ Para ligar o botão "Ver em 3D" no painel de propriedades da planta ou numa linh
 
 **Situação.** As cores são as da planta (`COR_SITUACAO` em `planta/Desenho.tsx`): verde sem avisos, âmbar com avisos e vermelho com falha. A regra que decide a situação também é a da planta (`planta/situacao.ts`). Sem cálculo, cada tipo fica num cinza próprio. A legenda conta lajes, vigas e pilares por situação, e o painel lista as peças com falha. As vigas da escada recebem a situação do cálculo delas.
 
-**Grandeza.** O mapa de cor opcional pinta um tipo numa rampa azul de um só matiz, do claro (menor) ao escuro (maior), e deixa os outros tipos transparentes. As grandezas são o Nk de cada lance de pilar (na base do lance), a taxa de armadura das vigas (As máximo / bw·h do primeiro trecho) e o maior momento positivo das lajes. A legenda mostra a unidade e os extremos, já convertidos para tf quando a obra está em tf.
+**Grandeza.** O mapa de cor opcional pinta um tipo numa rampa azul de um só matiz, do claro (menor) ao escuro (maior), e deixa os outros tipos transparentes. As grandezas são o Nk de cada lance de pilar (na base do lance), a taxa de armadura das vigas (o maior As / bw·h entre os tramos, cada tramo com a sua seção) e o maior momento positivo das lajes. A legenda mostra a unidade e os extremos, já convertidos para tf quando a obra está em tf.
 
 **Defeitos do original.** No modo "Como o SISTRUT original", uma placa "!" fúcsia marca as peças que algum erro documentado em `docs/MODO-CALCULO.md` atinge. Ela não usa o vermelho de falha:
 
@@ -115,16 +115,16 @@ O e2e mede uma obra de 20 níveis (cobertura, tipo × 18 e primeiro) com 50 pila
 | níveis, lances de pilar | 20, 1000 |
 | chamadas de desenho | 81 |
 | triângulos | 24 880 |
-| reconstruir a geometria (foco, cor, visibilidade) | 159 a 405 ms |
-| aplicar um filtro de camada (`definirFiltro`) | 1,2 ms |
+| reconstruir a geometria (foco, cor, visibilidade) | 121 a 405 ms |
+| aplicar um filtro de camada (`definirFiltro`) | 1,2 a 4,9 ms |
 | desenhar um quadro (CPU, SwiftShader) | 1,9 a 18 ms |
-| abrir a aba (baixar o pedaço, montar, primeiro quadro) | 3,0 a 15,3 s |
+| abrir a aba (baixar o pedaço, montar, primeiro quadro) | 3,0 a 24,4 s |
 
 Num celular com GPU, o quadro não passa pela rasterização em software. As 81 chamadas e os 25 mil triângulos ficam bem abaixo do que um celular desenha a 60 quadros por segundo. A medida em aparelho real não foi feita.
 
 ## Tamanho e PWA
 
-A aba carrega `Vista3D` por `import()` dinâmico. O three.js e o código da vista vão para pedaços com o prefixo `3d-` (`vite.config.ts`, `chunkFileNames`), que ficam fora do precache do service worker. Eles entram no cache "vista-3d" na primeira vez que a aba abre e funcionam offline daí em diante. Antes disso, a aba 3D precisa de rede.
+A aba carrega `Vista3D` por `import()` dinâmico. O three.js e o código da vista vão para pedaços com o prefixo `3d-` (`vite.config.ts`, `chunkFileNames`), que ficam fora do precache do service worker. Eles entram no cache "vista-3d" (até 10 arquivos) na primeira vez que a aba abre e funcionam offline daí em diante, até a próxima atualização do app, que troca os nomes dos pedaços. Sem rede antes disso, a aba mostra que a vista não carregou, com "Tentar de novo", e a planta e os resultados continuam funcionando.
 
 | Pedaço | Tamanho | gzip (relatório do Vite) | Quando baixa |
 |---|---|---|---|
@@ -141,26 +141,15 @@ Pelo relatório do vite-plugin-pwa, o precache ficou com 1539,5 KiB, contra 1535
 
 Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original × Corrigido, sequência construtiva 4D, realidade aumentada) entram como camadas, sem editar o núcleo (`cena.ts`, `Vista3D.tsx`). Cada recurso fica na pasta dele (`obra3d/armadura/`, `obra3d/render/`, `obra3d/tour/`, `obra3d/comparar/`, `obra3d/sequencia/`, `obra3d/ar/`) e acrescenta uma linha a `CAMADAS` em `camadas.ts`. O botão da camada aparece na seção "Camadas" do painel. O código dela só é baixado quando o usuário liga o botão, num pedaço `3d-` fora do precache.
 
-### Contrato
+### Ciclo de vida
 
-```ts
-// camadas.ts
-export interface Camada {
-  /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
-  ativar(ctx: ContextoVista): (() => void) | void;
-  /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
-  Painel?: ComponentType<{ ctx: ContextoVista }>;
-}
-
-export interface DefinicaoCamada {
-  id: string;
-  nome: string; // texto do botão
-  descricao: string; // dica do botão
-  carregar: () => Promise<Camada>; // () => import("./pasta/arquivo").then((m) => m.camada)
-}
-```
+Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel` (as declarações estão em "Tipos", abaixo). Ela entra na barra por uma `DefinicaoCamada` em `CAMADAS`, com `id`, `nome` (texto do botão), `descricao` (dica do botão) e `carregar`, que faz o import dinâmico do arquivo dela.
 
 `ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum. Ele recebe o mesmo `ctx` e some quando a camada desliga. Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
+
+### three.js
+
+Importe as classes do pacote `three` (`import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3 } from "three";`) e os complementos de `three/addons/...` (por exemplo `three/addons/exporters/GLTFExporter.js`). É o mesmo three 0.186 da vista, sem cópia: qualquer classe vale. O que a camada importa vai para o pedaço `3d-` dela.
 
 <!-- tipos:inicio -->
 ### Tipos
@@ -185,8 +174,6 @@ export interface DefinicaoCamada {
   carregar: () => Promise<Camada>;
 }
 
-/** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
- *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`). */
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
  *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`).
  *  A cena tem Y para cima: X = x da planta, Y = z (cota), Z = −y da planta, em metros. */
@@ -234,8 +221,10 @@ export interface ContextoVista {
    *  segundos (animação, path tracing); devolve o cancelamento. Enquanto houver algum, a
    *  vista desenha todo quadro. */
   aoQuadro(f: (dtSegundos: number) => void): () => void;
-  /** Avisa nos eventos da vista; devolve o cancelamento. */
-  aoMudar(evento: EventoVista, f: () => void): () => void;
+  /** Avisa nos eventos da vista; devolve o cancelamento. Com `fonte` igual ao `id` que a
+   *  camada usa em `definirFiltro` e `definirPlanosCorte`, ela não é avisada da própria
+   *  mudança (sem laço ao reagir a "visibilidade" com um filtro). */
+  aoMudar(evento: EventoVista, f: () => void, fonte?: string): () => void;
   /** Leva a câmera a `posicao` olhando para `alvo` (coordenadas da cena). Anima em 0,45 s,
    *  salvo com prefers-reduced-motion ou `animar` false. Uma chamada nova cancela a em
    *  curso, cuja Promise resolve "cancelada". */
@@ -250,13 +239,15 @@ export interface ContextoVista {
   /** Troca os materiais do núcleo (null volta aos padrão); refaz a geometria. */
   definirMateriais(f: FabricaMateriais | null): void;
   /** Planos de corte desta fonte (`id`); a vista junta os de todas as fontes no renderer.
-   *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. */
+   *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. Emite
+   *  "visibilidade" para as outras fontes. */
   definirPlanosCorte(id: string, planos: Plane[]): void;
   /** Filtro de visibilidade desta fonte (`id`): a peça aparece só se todos os filtros
    *  devolvem true (interseção); `null` remove o filtro. Não refaz a geometria nem emite
-   *  "cena" (custo linear nos vértices, alguns ms): dá para chamar a cada quadro. Peça
-   *  filtrada não aparece, não é selecionável e perde a seleção. O filtro vale também
-   *  para o modelo novo depois de editar a obra: confira índices contra `modelo.niveis`. */
+   *  "cena" (custo linear nos vértices, alguns ms): dá para chamar a cada quadro. Emite
+   *  "visibilidade" para as outras fontes. Peça filtrada não aparece, não é selecionável e
+   *  perde a seleção. O filtro vale também para o modelo novo depois de editar a obra:
+   *  confira índices contra `modelo.niveis`. */
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
 }
 
@@ -270,8 +261,9 @@ export type EventoVista =
   | "camera"
   /** Os níveis se moveram no explodido: a cada quadro da animação e no fim. */
   | "explodido"
-  /** Um filtro ou plano de corte mudou, de qualquer fonte (`estaVisivel` pode ter mudado).
-   *  Não dispara de novo dentro do próprio aviso: chamar `definirFiltro` aqui não faz laço. */
+  /** O que aparece pode ter mudado (`estaVisivel`): um filtro ou plano de corte de
+   *  qualquer camada, ou, depois de "cena", o foco, os tipos e os pavimentos ocultos. Não
+   *  refaz a geometria. A fonte da mudança não é avisada (ver `aoMudar`). */
   | "visibilidade";
 
 /** Como uma peça aparece pelo foco e pela visibilidade por tipo e pavimento: sólida,
@@ -382,7 +374,7 @@ export interface DadosElemento {
 }
 
 /** "sem": sem cálculo (obra não calculada ou elemento fora do resultado). */
-export type Estado = Situacao | "sem";
+export type Estado = "ok" | "aviso" | "falha" | "sem";
 
 export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
 ```
@@ -395,32 +387,43 @@ export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
 - `ctx.modelo.niveis` vem de baixo para cima, e `niveis[i].indice === i`. `cota` é a face de cima da laje do nível e `cotaPiso` é a do nível de baixo, as duas em metros a partir da fundação (cota 0).
 - `Elemento3D.nivel` é esse índice. A fundação fica no nível 0. A escada fica no nível de baixo dela, e a escada sem posição no nível 0.
 - Os sólidos de `Elemento3D.solidos` estão em coordenadas da planta: prisma (polígono anti-horário de z0 a z1) ou barra (eixo da face de cima de `a` a `b`, com `largura` e `altura` para baixo).
-- O explodido desloca o grupo de cada nível para cima. Para pôr algo junto de um nível, acrescente o objeto ao `ctx.grupoDoNivel(i)` (ele anda junto, mas o grupo é recriado a cada evento "cena") ou calcule a altura com `ctx.alturaNaCena(i, cota)` a cada evento "explodido".
+- O explodido só muda o `position.y` do grupo de cada nível, que não gira nem escala. Por isso as coordenadas locais de um filho de `ctx.grupoDoNivel(i)` são as da cena sem o explodido: um objeto posto em `ctx.paraCena(x, y, cota)` dentro do grupo anda com o nível. O grupo é recriado a cada evento `"cena"`, e os filhos que a camada pôs nele se perdem: ponha de novo no aviso de `"cena"`.
+- Fora do grupo (direto em `ctx.cena`), a altura com o explodido é `ctx.alturaNaCena(i, cota)`, que muda a cada aviso de `"explodido"`. `ctx.caixaDe(chave)` já vem com o explodido.
 
 ### O que o contexto oferece
 
 | Membro | Uso |
 |---|---|
 | `cena`, `renderer`, `camera`, `controles` | os objetos vivos do three.js. `camera` troca entre perspectiva e ortográfica pelos botões de vista; leia `ctx.camera` na hora, sem guardar. `renderer.xr` serve à realidade aumentada |
-| `modelo`, `obra`, `calculo`, `dados` | o modelo 3D, a obra, o cálculo (`calculo.tipo === "ok"` traz `calculo.resultado`) e os dados por chave de elemento (`estado`, `principal`, `grandeza`, `defeitos`) |
+| `modelo`, `obra`, `calculo`, `dados` | o modelo 3D (`modelo.elementos` é a lista de peças), a obra, o cálculo (`calculo.tipo === "ok"` traz `calculo.resultado`) e os dados de cada peça, um `ReadonlyMap` pela `chave` do elemento. Sem cálculo, toda peça tem `estado: "sem"`. `estado` é `"ok"`, `"aviso"`, `"falha"` ou `"sem"`, com a mesma regra e as mesmas cores da planta. `defeitos` é uma lista de textos, vazia fora do modo "Como o SISTRUT original" (`ctx.obra.modoCalculo === "original"`) |
 | `elemento(chave)`, `grupoDoNivel(i)` | o elemento do modelo e o grupo do nível |
 | `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera das peças visíveis (`Sphere`, com o explodido) |
 | `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |
 | `estaVisivel(chave)`, `exibicao(chave)` | se a peça aparece considerando tudo (foco, tipos e pavimentos ocultos, filtros de todas as camadas e planos de corte) e como o foco a mostra (`"solido"`, `"fantasma"` ou `"oculto"`) |
 | `alturaNaCena(nivel, cota)` | a altura Y de uma cota, com o deslocamento do explodido como está desenhado agora |
 | `selecao`, `selecionar(chave)` | a seleção atual (chave de `Elemento3D`) |
-| `aoMudar(evento, f)` | eventos, ver abaixo. Devolve o cancelamento |
+| `aoMudar(evento, f, fonte?)` | eventos, ver abaixo. Com `fonte` igual ao `id` que a camada usa em `definirFiltro` ou `definirPlanosCorte`, ela não é avisada da própria mudança. Devolve o cancelamento |
 | `aoQuadro(f)` | `f(dt)` a cada quadro, com `dt` em segundos. Enquanto houver algum registrado, a vista desenha todo quadro; sem nenhum, só desenha quando algo muda. Devolve o cancelamento |
 | `pedirRender()` | redesenhar no próximo quadro, depois de mexer em objetos fora de um `aoQuadro` |
 | `moverCamera(posicao, alvo, animar?)` | leva a câmera em 0,45 s (sem animação com `prefers-reduced-motion` ou `animar` false). Uma chamada nova cancela a anterior, cuja Promise resolve `"cancelada"`; a que termina resolve `"concluida"` |
 | `travarControles(sim)` | trava só a órbita, o zoom e o pan do mouse e do toque. Os botões de vista do usuário e `moverCamera` continuam valendo |
 | `definirMateriais(fabrica)` | troca os materiais dos papéis `"solido"`, `"fantasma"`, `"arestas"` e `"destaque"` (PBR). `null` volta aos padrão. Refaz a geometria |
-| `definirPlanosCorte(id, planos)` | planos de corte desta fonte. A vista junta os de todas as fontes e mantém o lado positivo de todos. Lista vazia remove |
+| `definirPlanosCorte(id, planos)` | planos de corte desta fonte (`Plane` do three, na cena). A vista junta os de todas as fontes e mantém o lado positivo de todos (`plano.distanceToPoint(p) >= 0`). Lista vazia remove |
 | `definirFiltro(id, f)` | esconde as peças para as quais `f` devolve `false`; `null` remove o filtro desta fonte. Vários filtros valem juntos: a peça aparece só se todos devolvem `true` |
 
-**Eventos.** `"selecao"` dispara quando a seleção muda. `"cena"` dispara quando a geometria foi refeita: obra editada (modelo novo), foco, cores, tipos ou pavimentos ocultos, materiais. `"explodido"` dispara a cada quadro da animação do explodido e no fim dela. `"visibilidade"` dispara quando um filtro ou plano de corte muda, de qualquer camada (o corte do pórtico e os tipos ou pavimentos ocultos vêm com `"cena"`). `"camera"` dispara quando a câmera mexe. Nenhum evento dispara de novo dentro do próprio aviso: chamar `definirFiltro` no aviso de `"visibilidade"`, ou `definirMateriais` no de `"cena"`, não entra em laço. Para saber se uma peça aparece depois de qualquer mudança, ouça `"cena"` e `"visibilidade"` e consulte `estaVisivel`.
+**Eventos.** Todos são síncronos, emitidos no fim da operação que os causa:
 
-**Filtro.** `definirFiltro` não refaz a geometria e não emite `"cena"`. Ele só zera os vértices das peças escondidas, o que custa cerca de 1 ms na obra de 20 pavimentos. Dá para chamar a cada quadro de uma animação. Peça filtrada não aparece, não é selecionável e perde a seleção. O filtro continua valendo depois que a obra é editada e o modelo muda. Por isso ele deve tolerar níveis e chaves que deixaram de existir (compare o índice com `ctx.modelo.niveis.length`).
+| Operação | Eventos, nesta ordem |
+|---|---|
+| a obra é editada; foco, cores, tipos ou pavimentos ocultos mudam; `definirMateriais` | `"cena"`, depois `"visibilidade"` |
+| `definirFiltro(id, …)`, `definirPlanosCorte(id, …)` | `"visibilidade"` (sem avisar quem registrou com `fonte` = `id`) |
+| explodido ligado ou desligado | `"explodido"` a cada quadro da animação e no fim |
+| seleção (clique, lista, `selecionar`) | `"selecao"` |
+| órbita, botões de vista, `moverCamera` | `"camera"` |
+
+Para saber se uma peça aparece depois de qualquer mudança, ouça `"visibilidade"` (que vem depois de toda `"cena"`) e consulte `estaVisivel`. Uma camada que reage a `"visibilidade"` com o próprio filtro registra o ouvinte com `fonte` = o `id` do filtro: assim ela não ouve a própria mudança. Avisos dentro de avisos param no quarto nível, então duas camadas que reagem uma à outra não travam a página.
+
+**Filtro.** `definirFiltro` não refaz a geometria e não emite `"cena"`; emite `"visibilidade"`. Ele só zera os vértices das peças escondidas, o que custa cerca de 1 ms na obra de 20 pavimentos. Dá para chamar a cada quadro de uma animação. Peça filtrada não aparece, não é selecionável e perde a seleção. O filtro continua valendo depois que a obra é editada e o modelo muda. Por isso ele deve tolerar níveis e chaves que deixaram de existir (compare o índice com `ctx.modelo.niveis.length`).
 
 **Materiais.** As malhas `"solido"` e `"fantasma"` têm o atributo `color` por vértice com a cor da situação ou da grandeza. Um material trocado precisa de `vertexColors: true` para mantê-la. `"fantasma"` é a peça de contexto transparente. `"destaque"` é a seleção, desenhada sem teste de profundidade.
 

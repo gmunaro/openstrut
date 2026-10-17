@@ -40,12 +40,11 @@ export type EventoVista =
   | "camera"
   /** Os níveis se moveram no explodido: a cada quadro da animação e no fim. */
   | "explodido"
-  /** Um filtro ou plano de corte mudou, de qualquer fonte (`estaVisivel` pode ter mudado).
-   *  Não dispara de novo dentro do próprio aviso: chamar `definirFiltro` aqui não faz laço. */
+  /** O que aparece pode ter mudado (`estaVisivel`): um filtro ou plano de corte de
+   *  qualquer camada, ou, depois de "cena", o foco, os tipos e os pavimentos ocultos. Não
+   *  refaz a geometria. A fonte da mudança não é avisada (ver `aoMudar`). */
   | "visibilidade";
 
-/** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
- *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`). */
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
  *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`).
  *  A cena tem Y para cima: X = x da planta, Y = z (cota), Z = −y da planta, em metros. */
@@ -93,8 +92,10 @@ export interface ContextoVista {
    *  segundos (animação, path tracing); devolve o cancelamento. Enquanto houver algum, a
    *  vista desenha todo quadro. */
   aoQuadro(f: (dtSegundos: number) => void): () => void;
-  /** Avisa nos eventos da vista; devolve o cancelamento. */
-  aoMudar(evento: EventoVista, f: () => void): () => void;
+  /** Avisa nos eventos da vista; devolve o cancelamento. Com `fonte` igual ao `id` que a
+   *  camada usa em `definirFiltro` e `definirPlanosCorte`, ela não é avisada da própria
+   *  mudança (sem laço ao reagir a "visibilidade" com um filtro). */
+  aoMudar(evento: EventoVista, f: () => void, fonte?: string): () => void;
   /** Leva a câmera a `posicao` olhando para `alvo` (coordenadas da cena). Anima em 0,45 s,
    *  salvo com prefers-reduced-motion ou `animar` false. Uma chamada nova cancela a em
    *  curso, cuja Promise resolve "cancelada". */
@@ -109,13 +110,15 @@ export interface ContextoVista {
   /** Troca os materiais do núcleo (null volta aos padrão); refaz a geometria. */
   definirMateriais(f: FabricaMateriais | null): void;
   /** Planos de corte desta fonte (`id`); a vista junta os de todas as fontes no renderer.
-   *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. */
+   *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. Emite
+   *  "visibilidade" para as outras fontes. */
   definirPlanosCorte(id: string, planos: Plane[]): void;
   /** Filtro de visibilidade desta fonte (`id`): a peça aparece só se todos os filtros
    *  devolvem true (interseção); `null` remove o filtro. Não refaz a geometria nem emite
-   *  "cena" (custo linear nos vértices, alguns ms): dá para chamar a cada quadro. Peça
-   *  filtrada não aparece, não é selecionável e perde a seleção. O filtro vale também
-   *  para o modelo novo depois de editar a obra: confira índices contra `modelo.niveis`. */
+   *  "cena" (custo linear nos vértices, alguns ms): dá para chamar a cada quadro. Emite
+   *  "visibilidade" para as outras fontes. Peça filtrada não aparece, não é selecionável e
+   *  perde a seleção. O filtro vale também para o modelo novo depois de editar a obra:
+   *  confira índices contra `modelo.niveis`. */
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
 }
 

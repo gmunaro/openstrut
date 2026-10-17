@@ -5,18 +5,13 @@
 import type { ResultadoObra, ResultadoPilar } from "../../calculo/fluxo";
 import { mesmoPonto } from "../../dominio/gerar";
 import type { Obra } from "../../dominio/obra";
-import {
-  type Situacao,
-  diagnosticoLaje,
-  diagnosticoPilar,
-  diagnosticoViga,
-} from "../../planta/situacao";
+import { diagnosticoLaje, diagnosticoPilar, diagnosticoViga } from "../../planta/situacao";
 import type { Calculo } from "../calculo";
 import { formatarGrandeza, formatarNumero, type SistemaUnidades, unidade } from "../formato";
 import type { Elemento3D, Modelo3D } from "./modelo";
 
 /** "sem": sem cálculo (obra não calculada ou elemento fora do resultado). */
-export type Estado = Situacao | "sem";
+export type Estado = "ok" | "aviso" | "falha" | "sem";
 
 export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
 

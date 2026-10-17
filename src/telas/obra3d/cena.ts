@@ -197,7 +197,7 @@ export class Cena3D implements ContextoVista {
   private materialContorno = new LineBasicMaterial({ color: COR_SELECAO, depthTest: false });
   private planos = new Map<string, Plane[]>();
   private filtros = new Map<string, (e: Elemento3D) => boolean>();
-  private ouvintes = new Map<EventoVista, Set<() => void>>();
+  private ouvintes = new Map<EventoVista, Set<{ f: () => void; fonte?: string }>>();
   private quadros = new Set<(dt: number) => void>();
   private sujo = true;
   private animacao: number | null = null;
@@ -327,24 +327,28 @@ export class Cena3D implements ContextoVista {
 
   // ---- eventos ------------------------------------------------------------------------
 
-  aoMudar(evento: EventoVista, f: () => void) {
+  aoMudar(evento: EventoVista, f: () => void, fonte?: string) {
     let s = this.ouvintes.get(evento);
     if (!s) this.ouvintes.set(evento, (s = new Set()));
-    s.add(f);
-    return () => void s.delete(f);
+    const ouvinte = fonte === undefined ? { f } : { f, fonte };
+    s.add(ouvinte);
+    return () => void s.delete(ouvinte);
   }
 
-  private emitindo = new Set<EventoVista>();
+  private profundidade = 0;
 
-  /** Avisa os ouvintes. Um evento não dispara de novo dentro do próprio aviso: a camada
-   *  que chama definirFiltro no aviso de "visibilidade" não entra em laço. */
-  private emitir(evento: EventoVista) {
-    if (this.emitindo.has(evento)) return;
-    this.emitindo.add(evento);
+  /** Avisa os ouvintes, menos os registrados com a mesma `fonte` de quem causou o
+   *  evento (a camada não ouve a própria mudança). Avisos dentro de avisos param no 4º
+   *  nível: duas camadas que reagem uma à outra não entram em laço. */
+  private emitir(evento: EventoVista, fonte?: string) {
+    if (this.profundidade >= 4) return;
+    this.profundidade++;
     try {
-      for (const f of this.ouvintes.get(evento) ?? []) f();
+      // cópia: um ouvinte pode cancelar outro durante o aviso
+      for (const o of Array.from(this.ouvintes.get(evento) ?? []))
+        if (fonte === undefined || o.fonte !== fonte) o.f();
     } finally {
-      this.emitindo.delete(evento);
+      this.profundidade--;
     }
   }
 
@@ -628,6 +632,8 @@ export class Cena3D implements ContextoVista {
     this.atualizarDestaque();
     this.sujo = true;
     this.emitir("cena");
+    // foco, tipos e pavimentos ocultos também mudam a visibilidade
+    this.emitir("visibilidade");
   }
 
   /** A peça passa em todos os filtros das camadas. */
@@ -1071,14 +1077,14 @@ export class Cena3D implements ContextoVista {
     if (planos.length === 0) this.planos.delete(id);
     else this.planos.set(id, planos);
     this.sujo = true;
-    this.emitir("visibilidade");
+    this.emitir("visibilidade", id);
   }
 
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null) {
     if (f) this.filtros.set(id, f);
     else this.filtros.delete(id);
     this.aplicarFiltros();
-    this.emitir("visibilidade");
+    this.emitir("visibilidade", id);
   }
 
   elemento(chave: string) {
