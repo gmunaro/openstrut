@@ -137,6 +137,8 @@ export function ImportarDrive({
   const tentativa = useRef<AbortController | null>(null);
   /** O último link lido, para o Picker abrir nele quando a importação pedir login. */
   const ultimoAlvo = useRef<AlvoDrive | undefined>(undefined);
+  /** Avisa quando o conteúdo do diálogo sai da página, no fim da animação de saída. */
+  const aoSair = useRef<(() => void) | null>(null);
 
   const novaTentativa = () => {
     tentativa.current?.abort();
@@ -257,8 +259,14 @@ export function ImportarDrive({
         setEtapa({ tipo: "ocupado", texto: "Abrindo o Google Drive…" });
         const picker = await carregarPicker();
         if (signal.aborted) return;
-        // o Picker fica por cima da página: o diálogo (modal) sai da frente enquanto isso
+        // o Picker fica por cima da página: o diálogo (modal) sai da frente enquanto isso.
+        // O Picker só abre quando o diálogo saiu de vez: o fundo e o conteúdo vão em
+        // portais separados, e o fundo, que termina a animação antes, reaberto no meio da
+        // saída do conteúdo voltava depois dele no <body> e cobria o diálogo
+        const saiu = new Promise<void>((r) => (aoSair.current = r));
         setAberto(false);
+        await saiu;
+        if (signal.aborted) return;
         const novos = await mostrarPicker(picker, config, t, onde);
         if (signal.aborted) return;
         setAberto(true);
@@ -324,6 +332,10 @@ export function ImportarDrive({
           className="max-h-[85vh] overflow-y-auto sm:max-w-xl"
           onInteractOutside={(e) => {
             if (!doApp(e.target)) e.preventDefault();
+          }}
+          onCloseAutoFocus={() => {
+            aoSair.current?.();
+            aoSair.current = null;
           }}
         >
           <DialogHeader>
