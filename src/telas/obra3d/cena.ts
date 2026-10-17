@@ -10,7 +10,6 @@ import {
   CanvasTexture,
   Color,
   DirectionalLight,
-  DoubleSide,
   Float32BufferAttribute,
   Group,
   HemisphereLight,
@@ -18,8 +17,6 @@ import {
   LineSegments,
   type Material,
   Mesh,
-  MeshBasicMaterial,
-  MeshLambertMaterial,
   type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
@@ -45,6 +42,7 @@ import type {
   PapelMaterial,
 } from "./camadas";
 import { COR_DEFEITO, COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
+import { COR_SELECAO, FUNDO, LUZES, materiaisPadrao } from "./materiais";
 import { type DadosElemento, faixaDaGrandeza, GRANDEZAS, type GrandezaMapa } from "./dados";
 import { type Malha, malhaVazia, paraCena, triangular } from "./geometria";
 import type { Elemento3D, Modelo3D, TipoElemento } from "./modelo";
@@ -56,7 +54,6 @@ export const TIPOS: readonly TipoElemento[] = ["laje", "viga", "pilar", "escada"
 
 /** Distância da câmera ao nível acima da qual as arestas somem (LOD), m. */
 const LIMIAR_ARESTAS = 60;
-const COR_SELECAO = "#38bdf8";
 
 /** Onde uma peça está nos buffers do grupo: início e tamanho, em números (x, y, z). */
 interface Faixa {
@@ -110,35 +107,6 @@ export const ESTADO_INICIAL: EstadoVisual = {
   explodido: false,
   modoCor: "estado",
   marcas: true,
-};
-
-const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Material => {
-  switch (papel) {
-    case "solido":
-      return new MeshLambertMaterial({
-        vertexColors: true,
-        side: DoubleSide,
-        polygonOffset: true,
-        polygonOffsetFactor: 1,
-        polygonOffsetUnits: 1,
-      });
-    case "fantasma":
-      return new MeshLambertMaterial({
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.12,
-        depthWrite: false,
-      });
-    case "arestas":
-      return new LineBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.4 });
-    case "destaque":
-      return new MeshBasicMaterial({
-        color: COR_SELECAO,
-        transparent: true,
-        opacity: 0.45,
-        depthTest: false,
-      });
-  }
 };
 
 const movimentoReduzido = () =>
@@ -235,11 +203,12 @@ export class Cena3D implements ContextoVista {
     canvas.setAttribute("role", "img");
     conteiner.appendChild(canvas);
     this.materiais = this.criarMateriais(materiaisPadrao);
-    this.cena.background = new Color(opcoes.fundoEscuro ? "#111827" : "#f1f5f9");
-    this.cena.add(new HemisphereLight(0xffffff, 0x64748b, 1.6));
-    this.cena.add(new AmbientLight(0xffffff, 0.35));
-    const sol = new DirectionalLight(0xffffff, 1.4);
-    sol.position.set(0.6, 1, 0.4);
+    this.cena.background = new Color(opcoes.fundoEscuro ? FUNDO.escuro : FUNDO.claro);
+    const { ceu, ambiente, sol: luzSol } = LUZES;
+    this.cena.add(new HemisphereLight(ceu.cor, ceu.chao, ceu.intensidade));
+    this.cena.add(new AmbientLight(ambiente.cor, ambiente.intensidade));
+    const sol = new DirectionalLight(luzSol.cor, luzSol.intensidade);
+    sol.position.set(...luzSol.direcao);
     this.cena.add(sol);
     this.cena.add(this.raiz);
     this.cena.add(this.destaque);

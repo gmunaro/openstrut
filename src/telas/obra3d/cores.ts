@@ -14,6 +14,7 @@ export const NEUTRO: Record<TipoElemento, string> = {
   fundacao: "#78716c",
 };
 
+/** As cores da planta (COR_SITUACAO): ok #22c55e, aviso #f59e0b, falha #ef4444. */
 export const COR_ESTADO: Record<Exclude<Estado, "sem">, string> = COR_SITUACAO;
 
 export const ROTULO_ESTADO: Record<Estado, string> = {

@@ -25,3 +25,5 @@ export type { Calculo } from "../calculo";
 
 // Cores da vista, para marcas e legendas das camadas combinarem com as da vista e da planta.
 export { COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA } from "./cores";
+// Materiais, luzes e fundo padrão (para render PBR e camadas com luz própria).
+export { COR_SELECAO, FUNDO, LUZES, materiaisPadrao } from "./materiais";

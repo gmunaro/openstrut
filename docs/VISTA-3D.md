@@ -160,11 +160,11 @@ Toda peça de `ctx.modelo.elementos` tem uma entrada em `ctx.dados` (sem cálcul
 Importe as classes do pacote `three` (`import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3 } from "three";`) e os complementos de `three/addons/...` (por exemplo `three/addons/exporters/GLTFExporter.js`). É o mesmo three 0.186 da vista, sem cópia: qualquer classe vale. O que a camada importa vai para o pedaço `3d-` dela.
 
 <!-- tipos:inicio -->
-### Tipos
+### Referência da API
 
-Importe os tipos de `obra3d/api.ts` (`import type { Camada, ContextoVista, Elemento3D } from "../api";`). As declarações abaixo são cópia do código; `api.test.ts` falha se elas mudarem e este texto não. `EstadoElemento` é o nome de `Estado` em `api.ts`. `Ponto` é `{ x: number; y: number }` em metros da planta.
+Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
 
-`camadas.ts`:
+`src/telas/obra3d/camadas.ts` (em `api.ts`: `Camada, ContextoVista, DefinicaoCamada, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
 
 ```ts
 export interface Camada {
@@ -172,14 +172,6 @@ export interface Camada {
   ativar(ctx: ContextoVista): (() => void) | void;
   /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
   Painel?: ComponentType<{ ctx: ContextoVista }>;
-}
-
-/** Entrada da barra: o botão liga/desliga e só então carrega o código da camada. */
-export interface DefinicaoCamada {
-  id: string;
-  nome: string;
-  descricao: string;
-  carregar: () => Promise<Camada>;
 }
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
@@ -269,6 +261,14 @@ export interface ContextoVista {
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
 }
 
+/** Entrada da barra: o botão liga/desliga e só então carrega o código da camada. */
+export interface DefinicaoCamada {
+  id: string;
+  nome: string;
+  descricao: string;
+  carregar: () => Promise<Camada>;
+}
+
 export type EventoVista =
   /** Seleção mudou (ctx.selecao). */
   | "selecao"
@@ -288,14 +288,76 @@ export type EventoVista =
  *  transparente (contexto) ou oculta. Filtros e planos de corte não entram aqui. */
 export type Exibicao = "solido" | "fantasma" | "oculto";
 
+export type FabricaMateriais = (papel: PapelMaterial) => Material;
+
 /** Papel de cada material do núcleo; `definirMateriais` troca qualquer um deles.
  *  "solido" e "fantasma" recebem a cor por vértice (atributo `color`). */
 export type PapelMaterial = "solido" | "fantasma" | "arestas" | "destaque";
 ```
 
-`modelo.ts`:
+`src/telas/obra3d/dados.ts` (em `api.ts`: `DadosElemento, Estado, GrandezaMapa`):
 
 ```ts
+export interface DadosElemento {
+  estado: Estado;
+  /** Avisos e falhas do elemento, como na planta. */
+  mensagens: string[];
+  /** Resultado principal, já formatado com unidade (ex.: "Nd = 812,40 kN"). */
+  principal?: string;
+  /** Valor SI da grandeza do mapa de cor do tipo (Nk, kN; taxa, %; momento, kN·m/m). */
+  grandeza?: number;
+  /** Defeitos do SISTRUT original que atingem o elemento (só no modo original). */
+  defeitos: string[];
+}
+
+/** "sem": sem cálculo (obra não calculada ou elemento fora do resultado). */
+export type Estado = "ok" | "aviso" | "falha" | "sem";
+
+export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
+```
+
+`src/telas/obra3d/modelo.ts` (em `api.ts`: `Coluna, Eixo3D, Elemento3D, Modelo3D, Nivel, Ponto3, Solido, TipoElemento`):
+
+```ts
+/** Lances de um pilar empilhados, da base ao topo (chaves de Elemento3D). */
+export interface Coluna {
+  id: string;
+  nome: string;
+  chaves: string[];
+  /** O lance mais baixo não está no primeiro nível: nasce sobre uma viga. */
+  nasceEmTransicao: boolean;
+}
+
+/** Linha da planta com vigas (pórtico): x = c (vigas verticais) ou y = c (horizontais). */
+export interface Eixo3D {
+  chave: string;
+  direcao: "x" | "y";
+  c: number;
+  vigas: string[];
+}
+
+export interface Elemento3D {
+  /** Única no modelo: tipo, nível e id. */
+  chave: string;
+  tipo: TipoElemento;
+  /** Id na obra (laje, viga ou pilar; na fundação, o do pilar). */
+  id: string;
+  nome: string;
+  pavimentoId: string;
+  /** Índice do nível; a fundação fica no 0 e a escada no nível de baixo dela. */
+  nivel: number;
+  repeticao: number;
+  solidos: Solido[];
+  /** Seção em texto, cm. */
+  secao: string;
+  /** Coluna do pilar (pilar e fundação). */
+  coluna?: string;
+  /** Notas que a vista mostra com o elemento (ex.: pilar que nasce em transição). */
+  notas: string[];
+  /** Rótulo na cena, em cima da peça (ex.: "ESCADA"). */
+  rotulo?: string;
+}
+
 export interface Modelo3D {
   niveis: Nivel[];
   elementos: Elemento3D[];
@@ -321,29 +383,11 @@ export interface Nivel {
   cota: number;
 }
 
-export interface Elemento3D {
-  /** Única no modelo: tipo, nível e id. */
-  chave: string;
-  tipo: TipoElemento;
-  /** Id na obra (laje, viga ou pilar; na fundação, o do pilar). */
-  id: string;
-  nome: string;
-  pavimentoId: string;
-  /** Índice do nível; a fundação fica no 0 e a escada no nível de baixo dela. */
-  nivel: number;
-  repeticao: number;
-  solidos: Solido[];
-  /** Seção em texto, cm. */
-  secao: string;
-  /** Coluna do pilar (pilar e fundação). */
-  coluna?: string;
-  /** Notas que a vista mostra com o elemento (ex.: pilar que nasce em transição). */
-  notas: string[];
-  /** Rótulo na cena, em cima da peça (ex.: "ESCADA"). */
-  rotulo?: string;
+export interface Ponto3 {
+  x: number;
+  y: number;
+  z: number;
 }
-
-export type TipoElemento = "laje" | "viga" | "pilar" | "escada" | "fundacao";
 
 /** Sólido, m. Prisma vertical: polígono da planta (anti-horário) de z0 a z1. Barra: o
  *  eixo da face de cima vai de `a` a `b` (pode inclinar, como na escada); a seção tem
@@ -352,52 +396,20 @@ export type Solido =
   | { tipo: "prisma"; base: Ponto[]; z0: number; z1: number }
   | { tipo: "barra"; a: Ponto3; b: Ponto3; largura: number; altura: number };
 
-export interface Ponto3 {
-  x: number;
-  y: number;
-  z: number;
-}
-
-/** Lances de um pilar empilhados, da base ao topo (chaves de Elemento3D). */
-export interface Coluna {
-  id: string;
-  nome: string;
-  chaves: string[];
-  /** O lance mais baixo não está no primeiro nível: nasce sobre uma viga. */
-  nasceEmTransicao: boolean;
-}
-
-/** Linha da planta com vigas (pórtico): x = c (vigas verticais) ou y = c (horizontais). */
-export interface Eixo3D {
-  chave: string;
-  direcao: "x" | "y";
-  c: number;
-  vigas: string[];
-}
+export type TipoElemento = "laje" | "viga" | "pilar" | "escada" | "fundacao";
 ```
 
-`dados.ts`:
+`src/dominio/obra.ts` (em `api.ts`: `Ponto`):
 
 ```ts
-export interface DadosElemento {
-  estado: Estado;
-  /** Avisos e falhas do elemento, como na planta. */
-  mensagens: string[];
-  /** Resultado principal, já formatado com unidade (ex.: "Nd = 812,40 kN"). */
-  principal?: string;
-  /** Valor SI da grandeza do mapa de cor do tipo (Nk, kN; taxa, %; momento, kN·m/m). */
-  grandeza?: number;
-  /** Defeitos do SISTRUT original que atingem o elemento (só no modo original). */
-  defeitos: string[];
+/** Ponto da planta, m. */
+export interface Ponto {
+  x: number;
+  y: number;
 }
-
-/** "sem": sem cálculo (obra não calculada ou elemento fora do resultado). */
-export type Estado = "ok" | "aviso" | "falha" | "sem";
-
-export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
 ```
 
-`calculo.ts`:
+`src/telas/calculo.ts` (em `api.ts`: `Calculo`):
 
 ```ts
 export type Calculo =
@@ -405,6 +417,78 @@ export type Calculo =
   /** A norma da obra ainda não tem implementação no motor. */
   | { tipo: "semNorma"; norma: NormaId }
   | { tipo: "erro"; mensagem: string };
+```
+
+`src/telas/obra3d/cores.ts` (em `api.ts`: `COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA`):
+
+```ts
+/** Marca dos defeitos do original: fúcsia, fora da paleta de estado (não é "falha"). */
+export const COR_DEFEITO = "#a21caf";
+
+/** As cores da planta (COR_SITUACAO): ok #22c55e, aviso #f59e0b, falha #ef4444. */
+export const COR_ESTADO: Record<Exclude<Estado, "sem">, string> = COR_SITUACAO;
+
+/** Cinzas por tipo para "sem cálculo" e para os tipos fora do mapa de grandeza. */
+export const NEUTRO: Record<TipoElemento, string> = {
+  laje: "#cbd5e1",
+  viga: "#94a3b8",
+  pilar: "#e2e8f0",
+  escada: "#a8a29e",
+  fundacao: "#78716c",
+};
+
+/** Rampa azul 100 → 700 (passos 100, 200, …, 700). */
+export const RAMPA = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+```
+
+`src/telas/obra3d/materiais.ts` (em `api.ts`: `COR_SELECAO, FUNDO, LUZES, materiaisPadrao`):
+
+```ts
+/** Cor da seleção: o preenchimento "destaque" e o contorno da peça selecionada. */
+export const COR_SELECAO = "#38bdf8";
+
+/** Cor de fundo da cena no tema escuro e no claro. */
+export const FUNDO = { escuro: "#111827", claro: "#f1f5f9" };
+
+/** Luzes da vista: céu (HemisphereLight), ambiente (AmbientLight) e sol
+ *  (DirectionalLight, direção na cena, Y para cima). */
+export const LUZES = {
+  ceu: { cor: 0xffffff, chao: 0x64748b, intensidade: 1.6 },
+  ambiente: { cor: 0xffffff, intensidade: 0.35 },
+  sol: { cor: 0xffffff, intensidade: 1.4, direcao: [0.6, 1, 0.4] as [number, number, number] },
+};
+
+/** Os materiais da vista. A vista chama a fábrica uma vez por papel e usa a mesma
+ *  instância em todas as malhas daquele papel. "solido" e "fantasma" pegam a cor de
+ *  cada peça do atributo `color` dos vértices (`vertexColors: true`). */
+export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Material => {
+  switch (papel) {
+    case "solido":
+      return new MeshLambertMaterial({
+        vertexColors: true,
+        side: DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      });
+    case "fantasma":
+      return new MeshLambertMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false,
+      });
+    case "arestas":
+      return new LineBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.4 });
+    case "destaque":
+      return new MeshBasicMaterial({
+        color: COR_SELECAO,
+        transparent: true,
+        opacity: 0.45,
+        depthTest: false,
+      });
+  }
+};
 ```
 
 <!-- tipos:fim -->
@@ -456,7 +540,16 @@ Para saber se uma peça aparece depois de qualquer mudança, ouça `"visibilidad
 
 **Filtro.** `definirFiltro` não refaz a geometria e não emite `"cena"`; emite `"visibilidade"`. Ele só zera os vértices das peças escondidas, o que custa cerca de 1 ms na obra de 20 pavimentos. Dá para chamar a cada quadro de uma animação. Peça filtrada não aparece, não é selecionável e perde a seleção. O filtro continua valendo depois que a obra é editada e o modelo muda. Por isso ele deve tolerar níveis e chaves que deixaram de existir (compare o índice com `ctx.modelo.niveis.length`).
 
-**Materiais.** As malhas `"solido"` e `"fantasma"` têm o atributo `color` por vértice com a cor da situação ou da grandeza. Um material trocado precisa de `vertexColors: true` para mantê-la. `"fantasma"` é a peça de contexto transparente. `"destaque"` é a seleção, desenhada sem teste de profundidade.
+**Materiais.** `definirMateriais(fabrica)` recebe uma função `(papel) => Material` (`FabricaMateriais`). A vista chama a fábrica uma vez para cada papel e usa a mesma instância em todas as malhas daquele papel, em todos os níveis, até a próxima troca. Por isso mudar uma propriedade da instância ao vivo (`material.roughness = 0.4`, depois `ctx.pedirRender()`) vale na hora, sem chamar a fábrica de novo; guarde as instâncias que a fábrica criou. Quem faz o `dispose` é a vista: ela descarta os materiais anteriores ao trocar (inclusive ao voltar aos padrão com `definirMateriais(null)`) e ao fechar. A camada não descarta os materiais que entregou. `definirMateriais` refaz a geometria (eventos `"cena"` e `"visibilidade"`).
+
+Os papéis são estes:
+
+- `"solido"`: as peças. A cor de cada peça (situação ou grandeza, conforme a escolha do usuário em "Cores") está no atributo `color` dos vértices. O material precisa de `vertexColors: true` para usá-la; `Elemento3D` não tem cor. Para saber a cor de uma peça fora da malha, use `ctx.dados.get(chave).estado` com `COR_ESTADO`.
+- `"fantasma"`: as peças de contexto (vizinhos transparentes, outros tipos no mapa de grandeza). Também usa `color`.
+- `"arestas"`: as linhas dos cantos das peças sólidas (`LineSegments`).
+- `"destaque"`: o preenchimento da peça selecionada. A vista o aplica sozinha à seleção, desenhado sem teste de profundidade. O contorno da seleção é uma linha `COR_SELECAO` fixa, que não passa pela fábrica.
+
+Os valores padrão estão em `materiaisPadrao`, `LUZES`, `FUNDO` e `COR_SELECAO` (Referência da API). Uma camada de render que troca os materiais deve partir deles (mesma opacidade do fantasma, mesma cor de destaque) para não destoar da vista e das fotos.
 
 **Câmera.** `ctx.controles` é o `OrbitControls` de `three/addons/controls/OrbitControls.js`; o alvo da câmera é `ctx.controles.target`. Uma camada que anima a câmera (tour, 4D) deve chamar `travarControles(true)` ao ligar e `travarControles(false)` na limpeza. Para ir a um nível ou a uma peça, use `enquadrarEm(ctx.caixaDoNivel(i))` ou `enquadrarEm(ctx.caixaDe(chave))`; para um ponto exato, `moverCamera`. Para animar continuamente, use `aoQuadro` e mexa em `ctx.camera.position` e `ctx.controles.target`.
 
