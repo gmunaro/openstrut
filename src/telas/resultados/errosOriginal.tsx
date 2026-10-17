@@ -5,6 +5,7 @@
 import { Bug } from "lucide-react";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   DEFEITOS_CONFERIDOS,
   errosDoOriginal,
@@ -121,6 +122,9 @@ function Parte({ n, rotulo, children }: { n: number; rotulo: string; children: R
 
 function TabelaImpacto({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" | "corrigido" }) {
   const destaque = "bg-primary/10 font-medium";
+  // valores podem ser frases ("trava no lado 3 (…)"): quebram em vez de passar da largura
+  // da rolagem, senão o encaixe da rolagem para no meio da célula, atrás da coluna fixa
+  const valor = "min-w-28 whitespace-normal";
   return (
     <Tabela className="mt-1 text-xs" aria-label={`Impacto de ${erro.id} por elemento`}>
       <Cabecalho>
@@ -138,9 +142,9 @@ function TabelaImpacto({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original
               {l.elemento}
               <span className="text-muted-foreground font-normal"> · {l.local}</span>
             </Td>
-            <Td className={ativo === "original" ? destaque : ""}>{l.original}</Td>
-            <Td>{l.semErro}</Td>
-            <Td className={ativo === "corrigido" ? destaque : ""}>{l.corrigido}</Td>
+            <Td className={cn(valor, ativo === "original" && destaque)}>{l.original}</Td>
+            <Td className={valor}>{l.semErro}</Td>
+            <Td className={cn(valor, ativo === "corrigido" && destaque)}>{l.corrigido}</Td>
           </Linha>
         ))}
       </Corpo>
