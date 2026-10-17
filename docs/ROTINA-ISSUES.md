@@ -1,6 +1,6 @@
 # Rotina das issues
 
-Um agente no t3-lab roda esta rotina a cada hora, por uma tarefa agendada do T3 Code, no clone `~/openstrut`. Ele lê as issues abertas de `gmunaro/openstrut`, investiga cada novidade no código e responde na própria issue com diagnóstico, opções e recomendação. Quando o problema e a solução estão definidos, ele avisa na issue o que vai implementar, implementa com a skill `enxame`, publica uma versão nova e avisa na issue para o usuário conferir.
+Um agente roda esta rotina a cada hora, por uma tarefa agendada do T3 Code, no clone do repositório que a tarefa indica. Hoje ela roda no Munaro-Pc. Ele lê as issues abertas de `gmunaro/openstrut`, investiga cada novidade no código e responde na própria issue com diagnóstico, opções e recomendação. Quando o problema e a solução estão definidos, ele avisa na issue o que vai implementar, implementa com a skill `enxame`, publica uma versão nova e avisa na issue para o usuário conferir.
 
 ## Para quem o OpenStrut existe
 
@@ -10,7 +10,7 @@ O objetivo de cada issue é deixar a ferramenta alinhada com o que ele precisa p
 
 ## Uma rodada
 
-1. **Atualize.** `git -C ~/openstrut fetch origin` e trabalhe a partir de `origin/main`. Pronto quando o checkout de leitura está em `origin/main`, sem mudança local.
+1. **Atualize.** `git fetch origin` no clone e trabalhe a partir de `origin/main`. Pronto quando o checkout de leitura está em `origin/main`, sem mudança local.
 2. **Ache as novidades.** Liste as issues abertas com os comentários (`gh issue list --state open --json number,title,updatedAt,labels` e `gh issue view <n> --comments`). Uma issue tem novidade quando a última manifestação nela não é do agente. Os comentários do agente terminam com o marcador oculto `<!-- openstrut-agente -->`. Os relatos do botão "Relatar problema" chegam com o título `[Relato] ` e o marcador `openstrut-relato` no corpo (`docs/RELATO.md`). Sem novidade em nenhuma issue, encerre a rodada sem comentar nada. Pronto quando você tem a lista de issues com novidade.
 3. **Investigue cada uma.** Leia a issue inteira e entenda o problema na obra dele. Reproduza: abra a obra ou os arquivos anexados, rode o caso no app ou num teste, e leia o código e as docs da área (`docs/SPEC.md`, `docs/MODO-CALCULO.md`, `docs/MOTOR-6118.md`, `docs/DETALHAMENTO.md` e as outras de `docs/`). Pronto quando você sabe a causa, com evidência (arquivo e linha, número calculado contra número esperado), ou sabe exatamente que informação falta para chegar nela.
 4. **Responda na issue.** Um comentário por issue por rodada, em português, de engenheiro para engenheiro:
@@ -43,12 +43,14 @@ O objetivo de cada issue é deixar a ferramenta alinhada com o que ele precisa p
 - Pergunta feita ao usuário espera a resposta dele. Sem resposta nova, a issue não ganha outro comentário.
 - Dúvida de engenharia sem fonte vira pergunta na issue, não suposição no código.
 
-## Ligar no t3-lab
+## Ligar numa máquina
 
-1. `gh auth status` no t3-lab mostra a conta `gmunaro` com os escopos `repo` e `workflow`.
+1. `gh auth status` mostra a conta `gmunaro` com os escopos `repo` e `workflow`.
 2. A skill `enxame` está em `~/.claude/skills/enxame` e os agentes que ela usa (`scout`, `auditor`, `implementer`, `reviewer`, `researcher`) em `~/.claude/agents`.
-3. No T3 Code do t3-lab, abra uma thread no projeto do clone `~/openstrut` e peça:
+3. No T3 Code da máquina, abra uma thread num projeto cujo diretório é o clone e peça:
 
-   > Crie uma tarefa agendada a cada 1 hora, neste thread, com o prompt: "Rode uma rodada da rotina de `docs/ROTINA-ISSUES.md` no `~/openstrut`." Depois rode a primeira rodada agora.
+   > Crie uma tarefa agendada a cada 1 hora, neste thread, com o prompt: "Rode uma rodada da rotina de `docs/ROTINA-ISSUES.md` neste clone." Depois rode a primeira rodada agora.
+
+O t3-lab também está pronto (clone `~/openstrut`, `gh` logado, skill e agentes copiados), caso a rotina mude para lá.
 
 A rotina mora neste arquivo. Para mudar o comportamento do agente, mude o arquivo por PR; a tarefa agendada só aponta para ele.
