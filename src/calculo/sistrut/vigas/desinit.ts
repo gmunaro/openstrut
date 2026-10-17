@@ -438,7 +438,7 @@ export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras 
   const memoria: Etapa[] = [];
   const edicao = extras.armaduraEditada;
   // reabertura da viga editada (DESEDITA → DESINIT): sem DESDIM, o DESINIT só refaz as
-  // faces (S_30132) e o quadro com os arrays do .EDV (DESINIT.BAS:84-100)
+  // faces (S_30132) e o quadro com os arrays do .EDV (DESINIT.BAS:114-140)
   const reabre = extras.reabreEdicao === true && edicao !== undefined;
   const c = reabre
     ? analisaDescalc(entrada, modo)
@@ -483,7 +483,7 @@ export const detalhaViga: DetalhaViga = (entrada, dimensionamento, modo, extras 
         );
       memoria.push({
         descricao: `Armadura editada no DESEDCAO (${arquivo}) no lugar da automática: ${edicao.negativas.length} negativas, ${edicao.positivas.length} positivas, ${edicao.portaEstribos.length} porta-estribos, ${edicao.estribos.length} trechos de estribo`,
-        ref: "DESINIT.BAS:96-104, 404-966 (S_202b9 com os arrays do DESEDCAO)",
+        ref: "DESINIT.BAS:132-140, 404-966 (S_202b9 com os arrays do DESEDCAO)",
       });
       if (modo === "corrigido" && !reabre)
         avisos.push(...conferenciaAsEditada(c, edicao, dimensionamento));

@@ -1,7 +1,7 @@
 // Armadura editada à mão no DESEDCAO (o .EDV, `ExtrasDesinit.armaduraEditada`) no lugar da
 // automática. No original, ao voltar do DESEDCAO o controle passa ao DESINIT, que refaz o
 // quadro de ferros com os arrays editados do COMMON e regrava o .TAB (S_202b9,
-// DESINIT.BAS:96-104 e 404-966); o DESEDITA, ao reabrir a viga, lê o .EDV para os mesmos
+// DESINIT.BAS:132-140 e 404-966); o DESEDITA, ao reabrir a viga, lê o .EDV para os mesmos
 // arrays (DESEDITA.BAS:745-880). `aplicaEdicao` faz a mesma troca no `Comum` depois do
 // detalhamento automático e antes do quadro (`posicoesDoQuadro` em desinit.ts).
 import type { EdicaoVigaSistrut } from "../../../dominio/edicaoViga";

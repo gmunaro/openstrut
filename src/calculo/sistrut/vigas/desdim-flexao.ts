@@ -21,7 +21,7 @@ export interface ResultadoFlexao {
   /** Armadura tracionada e comprimida, cm². */
   as: number;
   asc: number;
-  /** Momento acima de 1,4 × o limite da armadura simples (aviso "M", DESDIM.BAS:3712). */
+  /** Momento acima de 1,4 × o limite da armadura simples (aviso "M", DESDIM.BAS:3734). */
   acimaDoLimite: boolean;
   /** A curva do aço B não teve solução (σs = −1, DESDIM.BAS:3753). */
   tensaoInvalida: boolean;

@@ -966,7 +966,7 @@ function textoInterrompida(nome: string, motivos: readonly ("cisalhamento" | "mo
 
 /** Viga com armadura editada (.EDV) cujo DESDIM não concluiu: o quadro sai só da edição,
  *  como o original ao reabrir a viga no DESEDITA (DESINIT sem o detalhamento automático,
- *  DESINIT.BAS:84-100). É o caso de um .DSP próprio do usuário que não veio com a obra:
+ *  DESINIT.BAS:114-140). É o caso de um .DSP próprio do usuário que não veio com a obra:
  *  o .TAB do original saiu da edição, que não depende do DESDIM. */
 function quadroDaEdicao(
   v: VigaSistrut,

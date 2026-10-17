@@ -17,7 +17,7 @@
 // O registro guarda os arrays do COMMON do DESENHO que o DESINIT monta e o DESEDCAO edita
 // (os nomes das colunas são os de `calculo/sistrut/vigas/desinitComum.ts`). Ao voltar do
 // DESEDCAO, o DESINIT refaz com eles o quadro de ferros e regrava o .TAB (S_202b9,
-// DESINIT.BAS:404-966, chamado em DESINIT.BAS:96-104): a edição muda o desenho e o
+// DESINIT.BAS:404-966, chamado em DESINIT.BAS:132-140): a edição muda o desenho e o
 // quantitativo da viga no original.
 //
 // Unidades do original: posições e comprimentos em cm a partir da ponta esquerda da viga,

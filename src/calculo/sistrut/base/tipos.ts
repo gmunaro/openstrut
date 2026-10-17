@@ -1178,11 +1178,11 @@ export interface ExtrasDesinit {
   comprimidaApoios?: string[];
   /** Armadura editada no DESEDCAO (o .EDV, `Viga.armaduraEditada`): substitui barras,
    *  grampos, porta-estribos, pele e estribos antes do quadro de ferros, como o DESINIT
-   *  ao voltar do DESEDCAO (S_202b9, DESINIT.BAS:96-104, 404-966). Descartada com aviso
+   *  ao voltar do DESEDCAO (S_202b9, DESINIT.BAS:132-140, 404-966). Descartada com aviso
    *  se os tramos, os balanços ou o comprimento (1 cm) não batem com a viga. */
   armaduraEditada?: EdicaoVigaSistrut;
   /** Viga editada reaberta no DESEDITA: o DESINIT não refaz o detalhamento automático (vindo
-   *  do DESEDITA, DESINIT.BAS:84-100 só chama S_30132), e o quadro sai das faces e de
+   *  do DESEDITA, DESINIT.BAS:114-140 só chama S_30132), e o quadro sai das faces e de
    *  `armaduraEditada`; `dimensionamento` não é usado. Serve à viga cujo DESDIM a V2 não
    *  conclui (parâmetros do .DSP do usuário que não vieram). Edição que não serve à viga
    *  é erro. */
