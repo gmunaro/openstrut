@@ -21,12 +21,18 @@
 // - câmera: `ctx.enquadrarEm(caixa)`, `ctx.moverCamera(pos, alvo)` ("concluida" |
 //   "cancelada"), `ctx.travarControles(sim)`.
 // - cores por peça: `ctx.definirCores(id, (e) => "#hex" | null)` (refaz a geometria).
-// - materiais: `ctx.definirMateriais(fabrica | null)`, padrão em `materiaisPadrao`.
+// - transparência por peça: `ctx.definirTransparencia(id, (e) => boolean | null)`.
+// - materiais: `ctx.definirMateriais(id, fabrica | null)` (pilha: a última vale), padrão em
+//   `materiaisPadrao`. Para só ver através das peças, prefira `definirTransparencia`.
+// - cor atual de uma peça: `ctx.corDe(chave)`; fontes registradas: `ctx.fontesAtivas()`.
+// - legenda da camada: `ctx.definirLegenda(id, { titulo, itens, substitui? } | null)`.
 // - redesenhar: `ctx.pedirRender()`.
 export type {
   ArmaduraNaCena,
   Camada,
   ContextoVista,
+  FontesAtivas,
+  LegendaCamada,
   DefinicaoCamada,
   DetalhamentoElemento,
   EventoVista,

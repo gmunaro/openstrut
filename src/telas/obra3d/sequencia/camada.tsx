@@ -2,11 +2,10 @@
 // nível, pilares, fôrma e vigas, lajes), com datas por etapa a partir de uma data de
 // início. O concluído aparece normal, a etapa em andamento ganha cor própria
 // (`definirCores`, só quando a etapa muda) e o futuro some (`definirFiltro`) ou fica
-// transparente (malha própria, fantasma.ts). As etapas e as datas saem de etapas.ts.
+// transparente (`definirTransparencia`). As etapas e as datas saem de etapas.ts.
 import { useSyncExternalStore } from "react";
-import { DoubleSide, Group, Mesh, MeshLambertMaterial } from "three";
 import { Button } from "@/components/ui/button";
-import type { Camada, ContextoVista, Elemento3D } from "../api";
+import type { Camada, ContextoVista } from "../api";
 import {
   cronogramaCsv,
   DURACAO_PADRAO,
@@ -23,7 +22,6 @@ import {
   totalDias,
   type TipoEtapa,
 } from "./etapas";
-import { geometriaFantasma } from "./fantasma";
 
 const ID = "sequencia";
 /** Cor da etapa em andamento: violeta, fora das cores de situação, da seleção, da
@@ -62,7 +60,7 @@ interface Sessao {
   irParaDia(dia: number): void;
   regenerar(): void;
   alternarReproducao(): void;
-  atualizarFantasma(): void;
+  aplicarFuturo(): void;
   enquadrar(forcar: boolean): void;
 }
 let sessao: Sessao | null = null;
@@ -85,29 +83,8 @@ function criarSessao(ctx: ContextoVista): { sessao: Sessao; limpar: () => void }
   let visiveis = new Set<string>();
   let aplicada: number | null = null; // etapa em andamento já aplicada (−1 = concluída)
   let nivelEnquadrado: number | null = null;
-  let proprio = false; // dentro do nosso definirCores (o "cena" é nosso)
   let pararQuadro: (() => void) | null = null;
   let travado = false;
-
-  const raiz = new Group();
-  raiz.name = "sequencia: futuro";
-  ctx.cena.add(raiz);
-  const material = new MeshLambertMaterial({
-    color: "#94a3b8",
-    transparent: true,
-    opacity: 0.15,
-    depthWrite: false,
-    side: DoubleSide,
-  });
-  const gruposNivel = new Map<Group, number>();
-
-  const limparFantasma = () => {
-    for (const g of gruposNivel.keys()) {
-      for (const o of g.children) if (o instanceof Mesh) o.geometry.dispose();
-      raiz.remove(g);
-    }
-    gruposNivel.clear();
-  };
 
   const travar = (sim: boolean) => {
     if (sim === travado) return;
@@ -129,15 +106,11 @@ function criarSessao(ctx: ContextoVista): { sessao: Sessao; limpar: () => void }
         const pecas = pecasNoDia(s.etapas, opcoes.dia);
         visiveis = pecas.visiveis;
         const { emObra } = pecas;
-        // o filtro vale também para o modelo novo até `regenerar`: peça desconhecida aparece
-        ctx.definirFiltro(ID, (e) => !conhecidas.has(e.chave) || visiveis.has(e.chave));
-        proprio = true;
         ctx.definirCores(
           ID,
           emObra.size ? (e) => (emObra.has(e.chave) ? COR_EM_OBRA : null) : null,
         );
-        proprio = false;
-        s.atualizarFantasma();
+        s.aplicarFuturo();
         s.enquadrar(false);
       }
       avisar();
@@ -182,25 +155,17 @@ function criarSessao(ctx: ContextoVista): { sessao: Sessao; limpar: () => void }
       avisar();
     },
 
-    atualizarFantasma() {
-      limparFantasma();
+    /** O futuro some (filtro, barato) ou fica transparente (refaz a geometria). Peça
+     *  desconhecida (modelo novo, antes de `regenerar`) aparece normal. */
+    aplicarFuturo() {
+      const futuro = (chave: string) => conhecidas.has(chave) && !visiveis.has(chave);
       if (opcoes.futuro === "transparente") {
-        const porNivel = new Map<number, Elemento3D[]>();
-        for (const e of ctx.modelo.elementos)
-          if (!visiveis.has(e.chave) && ctx.exibicao(e.chave) !== "oculto") {
-            const l = porNivel.get(e.nivel);
-            if (l) l.push(e);
-            else porNivel.set(e.nivel, [e]);
-          }
-        for (const [nivel, els] of porNivel) {
-          const g = new Group();
-          g.position.y = ctx.alturaNaCena(nivel, 0);
-          g.add(new Mesh(geometriaFantasma(els), material));
-          gruposNivel.set(g, nivel);
-          raiz.add(g);
-        }
+        ctx.definirFiltro(ID, null);
+        ctx.definirTransparencia(ID, (e) => futuro(e.chave));
+      } else {
+        ctx.definirTransparencia(ID, null);
+        ctx.definirFiltro(ID, (e) => !futuro(e.chave));
       }
-      ctx.pedirRender();
     },
 
     /** Câmera no nível da etapa em andamento (obra concluída: o prédio inteiro). Sem
@@ -219,19 +184,20 @@ function criarSessao(ctx: ContextoVista): { sessao: Sessao; limpar: () => void }
     },
   };
 
-  // obra editada (modelo novo): as etapas mudam. O "cena" das nossas cores, dos tipos e do
-  // foco só refaz o fantasma (o que está oculto pode ter mudado).
+  // obra editada (modelo novo): as etapas mudam
   const pararCena = ctx.aoMudar("cena", () => {
     if (ctx.modelo !== modelo) s.regenerar();
-    else if (!proprio) s.atualizarFantasma();
   });
-  // o fantasma anda com o explodido; a câmera reenquadra quando ele termina
+  // a câmera reenquadra quando o explodido termina
   const pararExplodido = ctx.aoMudar("explodido", () => {
-    for (const [g, nivel] of gruposNivel) g.position.y = ctx.alturaNaCena(nivel, 0);
     if (!ctx.explodidoEmAnimacao) s.enquadrar(true);
   });
 
   s.regenerar();
+  ctx.definirLegenda(ID, {
+    titulo: "Sequência construtiva",
+    itens: [{ cor: COR_EM_OBRA, rotulo: "Etapa em andamento" }],
+  });
 
   const limpar = () => {
     pararQuadro?.();
@@ -239,10 +205,9 @@ function criarSessao(ctx: ContextoVista): { sessao: Sessao; limpar: () => void }
     pararExplodido();
     s.tocando = false;
     travar(false);
-    limparFantasma();
-    ctx.cena.remove(raiz);
-    material.dispose();
     ctx.definirFiltro(ID, null);
+    ctx.definirTransparencia(ID, null);
+    ctx.definirLegenda(ID, null);
     ctx.definirCores(ID, null);
     ctx.pedirRender();
   };
@@ -415,7 +380,7 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
           onChange={(e) =>
             mudar(() => {
               opcoes.futuro = e.target.value as "oculto" | "transparente";
-              s.atualizarFantasma();
+              s.aplicarFuturo();
             })
           }
         >

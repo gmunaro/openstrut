@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { DetalhamentoContexto } from "../detalhamento";
 import { useSessao } from "../sessao";
 import type { PropsVista3D } from "./AbaVista3D";
-import { CAMADAS, type Camada, type ContextoVista } from "./camadas";
+import { CAMADAS, type Camada, type ContextoVista, type LegendaCamada } from "./camadas";
 import { Cena3D, ESTADO_INICIAL, type EstadoVisual, type ModoCor, TIPOS, type Vista } from "./cena";
 import { COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA, ROTULO_ESTADO } from "./cores";
 import { dadosDosElementos, type Estado, GRANDEZAS, type GrandezaMapa } from "./dados";
@@ -103,6 +103,7 @@ export default function Vista3D({
   const [vista, setVista] = useState<Vista>("perspectiva");
   const [selecao, setSelecao] = useState<string | null>(null);
   const [painel, setPainel] = useState(true);
+  const [legendas, setLegendas] = useState<LegendaCamada[]>([]);
 
   // camadas ligadas: limpas antes de a cena ser destruída (no desmonte, abaixo)
   const ativas = useRef(new Map<string, { camada: Camada; limpar: (() => void) | void }>());
@@ -129,11 +130,13 @@ export default function Vista3D({
     cenaRef.current = c;
     setCena(c);
     const parar = c.aoMudar("selecao", () => setSelecao(c.selecao));
+    const pararLegenda = c.aoMudar("legenda", () => setLegendas(c.legendasCamadas));
     // e2e e depuração: a cena viva, só para leitura
     (window as { __vista3d?: Cena3D }).__vista3d = c;
     const camadas = ativas.current;
     return () => {
       parar();
+      pararLegenda();
       for (const a of camadas.values()) a.limpar?.();
       camadas.clear();
       delete (window as { __vista3d?: Cena3D }).__vista3d;
@@ -371,6 +374,7 @@ export default function Vista3D({
                 : v
           }
           original={original && comDefeito.length > 0}
+          camadas={legendas}
         />
 
         {sel && (
@@ -792,6 +796,7 @@ function Legenda({
   unidadeTexto,
   converter,
   original,
+  camadas,
 }: {
   modoCor: ModoCor;
   contagem: Record<Estado, number>;
@@ -800,6 +805,7 @@ function Legenda({
   unidadeTexto: string;
   converter: (v: number) => number;
   original: boolean;
+  camadas: LegendaCamada[];
 }) {
   const num = (v: number) => converter(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
   return (
@@ -807,7 +813,22 @@ function Legenda({
       aria-label="Legenda das cores"
       className="bg-background/85 absolute bottom-2 left-2 grid max-w-[min(18rem,calc(100%-1rem))] gap-1 rounded-md border p-2 text-[11px] shadow-sm"
     >
-      {modoCor === "estado" ? (
+      {camadas.map((l) => (
+        <ul key={l.titulo} className="grid gap-0.5">
+          <li className="font-semibold">{l.titulo}</li>
+          {l.itens.map((i) => (
+            <li key={i.rotulo} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block size-2.5 rounded-sm border"
+                style={{ background: i.cor }}
+              />
+              {i.rotulo}
+            </li>
+          ))}
+        </ul>
+      ))}
+      {camadas.some((l) => l.substitui) ? null : modoCor === "estado" ? (
         <ul className="grid gap-0.5">
           <li className="font-semibold">Lajes, vigas e pilares por situação</li>
           {(["ok", "aviso", "falha", "sem"] as const)

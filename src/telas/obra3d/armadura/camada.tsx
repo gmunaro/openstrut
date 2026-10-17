@@ -13,7 +13,7 @@ import {
   MeshLambertMaterial,
 } from "three";
 import { Button } from "@/components/ui/button";
-import { type Camada, type ContextoVista, type FabricaMateriais, materiaisPadrao } from "../api";
+import type { Camada, ContextoVista } from "../api";
 import {
   agruparPorMaterial,
   type Alvo,
@@ -54,19 +54,6 @@ function publicar(s: Situacao) {
 const assinar = (f: () => void) => {
   ouvintes.add(f);
   return () => void ouvintes.delete(f);
-};
-
-/** Peças da vista transparentes enquanto a camada está ligada, para ver o aço; o
- *  destaque da seleção fica mais fraco para não cobrir as barras. O resto é o padrão. */
-const materiaisTransparentes: FabricaMateriais = (papel) => {
-  const m = materiaisPadrao(papel);
-  if (papel === "solido") {
-    m.transparent = true;
-    m.opacity = 0.18;
-    m.depthWrite = false;
-  }
-  if (papel === "destaque") m.opacity = 0.12;
-  return m;
 };
 
 const fmt = (v: number, casas = 0) =>
@@ -197,7 +184,9 @@ function ativar(ctx: ContextoVista) {
     ctx.pedirRender();
   };
 
-  ctx.definirMateriais(materiaisTransparentes);
+  // peças da vista transparentes para ver o aço, sem trocar os materiais (o render PBR,
+  // se ligado, continua dono deles)
+  ctx.definirTransparencia("armadura", () => true);
   refazer();
   // "visibilidade" vem depois de toda "cena" (obra editada, foco, tipos ocultos)
   const parar = [
@@ -210,7 +199,7 @@ function ativar(ctx: ContextoVista) {
     limparMalhas();
     ctx.cena.remove(raiz);
     for (const m of materiais.values()) m.dispose();
-    ctx.definirMateriais(null);
+    ctx.definirTransparencia("armadura", null);
     publicar(INICIAL);
   };
 }

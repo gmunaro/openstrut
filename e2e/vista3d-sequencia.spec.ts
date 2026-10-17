@@ -93,27 +93,29 @@ type Peca = {
 /** Lê todas as peças da vista: `estaVisivel` e a cor que a fonte "sequencia" daria a cada
  *  uma. `fonteSequencia` diz se a camada ainda registra a fonte de cor. */
 async function lerPecas(page: Page): Promise<{ pecas: Peca[]; fonteSequencia: boolean }> {
-  return page.evaluate(() => {
+  return page.evaluate((violeta) => {
     type Elem = { chave: string; tipo: string; nome: string; nivel: number };
     type Vista = {
       modelo: { elementos: Elem[] };
       estaVisivel: (chave: string) => boolean;
-      cores: Map<string, (e: Elem) => string | null>;
+      corDe: (chave: string) => string | undefined;
+      fontesAtivas: () => { cores: string[] };
     };
     const v = (window as unknown as { __vista3d: Vista }).__vista3d;
-    const cor = v.cores.get("sequencia");
+    const fonteSequencia = v.fontesAtivas().cores.includes("sequencia");
     return {
-      fonteSequencia: v.cores.has("sequencia"),
+      fonteSequencia,
       pecas: v.modelo.elementos.map((e) => ({
         chave: e.chave,
         tipo: e.tipo,
         nome: e.nome,
         nivel: e.nivel,
         visivel: v.estaVisivel(e.chave),
-        cor: cor === undefined ? null : cor(e),
+        // a cor que a sequência dá (violeta) ou null: a peça está com a cor da vista
+        cor: fonteSequencia && v.corDe(e.chave) === violeta ? violeta : null,
       })),
     };
-  });
+  }, VIOLETA);
 }
 
 const pecasDe = (pecas: Peca[], tipo: string, nivel: number) =>
@@ -243,12 +245,14 @@ test("sequência construtiva 4D numa obra de 3 pavimentos, do dia 0 ao CSV, com 
   await expect(faixa).toHaveValue("0");
   await painel.getByLabel("Etapas futuras").selectOption("transparente");
   await painel.getByLabel("Velocidade").selectOption("10");
+  // o futuro fica transparente (papel "fantasma" da vista), não escondido
   const fantasmas = await page.evaluate(() => {
     type Vista = {
-      cena: { getObjectByName: (nome: string) => { children: unknown[] } | undefined };
+      modelo: { elementos: { chave: string }[] };
+      exibicao: (chave: string) => string;
     };
     const v = (window as unknown as { __vista3d: Vista }).__vista3d;
-    return v.cena.getObjectByName("sequencia: futuro")?.children.length ?? 0;
+    return v.modelo.elementos.filter((e) => v.exibicao(e.chave) === "fantasma").length;
   });
   expect(fantasmas).toBeGreaterThan(0);
   const antes = Number(await faixa.inputValue());

@@ -151,15 +151,23 @@ const armadura = (page: Page) =>
     return { raizes, malhas, barras, niveis, caixa };
   });
 
-/** Material das malhas sólidas das vigas da vista (papel "solido"). */
-const materialSolido = (page: Page) =>
-  cena(page, (c) => {
-    const ms: { transparent: boolean; opacity: number }[] = [];
-    c.cena.traverse((o) => {
-      if (o.isMesh && / viga$/.test(o.name) && !o.name.startsWith("armadura"))
-        ms.push({ transparent: o.material.transparent, opacity: o.material.opacity });
-    });
-    return ms[0] ?? null;
+/** Transparência das peças pela camada: a fonte "armadura" em `definirTransparencia` e
+ *  quantas vigas a vista mostra como contexto transparente (papel "fantasma"). */
+const transparencia = (page: Page) =>
+  page.evaluate(() => {
+    type Vista = {
+      modelo: { elementos: { chave: string; tipo: string }[] };
+      exibicao: (chave: string) => string;
+      fontesAtivas: () => { transparencias: string[]; materiais: string[] };
+    };
+    const v = (window as unknown as { __vista3d: Vista }).__vista3d;
+    const vigas = v.modelo.elementos.filter((e) => e.tipo === "viga");
+    return {
+      fonte: v.fontesAtivas().transparencias.includes("armadura"),
+      materiais: v.fontesAtivas().materiais.length,
+      vigasTransparentes: vigas.filter((e) => v.exibicao(e.chave) === "fantasma").length,
+      vigas: vigas.length,
+    };
   });
 
 const chaveDe = (page: Page, tipo: string, nome: string, nivel: number) =>
@@ -186,8 +194,8 @@ test("liga, desenha viga e coluna, acompanha explodido e seleção, desliga sem 
   await abrirObraJson(page, obraTresPavimentos());
   await abrir3d(page);
 
-  const solidoAntes = await materialSolido(page);
-  expect(solidoAntes).toEqual({ transparent: false, opacity: 1 });
+  const transpAntes = await transparencia(page);
+  expect(transpAntes).toMatchObject({ fonte: false, materiais: 0, vigasTransparentes: 0 });
 
   // ligar: sem seleção, o Painel diz o que fazer e nada é desenhado; as peças ficam transparentes
   await alternarCamada(page);
@@ -196,9 +204,11 @@ test("liga, desenha viga e coluna, acompanha explodido e seleção, desliga sem 
   const painel = page.getByTestId("painel-armadura");
   await expect(painel).toContainText("Selecione uma viga, um pilar ou uma fundação.");
   expect((await armadura(page)).malhas).toBe(0);
-  const solido = await materialSolido(page);
-  expect(solido?.transparent).toBe(true);
-  expect(solido?.opacity).toBeLessThan(0.5);
+  // as peças ficam transparentes sem trocar os materiais (o render PBR continua dono deles)
+  const ligada = await transparencia(page);
+  expect(ligada.fonte).toBe(true);
+  expect(ligada.materiais).toBe(0);
+  expect(ligada.vigasTransparentes).toBe(ligada.vigas);
 
   // viga V1 do primeiro nível pela lista: barras dentro da viga (a ancoragem passa até 10 cm
   // da ponta, até a face do apoio), uma malha por tipo, lista das posições no Painel
@@ -312,7 +322,9 @@ test("liga, desenha viga e coluna, acompanha explodido e seleção, desliga sem 
   const fim = await armadura(page);
   expect(fim.raizes).toBe(0);
   expect(fim.malhas).toBe(0);
-  expect(await materialSolido(page)).toEqual(solidoAntes);
+  // a camada não deixa fonte de transparência nem materiais (o foco da vista pode deixar
+  // vizinhos transparentes; isso é da vista, não da camada)
+  expect(await transparencia(page)).toMatchObject({ fonte: false, materiais: 0 });
 
   expect(erros).toEqual([]);
 });

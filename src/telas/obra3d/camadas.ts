@@ -78,7 +78,27 @@ export type EventoVista =
   /** O que aparece pode ter mudado (`estaVisivel`): um filtro ou plano de corte de
    *  qualquer camada, ou, depois de "cena", o foco, os tipos e os pavimentos ocultos. Não
    *  refaz a geometria. A fonte da mudança não é avisada (ver `aoMudar`). */
-  | "visibilidade";
+  | "visibilidade"
+  /** As legendas das camadas mudaram (`definirLegenda`). */
+  | "legenda";
+
+/** Legenda de uma camada, mostrada na legenda da vista. Com `substitui`, esconde a
+ *  legenda da vista (situação ou grandeza): use quando a camada repinta todas as peças. */
+export interface LegendaCamada {
+  titulo: string;
+  itens: { cor: string; rotulo: string }[];
+  substitui?: boolean;
+}
+
+/** Fontes registradas pelas camadas, por `id` (para conferir em teste e depuração). */
+export interface FontesAtivas {
+  filtros: string[];
+  cores: string[];
+  transparencias: string[];
+  materiais: string[];
+  planos: string[];
+  legendas: string[];
+}
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
  *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`).
@@ -115,7 +135,14 @@ export interface ContextoVista {
    *  regra de posição (cobrimento, estribo, distribuição) está em
    *  dominio/armaduraGeometria.ts. Para a coluna inteira, chame para cada lance de
    *  `modelo.colunas`. */
-  barrasDe(chave: string): ArmaduraNaCena[] | undefined;
+  barrasDe(chave: string, opcoes?: { semExplodido?: boolean }): ArmaduraNaCena[] | undefined;
+  /** Cor com que a peça está desenhada agora (situação, grandeza ou a de uma camada), CSS. */
+  corDe(chave: string): string | undefined;
+  /** Os `id` das fontes registradas pelas camadas (filtros, cores, transparências,
+   *  materiais, planos de corte e legendas). */
+  fontesAtivas(): FontesAtivas;
+  /** Legenda desta fonte (`id`) na legenda da vista; `null` remove. Avisa "legenda". */
+  definirLegenda(id: string, legenda: LegendaCamada | null): void;
   /** Chave do elemento selecionado. */
   readonly selecao: string | null;
   selecionar(chave: string | null): void;
@@ -171,8 +198,15 @@ export interface ContextoVista {
   /** Liga ou desliga a órbita, o zoom e o pan do usuário (o tour e o 4D animam a câmera).
    *  Não trava os botões de vista nem `moverCamera`. */
   travarControles(travar: boolean): void;
-  /** Troca os materiais do núcleo (null volta aos padrão); refaz a geometria. */
-  definirMateriais(f: FabricaMateriais | null): void;
+  /** Materiais desta fonte (`id`). As fábricas formam uma pilha: vale a última definida;
+   *  `null` tira a desta fonte e volta a valer a anterior (no fim, `materiaisPadrao`).
+   *  Refaz a geometria. Para só deixar peças transparentes, use `definirTransparencia`,
+   *  que não disputa os materiais com outra camada (ex.: o render PBR). */
+  definirMateriais(id: string, f: FabricaMateriais | null): void;
+  /** Peças transparentes desta fonte (`id`): a peça sólida para a qual `f` devolve true
+   *  vira contexto transparente (papel "fantasma"), sem trocar os materiais. `null`
+   *  remove. Refaz a geometria: não chame a cada quadro. */
+  definirTransparencia(id: string, f: ((e: Elemento3D) => boolean) | null): void;
   /** Planos de corte desta fonte (`id`); a vista junta os de todas as fontes no renderer.
    *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. Emite
    *  "visibilidade" para as outras fontes. */

@@ -46,6 +46,8 @@ import type { DetalhamentoObra } from "../detalhamento";
 import type {
   ArmaduraNaCena,
   ContextoVista,
+  FontesAtivas,
+  LegendaCamada,
   DetalhamentoElemento,
   EventoVista,
   Exibicao,
@@ -347,11 +349,57 @@ export class Cena3D implements ContextoVista {
     } satisfies Record<PapelMaterial, Material>;
   }
 
-  definirMateriais(f: FabricaMateriais | null) {
+  /** Fábricas de materiais das camadas, na ordem em que foram definidas (a última vale). */
+  private fabricas = new Map<string, FabricaMateriais>();
+
+  definirMateriais(id: string, f: FabricaMateriais | null) {
+    this.fabricas.delete(id);
+    if (f) this.fabricas.set(id, f);
+    const fabrica = [...this.fabricas.values()].at(-1) ?? materiaisPadrao;
+    if (fabrica === this.fabrica) return;
     for (const m of Object.values(this.materiais)) m.dispose();
-    this.fabrica = f ?? materiaisPadrao;
-    this.materiais = this.criarMateriais(this.fabrica);
+    this.fabrica = fabrica;
+    this.materiais = this.criarMateriais(fabrica);
     this.reconstruir();
+  }
+
+  /** Transparências das camadas: a peça sólida para a qual alguma devolve true fica
+   *  transparente (papel "fantasma"). */
+  private transparencias = new Map<string, (e: Elemento3D) => boolean>();
+
+  definirTransparencia(id: string, f: ((e: Elemento3D) => boolean) | null) {
+    if (f) this.transparencias.set(id, f);
+    else this.transparencias.delete(id);
+    this.reconstruir();
+  }
+
+  private legendas = new Map<string, LegendaCamada>();
+
+  definirLegenda(id: string, legenda: LegendaCamada | null) {
+    this.legendas.delete(id);
+    if (legenda) this.legendas.set(id, legenda);
+    this.emitir("legenda");
+  }
+
+  /** As legendas das camadas, na ordem em que foram definidas. */
+  get legendasCamadas() {
+    return [...this.legendas.values()];
+  }
+
+  fontesAtivas(): FontesAtivas {
+    return {
+      filtros: [...this.filtros.keys()],
+      cores: [...this.cores.keys()],
+      transparencias: [...this.transparencias.keys()],
+      materiais: [...this.fabricas.keys()],
+      planos: [...this.planos.keys()].filter((k) => k !== "eixo"),
+      legendas: [...this.legendas.keys()],
+    };
+  }
+
+  corDe(chave: string): string | undefined {
+    const e = this.porChave.get(chave);
+    return e && this.corDoElemento(e);
   }
 
   // ---- geometria ---------------------------------------------------------------------------
@@ -439,6 +487,7 @@ export class Cena3D implements ContextoVista {
     for (const e of this.modelo.elementos) {
       let x: Exibicao = solidos ? (solidos.has(e.chave) ? "solido" : resto) : "solido";
       if (lajesFantasma && e.tipo === "laje" && x === "solido") x = "fantasma";
+      if (x === "solido" && [...this.transparencias.values()].some((f) => f(e))) x = "fantasma";
       if (foco.tipo === "nivel") {
         const d = Math.abs(e.nivel - foco.nivel);
         x = d === 0 ? "solido" : d === 1 && vizinhosTransparentes ? "fantasma" : "oculto";
@@ -453,7 +502,7 @@ export class Cena3D implements ContextoVista {
     return mapa;
   }
 
-  private corDe(e: Elemento3D): string {
+  private corDoElemento(e: Elemento3D): string {
     // cores das camadas: a última registrada que der uma cor vale
     for (const f of [...this.cores.values()].reverse()) {
       const c = f(e);
@@ -536,7 +585,7 @@ export class Cena3D implements ContextoVista {
           const x = exib.get(e.chave);
           if (x === "oculto") continue;
           const m = this.malhaDe(e.chave);
-          cor.set(this.corDe(e));
+          cor.set(this.corDoElemento(e));
           const alvo = x === "solido" ? sol : fan;
           faixas.push({
             chave: e.chave,
@@ -753,7 +802,19 @@ export class Cena3D implements ContextoVista {
     return ponto;
   }
 
-  barrasDe(chave: string): ArmaduraNaCena[] | undefined {
+  barrasDe(chave: string, opcoes: { semExplodido?: boolean } = {}): ArmaduraNaCena[] | undefined {
+    const barras = this.barrasNaCena(chave);
+    const e = this.porChave.get(chave);
+    if (!barras || !e || !opcoes.semExplodido) return barras;
+    // o lance do pilar e a viga ficam num nível só: tira o deslocamento dele
+    const det = this.detalhamentoDe(chave);
+    const nivel = det?.tipo === "pilar" ? (det.niveis[det.lance] ?? e.nivel) : e.nivel;
+    const dy = this.deslocamentos[nivel] ?? 0;
+    for (const p of barras) for (const b of p.barras) for (const v of b) v.y -= dy;
+    return barras;
+  }
+
+  private barrasNaCena(chave: string): ArmaduraNaCena[] | undefined {
     const e = this.porChave.get(chave);
     const det = this.detalhamentoDe(chave);
     if (!e || !det || e.tipo === "fundacao") return undefined;
