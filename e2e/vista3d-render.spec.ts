@@ -220,10 +220,12 @@ test("render realista: Painel, path tracing, baixar imagem e desligar, sem erro 
   await painel.getByLabel("Path tracing quando a câmera para").check();
   const status = painel.getByRole("status");
   await expect(status).toContainText(/Amostras: [1-9]/, { timeout: 150_000 });
-  const n1 = Number((await status.textContent())!.match(/Amostras: (\d+)/)![1]);
-  await page.waitForTimeout(3000);
-  const n2 = Number((await status.textContent())!.match(/Amostras: (\d+)/)![1]);
-  expect(n2).toBeGreaterThan(n1);
+  const amostras = async () =>
+    Number((await status.textContent())!.match(/Amostras: (\d+)/)![1]);
+  const n1 = await amostras();
+  // a soma continua com a câmera parada; sem GPU (o WebGL do CI é por software) uma
+  // amostra pode levar mais de 3 s, então espera a contagem subir em vez de um tempo fixo
+  await expect.poll(amostras, { timeout: 60_000 }).toBeGreaterThan(n1);
   await page.screenshot({ path: path.join(PRINTS, "tracado-1366.png") });
 
   // mexer a câmera recomeça a soma
