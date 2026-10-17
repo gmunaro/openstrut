@@ -117,7 +117,19 @@ describe("colunas: o mesmo pilar em posições diferentes", () => {
 // Reação da viga em PB: P·4,1/4 = 10,25 t; em PA: −P·0,1/4 = −0,25 t.
 describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)", () => {
   const P = 10;
-  function transicao(comCarga = true, extra: Pilar[] = []): Obra {
+  /** `f`: a concentrada na ponta do balanço, t (0 = sem); `nome`: o do pilar de cima;
+   *  `extra`: pilares e vigas a mais no CIMA. */
+  function transicao({
+    f = P,
+    nome = "PB",
+    extra = [],
+    vigasCima = [],
+  }: {
+    f?: number;
+    nome?: string;
+    extra?: Pilar[];
+    vigasCima?: Obra["pavimentos"][number]["vigas"];
+  } = {}): Obra {
     const base = obraE2E("original");
     const pilar = (id: string, x: number, mais: Partial<Pilar> = {}): Pilar => ({
       id,
@@ -141,9 +153,9 @@ describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)",
           ...vazio,
           id: "CIMA",
           nome: "CIMA",
-          vigas: [],
+          vigas: vigasCima,
           pilares: [
-            pilar("CIMA/PB", 4.1, {
+            pilar(`CIMA/${nome}`, 4.1, {
               cargaTopo: { normal: P * KN_POR_TF, momentos: [] },
             }),
             ...extra,
@@ -165,13 +177,13 @@ describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)",
               h: 50,
               cargaLinear: 0,
               somenteCargasProprias: true,
-              cargas: comCarga
+              cargas: f
                 ? [
                     {
                       tipo: "concentrada",
                       trecho: 1,
                       posicao: 0.1,
-                      total: P * KN_POR_TF,
+                      total: f * KN_POR_TF,
                     },
                   ]
                 : [],
@@ -197,7 +209,7 @@ describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)",
     expect(base["BAIXO/PB"]).toBeCloseTo(20.25, 4);
     expect(base["CIMA/PB"]).toBeUndefined();
     expect(avisos).toContain(
-      "PB: nasce sobre a viga V1 do pavimento BAIXO, que tem 10,00 t de carga concentrada sob ele, e continua a coluna do PB de baixo, deslocado 10 cm, como no .COL do original: a carga dele chega à fundação duas vezes, pela coluna e pela reação da viga. O modo corrigido não continua a coluna.",
+      "PB: nasce sobre a viga V1 do pavimento BAIXO, que tem 10,00 t de carga concentrada sob ele, e continua a coluna do PB de baixo, deslocado 10 cm, como no .COL do original. Se a concentrada é a carga deste pilar (10,00 t sem o peso próprio), 10,00 t chegam à fundação duas vezes, pela coluna e pela reação da viga. O modo corrigido não continua a coluna.",
     );
   });
 
@@ -217,7 +229,7 @@ describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)",
 
   it("sem a concentrada na viga não há dupla contagem: nos dois modos a coluna continua (10 t)", () => {
     for (const modo of ["original", "corrigido"] as const) {
-      const { base, avisos } = cargas(transicao(false), modo);
+      const { base, avisos } = cargas(transicao({ f: 0 }), modo);
       expect(base["BAIXO/PB"]).toBeCloseTo(P, 4);
       expect(avisos).toContainEqual(
         expect.stringMatching(/^PB: lance deslocado 10 cm do de baixo/),
@@ -236,7 +248,7 @@ describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)",
       transicao: true,
     };
     for (const modo of ["original", "corrigido"] as const) {
-      const { r, base, avisos } = cargas(transicao(true, [apoio]), modo);
+      const { r, base, avisos } = cargas(transicao({ extra: [apoio] }), modo);
       expect(base["CIMA/A0"]).toBeUndefined();
       expect(r.lances.some((l) => l.pilarId === "CIMA/A0")).toBe(false);
       expect(avisos.filter((a) => a.startsWith("A0:"))).toEqual([]);
@@ -245,10 +257,66 @@ describe("colunas: pilar que nasce numa viga com a carga dele (dupla contagem)",
       );
       // com carga no topo, o mesmo pilar é calculado
       const carregado = cargas(
-        transicao(true, [{ ...apoio, cargaTopo: { normal: 10, momentos: [] } }]),
+        transicao({ extra: [{ ...apoio, cargaTopo: { normal: 10, momentos: [] } }] }),
         modo,
       );
       expect(carregado.base["CIMA/A0"]).toBeCloseTo(10 / KN_POR_TF, 4);
     }
+  });
+
+  it("concentrada que não cobre a carga de cima (0,5 t de 10 t): a coluna continua nos dois modos", () => {
+    // em PB: 10 t da coluna + a reação 0,5·4,1/4 = 0,5125 t (no original, INT(R·100)/100 =
+    // 0,51 t, o R5)
+    for (const modo of ["original", "corrigido"] as const) {
+      const { r, base, avisos } = cargas(transicao({ f: 0.5 }), modo);
+      expect(base["BAIXO/PB"]).toBeCloseTo(modo === "original" ? 10.51 : 10.5125, 5);
+      expect(base["CIMA/PB"]).toBeUndefined();
+      expect(r.falhas).toEqual([]);
+      expect(avisos).toContain(
+        modo === "original"
+          ? "PB: nasce sobre a viga V1 do pavimento BAIXO, que tem 0,50 t de carga concentrada sob ele, e continua a coluna do PB de baixo, deslocado 10 cm, como no .COL do original. Se a concentrada é a carga deste pilar (10,00 t sem o peso próprio), 0,50 t chegam à fundação duas vezes, pela coluna e pela reação da viga."
+          : "PB: nasce sobre a viga V1 do pavimento BAIXO, que tem 0,50 t de carga concentrada sob ele, menos que a carga dele (10,00 t sem o peso próprio); a coluna continua a do PB de baixo, deslocado 10 cm. Se a concentrada é parte da carga deste pilar, ela chega à fundação duas vezes, pela coluna e pela reação da viga; confira.",
+      );
+    }
+  });
+
+  it("dentro da folga de 3 %: 9,8 t cobrem os 10 t, e o corrigido parte a coluna", () => {
+    const { base } = cargas(transicao({ f: 9.8 }), "corrigido");
+    expect(base["CIMA/PB"]).toBeCloseTo(P, 6);
+    expect(base["BAIXO/PB"]).toBeCloseTo((9.8 * 4.1) / 4, 6);
+  });
+
+  it("pilar de cima com outro nome (não funde): falha se a concentrada não cobre, aviso se cobre", () => {
+    for (const modo of ["original", "corrigido"] as const) {
+      const pouca = cargas(transicao({ f: 0.5, nome: "PX" }), modo);
+      expect(pouca.r.falhas.map((f) => f.texto)).toEqual([
+        expect.stringContaining("Pilar PX do pavimento CIMA nasce acima da fundação"),
+      ]);
+      const toda = cargas(transicao({ nome: "PX" }), modo);
+      expect(toda.r.falhas).toEqual([]);
+      expect(toda.avisos).toContainEqual(
+        expect.stringMatching(/^PX: nasce sobre a viga V1 do pavimento BAIXO, que tem 10,00 t/),
+      );
+    }
+  });
+
+  it("apoio sem carga num pavimento com viga não calculada: continua calculado (a falta de carga pode ser da viga)", () => {
+    const apoio: Pilar = { id: "CIMA/A0", nome: "A0", x: 20, y: 20, b: 20, h: 20, transicao: true };
+    const inclinada = {
+      id: "CIMA/V9",
+      nome: "V9",
+      x1: 20,
+      y1: 20,
+      x2: 21,
+      y2: 22,
+      bw: 20,
+      h: 50,
+      cargaLinear: 0,
+    };
+    const { r, base } = cargas(transicao({ extra: [apoio], vigasCima: [inclinada] }), "corrigido");
+    expect(base["CIMA/A0"]).toBeCloseTo(0, 6);
+    expect(r.pavimentos.find((p) => p.pavimentoId === "CIMA")!.avisos.join(" ")).not.toMatch(
+      /só apoio de cálculo/,
+    );
   });
 });

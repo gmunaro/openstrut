@@ -1277,6 +1277,10 @@ const ehOtimizacaoParada = (x: unknown): x is OtimizacaoParada =>
 
 // ---------------------------------------------------------------- pilares
 
+/** Folga relativa com que a concentrada na viga cobre a carga do pilar que nasce nela: o
+ *  .REP grava cada parcela com 2 casas, e o usuário digita a soma no VIGA. */
+const FOLGA_CARGA_NA_VIGA = 0.03;
+
 const chavePilar = (p: Pick<Pilar, "x" | "y">) => `${p.x.toFixed(3)};${p.y.toFixed(3)}`;
 
 /** Níveis do edifício de baixo para cima: cada repetição de pavimento é um nível. */
@@ -1370,11 +1374,22 @@ function calcularPilaresSistrut(
     }
     return undefined;
   };
-  /** Corrigido: o pilar que nasce numa viga com a carga dele lançada nela não continua a
-   *  coluna de baixo; a carga chega à fundação pela viga. O original liga pela coluna do
-   *  .COL e conta a carga duas vezes (PILGEEDI.BAS:567-579; PILAREDI.BAS:513-516). */
-  const naoContinua = (p: Pilar, nivel: number) =>
-    p.transicao === true || (modo === "corrigido" && cargaNaViga(p, nivel - 1) !== undefined);
+  /** Carga que os lances levam à base deles, t, sem o peso próprio: as linhas do .REP de
+   *  cada pavimento com o nome do pilar e a normal de `cargaTopo`. */
+  const cargaDosLances = (ls: readonly { pilar: Pilar; nivel: number }[]) =>
+    ls.reduce(
+      (soma, { pilar, nivel }) =>
+        soma +
+        (porId
+          .get(niveis[nivel]!.pav.id)
+          ?.rep.filter((l) => l.pilar === pilar.nome)
+          .reduce((t, l) => t + l.total, 0) ?? 0) +
+        (pilar.cargaTopo ? pilar.cargaTopo.normal / KN_POR_TF : 0),
+      0,
+    );
+  /** A concentrada na viga cobre a carga do pilar que nasce nela (folga de
+   *  `FOLGA_CARGA_NA_VIGA` para os arredondamentos do .REP): é a carga dele. */
+  const cobre = (f: number, carga: number) => f >= carga * (1 - FOLGA_CARGA_NA_VIGA);
   type Trecho = (typeof trechos)[number];
   const chave = (nivel: number, nome: string) => `${nivel}|${nome}`;
   /** Trechos por (nível, nome) da ponta de cima e da de baixo. */
@@ -1387,11 +1402,13 @@ function calcularPilaresSistrut(
     indexa(porInicio, chave(t[0]!.nivel, t[0]!.pilar.nome), t);
   }
   const avisosDeFusao = new Map<string, string>();
+  /** Lances de cima de cada fusão (id do pilar): o pilar de baixo e o deslocamento, cm. */
+  const juncoes = new Map<string, { de: string; cm: number }>();
   const fundidos = new Set<Trecho>();
   // de baixo para cima, para uma coluna crescer lance a lance
   for (const t of [...trechos].sort((a, b) => a[0]!.nivel - b[0]!.nivel)) {
     const ini = t[0]!;
-    if (ini.nivel === 0 || naoContinua(ini.pilar, ini.nivel)) continue;
+    if (ini.nivel === 0 || ini.pilar.transicao) continue;
     const de = (porFim.get(chave(ini.nivel - 1, ini.pilar.nome)) ?? []).filter((u) =>
       sobrepoe(u.at(-1)!.pilar, ini.pilar),
     );
@@ -1399,20 +1416,16 @@ function calcularPilaresSistrut(
     const u = de[0]!;
     const fim = u.at(-1)!;
     const rivais = (porInicio.get(chave(ini.nivel, ini.pilar.nome)) ?? []).filter(
-      (v) => !naoContinua(v[0]!.pilar, ini.nivel) && sobrepoe(fim.pilar, v[0]!.pilar),
+      (v) => !v[0]!.pilar.transicao && sobrepoe(fim.pilar, v[0]!.pilar),
     );
     if (rivais.length !== 1) continue;
     const cm =
       Math.round(Math.hypot(ini.pilar.x - fim.pilar.x, ini.pilar.y - fim.pilar.y) * 1000) / 10;
-    // no original, o pilar que nasce numa viga carregada com a carga dele continua a
-    // coluna (o .COL não sabe da viga) e a carga chega à fundação duas vezes
-    const naViga = cargaNaViga(ini.pilar, ini.nivel - 1);
     avisosDeFusao.set(
       ini.pilar.id,
-      naViga
-        ? `${ini.pilar.nome}: nasce sobre a viga ${naViga.viga} do pavimento ${naViga.pavimento}, que tem ${num(naViga.f, 2)} t de carga concentrada sob ele, e continua a coluna do ${fim.pilar.nome} de baixo, deslocado ${numAte(cm, 1)} cm, como no .COL do original: a carga dele chega à fundação duas vezes, pela coluna e pela reação da viga. O modo corrigido não continua a coluna.`
-        : `${ini.pilar.nome}: lance deslocado ${numAte(cm, 1)} cm do de baixo na planta; tratado como a mesma coluna, como no .COL do original, e o deslocamento não entra no cálculo (sem excentricidade).`,
+      `${ini.pilar.nome}: lance deslocado ${numAte(cm, 1)} cm do de baixo na planta; tratado como a mesma coluna, como no .COL do original, e o deslocamento não entra no cálculo (sem excentricidade).`,
     );
+    juncoes.set(ini.pilar.id, { de: fim.pilar.nome, cm });
     porFim.set(
       chave(fim.nivel, fim.pilar.nome),
       porFim.get(chave(fim.nivel, fim.pilar.nome))!.filter((x) => x !== u),
@@ -1426,6 +1439,32 @@ function calcularPilaresSistrut(
     fundidos.add(t);
   }
   for (let i = trechos.length - 1; i >= 0; i--) if (fundidos.has(trechos[i]!)) trechos.splice(i, 1);
+  // P-b: a fusão que começa num pilar sobre uma viga do nível de baixo com concentrada
+  // sob ele. O original continua a coluna (o .COL não sabe da viga) e, se a concentrada é
+  // a carga do pilar, ela chega à fundação duas vezes (PILGEEDI.BAS:567-579; PILAREDI.BAS:
+  // 513-516). O corrigido parte a coluna quando a concentrada cobre a carga de cima: ela
+  // chega à fundação pela viga. Sem cobrir, a coluna continua, com aviso. De cima para
+  // baixo: a carga de uma parte já partida vai pela viga dela, no .REP de um lance abaixo.
+  for (const t of [...trechos])
+    for (let k = t.length - 1; k >= 1; k--) {
+      const l = t[k]!;
+      const juncao = juncoes.get(l.pilar.id);
+      const naViga = juncao && cargaNaViga(l.pilar, l.nivel - 1);
+      if (!juncao || !naViga) continue;
+      const carga = cargaDosLances(t.slice(k));
+      const viga = `a viga ${naViga.viga} do pavimento ${naViga.pavimento}, que tem ${num(naViga.f, 2)} t de carga concentrada sob ele`;
+      if (modo === "corrigido" && cobre(naViga.f, carga)) {
+        trechos.push(t.splice(k));
+        avisosDeFusao.delete(l.pilar.id);
+        continue;
+      }
+      avisosDeFusao.set(
+        l.pilar.id,
+        modo === "original"
+          ? `${l.pilar.nome}: nasce sobre ${viga}, e continua a coluna do ${juncao.de} de baixo, deslocado ${numAte(juncao.cm, 1)} cm, como no .COL do original. Se a concentrada é a carga deste pilar (${num(carga, 2)} t sem o peso próprio), ${num(Math.min(naViga.f, carga), 2)} t chegam à fundação duas vezes, pela coluna e pela reação da viga.${cobre(naViga.f, carga) ? " O modo corrigido não continua a coluna." : ""}`
+          : `${l.pilar.nome}: nasce sobre ${viga}, menos que a carga dele (${num(carga, 2)} t sem o peso próprio); a coluna continua a do ${juncao.de} de baixo, deslocado ${numAte(juncao.cm, 1)} cm. Se a concentrada é parte da carga deste pilar, ela chega à fundação duas vezes, pela coluna e pela reação da viga; confira.`,
+      );
+    }
   // coluna que nasce sobre viga de transição e não recebe carga em nível nenhum (nenhuma
   // viga descarrega nela, sem carga no topo nem na base): é só o apoio de uma viga à
   // parte, como os de uma escada calculada no VIGA, com os apoios desconsiderados. Não é
@@ -1434,10 +1473,21 @@ function calcularPilaresSistrut(
     pilar.cargaTopo !== undefined ||
     pilar.cargaBase !== undefined ||
     (porId.get(niveis[nivel]!.pav.id)?.rep.some((l) => l.pilar === pilar.nome) ?? false);
+  /** Todas as vigas do pavimento do lance foram calculadas: a falta de .REP é falta de
+   *  carga, e não de cálculo. */
+  const vigasCalculadas = ({ nivel }: Trecho[number]) => {
+    const pav = niveis[nivel]!.pav;
+    const ps = porId.get(pav.id);
+    return (
+      ps !== undefined &&
+      ps.naoProcessadas.length === 0 &&
+      ps.geometriaVigas.length === pav.vigas.length
+    );
+  };
   const soApoio = new Map<string, string[]>();
   for (let i = trechos.length - 1; i >= 0; i--) {
     const t = trechos[i]!;
-    if (!t[0]!.pilar.transicao || t.some(recebeCarga)) continue;
+    if (!t[0]!.pilar.transicao || t.some(recebeCarga) || !t.every(vigasCalculadas)) continue;
     const pav = niveis[t[0]!.nivel]!.pav;
     soApoio.set(pav.id, [t[0]!.pilar.nome, ...(soApoio.get(pav.id) ?? [])]);
     trechos.splice(i, 1);
@@ -1698,7 +1748,7 @@ function calcularPilaresSistrut(
     const abaixo = niveis[base.nivel - 1]!.pav;
     const carga = `${num(f.fundacao * KN_POR_TF, 1)} kN (${num(f.fundacao, 2)} t)`;
     const naViga = cargaNaViga(base.pilar, base.nivel - 1);
-    if (naViga && !base.pilar.transicao)
+    if (naViga && !base.pilar.transicao && cobre(naViga.f, cargaDosLances(lancesDasColunas[i]!)))
       lances
         .find((l) => l.pilarId === base.pilar.id && l.nivel === base.nivel)
         ?.avisos.push(
