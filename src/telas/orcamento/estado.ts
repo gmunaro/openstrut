@@ -153,7 +153,7 @@ export function useDadosOrcamento() {
   );
   const mudarConfig = useCallback((c: ConfigGuardada) => {
     setGuardada(c);
-    void gravarConfig(c as ConfigOrcamento);
+    void gravarConfig(c);
   }, []);
   const editada = doUsuario.some((t) => t.id === ID_SINAPI);
   return { tabelas, guardada, carregado, salvarTabela, apagarTabela, mudarConfig, editada };

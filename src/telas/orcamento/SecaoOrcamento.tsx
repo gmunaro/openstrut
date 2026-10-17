@@ -9,10 +9,9 @@ import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "../resulta
 import { textoComposicao, type ResultadoOrcamento } from "./estado";
 import { AVISO_ORCAMENTO, textoDesoneracao, textoMes, type Comparacao } from "./exportar";
 
-const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-/** "R$ 1.234,56"; "—" para NaN ou null. */
-export const reais = (v: number | null | undefined) =>
-  v === null || v === undefined || !Number.isFinite(v) ? "—" : BRL.format(v);
+/** Valor em reais sem o símbolo ("1.234,56"; "—" sem valor): o "R$" vai na unidade da
+ *  coluna, como nas outras tabelas do app. */
+export const reais = (v: number | null | undefined) => formatarNumero(v, 2);
 
 /** Aviso fixo: estimativa, não orçamento executivo. */
 export function AvisoOrcamento() {
@@ -36,7 +35,7 @@ export function OrigemPrecos({ r }: { r: ResultadoOrcamento }) {
     textoDesoneracao(t).toLowerCase(),
   ].filter(Boolean);
   return (
-    <p className="text-muted-foreground text-xs">
+    <p className="text-muted-foreground text-xs [overflow-wrap:anywhere]">
       Preços: <span className="text-foreground font-medium">{t.nome}</span>
       {partes.length > 0 && ` (${partes.join(", ")})`}. Fonte: {t.fonte}
     </p>
@@ -48,9 +47,9 @@ export function Resumo({ r }: { r: ResultadoOrcamento }) {
   const { orc } = r;
   const i = orc.indicadores;
   const linhas: [string, string, string][] = [
-    ["Custo direto", reais(orc.custoDireto), ""],
-    [`BDI (${formatarNumero(orc.bdi * 100, 2)} %)`, reais(orc.total - orc.custoDireto), ""],
-    ["Total com BDI", reais(orc.total), ""],
+    ["Custo direto", reais(orc.custoDireto), "R$"],
+    [`BDI (${formatarNumero(orc.bdi * 100, 2)} %)`, reais(orc.total - orc.custoDireto), "R$"],
+    ["Total com BDI", reais(orc.total), "R$"],
     ["Área construída", formatarNumero(i.areaConstruida, 2), "m²"],
     ["Custo por área", reais(i.custoPorArea), "R$/m²"],
     ["Taxa de aço", formatarNumero(i.acoPorConcreto, 1), "kg/m³"],
@@ -71,6 +70,9 @@ export function Resumo({ r }: { r: ResultadoOrcamento }) {
           ))}
         </Corpo>
       </Tabela>
+      <p className="text-aviso mt-1 text-xs font-medium">
+        Estimativa da estrutura: não substitui o orçamento executivo.
+      </p>
       <p className="text-muted-foreground mt-1 text-xs">
         Área construída: área das lajes pelos eixos × repetições. Taxa de aço: aço sem perda (barras
         do detalhamento) por m³ de concreto.

@@ -32,4 +32,4 @@ export async function lerConfig(): Promise<Partial<ConfigOrcamento> | undefined>
   return typeof v === "object" && v !== null ? (v as Partial<ConfigOrcamento>) : undefined;
 }
 
-export const gravarConfig = (c: ConfigOrcamento) => set(CHAVE_CONFIG, c, lojaOrcamento());
+export const gravarConfig = (c: Partial<ConfigOrcamento>) => set(CHAVE_CONFIG, c, lojaOrcamento());

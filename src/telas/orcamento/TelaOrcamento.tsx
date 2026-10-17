@@ -3,7 +3,7 @@
 // reaproveitamento de fôrma e BDI, e mostra o custo por pavimento, tipo, insumo e
 // elemento, com a comparação entre os modos de cálculo na NB-1/78. Exporta CSV e XLSX.
 import { Download, FileUp, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -114,7 +114,9 @@ export function TelaOrcamento({
     o.mudarConfig({ ...o.guardada, ...parcial });
 
   return (
-    <div className="grid max-w-[110rem] gap-1 pb-8">
+    // coluna minmax(0, 1fr): as tabelas rolam por dentro e nada passa da largura da tela;
+    // pb-28: o fim da aba sobe acima do botão flutuante de relatar problema
+    <div className="grid max-w-[110rem] grid-cols-[minmax(0,1fr)] gap-1 pb-28">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-semibold">Orçamento da estrutura</h2>
         <span className="flex-1" />
@@ -204,7 +206,7 @@ function EscolhaTabela({
         <label htmlFor={id}>Tabela</label>
         <select
           id={id}
-          className={cn(SELECT, "max-w-full min-w-0")}
+          className={cn(SELECT, "w-full min-w-0 sm:w-auto sm:max-w-full")}
           value={r.tabela.id}
           onChange={(e) => mudarTabela(e.target.value)}
         >
@@ -523,19 +525,22 @@ function CalculoBdi({ aplicar }: { aplicar: (bdi: number) => void }) {
 
 // ---- composições --------------------------------------------------------------------
 
-/** Campo de texto que confirma no Enter ou ao sair; `confirmar` devolve o erro ou null. */
+/** Campo de texto que confirma no Enter ou ao sair; `confirmar` devolve o erro ou null.
+ *  `linhas`: campo de várias linhas que cresce com o texto (a composição inteira à vista). */
 function CampoCelula({
   valor,
   rotulo,
   confirmar,
   className,
   numero = false,
+  linhas = false,
 }: {
   valor: string;
   rotulo: string;
   confirmar: (texto: string) => string | null;
   className?: string;
   numero?: boolean;
+  linhas?: boolean;
 }) {
   const [texto, setTexto] = useState(valor);
   const [erro, setErro] = useState<string | null>(null);
@@ -544,25 +549,51 @@ function CampoCelula({
     setErro(null);
   }, [valor]);
   const aplicar = () => setErro(texto === valor ? null : confirmar(texto));
+  const teclas = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      aplicar();
+    }
+    if (e.key === "Escape") {
+      setTexto(valor);
+      setErro(null);
+    }
+  };
   return (
-    <span className="inline-flex flex-col">
-      <Input
-        aria-label={rotulo}
-        title={erro ?? rotulo}
-        value={texto}
-        aria-invalid={erro !== null}
-        inputMode={numero ? "decimal" : undefined}
-        className={cn("h-7 px-2 text-xs", numero && "text-right font-mono tabular-nums", className)}
-        onChange={(e) => setTexto(e.target.value)}
-        onBlur={aplicar}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") aplicar();
-          if (e.key === "Escape") {
-            setTexto(valor);
-            setErro(null);
-          }
-        }}
-      />
+    <span className="inline-flex max-w-full flex-col">
+      {linhas ? (
+        <textarea
+          aria-label={rotulo}
+          title={erro ?? rotulo}
+          value={texto}
+          aria-invalid={erro !== null}
+          // ~26 caracteres por linha na largura do campo; o Chrome ajusta com field-sizing
+          rows={Math.max(1, Math.ceil(texto.length / 26))}
+          className={cn(
+            "border-input dark:bg-input/30 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive min-h-7 max-w-full resize-none rounded-md border bg-transparent px-2 py-1 text-xs leading-snug whitespace-pre-wrap outline-none focus-visible:ring-[3px] [field-sizing:content]",
+            className,
+          )}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={aplicar}
+          onKeyDown={teclas}
+        />
+      ) : (
+        <Input
+          aria-label={rotulo}
+          title={erro ?? rotulo}
+          value={texto}
+          aria-invalid={erro !== null}
+          inputMode={numero ? "decimal" : undefined}
+          className={cn(
+            "h-7 px-2 text-xs",
+            numero && "text-right font-mono tabular-nums",
+            className,
+          )}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={aplicar}
+          onKeyDown={teclas}
+        />
+      )}
       {erro && <span className="text-destructive mt-0.5 max-w-64 text-[11px]">{erro}</span>}
     </span>
   );
@@ -619,6 +650,7 @@ function Composicoes({
                     rotulo={`Composição de ${rotuloPapel(p)}`}
                     valor={textoComposicao(comps)}
                     className="w-56 font-mono"
+                    linhas
                     confirmar={(t) => {
                       if (t.trim() === "") {
                         mudar(p, null);
