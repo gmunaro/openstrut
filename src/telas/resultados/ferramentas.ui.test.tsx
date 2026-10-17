@@ -3,7 +3,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { obraNova } from "../../dominio/criar";
-import { useObra } from "../../estado/obra";
 import { acrescentarLaje, substituirPavimento } from "../../planta/edicao";
 import { abrirObra, obraDuasLajes, renderizarApp } from "../../test-setup";
 import { tsvDaTabela } from "./tabela";
