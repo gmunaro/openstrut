@@ -31,6 +31,7 @@ import { VERSAO_ATUAL } from "../../armazenamento/arquivo";
 import { criarSalvadorRascunho } from "../../armazenamento/rascunho";
 import type { Obra } from "../../dominio/obra";
 import { useObra } from "../../estado/obra";
+import { baixarIfc } from "../../exportacao/ifc/baixar";
 import { EditorPlanta } from "../../planta/EditorPlanta";
 import {
   baixarArmacaoDxf,
@@ -358,6 +359,14 @@ function ObraAberta({ obra }: { obra: Obra }) {
                       ),
                   )}
                 />
+                <BotaoExportar
+                  rotulo="Exportar IFC"
+                  motivo={undefined}
+                  className={linhaMenu}
+                  aoClicar={doMenu(
+                    () => void exportar(undefined, () => baixarIfc(obra, calculo, detalhamento)),
+                  )}
+                />
               </div>
             </DialogContent>
           </Dialog>
@@ -452,6 +461,13 @@ function ObraAberta({ obra }: { obra: Obra }) {
               }
             >
               <FileDown /> Exportar DXF (armação)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void exportar(undefined, () => baixarIfc(obra, calculo, detalhamento))}
+            >
+              <FileDown /> Exportar IFC
             </Button>
           </div>
           {(motivoFormas || motivoArmacao) && (
