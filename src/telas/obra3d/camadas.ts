@@ -21,6 +21,10 @@ import type { Calculo } from "../calculo";
 import type { DadosElemento } from "./dados";
 import type { Elemento3D, Modelo3D } from "./modelo";
 
+/** Como uma peça aparece pelo foco e pela visibilidade por tipo e pavimento: sólida,
+ *  transparente (contexto) ou oculta. Filtros e planos de corte não entram aqui. */
+export type Exibicao = "solido" | "fantasma" | "oculto";
+
 /** Papel de cada material do núcleo; `definirMateriais` troca qualquer um deles.
  *  "solido" e "fantasma" recebem a cor por vértice (atributo `color`). */
 export type PapelMaterial = "solido" | "fantasma" | "arestas" | "destaque";
@@ -35,7 +39,10 @@ export type EventoVista =
   /** A câmera mexeu (órbita, vista, animação). */
   | "camera"
   /** Os níveis se moveram no explodido: a cada quadro da animação e no fim. */
-  | "explodido";
+  | "explodido"
+  /** Um filtro ou plano de corte mudou, de qualquer fonte (`estaVisivel` pode ter mudado).
+   *  Não dispara de novo dentro do próprio aviso: chamar `definirFiltro` aqui não faz laço. */
+  | "visibilidade";
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
  *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`). */
@@ -72,6 +79,14 @@ export interface ContextoVista {
   caixaNaCena(): Box3;
   /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
   esferaVisivel(): Sphere;
+  /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
+  caixaDe(chave: string): Box3 | undefined;
+  /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */
+  exibicao(chave: string): Exibicao;
+  /** A peça aparece: não está oculta (exibicao), passa em todos os filtros e alguma parte
+   *  dela fica do lado mantido de todos os planos de corte (inclusive o do pórtico e o da
+   *  camada de corte). Transparente conta como visível. */
+  estaVisivel(chave: string): boolean;
   /** Redesenha no próximo quadro (a vista só desenha quando algo muda). */
   pedirRender(): void;
   /** Chamado a cada quadro enquanto registrado, com o tempo desde o quadro anterior em

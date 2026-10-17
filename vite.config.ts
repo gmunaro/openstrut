@@ -24,7 +24,7 @@ export default defineConfig({
       workbox: {
         globIgnores: ["**/3d-*.js"],
         runtimeCaching: [
-          { urlPattern: /\/assets\/3d-[^/]+\.js$/, handler: "CacheFirst", options: { cacheName: "vista-3d" } },
+          { urlPattern: /\/assets\/3d-[^/]+\.js$/, handler: "CacheFirst", options: { cacheName: "vista-3d", expiration: { maxEntries: 10 } } },
         ],
       },
       includeAssets: ["favicon.svg", "apple-touch-icon-180x180.png"],

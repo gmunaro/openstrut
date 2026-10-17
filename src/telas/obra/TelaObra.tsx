@@ -3,7 +3,7 @@
 // No celular (useCompacto) o cabeçalho fica numa linha e as outras ações vão para
 // a folha "Mais ações"; deitado, as abas sobem para o cabeçalho.
 // Salva o rascunho no navegador a cada edição (com debounce).
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   EllipsisVertical,
   FileDown,
@@ -169,18 +169,27 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const botaoUnidades = useRef<HTMLButtonElement>(null);
   const botaoAbrir = useRef<HTMLButtonElement>(null);
   const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao(botaoAbrir);
-  const [aba, setAba] = useState("planta");
+  const [aba, setAbaBruta] = useState("planta");
   // "ver em 3D": pedido da planta/resultados (useVer3d) ou ?ver3d= na URL abre a aba 3D focada
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const pedido3d = useVer3d((s) => s.pedido);
   const [foco3d, setFoco3d] = useState<Ver3d | null>(null);
+  /** Troca de aba; sair da 3D esquece o foco pedido (voltar a ela abre o prédio inteiro). */
+  const setAba = (v: string) => {
+    setAbaBruta(v);
+    if (v !== "3d") setFoco3d(null);
+  };
+  const navegar = useNavigate();
   useEffect(() => {
-    const v = pedido3d ?? lerVer3d(new URLSearchParams(searchStr).get(PARAM_VER3D));
+    const daUrl = lerVer3d(new URLSearchParams(searchStr).get(PARAM_VER3D));
+    const v = pedido3d ?? daUrl;
     if (!v) return;
     setFoco3d(v);
-    setAba("3d");
-    useVer3d.getState().limpar();
-  }, [pedido3d, searchStr]);
+    setAbaBruta("3d");
+    if (pedido3d) useVer3d.getState().limpar();
+    // a URL vale uma vez: sem o parâmetro, o próximo pedido não volta a ela
+    if (daUrl) void navegar({ to: "/obra", search: {}, replace: true });
+  }, [pedido3d, searchStr, navegar]);
   const selecionarPavimento = useObra((e) => e.selecionarPavimento);
   const selecionar = useObra((e) => e.selecionar);
   const compacto = useCompacto();

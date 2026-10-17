@@ -1,8 +1,11 @@
 // Modelo 3D a partir da obra: cotas, posição, dimensões e rotação conferidas com conta à
 // mão (valores esperados escritos nos comentários, não tirados da própria função).
 import { describe, expect, it } from "vitest";
-import { obraNova, pavimentoNovo } from "../../dominio/criar";
+import { lajeNova, obraNova, pavimentoNovo } from "../../dominio/criar";
 import type { Laje, Obra, Pavimento, Pilar, Viga } from "../../dominio/obra";
+import { gerarEstrutura } from "../../dominio/gerar";
+import { calcular } from "../calculo";
+import { dadosDosElementos } from "./dados";
 import { pavimentoAvulso, reacoesBiapoiada } from "./escada";
 import { malhaVazia, paraCena, triangular } from "./geometria";
 import { contornoPilar, type Elemento3D, montarModelo, niveisDaObra, type Solido } from "./modelo";
@@ -90,7 +93,8 @@ const caixa = (pts: { x: number; y: number }[]) => ({
 });
 
 // Prédio: TIPO (pé-direito 2,80 m, 2 repetições) na base e COB (3,00 m) no topo.
-// Cotas à mão: TIPO 1/2 0 → 2,80; TIPO 2/2 2,80 → 5,60; COB 5,60 → 8,60.
+// Cotas à mão: TIPO (2/2) 0 → 2,80; TIPO (1/2) 2,80 → 5,60; COB 5,60 → 8,60. A repetição 1 é
+// a mais alta, como no motor (fluxo.test.ts: no tipo repetido 2 vezes, o Nk da 2 é o dobro).
 const tipo = pav("TIPO", 2.8, 2, {
   pilares: [pilar("P1", 0, 0), pilar("P2", 4, 0), pilar("P3", 2, 0)],
   vigas: [
@@ -122,8 +126,8 @@ const M = montarModelo(PREDIO);
 describe("níveis", () => {
   it("empilha da fundação pela soma dos pés-direitos, com as repetições", () => {
     expect(niveisDaObra(PREDIO).map((n) => [n.nome, n.cotaPiso, n.cota])).toEqual([
-      ["TIPO (1/2)", 0, 2.8],
-      ["TIPO (2/2)", 2.8, 5.6],
+      ["TIPO (2/2)", 0, 2.8],
+      ["TIPO (1/2)", 2.8, 5.6],
       ["COB", 5.6, 8.6],
     ]);
   });
@@ -131,7 +135,7 @@ describe("níveis", () => {
 
 describe("pilares", () => {
   it("lance do nível: do piso à cota, com a seção b × h em cm centrada no ponto", () => {
-    const s = prisma(por(M.elementos, "pilar:TIPO#2:P1@0,0").solidos[0]);
+    const s = prisma(por(M.elementos, "pilar:TIPO#1:P1@0,0").solidos[0]);
     expect(s.z0).toBeCloseTo(2.8, 9);
     expect(s.z1).toBeCloseTo(5.6, 9);
     // b = 20 cm em x, h = 40 cm em y: x ±0,10 e y ±0,20
@@ -198,7 +202,7 @@ describe("pilares", () => {
   });
 
   it("fundação: bloco com 25 cm de folga em volta da seção, de −0,50 a 0", () => {
-    const f = prisma(por(M.elementos, "fundacao:pilar:TIPO#1:P1@0,0").solidos[0]);
+    const f = prisma(por(M.elementos, "fundacao:pilar:TIPO#2:P1@0,0").solidos[0]);
     // seção x ±0,10 e y ±0,20, mais 0,25: x ±0,35, y ±0,45
     const c = caixa(f.base);
     expect(c.x0).toBeCloseTo(-0.35, 9);
@@ -211,7 +215,7 @@ describe("pilares", () => {
 
 describe("vigas", () => {
   it("topo na cota do nível, seção do .SEC por trecho entre os nós (pilares)", () => {
-    const v = por(M.elementos, "viga:TIPO#1:V1");
+    const v = por(M.elementos, "viga:TIPO#2:V1");
     // nós nos pilares x = 0, 2 e 4: trecho 0 de 0 a 2 com 20 × 40, trecho 1 de 2 a 4 com 15 × 30
     const [t0, t1] = v.solidos.map(barra);
     expect([t0!.a.x, t0!.b.x, t0!.a.z, t0!.largura, t0!.altura]).toEqual([0, 2, 2.8, 0.2, 0.4]);
@@ -369,7 +373,7 @@ describe("partes", () => {
   it("pilar com a coluna inteira, da fundação ao topo", () => {
     const v = vizinhos(M, "pilar:TIPO#2:P2@4,0");
     for (const k of [
-      "fundacao:pilar:TIPO#1:P2@4,0",
+      "fundacao:pilar:TIPO#2:P2@4,0",
       "pilar:TIPO#1:P2@4,0",
       "pilar:TIPO#2:P2@4,0",
       "pilar:COB#1:P2@4.105,0",
@@ -394,5 +398,27 @@ describe("partes", () => {
     expect(
       trilha(M, { tipo: "elemento", chave: "pilar:COB#1:P3@2,0" }).map((p) => p.rotulo),
     ).toEqual(["Prédio", "Coluna P3"]);
+  });
+});
+
+describe("dados do cálculo no lance certo", () => {
+  it("pavimento-tipo repetido: o Nk cresce para baixo (a repetição 1 é a mais alta)", () => {
+    // referência física, não a saída da função: a carga acumula do topo para a fundação,
+    // então o lance de baixo da coluna tem o maior Nk
+    const o = obraNova("Tipo × 3", "nbr6118-2023");
+    const p = pavimentoNovo("TIPO", 3, 3);
+    p.lajes.push(lajeNova(p, { x: 0, y: 0, lx: 4, ly: 5 }));
+    o.pavimentos = [gerarEstrutura(p)];
+    const m = montarModelo(o);
+    const c = calcular(o);
+    expect(c.tipo).toBe("ok");
+    const dados = dadosDosElementos(m, c, o, "si");
+    const coluna = m.colunas[0]!;
+    const nk = coluna.chaves.map((k) => dados.get(k)?.grandeza ?? Number.NaN);
+    expect(nk).toHaveLength(3);
+    expect(nk[0]!).toBeGreaterThan(nk[1]!);
+    expect(nk[1]!).toBeGreaterThan(nk[2]!);
+    // e o nível de baixo é o "TIPO (3/3)", como na aba Resultados
+    expect(m.niveis[0]!.nome).toBe("TIPO (3/3)");
   });
 });

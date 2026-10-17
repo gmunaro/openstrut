@@ -96,17 +96,23 @@ export function dadosDosElementos(
         continue;
       }
       const d = diagnosticoViga(rv, rp?.falhas);
-      const as = Math.max(
-        0,
-        ...rv.tramos.flatMap((t) =>
-          [t.positivo, t.negativoEsq, t.negativoDir].map((x) =>
+      // As máximo e taxa ρ = As / (bw·h) por tramo, com a seção do próprio tramo (.SEC na
+      // mesma quantidade de tramos; senão a primeira seção ou bw × h da viga)
+      const v = vigaObra.get(`${e.pavimentoId}|${e.id}`);
+      const secoes = v?.secoes?.trechos ?? [];
+      let as = 0;
+      let taxa: number | undefined;
+      rv.tramos.forEach((t, k) => {
+        const asT = Math.max(
+          0,
+          ...[t.positivo, t.negativoEsq, t.negativoDir].map((x) =>
             x.flexao && Number.isFinite(x.flexao.as) ? x.flexao.as : 0,
           ),
-        ),
-      );
-      const v = vigaObra.get(`${e.pavimentoId}|${e.id}`);
-      const sec = v?.secoes?.trechos?.[0] ?? v;
-      const taxa = sec && sec.bw > 0 && sec.h > 0 ? (100 * as) / (sec.bw * sec.h) : undefined;
+        );
+        as = Math.max(as, asT);
+        const s = (secoes.length === rv.tramos.length ? secoes[k] : secoes[0]) ?? v ?? undefined;
+        if (s && s.bw > 0 && s.h > 0) taxa = Math.max(taxa ?? 0, (100 * asT) / (s.bw * s.h));
+      });
       mapa.set(e.chave, {
         estado: d.situacao,
         mensagens: d.mensagens,
@@ -191,8 +197,12 @@ function defeitosDoOriginal(r: ResultadoObra) {
           `O original para em "Continuo com o processamento desta Viga S/N" (${v.interrompida.motivos.join(" e ")}): sem detalhamento.`,
         );
   }
-  for (const a of r.avisosComOpcao ?? [])
-    add(`${a.elemento.tipo}|${a.pavimentoId}|${a.elemento.id}`, a.texto);
+  for (const a of r.avisosComOpcao ?? []) {
+    const k = `${a.elemento.tipo}|${a.pavimentoId}|${a.elemento.id}`;
+    // a viga interrompida já tem o texto do laço acima
+    if (a.id === "viga.continuar-acima-do-limite" && mapa.has(k)) continue;
+    add(k, a.texto);
+  }
   return mapa;
 }
 

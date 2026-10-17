@@ -24,7 +24,7 @@ As fotos são de uma obra do oráculo de vários pavimentos: os arquivos da obra
 
 `montarModelo(obra)` (`modelo.ts`) devolve os níveis, os sólidos de cada peça, as colunas e os eixos. É uma função pura, em metros, com z para cima. A cena só triangula esses sólidos (`geometria.ts`).
 
-**Níveis e cotas.** A obra não guarda cota. A fundação é a cota 0, e a cota de cada nível é a soma dos pés-direitos de baixo para cima (`obra.pavimentos` vem do topo para a base). O importador do SISTRUT converte as cotas do `.COL` em pé-direito, então a pilha sai igual à do `.COL`. Cada repetição de um pavimento-tipo é um nível; a repetição 1 é a mais baixa, como no motor (`sistrut/obra.ts`).
+**Níveis e cotas.** A obra não guarda cota. A fundação é a cota 0, e a cota de cada nível é a soma dos pés-direitos de baixo para cima (`obra.pavimentos` vem do topo para a base). O importador do SISTRUT converte as cotas do `.COL` em pé-direito, então a pilha sai igual à do `.COL`. Cada repetição de um pavimento-tipo é um nível. A repetição 1 é a mais alta e a n é a de baixo, como no motor (`sistrut/obra.ts`, `pilares/acumulacao.ts`) e na aba Resultados: "TIPO (3/3)" é o primeiro tipo acima do térreo.
 
 **Pilares.** O lance de um pavimento vai da cota do nível de baixo à cota do nível dele. A seção é a real. O retângulo b × h tem b em x e gira `rotacao` graus, no sentido anti-horário, em torno do centro. A circular vira um polígono de 24 lados (12 em obras com mais de 400 lances), sem o vazado. A poligonal fica com o centro da caixa no ponto do pilar.
 
@@ -162,6 +162,233 @@ export interface DefinicaoCamada {
 
 `ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum. Ele recebe o mesmo `ctx` e some quando a camada desliga. Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
 
+<!-- tipos:inicio -->
+### Tipos
+
+Importe os tipos de `obra3d/api.ts` (`import type { Camada, ContextoVista, Elemento3D } from "../api";`). As declarações abaixo são cópia do código; `api.test.ts` falha se elas mudarem e este texto não. `EstadoElemento` é o nome de `Estado` em `api.ts`. `Ponto` é `{ x: number; y: number }` em metros da planta.
+
+`camadas.ts`:
+
+```ts
+export interface Camada {
+  /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
+  ativar(ctx: ContextoVista): (() => void) | void;
+  /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
+  Painel?: ComponentType<{ ctx: ContextoVista }>;
+}
+
+/** Entrada da barra: o botão liga/desliga e só então carrega o código da camada. */
+export interface DefinicaoCamada {
+  id: string;
+  nome: string;
+  descricao: string;
+  carregar: () => Promise<Camada>;
+}
+
+/** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
+ *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`). */
+/** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
+ *  ler e mexer, mas deve desfazer o que fez na limpeza (retorno de `ativar`).
+ *  A cena tem Y para cima: X = x da planta, Y = z (cota), Z = −y da planta, em metros. */
+export interface ContextoVista {
+  readonly cena: Scene;
+  readonly renderer: WebGLRenderer;
+  /** A câmera atual (perspectiva ou ortográfica, conforme a vista). */
+  readonly camera: PerspectiveCamera | OrthographicCamera;
+  readonly controles: OrbitControls;
+  /** Níveis de baixo para cima (`modelo.niveis[i].indice === i`), elementos, colunas e
+   *  eixos. `Elemento3D.nivel` é o índice do nível; fundação e escada sem posição ficam
+   *  no nível 0. Troca quando a obra muda (evento "cena"). */
+  readonly modelo: Modelo3D;
+  readonly obra: Obra;
+  readonly calculo: Calculo;
+  /** Dados do cálculo por chave de elemento (situação, resultado principal). */
+  readonly dados: ReadonlyMap<string, DadosElemento>;
+  /** Chave do elemento selecionado. */
+  readonly selecao: string | null;
+  selecionar(chave: string | null): void;
+  elemento(chave: string): Elemento3D | undefined;
+  /** O grupo do nível (filhos dele andam com o explodido). Índice de modelo.niveis. Os
+   *  grupos são recriados a cada evento "cena": guarde o índice, não o objeto. */
+  grupoDoNivel(indice: number): Object3D | undefined;
+  /** Altura na cena (Y) de uma cota do nível, com o deslocamento do explodido como está
+   *  desenhado agora (durante a animação, "explodido" avisa a cada quadro). */
+  alturaNaCena(indiceNivel: number, cota: number): number;
+  /** Ponto da planta (x, y em m; z = cota) na cena, sem o explodido. */
+  paraCena(x: number, y: number, z: number): Vector3;
+  /** Caixa do modelo inteiro na cena, sem o explodido. */
+  caixaNaCena(): Box3;
+  /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
+  esferaVisivel(): Sphere;
+  /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
+  caixaDe(chave: string): Box3 | undefined;
+  /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */
+  exibicao(chave: string): Exibicao;
+  /** A peça aparece: não está oculta (exibicao), passa em todos os filtros e alguma parte
+   *  dela fica do lado mantido de todos os planos de corte (inclusive o do pórtico e o da
+   *  camada de corte). Transparente conta como visível. */
+  estaVisivel(chave: string): boolean;
+  /** Redesenha no próximo quadro (a vista só desenha quando algo muda). */
+  pedirRender(): void;
+  /** Chamado a cada quadro enquanto registrado, com o tempo desde o quadro anterior em
+   *  segundos (animação, path tracing); devolve o cancelamento. Enquanto houver algum, a
+   *  vista desenha todo quadro. */
+  aoQuadro(f: (dtSegundos: number) => void): () => void;
+  /** Avisa nos eventos da vista; devolve o cancelamento. */
+  aoMudar(evento: EventoVista, f: () => void): () => void;
+  /** Leva a câmera a `posicao` olhando para `alvo` (coordenadas da cena). Anima em 0,45 s,
+   *  salvo com prefers-reduced-motion ou `animar` false. Uma chamada nova cancela a em
+   *  curso, cuja Promise resolve "cancelada". */
+  moverCamera(
+    posicao: Vector3,
+    alvo: Vector3,
+    animar?: boolean,
+  ): Promise<"concluida" | "cancelada">;
+  /** Liga ou desliga a órbita, o zoom e o pan do usuário (o tour e o 4D animam a câmera).
+   *  Não trava os botões de vista nem `moverCamera`. */
+  travarControles(travar: boolean): void;
+  /** Troca os materiais do núcleo (null volta aos padrão); refaz a geometria. */
+  definirMateriais(f: FabricaMateriais | null): void;
+  /** Planos de corte desta fonte (`id`); a vista junta os de todas as fontes no renderer.
+   *  Fica o que está do lado positivo de todos os planos. Lista vazia remove. */
+  definirPlanosCorte(id: string, planos: Plane[]): void;
+  /** Filtro de visibilidade desta fonte (`id`): a peça aparece só se todos os filtros
+   *  devolvem true (interseção); `null` remove o filtro. Não refaz a geometria nem emite
+   *  "cena" (custo linear nos vértices, alguns ms): dá para chamar a cada quadro. Peça
+   *  filtrada não aparece, não é selecionável e perde a seleção. O filtro vale também
+   *  para o modelo novo depois de editar a obra: confira índices contra `modelo.niveis`. */
+  definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null): void;
+}
+
+export type EventoVista =
+  /** Seleção mudou (ctx.selecao). */
+  | "selecao"
+  /** A geometria foi refeita (modelo, cores, foco, tipos ou pavimentos ocultos, materiais).
+   *  Os filtros (`definirFiltro`) não refazem a geometria nem emitem este evento. */
+  | "cena"
+  /** A câmera mexeu (órbita, vista, animação). */
+  | "camera"
+  /** Os níveis se moveram no explodido: a cada quadro da animação e no fim. */
+  | "explodido"
+  /** Um filtro ou plano de corte mudou, de qualquer fonte (`estaVisivel` pode ter mudado).
+   *  Não dispara de novo dentro do próprio aviso: chamar `definirFiltro` aqui não faz laço. */
+  | "visibilidade";
+
+/** Como uma peça aparece pelo foco e pela visibilidade por tipo e pavimento: sólida,
+ *  transparente (contexto) ou oculta. Filtros e planos de corte não entram aqui. */
+export type Exibicao = "solido" | "fantasma" | "oculto";
+
+/** Papel de cada material do núcleo; `definirMateriais` troca qualquer um deles.
+ *  "solido" e "fantasma" recebem a cor por vértice (atributo `color`). */
+export type PapelMaterial = "solido" | "fantasma" | "arestas" | "destaque";
+```
+
+`modelo.ts`:
+
+```ts
+export interface Modelo3D {
+  niveis: Nivel[];
+  elementos: Elemento3D[];
+  colunas: Coluna[];
+  eixos: Eixo3D[];
+  /** O que a montagem deduziu ou não conseguiu (escada sem posição etc.). */
+  avisos: string[];
+  caixa: { min: Ponto3; max: Ponto3 };
+}
+
+/** Um nível da obra: cada repetição de um pavimento-tipo é um nível. A cota é a da face
+ *  de cima da laje do pavimento; o lance de pilar do nível vai de `cotaPiso` a `cota`. */
+export interface Nivel {
+  chave: string;
+  pavimentoId: string;
+  nome: string;
+  /** Repetição do pavimento-tipo: 1 = a mais alta, n = a mais baixa, como no motor
+   *  (sistrut/obra.ts, niveisDoEdificio; pilares/acumulacao.ts) e na aba Resultados. */
+  repeticao: number;
+  /** 0 = o primeiro acima da fundação. */
+  indice: number;
+  cotaPiso: number;
+  cota: number;
+}
+
+export interface Elemento3D {
+  /** Única no modelo: tipo, nível e id. */
+  chave: string;
+  tipo: TipoElemento;
+  /** Id na obra (laje, viga ou pilar; na fundação, o do pilar). */
+  id: string;
+  nome: string;
+  pavimentoId: string;
+  /** Índice do nível; a fundação fica no 0 e a escada no nível de baixo dela. */
+  nivel: number;
+  repeticao: number;
+  solidos: Solido[];
+  /** Seção em texto, cm. */
+  secao: string;
+  /** Coluna do pilar (pilar e fundação). */
+  coluna?: string;
+  /** Notas que a vista mostra com o elemento (ex.: pilar que nasce em transição). */
+  notas: string[];
+  /** Rótulo na cena, em cima da peça (ex.: "ESCADA"). */
+  rotulo?: string;
+}
+
+export type TipoElemento = "laje" | "viga" | "pilar" | "escada" | "fundacao";
+
+/** Sólido, m. Prisma vertical: polígono da planta (anti-horário) de z0 a z1. Barra: o
+ *  eixo da face de cima vai de `a` a `b` (pode inclinar, como na escada); a seção tem
+ *  `largura` na horizontal, perpendicular ao eixo, e `altura` na vertical, para baixo. */
+export type Solido =
+  | { tipo: "prisma"; base: Ponto[]; z0: number; z1: number }
+  | { tipo: "barra"; a: Ponto3; b: Ponto3; largura: number; altura: number };
+
+export interface Ponto3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/** Lances de um pilar empilhados, da base ao topo (chaves de Elemento3D). */
+export interface Coluna {
+  id: string;
+  nome: string;
+  chaves: string[];
+  /** O lance mais baixo não está no primeiro nível: nasce sobre uma viga. */
+  nasceEmTransicao: boolean;
+}
+
+/** Linha da planta com vigas (pórtico): x = c (vigas verticais) ou y = c (horizontais). */
+export interface Eixo3D {
+  chave: string;
+  direcao: "x" | "y";
+  c: number;
+  vigas: string[];
+}
+```
+
+`dados.ts`:
+
+```ts
+export interface DadosElemento {
+  estado: Estado;
+  /** Avisos e falhas do elemento, como na planta. */
+  mensagens: string[];
+  /** Resultado principal, já formatado com unidade (ex.: "Nd = 812,40 kN"). */
+  principal?: string;
+  /** Valor SI da grandeza do mapa de cor do tipo (Nk, kN; taxa, %; momento, kN·m/m). */
+  grandeza?: number;
+  /** Defeitos do SISTRUT original que atingem o elemento (só no modo original). */
+  defeitos: string[];
+}
+
+/** "sem": sem cálculo (obra não calculada ou elemento fora do resultado). */
+export type Estado = Situacao | "sem";
+
+export type GrandezaMapa = "nkPilares" | "taxaVigas" | "momentoLajes";
+```
+
+<!-- tipos:fim -->
+
 ### Coordenadas
 
 - A cena tem Y para cima, em metros: X = x da planta, Y = cota (z), Z = −y da planta. `ctx.paraCena(x, y, z)` faz a conversão.
@@ -177,7 +404,9 @@ export interface DefinicaoCamada {
 | `cena`, `renderer`, `camera`, `controles` | os objetos vivos do three.js. `camera` troca entre perspectiva e ortográfica pelos botões de vista; leia `ctx.camera` na hora, sem guardar. `renderer.xr` serve à realidade aumentada |
 | `modelo`, `obra`, `calculo`, `dados` | o modelo 3D, a obra, o cálculo (`calculo.tipo === "ok"` traz `calculo.resultado`) e os dados por chave de elemento (`estado`, `principal`, `grandeza`, `defeitos`) |
 | `elemento(chave)`, `grupoDoNivel(i)` | o elemento do modelo e o grupo do nível |
-| `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()` | conversão da planta, caixa do modelo inteiro (sem o explodido) e esfera das peças visíveis (com o explodido) |
+| `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera das peças visíveis (`Sphere`, com o explodido) |
+| `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |
+| `estaVisivel(chave)`, `exibicao(chave)` | se a peça aparece considerando tudo (foco, tipos e pavimentos ocultos, filtros de todas as camadas e planos de corte) e como o foco a mostra (`"solido"`, `"fantasma"` ou `"oculto"`) |
 | `alturaNaCena(nivel, cota)` | a altura Y de uma cota, com o deslocamento do explodido como está desenhado agora |
 | `selecao`, `selecionar(chave)` | a seleção atual (chave de `Elemento3D`) |
 | `aoMudar(evento, f)` | eventos, ver abaixo. Devolve o cancelamento |
@@ -189,7 +418,7 @@ export interface DefinicaoCamada {
 | `definirPlanosCorte(id, planos)` | planos de corte desta fonte. A vista junta os de todas as fontes e mantém o lado positivo de todos. Lista vazia remove |
 | `definirFiltro(id, f)` | esconde as peças para as quais `f` devolve `false`; `null` remove o filtro desta fonte. Vários filtros valem juntos: a peça aparece só se todos devolvem `true` |
 
-**Eventos.** `"selecao"` dispara quando a seleção muda. `"cena"` dispara quando a geometria foi refeita: obra editada (modelo novo), foco, cores, tipos ou pavimentos ocultos, materiais. `"explodido"` dispara a cada quadro da animação do explodido e no fim dela. `"camera"` dispara quando a câmera mexe.
+**Eventos.** `"selecao"` dispara quando a seleção muda. `"cena"` dispara quando a geometria foi refeita: obra editada (modelo novo), foco, cores, tipos ou pavimentos ocultos, materiais. `"explodido"` dispara a cada quadro da animação do explodido e no fim dela. `"visibilidade"` dispara quando um filtro ou plano de corte muda, de qualquer camada (o corte do pórtico e os tipos ou pavimentos ocultos vêm com `"cena"`). `"camera"` dispara quando a câmera mexe. Nenhum evento dispara de novo dentro do próprio aviso: chamar `definirFiltro` no aviso de `"visibilidade"`, ou `definirMateriais` no de `"cena"`, não entra em laço. Para saber se uma peça aparece depois de qualquer mudança, ouça `"cena"` e `"visibilidade"` e consulte `estaVisivel`.
 
 **Filtro.** `definirFiltro` não refaz a geometria e não emite `"cena"`. Ele só zera os vértices das peças escondidas, o que custa cerca de 1 ms na obra de 20 pavimentos. Dá para chamar a cada quadro de uma animação. Peça filtrada não aparece, não é selecionável e perde a seleção. O filtro continua valendo depois que a obra é editada e o modelo muda. Por isso ele deve tolerar níveis e chaves que deixaram de existir (compare o índice com `ctx.modelo.niveis.length`).
 
@@ -204,7 +433,7 @@ A camada abaixo mostra o prédio sendo construído nível por nível, com um con
 ```tsx
 // src/telas/obra3d/sequencia/camada.tsx
 import { useEffect, useState } from "react";
-import type { Camada, ContextoVista } from "../camadas";
+import type { Camada, ContextoVista } from "../api";
 
 /** Etapa atual: os níveis 0..etapa aparecem. Fica no módulo entre ligar e desligar. */
 const estado = { etapa: Number.POSITIVE_INFINITY, tocando: false };
@@ -304,8 +533,9 @@ O corte por pavimento (`camadas/corte.tsx`) é uma camada real e mais curta. Ela
 
 ## Testes
 
-- `src/telas/obra3d/modelo.test.ts` (20 testes, com conta à mão): cotas com repetições, seção girada 90° e 30°, circular, poligonal horário, colunas com pilar deslocado e de transição, bloco de fundação, seção por trecho e mesa T, laje rebaixada, normais para fora, reações da escada, posição da escada pelas cargas e fora do prédio, vizinhos, eixo e trilha.
-- `e2e/vista3d.spec.ts` (5 testes, `PORT=4407 bun x playwright test e2e/vista3d.spec.ts`): obra de 3 pavimentos (girar, selecionar, ocultar, explodido, teclado, ver na planta), obra do oráculo de vários pavimentos importada (todo, partes, trilha, camada de corte, mapa de Nk, PNG e glTF), 360 × 800 com toque, 3840 × 2160 e o desempenho de 20 pavimentos. Todos conferem que o console não tem erro nem aviso.
+- `src/telas/obra3d/modelo.test.ts` (21 testes, com conta à mão ou referência independente): cotas com repetições (a repetição 1 é a mais alta), seção girada 90° e 30°, circular, poligonal horário, colunas com pilar deslocado e de transição, bloco de fundação, seção por trecho e mesa T, laje rebaixada, normais para fora, reações da escada, posição da escada pelas cargas e fora do prédio, vizinhos, eixo, trilha e o Nk do pavimento-tipo crescendo para baixo.
+- `src/telas/obra3d/api.test.ts` (18 testes): a seção "Tipos" deste documento é igual às declarações do código, e `api.ts` exporta todas.
+- `e2e/vista3d.spec.ts` (5 testes, `PORT=4407 bun x playwright test e2e/vista3d.spec.ts`): obra de 3 pavimentos (girar, selecionar, filtro de camada que esconde e tira a seleção, ocultar, explodido, teclado, ver na planta), obra do oráculo de vários pavimentos importada (todo, partes, trilha, camada de corte, mapa de Nk, PNG e glTF), 360 × 800 com toque, 3840 × 2160 e o desempenho de 20 pavimentos. Todos conferem que o console não tem erro nem aviso.
 
 ## Limitações
 

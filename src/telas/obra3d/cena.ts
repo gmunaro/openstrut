@@ -37,7 +37,13 @@ import {
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Obra } from "../../dominio/obra";
 import type { Calculo } from "../calculo";
-import type { ContextoVista, EventoVista, FabricaMateriais, PapelMaterial } from "./camadas";
+import type {
+  ContextoVista,
+  EventoVista,
+  Exibicao,
+  FabricaMateriais,
+  PapelMaterial,
+} from "./camadas";
 import { COR_DEFEITO, COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
 import { type DadosElemento, faixaDaGrandeza, GRANDEZAS, type GrandezaMapa } from "./dados";
 import { type Malha, malhaVazia, paraCena, triangular } from "./geometria";
@@ -51,8 +57,6 @@ export const TIPOS: readonly TipoElemento[] = ["laje", "viga", "pilar", "escada"
 /** Distância da câmera ao nível acima da qual as arestas somem (LOD), m. */
 const LIMIAR_ARESTAS = 60;
 const COR_SELECAO = "#38bdf8";
-
-type Exibicao = "solido" | "fantasma" | "oculto";
 
 /** Onde uma peça está nos buffers do grupo: início e tamanho, em números (x, y, z). */
 interface Faixa {
@@ -190,6 +194,7 @@ export class Cena3D implements ContextoVista {
   private materiais: Record<PapelMaterial, Material>;
   private fabrica: FabricaMateriais = materiaisPadrao;
   private destaque = new Group();
+  private materialContorno = new LineBasicMaterial({ color: COR_SELECAO, depthTest: false });
   private planos = new Map<string, Plane[]>();
   private filtros = new Map<string, (e: Elemento3D) => boolean>();
   private ouvintes = new Map<EventoVista, Set<() => void>>();
@@ -202,6 +207,7 @@ export class Cena3D implements ContextoVista {
   private deslocamentos: number[] = [];
   private deslocamentosAlvo: number[] = [];
   private _selecao: string | null = null;
+  private exib = new Map<string, Exibicao>();
   private apontado: { x: number; y: number } | null = null;
   estado: EstadoVisual = ESTADO_INICIAL;
   obra: Obra;
@@ -312,7 +318,10 @@ export class Cena3D implements ContextoVista {
     this.limparGrupos();
     this.limparDestaque();
     for (const m of Object.values(this.materiais)) m.dispose();
+    this.materialContorno.dispose();
     this.renderer.dispose();
+    // o dispose não solta o contexto WebGL; o Chrome aceita uns 16 ao mesmo tempo
+    this.renderer.forceContextLoss();
     canvas.remove();
   }
 
@@ -325,8 +334,18 @@ export class Cena3D implements ContextoVista {
     return () => void s.delete(f);
   }
 
+  private emitindo = new Set<EventoVista>();
+
+  /** Avisa os ouvintes. Um evento não dispara de novo dentro do próprio aviso: a camada
+   *  que chama definirFiltro no aviso de "visibilidade" não entra em laço. */
   private emitir(evento: EventoVista) {
-    for (const f of this.ouvintes.get(evento) ?? []) f();
+    if (this.emitindo.has(evento)) return;
+    this.emitindo.add(evento);
+    try {
+      for (const f of this.ouvintes.get(evento) ?? []) f();
+    } finally {
+      this.emitindo.delete(evento);
+    }
   }
 
   // ---- materiais ------------------------------------------------------------------------
@@ -368,6 +387,19 @@ export class Cena3D implements ContextoVista {
     if (modeloNovo) this.malhas.clear();
     if (this._selecao && !this.modelo.elementos.some((e) => e.chave === this._selecao))
       this.selecionar(null);
+    // o foco e os níveis ocultos guardam índices e chaves do modelo antigo
+    const { foco, niveisOcultos } = this.estado;
+    const n = this.modelo.niveis.length;
+    const valido =
+      foco.tipo === "todo" ||
+      (foco.tipo === "nivel" && foco.nivel < n) ||
+      (foco.tipo === "elemento" && this.modelo.elementos.some((e) => e.chave === foco.chave)) ||
+      (foco.tipo === "eixo" && this.modelo.eixos.some((e) => e.chave === foco.chave));
+    this.estado = {
+      ...this.estado,
+      foco: valido ? foco : { tipo: "todo" },
+      niveisOcultos: new Set([...niveisOcultos].filter((i) => i < n)),
+    };
     this.reconstruir();
   }
 
@@ -441,16 +473,16 @@ export class Cena3D implements ContextoVista {
       return COR_ESTADO[d.estado];
     }
     if (GRANDEZAS[modo].tipo !== e.tipo) return NEUTRO[e.tipo];
-    const faixa = this.faixa;
+    const faixa = this.faixaAtual;
     if (d?.grandeza === undefined || !faixa) return SEM_VALOR;
     const t = faixa.max > faixa.min ? (d.grandeza - faixa.min) / (faixa.max - faixa.min) : 1;
     return corNaRampa(t);
   }
 
-  /** Faixa da grandeza do mapa de cor (para a legenda). */
+  /** Faixa da grandeza do mapa de cor da última reconstrução (cores e legenda). */
+  private faixaAtual: { min: number; max: number } | undefined;
   get faixa() {
-    const modo = this.estado.modoCor;
-    return modo === "estado" ? undefined : faixaDaGrandeza(this.modelo, this.dados, modo);
+    return this.faixaAtual;
   }
 
   private limparGrupos() {
@@ -470,8 +502,12 @@ export class Cena3D implements ContextoVista {
   /** Refaz a geometria mesclada de todos os grupos (foco, cores, filtros, modelo). */
   reconstruir() {
     this.porChave = new Map(this.modelo.elementos.map((e) => [e.chave, e]));
+    const modo = this.estado.modoCor;
+    this.faixaAtual =
+      modo === "estado" ? undefined : faixaDaGrandeza(this.modelo, this.dados, modo);
     this.limparGrupos();
     const exib = this.exibicoes();
+    this.exib = exib;
     const n = this.modelo.niveis.length;
     this.definirDeslocamentos();
     const cor = new Color();
@@ -667,6 +703,43 @@ export class Cena3D implements ContextoVista {
   }
 
   /** Caixa do modelo inteiro na cena (sem o explodido). */
+  /** Como a peça aparece pelo foco, tipos e pavimentos ocultos (sem filtros e cortes). */
+  exibicao(chave: string): Exibicao {
+    return this.exib.get(chave) ?? "oculto";
+  }
+
+  /** Caixa da peça na cena, com o deslocamento do explodido desenhado agora. */
+  caixaDe(chave: string): Box3 | undefined {
+    const e = this.porChave.get(chave);
+    if (!e) return undefined;
+    const pos = this.malhaDe(chave).posicoes;
+    const caixa = new Box3();
+    const p = new Vector3();
+    for (let k = 0; k < pos.length; k += 3)
+      caixa.expandByPoint(p.set(pos[k]!, pos[k + 1]!, pos[k + 2]!));
+    const dy = this.deslocamentos[e.nivel] ?? 0;
+    caixa.min.y += dy;
+    caixa.max.y += dy;
+    return caixa;
+  }
+
+  /** A peça aparece na tela: não está oculta pelo foco, tipo ou pavimento, passa em
+   *  todos os filtros das camadas e alguma parte da caixa dela fica do lado mantido de
+   *  todos os planos de corte. Transparente (contexto) conta como visível. */
+  estaVisivel(chave: string): boolean {
+    if (this.exibicao(chave) === "oculto") return false;
+    if (!this.passaFiltros(this.porChave.get(chave))) return false;
+    const caixa = this.caixaDe(chave);
+    if (!caixa) return false;
+    const { min, max } = caixa;
+    const cantos = [0, 1, 2, 3, 4, 5, 6, 7].map(
+      (i) => new Vector3(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? max.z : min.z),
+    );
+    return [...this.planos.values()]
+      .flat()
+      .every((pl) => cantos.some((c) => pl.distanceToPoint(c) >= 0));
+  }
+
   caixaNaCena() {
     const { min, max } = this.modelo.caixa;
     return new Box3(new Vector3(min.x, min.z, -max.y), new Vector3(max.x, max.z, -min.y));
@@ -772,10 +845,7 @@ export class Cena3D implements ContextoVista {
     preenchimento.renderOrder = 5;
     const ga = new BufferGeometry();
     ga.setAttribute("position", new Float32BufferAttribute(m.arestas, 3));
-    const contorno = new LineSegments(
-      ga,
-      new LineBasicMaterial({ color: COR_SELECAO, depthTest: false }),
-    );
+    const contorno = new LineSegments(ga, this.materialContorno);
     contorno.renderOrder = 6;
     this.destaque.add(preenchimento, contorno);
     this.atualizarPosicaoDestaque();
@@ -1001,12 +1071,14 @@ export class Cena3D implements ContextoVista {
     if (planos.length === 0) this.planos.delete(id);
     else this.planos.set(id, planos);
     this.sujo = true;
+    this.emitir("visibilidade");
   }
 
   definirFiltro(id: string, f: ((e: Elemento3D) => boolean) | null) {
     if (f) this.filtros.set(id, f);
     else this.filtros.delete(id);
     this.aplicarFiltros();
+    this.emitir("visibilidade");
   }
 
   elemento(chave: string) {

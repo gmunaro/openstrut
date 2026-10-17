@@ -27,7 +27,8 @@ export interface Nivel {
   chave: string;
   pavimentoId: string;
   nome: string;
-  /** 1 = a repetição mais baixa (a numeração do motor, sistrut/obra.ts). */
+  /** Repetição do pavimento-tipo: 1 = a mais alta, n = a mais baixa, como no motor
+   *  (sistrut/obra.ts, niveisDoEdificio; pilares/acumulacao.ts) e na aba Resultados. */
   repeticao: number;
   /** 0 = o primeiro acima da fundação. */
   indice: number;
@@ -104,7 +105,7 @@ export function niveisDaObra(obra: Obra): Nivel[] {
   for (const p of obra.pavimentos.toReversed()) {
     if (pavimentoAvulso(p)) continue;
     const n = Math.max(1, p.repeticoes);
-    for (let r = 1; r <= n; r++) {
+    for (let r = n; r >= 1; r--) {
       const piso = cota;
       cota += p.peDireito;
       niveis.push({
@@ -199,17 +200,20 @@ export function trechosViga(v: Viga, g: GeometriaViga | undefined) {
   const p2 = { x: v.x2, y: v.y2 };
   const naPlanta = (s: number) =>
     g!.eixo.horizontal ? { x: s, y: g!.eixo.c } : { x: g!.eixo.c, y: s };
+  // seção sem largura ou altura no .SEC (balanço): vale a da viga
+  const valida = (s: (typeof secoes)[number]) =>
+    s.bw > 0 && s.h > 0 ? s : { bw: v.bw, h: v.h, bf: 0, hf: 0 };
   if (g && secoes.length > 1 && secoes.length === g.nos.length - 1)
     return secoes.map((s, k) => ({
       de: naPlanta(g.nos[k]!),
       ate: naPlanta(g.nos[k + 1]!),
-      secao: s,
+      secao: valida(s),
     }));
   const s0 = secoes[0];
   const iguais =
     s0 !== undefined &&
     secoes.every((s) => s.bw === s0.bw && s.h === s0.h && s.bf === s0.bf && s.hf === s0.hf);
-  return [{ de: p1, ate: p2, secao: iguais ? s0 : { bw: v.bw, h: v.h, bf: 0, hf: 0 } }];
+  return [{ de: p1, ate: p2, secao: iguais ? valida(s0) : { bw: v.bw, h: v.h, bf: 0, hf: 0 } }];
 }
 
 export function textoSecaoViga(trechos: ReturnType<typeof trechosViga>): string {
