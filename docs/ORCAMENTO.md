@@ -59,13 +59,25 @@ Composições padrão (coeficientes do Analítico 09/2026):
 | Papel | Composição |
 |---|---|
 | Concreto C20 a C40 | insumo 1524, 1527, 1525, 11145, 34479 (usinado bombeável, com bombeamento, sem lançamento). fck fora de 20 a 40 fica sem composição (a SINAPI não tem C15). |
-| Aço CA-50 | 32 (6,3), 33 (8,0), 34 (10,0), 43055 (12,5 ou 16,0), 43056 (20,0 ou 25,0), 43057 (32,0). CA-60: 43059 (4,2 a 7,0). |
+| Aço CA-50 | 32 (6,3), 33 (8,0), 34 (10,0), 43055 (12,5 ou 16,0), 43056 (20,0 ou 25,0), 43057 (32,0). CA-60: 43059 (4,2 a 7,0). CA-50 φ 5 fica sem composição: a SINAPI (e a NBR 7480) não tem CA-50 de 5 mm, e o 5,0 dela é CA-60. As obras da NB-1/78 com os materiais padrão (fck 15 MPa, estribo CA-50) abrem com o total parcial por esses dois insumos, até o usuário escolher o item. |
 | Concretagem | 103673, inteira. |
 | Fôrma, fabricação | 92267 (laje), 92265 (viga), 92263 (pilar), compensado resinado 17 mm. |
 | Fôrma, montagem e desmontagem | 92514 (laje, pé-direito simples), 92456 (viga, escoramento metálico) e 92419 (pilar), 4 utilizações, sem a subcomposição de fabricação. |
 | Armação | 92762 (CA-50 10,0 mm, montagem) sem a 92803, mais a 92803 (corte e dobra) sem o aço: 88245 × 0,048, 88238 × 0,0078, arame 43132 × 0,025, espaçador 39017 × 0,543. |
 
 As composições da SINAPI de montagem de fôrma já trazem uma fração da fôrma fabricada (0,341, 0,414 e 0,263 m²/m² nas três acima), e as de armação trazem o aço com 11 % de perda. O app cobra o material à parte, com a perda e o reaproveitamento da tela, e deixa na composição de mão de obra o resto. O teste `sinapi.test.ts` soma de volta o material e confere o custo publicado na CSD: 92514 = R$ 57,18, 92456 = R$ 177,28, 92419 = R$ 101,51, 92762 = R$ 10,10 (SP, 09/2026).
+
+### Custo publicado × soma dos itens
+
+O custo que a SINAPI publica para uma composição não é Σ coeficiente × preço dos itens. Cada item (coeficiente × preço) é truncado no centavo antes da soma. Com essa regra os quatro custos acima saem exatos, e o teste "regra de soma da SINAPI" confere isso no centavo (92803: 7,42 + 0,32 + 0,04 = 7,78; 92762: 7,78 + 1,45 + 0,22 + 0,54 + 0,11 = 10,10). Sem truncar, a soma fica de R$ 0,01 a R$ 0,06 acima por unidade: 57,22 contra 57,18 na 92514, 177,34 contra 177,28 na 92456, 101,57 contra 101,51 na 92419, 10,11 contra 10,10 na 92762.
+
+O app usa Σ coeficiente × preço, sem truncar:
+
+- as composições de montagem e de armação do app não são as publicadas (sem a fôrma fabricada e sem o aço), então não há custo publicado para reproduzir;
+- a mesma conta vale para a tabela importada do usuário, que não segue a regra da SINAPI;
+- a diferença fica abaixo de 0,1 % do custo de cada composição.
+
+Quando o item da composição é uma composição da SINAPI usada inteira (92267, 92265, 92263, 103673 e as de mão de obra 88245, 88238, 88262, 88239), o preço é o publicado.
 
 Os preços mudam todo mês e por UF. Para outro mês, outra UF ou com desoneração, importe o ZIP mensal da SINAPI.
 
@@ -75,6 +87,8 @@ Os preços mudam todo mês e por UF. Para outro mês, outra UF ou com desoneraç
 
 - CSV (separador `;`, `,` ou tab, UTF-8 ou latin1) e XLSX com as colunas código, descrição, unidade e preço. O cabeçalho é achado nas primeiras 40 linhas pelos nomes ("código...", "descrição...", "unid...", "preço/custo/valor...").
 - O XLSX da SINAPI e o ZIP mensal (o app abre a planilha de referência de dentro do ZIP). Abas de insumos (ISD, ICD, ISE): cabeçalho na linha 10, preço numa coluna por UF. Abas de composições (CSD, CCD, CSE): a UF fica na linha 9, sobre a coluna "Custo (R$)", e o código está numa fórmula `HYPERLINK(...; código)` com valor em cache 0; o leitor usa o código da fórmula. O mês de referência e a desoneração saem da aba (linha "Mês de Referência", nome ISD/CSD = sem, ICD/CCD = com).
+- Números em texto: com vírgula e ponto, o último é o decimal ("1.234,56", "1,234.56"); separador repetido é de milhar ("1.234.567"). Um separador só, seguido de três dígitos ("12.500"), é ambíguo, e decide o arquivo: CSV com `;` usa vírgula decimal (12.500 = doze mil e quinhentos), CSV com `,` usa ponto (12.500 = 12,5). O separador do CSV é o que mais aparece nas primeiras 40 linhas, para um título com vírgula na primeira linha não decidir sozinho.
+- Código repetido no arquivo: vale a primeira linha, e a tela diz quantas ficaram de fora.
 - O `.xls` antigo não é lido.
 
 A importação cria uma tabela nova ou junta os itens à tabela atual (o código que já existe recebe o preço novo). Para ter insumos e composições da SINAPI numa tabela só, importe a ISD como nova e junte a CSD.
@@ -98,6 +112,7 @@ import { useOrcamento } from "../orcamento/estado";
 import { secaoOrcamento } from "../orcamento/SecaoOrcamento";
 
 // dentro do componente, com o resultado e o detalhamento que o relatório já tem
+// `atual` fica null até o hook ler a tabela e os parâmetros guardados no navegador
 const { atual } = useOrcamento(obra, calculo.tipo === "ok" ? calculo.resultado : null, detalhamento);
 // ...
 {incluirOrcamento && atual && secaoOrcamento(atual)}
@@ -112,5 +127,5 @@ const { atual } = useOrcamento(obra, calculo.tipo === "ok" ? calculo.resultado :
 - Mão de obra de armação única para todas as bitolas (a de 10 mm da SINAPI). Na SINAPI ela cai com a bitola: na montagem, 0,1069 h/kg de armador no CA-60 5,0 mm (92759), 0,0392 no CA-50 10,0 mm (92762) e 0,0257 no CA-50 12,5 mm (92763).
 - Fôrma: um jogo por tipo de elemento; o reaproveitamento não considera a sequência real da obra nem a perda por uso.
 - Área construída pela área das lajes nos eixos, sem projeções, escadas nem vazios.
-- Fundação só paramétrica (R$/tf) e só na NB-1/78.
+- Fundação só paramétrica (R$/tf) e só na NB-1/78. A comparação mostra a diferença como parcial quando falta preço a algum insumo em um dos modos.
 - A tabela de referência é de um mês e uma UF. Um item agrupado da SINAPI (12,5 ou 16 mm; 20 ou 25 mm; CA-60 4,2 a 7,0 mm) tem o mesmo preço para as bitolas do grupo.

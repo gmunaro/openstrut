@@ -70,9 +70,18 @@ const transbordos = (page: Page) =>
       if (el.parentElement?.closest('[data-slot="tabela-rolagem"]')) continue;
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.right > largura + 0.5)
-        fora.push(`${el.tagName.toLowerCase()} "${(el.textContent ?? "").trim().slice(0, 40)}" até ${Math.round(r.right)} px`);
-      if (el instanceof HTMLElement && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== "visible" && el.dataset.slot !== "tabela-rolagem")
-        fora.push(`${el.tagName.toLowerCase()} rola de lado: ${el.scrollWidth} > ${el.clientWidth} px`);
+        fora.push(
+          `${el.tagName.toLowerCase()} "${(el.textContent ?? "").trim().slice(0, 40)}" até ${Math.round(r.right)} px`,
+        );
+      if (
+        el instanceof HTMLElement &&
+        el.scrollWidth > el.clientWidth + 1 &&
+        getComputedStyle(el).overflowX !== "visible" &&
+        el.dataset.slot !== "tabela-rolagem"
+      )
+        fora.push(
+          `${el.tagName.toLowerCase()} rola de lado: ${el.scrollWidth} > ${el.clientWidth} px`,
+        );
     }
     return {
       pagina: document.documentElement.scrollWidth - largura,
@@ -92,9 +101,12 @@ const controlesSobOBotao = (page: Page) =>
     const achados = new Set<string>();
     for (const x of xs)
       for (const y of ys) {
-        const alvo = document.elementsFromPoint(x, y).find((el) => !el.closest("[data-relato-ignorar]"));
+        const alvo = document
+          .elementsFromPoint(x, y)
+          .find((el) => !el.closest("[data-relato-ignorar]"));
         const c = alvo?.closest('input, select, textarea, button, summary, label, [role="tab"]');
-        if (c && c.closest('[role="tabpanel"]')) achados.add(c.getAttribute("aria-label") ?? c.textContent?.trim() ?? c.tagName);
+        if (c && c.closest('[role="tabpanel"]'))
+          achados.add(c.getAttribute("aria-label") ?? c.textContent?.trim() ?? c.tagName);
       }
     return [...achados];
   });
@@ -138,19 +150,25 @@ const contrastes = (page: Page) =>
     let qual = "";
     const baixos: string[] = [];
     for (const el of painel.querySelectorAll("*")) {
-      const texto = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent!.trim()).join("");
+      const texto = [...el.childNodes]
+        .filter((n) => n.nodeType === 3)
+        .map((n) => n.textContent!.trim())
+        .join("");
       if (!texto || el.closest(":disabled")) continue;
       const r = el.getBoundingClientRect();
       const st = getComputedStyle(el);
       if (r.width === 0 || st.visibility === "hidden") continue;
       let opacidade = 1;
-      for (let e: Element | null = el; e; e = e.parentElement) opacidade *= Number(getComputedStyle(e).opacity);
+      for (let e: Element | null = el; e; e = e.parentElement)
+        opacidade *= Number(getComputedStyle(e).opacity);
       const bg = fundo(el);
       const c = rgba(st.color);
       const cor = sobre(c, c[3]! * opacidade, bg);
       const [a, b] = [lum(cor), lum(bg)].sort((x, y) => y - x);
       const razao = (a! + 0.05) / (b! + 0.05);
-      const grande = parseFloat(st.fontSize) >= 24 || (parseFloat(st.fontSize) >= 18.66 && Number(st.fontWeight) >= 700);
+      const grande =
+        parseFloat(st.fontSize) >= 24 ||
+        (parseFloat(st.fontSize) >= 18.66 && Number(st.fontWeight) >= 700);
       if (razao < menor) {
         menor = razao;
         qual = texto.slice(0, 40);
@@ -160,9 +178,44 @@ const contrastes = (page: Page) =>
     return { menor, qual, baixos };
   });
 
+/** Textos do painel visíveis embaixo do botão de relatar problema: cada trecho de texto
+ *  recortado pelos contêineres que rolam (o que rolou para fora não conta). */
+const textosSobOBotao = (page: Page) =>
+  page.evaluate(() => {
+    const botao = document.querySelector('[aria-label="Relatar problema"]');
+    const painel = document.querySelector('[role="tabpanel"][data-state="active"]');
+    if (!botao || !painel) return [];
+    const b = botao.getBoundingClientRect();
+    const achados: string[] = [];
+    const andar = document.createTreeWalker(painel, NodeFilter.SHOW_TEXT);
+    for (let n = andar.nextNode(); n; n = andar.nextNode()) {
+      if (!n.textContent?.trim()) continue;
+      const faixa = document.createRange();
+      faixa.selectNodeContents(n);
+      for (const r of faixa.getClientRects()) {
+        let [l, t, d, f] = [r.left, r.top, r.right, r.bottom];
+        for (let e = n.parentElement; e && e !== document.body; e = e.parentElement) {
+          if (getComputedStyle(e).overflow === "visible") continue;
+          const c = e.getBoundingClientRect();
+          [l, t, d, f] = [
+            Math.max(l, c.left),
+            Math.max(t, c.top),
+            Math.min(d, c.right),
+            Math.min(f, c.bottom),
+          ];
+        }
+        if (d <= l || f <= t) continue;
+        if (l < b.right && d > b.left && t < b.bottom && f > b.top)
+          achados.push(n.textContent.trim().slice(0, 30));
+      }
+    }
+    return achados;
+  });
+
 /** Uma captura por bloco (o painel rola por dentro), conferindo em cada posição o
- *  transbordo e o botão flutuante. */
-async function revisarBlocos(page: Page, painel: Locator, nome: string) {
+ *  transbordo e o botão flutuante. `semTexto`: nem texto embaixo dele (celular, com a
+ *  faixa da direita livre). */
+async function revisarBlocos(page: Page, painel: Locator, nome: string, semTexto = false) {
   // sem o botão a conferência passaria sem conferir nada
   await expect(page.getByRole("button", { name: "Relatar problema" })).toBeVisible();
   const titulos = painel.getByRole("heading");
@@ -172,6 +225,8 @@ async function revisarBlocos(page: Page, painel: Locator, nome: string) {
     // o botão de relatar se reposiciona depois da rolagem
     await page.waitForTimeout(400);
     sob.push(...(await controlesSobOBotao(page)).map((c) => `${nome}-${i}: ${c}`));
+    if (semTexto)
+      sob.push(...(await textosSobOBotao(page)).map((c) => `${nome}-${i}: texto "${c}"`));
     await page.screenshot({ path: path.join(PASTA, `${nome}-${String(i).padStart(2, "0")}.png`) });
   }
   // o fim da aba tem folga: o último conteúdo sobe acima do botão
@@ -181,14 +236,20 @@ async function revisarBlocos(page: Page, painel: Locator, nome: string) {
   expect(sob, sob.join("\n")).toEqual([]);
 }
 
-test("orçamento: SINAPI, composição, BDI, importação, comparação e exportação", async ({ page }) => {
+test("orçamento: SINAPI, composição, BDI, importação, comparação e exportação", async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1366, height: 900 });
   const { painel, erros } = await abrirOrcamento(page);
 
   // aviso fixo e a tabela de referência datada
-  await expect(painel.getByRole("note").filter({ hasText: "Não substitui o orçamento executivo" })).toBeVisible();
-  await expect(painel.getByText("Estimativa da estrutura: não substitui o orçamento executivo.")).toBeVisible();
+  await expect(
+    painel.getByRole("note").filter({ hasText: "Não substitui o orçamento executivo" }),
+  ).toBeVisible();
+  await expect(
+    painel.getByText("Estimativa da estrutura: não substitui o orçamento executivo."),
+  ).toBeVisible();
   await expect(painel.getByLabel("Tabela", { exact: true })).toHaveValue("sinapi-2026-09-sp-nd");
   await expect(painel.getByText("referência 09/2026, UF SP, sem desoneração")).toBeVisible();
 
@@ -208,7 +269,9 @@ test("orçamento: SINAPI, composição, BDI, importação, comparação e export
   expect(total).toBeCloseTo(direto * 1.25, 1);
 
   // comparação com o modo corrigido (a obra está no original)
-  await expect(painel.getByRole("heading", { name: "Quanto custa o erro do original" })).toBeVisible();
+  await expect(
+    painel.getByRole("heading", { name: "Quanto custa o erro do original" }),
+  ).toBeVisible();
   await expect(celula(page, "diferenca-carga")).not.toHaveText("—");
 
   // layout no desktop
@@ -242,7 +305,9 @@ test("orçamento: SINAPI, composição, BDI, importação, comparação e export
   });
   await painel.getByRole("button", { name: "Importar", exact: true }).click();
   await expect(painel.getByRole("status")).toContainText("1 item importado");
-  await expect(painel.getByLabel("Tabela", { exact: true })).not.toHaveValue("sinapi-2026-09-sp-nd");
+  await expect(painel.getByLabel("Tabela", { exact: true })).not.toHaveValue(
+    "sinapi-2026-09-sp-nd",
+  );
   await expect(
     painel.locator('[data-papel="concreto:15"]').getByLabel("Preço de 1524"),
   ).toHaveValue("600,00");
@@ -255,7 +320,9 @@ test("orçamento: SINAPI, composição, BDI, importação, comparação e export
   const depois = await abrirOrcamento(page);
   await expect(depois.painel.getByLabel("BDI", { exact: true })).toHaveValue("25,00");
   await expect(depois.painel.getByLabel("Composição de Concreto fck 15 MPa")).toHaveValue("1524");
-  await expect(depois.painel.getByLabel("Tabela", { exact: true }).locator("option")).toHaveCount(2);
+  await expect(depois.painel.getByLabel("Tabela", { exact: true }).locator("option")).toHaveCount(
+    2,
+  );
 
   expect([...erros, ...depois.erros]).toEqual([]);
 });
@@ -283,7 +350,9 @@ for (const tela of [
     expect(await transbordos(page)).toEqual({ pagina: 0, painel: 0, fora: [] });
 
     // o aviso cabe inteiro
-    const aviso = painel.getByRole("note").filter({ hasText: "Não substitui o orçamento executivo" });
+    const aviso = painel
+      .getByRole("note")
+      .filter({ hasText: "Não substitui o orçamento executivo" });
     const caixa = await aviso.boundingBox();
     expect(caixa!.x).toBeGreaterThanOrEqual(0);
     expect(caixa!.x + caixa!.width).toBeLessThanOrEqual(tela.largura);
@@ -294,12 +363,14 @@ for (const tela of [
     await montagem.scrollIntoViewIfNeeded();
     expect(await montagem.inputValue()).toContain("88262 × 1,635; 88239 × 0,3;");
     expect(
-      await montagem.evaluate((el) => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1),
+      await montagem.evaluate(
+        (el) => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1,
+      ),
     ).toBe(true);
 
     await painel.evaluate((el) => el.scrollTo({ top: 0 }));
     await page.screenshot({ path: path.join(PASTA, `${tela.nome}.png`) });
-    await revisarBlocos(page, painel, tela.nome);
+    await revisarBlocos(page, painel, tela.nome, true);
     expect(erros).toEqual([]);
     await ctx.close();
   });

@@ -2,7 +2,7 @@
 // unidade e preço) e a planilha de insumos da SINAPI (mesmas colunas, com o preço numa
 // coluna por UF). O cabeçalho é achado nas primeiras linhas pelos nomes das colunas.
 import type { ItemPreco, TabelaPrecos } from "../../dominio/orcamento";
-import { abrirXlsx, deszipar, lerCsv, type Aba, type Celula } from "./planilha";
+import { abrirXlsx, deszipar, lerCsv, separadorCsv, type Aba, type Celula } from "./planilha";
 
 const UFS = [
   "AC",
@@ -43,14 +43,31 @@ const normal = (c: Celula) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** Número de célula: número, "1.234,56", "1234,56", "1234.56"; vazio ou "-" = null. */
-export function numeroCelula(c: Celula): number | null {
+/**
+ * Número de uma célula; vazio ou "-" = null. Com vírgula e ponto, o último é o decimal
+ * ("1.234,56", "1,234.56"); um separador repetido é de milhar ("1.234.567"). Um só, com
+ * três dígitos depois ("12.500", "1,234"), é ambíguo: vale `decimal` (o separador
+ * decimal do arquivo); sem ele, é decimal.
+ */
+export function numeroCelula(c: Celula, decimal?: "," | "."): number | null {
   if (typeof c === "number") return Number.isFinite(c) ? c : null;
   if (c === null) return null;
   let s = c.replace(/R\$|\s/g, "");
   if (s === "" || s === "-") return null;
-  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
-  else if ((s.match(/\./g) ?? []).length > 1) s = s.replace(/\./g, "");
+  const ultimoPonto = s.lastIndexOf(".");
+  const ultimaVirgula = s.lastIndexOf(",");
+  const tira = (x: string, sep: string) => x.split(sep).join("");
+  if (ultimoPonto >= 0 && ultimaVirgula >= 0)
+    s = ultimaVirgula > ultimoPonto ? tira(s, ".").replace(",", ".") : tira(s, ",");
+  else {
+    const sep = ultimaVirgula >= 0 ? "," : ultimoPonto >= 0 ? "." : "";
+    const vezes = sep ? s.split(sep).length - 1 : 0;
+    const milhar =
+      vezes > 1 ||
+      (vezes === 1 && decimal !== undefined && decimal !== sep && /^-?\d{1,3}[.,]\d{3}$/.test(s));
+    if (milhar) s = tira(s, sep);
+    else if (sep === ",") s = s.replace(",", ".");
+  }
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
@@ -99,7 +116,17 @@ function acharColunas(linhas: readonly Celula[][], uf: string): Colunas | string
 }
 
 export type Importacao =
-  | { ok: true; itens: ItemPreco[]; aba: string; ufs: string[]; uf: string; ignoradas: number }
+  | {
+      ok: true;
+      itens: ItemPreco[];
+      aba: string;
+      ufs: string[];
+      uf: string;
+      /** Linhas sem código ou descrição. */
+      ignoradas: number;
+      /** Linhas com código já lido (vale a primeira). */
+      repetidos: number;
+    }
   | { ok: false; erro: string };
 
 /** Itens de uma aba. `uf` escolhe a coluna de preço quando há uma por UF. */
@@ -107,7 +134,9 @@ export function itensDaAba(aba: Aba, uf = "SP"): Importacao {
   const col = acharColunas(aba.linhas, uf);
   if (typeof col === "string") return { ok: false, erro: col };
   const itens: ItemPreco[] = [];
+  const vistos = new Set<string>();
   let ignoradas = 0;
+  let repetidos = 0;
   for (const l of aba.linhas.slice(col.linha + 1)) {
     const cod = l[col.codigo];
     const codigo = typeof cod === "number" ? String(cod) : String(cod ?? "").trim();
@@ -116,17 +145,23 @@ export function itensDaAba(aba: Aba, uf = "SP"): Importacao {
       if (l.some((c) => c !== null && String(c).trim() !== "")) ignoradas++;
       continue;
     }
+    // código repetido: vale o primeiro (a tabela usa o código como chave)
+    if (vistos.has(codigo)) {
+      repetidos++;
+      continue;
+    }
+    vistos.add(codigo);
     itens.push({
       codigo,
       descricao,
       unidade: String(l[col.unidade] ?? "").trim(),
-      preco: numeroCelula(l[col.preco] ?? null),
+      preco: numeroCelula(l[col.preco] ?? null, aba.decimal),
     });
   }
   if (itens.length === 0)
     return { ok: false, erro: "A planilha não tem linhas de preço abaixo do cabeçalho." };
   const ufUsada = col.ufs.length > 0 ? (col.ufs.includes(uf) ? uf : col.ufs[0]!) : "";
-  return { ok: true, itens, aba: aba.nome, ufs: col.ufs, uf: ufUsada, ignoradas };
+  return { ok: true, itens, aba: aba.nome, ufs: col.ufs, uf: ufUsada, ignoradas, repetidos };
 }
 
 /** Mês de referência ("AAAA-MM") e desoneração da aba da SINAPI, pelo nome da aba
@@ -168,7 +203,12 @@ export async function abrirPlanilha(nome: string, dados: Uint8Array): Promise<Pl
     } catch {
       texto = new TextDecoder("latin1").decode(dados);
     }
-    const aba = { nome, linhas: lerCsv(texto) };
+    const aba: Aba = {
+      nome,
+      linhas: lerCsv(texto),
+      ...(separadorCsv(texto) === ";" ? { decimal: "," as const } : {}),
+      ...(separadorCsv(texto) === "," ? { decimal: "." as const } : {}),
+    };
     return { nomes: [nome], ler: async () => aba };
   }
   throw new Error(
@@ -194,8 +234,8 @@ export const tabelaImportada = (
 /** Junta itens numa tabela: o código que já existe recebe a descrição, a unidade e o
  *  preço novos; os outros entram no fim. */
 export function juntarItens(tabela: TabelaPrecos, itens: readonly ItemPreco[]): TabelaPrecos {
-  const novos = new Map(itens.map((i) => [i.codigo, i]));
-  const atualizados = tabela.itens.map((i) => novos.get(i.codigo) ?? i);
-  const existentes = new Set(tabela.itens.map((i) => i.codigo));
-  return { ...tabela, itens: [...atualizados, ...itens.filter((i) => !existentes.has(i.codigo))] };
+  // Map pelo código: um código repetido (na tabela ou nos itens) fica uma vez só
+  const todos = new Map(tabela.itens.map((i) => [i.codigo, i]));
+  for (const i of itens) todos.set(i.codigo, i);
+  return { ...tabela, itens: [...todos.values()] };
 }

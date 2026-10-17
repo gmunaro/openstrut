@@ -11,6 +11,9 @@ export type Celula = string | number | null;
 export interface Aba {
   nome: string;
   linhas: Celula[][];
+  /** Separador decimal dos números em texto, quando o formato diz (CSV com ";" usa
+   *  vírgula, CSV com "," usa ponto); sem ele, `numeroCelula` decide pelo número. */
+  decimal?: "," | ".";
 }
 
 // ---- CSV ----------------------------------------------------------------------------
@@ -28,12 +31,18 @@ const campoCsv = (c: Celula) => {
 export const gerarCsv = (linhas: readonly Celula[][]) =>
   `﻿${linhas.map((l) => l.map(campoCsv).join(";")).join("\r\n")}\r\n`;
 
-/** Lê CSV: separador ";", "," ou tab (o que mais aparece na primeira linha), aspas. */
+/** Separador do CSV: ";", tab ou ",", o que mais aparece nas primeiras 40 linhas (um
+ *  título com vírgula na primeira linha não decide sozinho). */
+export function separadorCsv(texto: string) {
+  const inicio = texto.split(/\r?\n/, 40).join("\n");
+  const conta = (s: string) => inicio.split(s).length;
+  return [";", "\t", ","].reduce((a, b) => (conta(b) > conta(a) ? b : a));
+}
+
+/** Lê CSV: separador de `separadorCsv`, campos entre aspas. */
 export function lerCsv(texto: string): string[][] {
   const t = texto.replace(/^﻿/, "");
-  const primeira = t.split(/\r?\n/, 1)[0] ?? "";
-  const conta = (s: string) => primeira.split(s).length;
-  const sep = [";", "\t", ","].reduce((a, b) => (conta(b) > conta(a) ? b : a));
+  const sep = separadorCsv(t);
   const linhas: string[][] = [];
   let linha: string[] = [];
   let campo = "";
@@ -269,9 +278,13 @@ export function gerarXlsx(abas: readonly Aba[]): Uint8Array {
   ]);
 }
 
-/** Atributo `nome` de uma tag XML (o texto entre <tag ... >). */
-const atributo = (tag: string, nome: string) =>
-  new RegExp(`(?:^|\\s)${nome}="([^"]*)"`).exec(tag)?.[1];
+const regexAtributo = new Map<string, RegExp>();
+/** Atributo `nome` de uma tag XML (regex guardado por nome: são milhões de células). */
+const atributo = (tag: string, nome: string) => {
+  let r = regexAtributo.get(nome);
+  if (!r) regexAtributo.set(nome, (r = new RegExp(`(?:^|\\s)${nome}="([^"]*)"`)));
+  return r.exec(tag)?.[1];
+};
 
 /** Texto de um <si> ou <is>: os <t>, fora da transliteração fonética <rPh>. */
 const textoRico = (xml: string) =>
@@ -354,8 +367,12 @@ function celulasDaAba(xml: string, compartilhadas: readonly string[]): Celula[][
       else if (v !== undefined) valor = Number.isFinite(Number(v)) ? Number(v) : desescXml(v);
       // link da SINAPI: HYPERLINK(destino; código) com o valor em cache 0; vale o código
       const f = /<f\b[^>]*>([\s\S]*?)<\/f>/.exec(corpo)?.[1];
-      const link = f ? /^HYPERLINK\(.*,\s*"?([^",()]+)"?\)$/.exec(desescXml(f).trim()) : null;
-      if (link?.[1]) valor = Number.isFinite(Number(link[1])) ? Number(link[1]) : link[1];
+      // só número ou texto entre aspas no 2º argumento (uma referência, como B2, fica o valor)
+      const link = f
+        ? /^HYPERLINK\(.*,\s*(?:"([^"]*)"|(\d+(?:\.\d+)?))\)$/.exec(desescXml(f).trim())
+        : null;
+      if (link?.[2]) valor = Number(link[2]);
+      else if (link?.[1]) valor = link[1];
       linha[col] = valor;
       col++;
     }

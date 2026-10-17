@@ -1,7 +1,7 @@
 // Estado do orçamento na tela: tabelas de preços e parâmetros guardados no navegador,
 // a composição efetiva de cada papel (a padrão da SINAPI, ou a que o usuário editou)
 // e o orçamento da obra calculada. useOrcamento serve à aba Orçamento e ao relatório.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResultadoObra } from "../../calculo/fluxo";
 import {
   CONFIG_PADRAO,
@@ -132,31 +132,63 @@ export function useDadosOrcamento() {
     ],
     [doUsuario],
   );
-  const mudarTabelas = useCallback((novas: TabelaPrecos[]) => {
+  // As mudanças são funções do valor mais recente (guardado no ref), não do estado da
+  // renderização: uma importação que termina depois de um await não apaga a edição de
+  // preço ou de parâmetro feita enquanto a planilha era lida.
+  const ultimasTabelas = useRef(doUsuario);
+  const ultimaConfig = useRef(guardada);
+  ultimasTabelas.current = doUsuario;
+  ultimaConfig.current = guardada;
+  const alterarTabelas = useCallback((f: (t: TabelaPrecos[]) => TabelaPrecos[]) => {
+    const novas = f(ultimasTabelas.current);
+    ultimasTabelas.current = novas;
     setDoUsuario(novas);
     void gravarTabelas(novas);
   }, []);
-  /** Grava a tabela (nova ou editada; a de referência vira cópia editada). */
+  /** Grava a tabela inteira (nova ou editada; a de referência vira cópia editada). */
   const salvarTabela = useCallback(
     (t: TabelaPrecos) =>
-      mudarTabelas(
-        doUsuario.some((x) => x.id === t.id)
-          ? doUsuario.map((x) => (x.id === t.id ? t : x))
-          : [...doUsuario, t],
+      alterarTabelas((ts) =>
+        ts.some((x) => x.id === t.id) ? ts.map((x) => (x.id === t.id ? t : x)) : [...ts, t],
       ),
-    [doUsuario, mudarTabelas],
+    [alterarTabelas],
+  );
+  /** Muda a tabela `id` a partir da versão mais recente dela. */
+  const alterarTabela = useCallback(
+    (id: string, f: (t: TabelaPrecos) => TabelaPrecos) =>
+      alterarTabelas((ts) => {
+        const base = ts.find((x) => x.id === id) ?? (id === ID_SINAPI ? TABELA_SINAPI : undefined);
+        if (!base) return ts;
+        const nova = f(base);
+        return ts.some((x) => x.id === id)
+          ? ts.map((x) => (x.id === id ? nova : x))
+          : [...ts, nova];
+      }),
+    [alterarTabelas],
   );
   /** Apaga a tabela do usuário; na de referência, desfaz as edições. */
   const apagarTabela = useCallback(
-    (id: string) => mudarTabelas(doUsuario.filter((x) => x.id !== id)),
-    [doUsuario, mudarTabelas],
+    (id: string) => alterarTabelas((ts) => ts.filter((x) => x.id !== id)),
+    [alterarTabelas],
   );
-  const mudarConfig = useCallback((c: ConfigGuardada) => {
-    setGuardada(c);
-    void gravarConfig(c);
+  /** Muda a configuração guardada a partir da versão mais recente. */
+  const mudarConfig = useCallback((f: (c: ConfigGuardada) => ConfigGuardada) => {
+    const nova = f(ultimaConfig.current);
+    ultimaConfig.current = nova;
+    setGuardada(nova);
+    void gravarConfig(nova);
   }, []);
   const editada = doUsuario.some((t) => t.id === ID_SINAPI);
-  return { tabelas, guardada, carregado, salvarTabela, apagarTabela, mudarConfig, editada };
+  return {
+    tabelas,
+    guardada,
+    carregado,
+    salvarTabela,
+    alterarTabela,
+    apagarTabela,
+    mudarConfig,
+    editada,
+  };
 }
 
 export interface ResultadoOrcamento {
@@ -199,9 +231,10 @@ export function useOrcamento(
     () => (resultado ? levantamentoDaObra(obra, resultado, detalhamento) : null),
     [obra, resultado, detalhamento],
   );
+  // só depois de ler o navegador: antes, sairia com a tabela e os parâmetros padrão
   const atual = useMemo(
-    () => (lev ? orcamentoDe(lev, dados.tabelas, dados.guardada) : null),
-    [lev, dados.tabelas, dados.guardada],
+    () => (lev && dados.carregado ? orcamentoDe(lev, dados.tabelas, dados.guardada) : null),
+    [lev, dados.carregado, dados.tabelas, dados.guardada],
   );
   return { ...dados, atual };
 }

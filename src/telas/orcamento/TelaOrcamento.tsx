@@ -14,6 +14,7 @@ import {
   rotuloPapel,
   ROTULO_TIPO,
   type Componente,
+  type ItemPreco,
   type Papel,
   type TabelaPrecos,
 } from "../../dominio/orcamento";
@@ -95,6 +96,17 @@ export function TelaOrcamento({
       cargaB: atualOriginal ? o.atual.lev.cargaFundacao : levOutro.cargaFundacao,
     };
   }, [o.atual, o.guardada, levOutro, obra.modoCalculo]);
+  // papéis dos dois modos: um insumo que só o outro modo usa também tem composição editável
+  const papeisTodos = useMemo(
+    () => [
+      ...new Set([...(o.atual?.papeis ?? []), ...(levOutro ? papeisDoLevantamento(levOutro) : [])]),
+    ],
+    [o.atual, levOutro],
+  );
+  const vinculosTodos = useMemo(
+    () => configEfetiva(o.guardada, papeisTodos).vinculos,
+    [o.guardada, papeisTodos],
+  );
 
   if (calculo.tipo !== "ok") return <SemCalculo calculo={calculo} />;
   if (!o.carregado || !o.atual) return <p className="text-muted-foreground text-sm">Carregando…</p>;
@@ -111,12 +123,13 @@ export function TelaOrcamento({
     baixar(blob, `${arquivoBase(obra.nome)}.${tipo}`);
   };
   const mudar = (parcial: Partial<typeof o.guardada>) =>
-    o.mudarConfig({ ...o.guardada, ...parcial });
+    o.mudarConfig((g) => ({ ...g, ...parcial }));
 
   return (
     // coluna minmax(0, 1fr): as tabelas rolam por dentro e nada passa da largura da tela;
-    // pb-28: o fim da aba sobe acima do botão flutuante de relatar problema
-    <div className="grid max-w-[110rem] grid-cols-[minmax(0,1fr)] gap-1 pb-28">
+    // pb-28: o fim da aba sobe acima do botão flutuante de relatar problema; no celular,
+    // pr-14 deixa livre a faixa da direita onde o botão fica (nada passa por baixo dele)
+    <div className="compacto:pr-14 grid max-w-[110rem] grid-cols-[minmax(0,1fr)] gap-1 pb-28">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-semibold">Orçamento da estrutura</h2>
         <span className="flex-1" />
@@ -144,17 +157,21 @@ export function TelaOrcamento({
       <Bloco titulo="Composições e custo por insumo">
         <Composicoes
           r={r}
-          mudar={(p, comps) => {
-            const vinculos = { ...o.guardada.vinculos };
-            if (comps === null) delete vinculos[p];
-            else vinculos[p] = comps;
-            mudar({ vinculos });
-          }}
-          salvarPreco={(codigo, preco) =>
-            o.salvarTabela({
-              ...r.tabela,
-              itens: r.tabela.itens.map((i) => (i.codigo === codigo ? { ...i, preco } : i)),
+          papeis={papeisTodos}
+          vinculos={vinculosTodos}
+          mudar={(p, comps) =>
+            o.mudarConfig((g) => {
+              const vinculos = { ...g.vinculos };
+              if (comps === null) delete vinculos[p];
+              else vinculos[p] = comps;
+              return { ...g, vinculos };
             })
+          }
+          salvarPreco={(codigo, preco) =>
+            o.alterarTabela(r.tabela.id, (t) => ({
+              ...t,
+              itens: t.itens.map((i) => (i.codigo === codigo ? { ...i, preco } : i)),
+            }))
           }
         />
       </Bloco>
@@ -172,7 +189,7 @@ export function TelaOrcamento({
       {comp && <TabelaComparacao comp={comp} />}
 
       <PorElemento r={r} />
-      <PrecosDaTabela tabela={r.tabela} salvar={o.salvarTabela} />
+      <PrecosDaTabela tabela={r.tabela} alterar={(f) => o.alterarTabela(r.tabela.id, f)} />
     </div>
   );
 }
@@ -256,9 +273,11 @@ function EscolhaTabela({
       {importando && (
         <Importacao
           atual={r.tabela}
-          aoImportar={(t, nova) => {
-            o.salvarTabela(t);
-            if (nova) mudarTabela(t.id);
+          aoImportar={(i) => {
+            if ("nova" in i) {
+              o.salvarTabela(i.nova);
+              mudarTabela(i.nova.id);
+            } else o.alterarTabela(r.tabela.id, (t) => juntarItens(t, i.itens));
           }}
         />
       )}
@@ -271,7 +290,7 @@ function Importacao({
   aoImportar,
 }: {
   atual: TabelaPrecos;
-  aoImportar: (t: TabelaPrecos, nova: boolean) => void;
+  aoImportar: (i: { nova: TabelaPrecos } | { itens: ItemPreco[] }) => void;
 }) {
   const id = useId();
   const [arquivo, setArquivo] = useState<{ nome: string; planilha: Planilha } | null>(null);
@@ -303,16 +322,16 @@ function Importacao({
       const imp = itensDaAba(a, uf);
       if (!imp.ok) return setMsg({ erro: true, texto: imp.erro });
       const meta = metadadosSinapi(a);
-      const t =
+      aoImportar(
         destino === "nova"
-          ? tabelaImportada(arquivo.nome, imp, meta)
-          : juntarItens(atual, imp.itens);
-      aoImportar(t, destino === "nova");
+          ? { nova: tabelaImportada(arquivo.nome, imp, meta) }
+          : { itens: imp.itens },
+      );
       const semUf =
         imp.ufs.length > 0 && imp.uf !== uf ? ` A planilha não tem ${uf}; usei ${imp.uf}.` : "";
       setMsg({
         erro: false,
-        texto: `${imp.itens.length} ${imp.itens.length === 1 ? "item importado" : "itens importados"} da aba ${imp.aba}${imp.uf ? ` (${imp.uf})` : ""}${destino === "atual" ? ` para ${atual.nome}` : ""}.${semUf}${imp.ignoradas ? ` ${imp.ignoradas} linhas sem código ou descrição ficaram de fora.` : ""}`,
+        texto: `${imp.itens.length} ${imp.itens.length === 1 ? "item importado" : "itens importados"} da aba ${imp.aba}${imp.uf ? ` (${imp.uf})` : ""}${destino === "atual" ? ` para ${atual.nome}` : ""}.${semUf}${imp.ignoradas ? ` ${imp.ignoradas} linhas sem código ou descrição ficaram de fora.` : ""}${imp.repetidos ? ` ${imp.repetidos} linhas com código repetido ficaram de fora (vale a primeira).` : ""}`,
       });
     } finally {
       setLendo(false);
@@ -601,17 +620,21 @@ function CampoCelula({
 
 function Composicoes({
   r,
+  papeis,
+  vinculos,
   mudar,
   salvarPreco,
 }: {
   r: ResultadoOrcamento;
+  /** Papéis dos dois modos de cálculo (um papel só do outro modo também se edita). */
+  papeis: readonly Papel[];
+  vinculos: ResultadoOrcamento["cfg"]["vinculos"];
   mudar: (p: Papel, comps: Componente[] | null) => void;
   salvarPreco: (codigo: string, preco: number | null) => void;
 }) {
   const porCodigo = new Map(r.tabela.itens.map((i) => [i.codigo, i]));
   const grupos = new Map(r.orc.porInsumo.map((g) => [g.papel, g]));
   // papéis sem quantidade (fundação sem composição) também aparecem para editar
-  const papeis = r.papeis;
   return (
     <>
       <Tabela className="w-auto">
@@ -632,7 +655,7 @@ function Composicoes({
         <Corpo>
           {papeis.map((p) => {
             const g = grupos.get(p);
-            const comps = r.cfg.vinculos[p];
+            const comps = vinculos[p];
             const unico =
               comps?.length === 1 && comps[0]!.coef === 1
                 ? porCodigo.get(comps[0]!.codigo)
@@ -704,10 +727,11 @@ function Composicoes({
         </Corpo>
       </Tabela>
       <p className="text-muted-foreground mt-1 max-w-3xl text-xs">
-        Preço unitário = Σ coeficiente × preço do item. Composição vazia deixa o insumo sem preço;
-        apague o texto e confirme para voltar à composição padrão da SINAPI. Com um item só, o preço
-        dele se edita aqui; com vários, em "Preços da tabela". A fundação só entra com uma
-        composição (R$ por tf de carga na fundação).
+        Preço unitário = Σ coeficiente × preço do item. Apague o texto e confirme para voltar à
+        composição padrão da SINAPI; sem padrão (como o concreto C15 ou o CA-50 φ 5), o insumo fica
+        sem preço até você escolher o item. Com um item só, o preço dele se edita aqui; com vários,
+        em "Preços da tabela". A fundação só entra com uma composição (R$ por tf de carga na
+        fundação).
       </p>
     </>
   );
@@ -780,10 +804,10 @@ const LIMITE_LINHAS = 100;
 
 function PrecosDaTabela({
   tabela,
-  salvar,
+  alterar,
 }: {
   tabela: TabelaPrecos;
-  salvar: (t: TabelaPrecos) => void;
+  alterar: (f: (t: TabelaPrecos) => TabelaPrecos) => void;
 }) {
   const [filtro, setFiltro] = useState("");
   const [novo, setNovo] = useState({ codigo: "", descricao: "", unidade: "", preco: "" });
@@ -802,17 +826,17 @@ function PrecosDaTabela({
         .includes(f),
   );
   const salvarPreco = (codigo: string, preco: number | null) =>
-    salvar({
-      ...tabela,
-      itens: tabela.itens.map((i) => (i.codigo === codigo ? { ...i, preco } : i)),
-    });
+    alterar((t) => ({
+      ...t,
+      itens: t.itens.map((i) => (i.codigo === codigo ? { ...i, preco } : i)),
+    }));
   const acrescentar = () => {
     const preco = novo.preco.trim() === "" ? null : lerNumero(novo.preco);
     if (!novo.codigo.trim() || tabela.itens.some((i) => i.codigo === novo.codigo.trim())) return;
-    salvar({
-      ...tabela,
+    alterar((t) => ({
+      ...t,
       itens: [
-        ...tabela.itens,
+        ...t.itens,
         {
           codigo: novo.codigo.trim(),
           descricao: novo.descricao.trim() || novo.codigo.trim(),
@@ -820,7 +844,7 @@ function PrecosDaTabela({
           preco,
         },
       ],
-    });
+    }));
     setNovo({ codigo: "", descricao: "", unidade: "", preco: "" });
   };
   return (

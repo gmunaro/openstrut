@@ -1,6 +1,6 @@
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { abrirPlanilha, itensDaAba, metadadosSinapi, numeroCelula } from "./importar";
+import { abrirPlanilha, itensDaAba, juntarItens, metadadosSinapi, numeroCelula } from "./importar";
 import { crc32, deszipar, gerarCsv, gerarXlsx, lerCsv, lerXlsx, zipar } from "./planilha";
 
 const enc = new TextEncoder();
@@ -143,6 +143,25 @@ describe("XLSX", () => {
     expect(metadadosSinapi({ ...aba, nome: "ICD" }).desonerado).toBe(true);
   });
 
+  it("HYPERLINK com referência no 2º argumento fica com o valor da célula", async () => {
+    const z = zipDeflate([
+      {
+        nome: "xl/workbook.xml",
+        texto: `<workbook xmlns:r="x"><sheets><sheet name="A" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+      },
+      {
+        nome: "xl/_rels/workbook.xml.rels",
+        texto: `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`,
+      },
+      {
+        nome: "xl/worksheets/sheet1.xml",
+        texto: `<worksheet><sheetData><row r="1"><c r="A1" t="str"><f>HYPERLINK("http://x",B1)</f><v>texto do link</v></c><c r="B1"><f>HYPERLINK("#a","92267")</f><v>0</v></c></row></sheetData></worksheet>`,
+      },
+    ]);
+    const abas = await lerXlsx(z);
+    expect(abas[0]?.linhas[0]).toEqual(["texto do link", "92267"]);
+  });
+
   it("ZIP mensal da SINAPI: abre a planilha de referência de dentro dele", async () => {
     const ref = gerarXlsx([
       {
@@ -195,6 +214,65 @@ describe("CSV", () => {
     });
   });
 
+  it("CSV com ; e título com vírgula na primeira linha; preço inteiro com milhar", async () => {
+    const texto =
+      "Tabela de preços, SP\ncodigo;descricao;unidade;preco\nC25;Concreto 25;m3;1.234,56\nF;Fôrma;m2;12.500\nF;Fôrma de novo;m2;1\n";
+    const p = await abrirPlanilha("precos.csv", enc.encode(texto));
+    const imp = itensDaAba(await p.ler(p.nomes[0]!));
+    expect(imp).toMatchObject({
+      ok: true,
+      repetidos: 1,
+      itens: [
+        { codigo: "C25", preco: 1234.56 },
+        { codigo: "F", descricao: "Fôrma", preco: 12500 },
+      ],
+    });
+  });
+
+  it("CSV en-US (separador vírgula): ponto decimal", async () => {
+    const p = await abrirPlanilha(
+      "en.csv",
+      enc.encode('code,description,unit,price\nA,"Steel, 10 mm",kg,"1,234.5"\nB,Form,m2,12.500\n'),
+    );
+    const imp = itensDaAba(await p.ler(p.nomes[0]!));
+    // "código"/"descrição" em inglês não são achados: o cabeçalho precisa dos nomes em pt-BR
+    expect(imp.ok).toBe(false);
+    const pt = await abrirPlanilha(
+      "en.csv",
+      enc.encode(
+        'codigo,descricao,unidade,preco\nA,"Aço, 10 mm",kg,"1,234.5"\nB,Fôrma,m2,12.500\n',
+      ),
+    );
+    expect(itensDaAba(await pt.ler(pt.nomes[0]!))).toMatchObject({
+      itens: [{ preco: 1234.5 }, { preco: 12.5 }],
+    });
+  });
+
+  it("juntar itens: código existente recebe o novo; repetido fica uma vez", () => {
+    const t = {
+      id: "t",
+      nome: "t",
+      fonte: "",
+      referencia: "",
+      uf: "",
+      desonerado: null,
+      itens: [
+        { codigo: "1", descricao: "a", unidade: "kg", preco: 1 },
+        { codigo: "2", descricao: "b", unidade: "kg", preco: 2 },
+      ],
+    };
+    const j = juntarItens(t, [
+      { codigo: "2", descricao: "b2", unidade: "kg", preco: 20 },
+      { codigo: "3", descricao: "c", unidade: "kg", preco: 3 },
+      { codigo: "3", descricao: "c2", unidade: "kg", preco: 30 },
+    ]);
+    expect(j.itens.map((i) => [i.codigo, i.preco])).toEqual([
+      ["1", 1],
+      ["2", 20],
+      ["3", 30],
+    ]);
+  });
+
   it("recusa planilha sem cabeçalho e .xls", async () => {
     expect(itensDaAba({ nome: "a", linhas: [["a", "b"]] })).toMatchObject({ ok: false });
     await expect(abrirPlanilha("a.xls", new Uint8Array())).rejects.toThrow(/xlsx/);
@@ -210,5 +288,18 @@ describe("numeroCelula", () => {
     expect(numeroCelula("-")).toBeNull();
     expect(numeroCelula("")).toBeNull();
     expect(numeroCelula(3)).toBe(3);
+    // os dois separadores: o último é o decimal
+    expect(numeroCelula("1,234.56")).toBe(1234.56);
+    expect(numeroCelula("12.345.678,9")).toBe(12345678.9);
+    expect(numeroCelula("1,234,567")).toBe(1234567);
+    // um só, com 3 dígitos depois: ambíguo; decide o separador decimal do arquivo
+    expect(numeroCelula("12.500", ",")).toBe(12500);
+    expect(numeroCelula("12.500", ".")).toBe(12.5);
+    expect(numeroCelula("1,234", ".")).toBe(1234);
+    expect(numeroCelula("1,234", ",")).toBe(1.234);
+    expect(numeroCelula("12.500")).toBe(12.5);
+    // 2 casas não é milhar em formato nenhum
+    expect(numeroCelula("12.50", ",")).toBe(12.5);
+    expect(numeroCelula("-1.250", ",")).toBe(-1250);
   });
 });

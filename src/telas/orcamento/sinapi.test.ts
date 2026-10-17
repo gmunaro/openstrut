@@ -51,3 +51,33 @@ describe("composições padrão da SINAPI", () => {
         expect(porCodigo.get(c.codigo)?.preco).toBeGreaterThan(0);
   });
 });
+
+// A regra da SINAPI para o custo publicado: cada item da composição (coeficiente ×
+// preço) é truncado no centavo antes da soma. Com ela, a composição padrão do app mais o
+// material retirado reproduz o custo publicado exatamente; a conta do app (sem truncar)
+// fica de R$ 0,01 a R$ 0,06 acima por unidade (docs/ORCAMENTO.md).
+describe("regra de soma da SINAPI (item truncado no centavo)", () => {
+  const centavos = (coef: number, codigo: string) => Math.floor(coef * preco(codigo) * 100 + 1e-6);
+  const publicado = (p: Papel, material: [number, string]) =>
+    (centavos(...material) +
+      (composicaoSinapi(p) ?? []).reduce((a, c) => a + centavos(c.coef, c.codigo), 0)) /
+    100;
+  it("92514, 92456, 92419 e 92762 batem no centavo", () => {
+    expect(publicado("mo-forma:laje", [0.341, "92267"])).toBe(57.18);
+    expect(publicado("mo-forma:viga", [0.414, "92265"])).toBe(177.28);
+    expect(publicado("mo-forma:pilar", [0.263, "92263"])).toBe(101.51);
+    // armação: a 92803 (corte e dobra, 7,78) entra inteira na 92762; a composição do app
+    // junta a mão de obra das duas, então a conta é feita em duas etapas
+    const corte =
+      (centavos(1.11, "34") + centavos(0.0088, "88245") + centavos(0.0014, "88238")) / 100;
+    expect(corte).toBe(7.78);
+    const armacao =
+      (Math.round(corte * 100) +
+        centavos(0.0392, "88245") +
+        centavos(0.0064, "88238") +
+        centavos(0.025, "43132") +
+        centavos(0.543, "39017")) /
+      100;
+    expect(armacao).toBe(10.1);
+  });
+});
