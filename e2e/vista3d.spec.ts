@@ -244,6 +244,48 @@ test("obra de 3 pavimentos: gira, seleciona, oculta e explode, sem erro no conso
   expect(det.comprimento).toBeCloseTo(8, 2);
   expect(det.pilar).toEqual({ lance: 1, niveis: [0, 1, 2], cotaBase: 0 });
 
+  // barras prontas para desenhar (dominio/armaduraGeometria.ts): todas dentro da viga; no
+  // pilar, dentro da seção, e a ponta de cima pode passar do topo pelo traspasse
+  const barras = await page.evaluate(() => {
+    type V = { x: number; y: number; z: number };
+    type Caixa = { min: V; max: V };
+    type Api = {
+      modelo: { elementos: { chave: string; tipo: string; nome: string; nivel: number }[] };
+      barrasDe: (k: string) => { tipo: string; barras: V[][] }[] | undefined;
+      caixaDe: (k: string) => Caixa | undefined;
+    };
+    const c = (window as unknown as { __vista3d: Api }).__vista3d;
+    const ach = (tipo: string, nome: string, nivel: number) =>
+      c.modelo.elementos.find((e) => e.tipo === tipo && e.nome === nome && e.nivel === nivel)!
+        .chave;
+    // folga no plano: as longitudinais da viga entram no apoio (ancoragem além do nó,
+    // até a face do pilar, 10 cm aqui)
+    const dentro = (p: V, k: Caixa, folgaY = 0, folgaXZ = 0) =>
+      p.x >= k.min.x - folgaXZ - 1e-6 &&
+      p.x <= k.max.x + folgaXZ + 1e-6 &&
+      p.z >= k.min.z - folgaXZ - 1e-6 &&
+      p.z <= k.max.z + folgaXZ + 1e-6 &&
+      p.y >= k.min.y - 1e-6 &&
+      p.y <= k.max.y + folgaY + 1e-6;
+    const v1 = ach("viga", "V1", 0);
+    const p1 = ach("pilar", "P1", 1);
+    const bv = c.barrasDe(v1) ?? [];
+    const bp = c.barrasDe(p1) ?? [];
+    const kv = c.caixaDe(v1)!;
+    const kp = c.caixaDe(p1)!;
+    return {
+      viga: { posicoes: bv.length, fora: bv.flatMap((p) => p.barras.flat()).filter((q) => !dentro(q, kv, 0, 0.1)).length },
+      pilar: {
+        tipos: [...new Set(bp.map((p) => p.tipo))],
+        fora: bp.flatMap((p) => p.barras.flat()).filter((q) => !dentro(q, kp, 1.5)).length,
+      },
+    };
+  });
+  expect(barras.viga.posicoes).toBeGreaterThan(0);
+  expect(barras.viga.fora).toBe(0);
+  expect(barras.pilar.tipos).toEqual(["positiva", "estribo"]);
+  expect(barras.pilar.fora).toBe(0);
+
   // ocultar as lajes: a malha sólida das lajes some
   await page.getByRole("button", { name: "Lajes", exact: true }).click();
   await expect(page.getByRole("button", { name: "Lajes", exact: true })).toHaveAttribute("aria-pressed", "false");

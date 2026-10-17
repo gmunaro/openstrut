@@ -34,8 +34,17 @@ import {
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Obra } from "../../dominio/obra";
 import type { Calculo } from "../calculo";
+import {
+  armaduraPilar,
+  armaduraViga,
+  barrasDaV2,
+  type P3,
+  type PosicaoGeometria,
+  perfilPilar,
+} from "../../dominio/armaduraGeometria";
 import type { DetalhamentoObra } from "../detalhamento";
 import type {
+  ArmaduraNaCena,
   ContextoVista,
   DetalhamentoElemento,
   EventoVista,
@@ -736,6 +745,109 @@ export class Cena3D implements ContextoVista {
     );
     ponto.y += this.deslocamentos[e.nivel] ?? 0;
     return ponto;
+  }
+
+  barrasDe(chave: string): ArmaduraNaCena[] | undefined {
+    const e = this.porChave.get(chave);
+    const det = this.detalhamentoDe(chave);
+    if (!e || !det || e.tipo === "fundacao") return undefined;
+    const { aco, acoEstribo } = this.obra.materiais;
+    /** Posições locais → barras na cena, pela transformação do ponto local. */
+    const naCena = (pos: PosicaoGeometria[], ponto: (p: P3) => Vector3): ArmaduraNaCena[] =>
+      pos.map(({ forma, copias, ...dados }) => ({
+        ...dados,
+        barras: copias.map((c) =>
+          forma.map((p) => ponto({ x: p.x + c.x, y: p.y + c.y, z: p.z + c.z })),
+        ),
+      }));
+
+    if (det.tipo === "viga") {
+      const v = det.viga;
+      // alma de cada trecho (a barra mais alta entre as do mesmo trecho), ao longo do eixo
+      const fim = v.nos.at(-1) ?? 0;
+      const a0 = this.pontoDaViga(chave, 0);
+      const a1 = this.pontoDaViga(chave, fim);
+      if (!a0 || !a1) return undefined;
+      const almas = e.solidos.flatMap((s) => (s.tipo === "barra" ? [s] : []));
+      const ini = almas[0]!;
+      const total = almas.reduce(
+        (t, s) => Math.max(t, Math.hypot(s.b.x - ini.a.x, s.b.y - ini.a.y)),
+        0,
+      );
+      const secaoEm = (x: number) => {
+        const t = fim > 0 ? (x * 100) / fim : 0;
+        const s = Math.min(Math.max(t, 0), 1) * total;
+        const nesta = almas.filter((b) => {
+          const d0 = Math.hypot(b.a.x - ini.a.x, b.a.y - ini.a.y);
+          const d1 = Math.hypot(b.b.x - ini.a.x, b.b.y - ini.a.y);
+          return s >= Math.min(d0, d1) - 1e-6 && s <= Math.max(d0, d1) + 1e-6;
+        });
+        const alma = nesta.reduce<(typeof almas)[number] | undefined>(
+          (m, b) => (!m || b.altura > m.altura ? b : m),
+          undefined,
+        );
+        return alma ? { bw: alma.largura, h: alma.altura } : { bw: v.bw / 100, h: v.h / 100 };
+      };
+      const pos = armaduraViga(
+        barrasDaV2(v.detalhamento.posicoes, 0),
+        secaoEm,
+        v.cobrimento,
+        aco,
+        acoEstribo,
+      );
+      // lado: horizontal, perpendicular ao eixo, à esquerda de quem anda do primeiro nó
+      const dir = a1.clone().sub(a0);
+      const lado = new Vector3(dir.z, 0, -dir.x).normalize();
+      return naCena(pos, (p) => {
+        const eixo = this.pontoDaViga(chave, p.x * 100)!;
+        return eixo.addScaledVector(lado, p.y).add(new Vector3(0, p.z, 0));
+      });
+    }
+
+    if (det.tipo === "pilar") {
+      const pilarObra = this.obra.pavimentos
+        .find((q) => q.id === e.pavimentoId)
+        ?.pilares.find((q) => q.id === e.id);
+      const i = det.lance;
+      const lance = det.pilar.lances[i];
+      const nivel = this.modelo.niveis[det.niveis[i] ?? -1];
+      if (!pilarObra || !lance || !nivel) return undefined;
+      const doLance = det.pilar.detalhamento.posicoes.filter((p) => p.tramo === i);
+      const long = doLance.find((p) => p.tipo === "longitudinal");
+      const est = doLance.find((p) => p.tipo === "estribo");
+      if (!long) return [];
+      // cotas do detalhamento: cm a partir de cotaBase; local: m a partir do piso do lance
+      const z = (cm: number) => det.cotaBase + cm / 100 - nivel.cotaPiso;
+      const pos = armaduraPilar({
+        barras: {
+          n: long.quantidade,
+          phi: long.phi,
+          porFaceX: lance.porFaceX,
+          porFaceY: lance.porFaceY,
+        },
+        estribo: { phi: est?.phi ?? 0, espacamento: est?.espacamento ?? 0 },
+        perfil: perfilPilar(pilarObra),
+        altura: nivel.cota - nivel.cotaPiso,
+        cobrimento: det.pilar.cobrimento,
+        aco,
+        acoEstribo,
+        longitudinal: { z0: z(long.xInicio), z1: z(long.xFim) },
+        ...(est
+          ? { estribos: { z0: z(est.xInicio), z1: z(est.xFim), quantidade: est.quantidade } }
+          : {}),
+      });
+      const giro = ((pilarObra.rotacao ?? 0) * Math.PI) / 180;
+      const [cg, sg] = [Math.cos(giro), Math.sin(giro)];
+      const dy = this.deslocamentos[det.niveis[i] ?? 0] ?? 0;
+      return naCena(pos, (p) => {
+        const x = pilarObra.x + p.x * cg - p.y * sg;
+        const y = pilarObra.y + p.x * sg + p.y * cg;
+        const v = new Vector3(...paraCena(x, y, nivel.cotaPiso + p.z));
+        v.y += dy;
+        return v;
+      });
+    }
+    return undefined;
   }
 
   /** Caixa das lajes, vigas e pilares do nível na cena, com o explodido desenhado agora

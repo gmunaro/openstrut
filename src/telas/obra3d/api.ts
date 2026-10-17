@@ -1,6 +1,7 @@
 // Tipos públicos da vista 3D para quem escreve uma camada (docs/VISTA-3D.md, "Tipos").
 // Importe daqui: `import type { Camada, ContextoVista, Elemento3D } from "../api";`.
 export type {
+  ArmaduraNaCena,
   Camada,
   ContextoVista,
   DefinicaoCamada,
@@ -23,6 +24,8 @@ export type {
 } from "./modelo";
 export type { Ponto } from "../../dominio/obra";
 export type { Calculo } from "../calculo";
+// Geometria das barras (a regra comum à vista 3D e ao IFC), no sistema local da peça.
+export type { P3, PosicaoGeometria } from "../../dominio/armaduraGeometria";
 // Detalhamento de armadura (cm, mm), o mesmo de Resultados, Relatório e DXF de armação.
 export type {
   DetalhamentoLajeObra,

@@ -164,9 +164,17 @@ Importe as classes do pacote `three` (`import { Mesh, SphereGeometry, MeshBasicM
 
 Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
 
-`src/telas/obra3d/camadas.ts` (em `api.ts`: `Camada, ContextoVista, DefinicaoCamada, DetalhamentoElemento, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
+`src/telas/obra3d/camadas.ts` (em `api.ts`: `ArmaduraNaCena, Camada, ContextoVista, DefinicaoCamada, DetalhamentoElemento, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
 
 ```ts
+/** Uma posição de armadura da peça na cena: os dados da posição (nome, tipo, bitola em
+ *  mm, aço, comprimento em cm) e cada barra como polilinha em coordenadas da cena, m,
+ *  com o explodido desenhado agora. O estribo é uma polilinha aberta (termina 2φ antes
+ *  do início). Calculado por dominio/armaduraGeometria.ts, o mesmo do exportador IFC. */
+export interface ArmaduraNaCena extends Omit<PosicaoGeometria, "forma" | "copias"> {
+  barras: Vector3[][];
+}
+
 export interface Camada {
   /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
   ativar(ctx: ContextoVista): (() => void) | void;
@@ -202,6 +210,14 @@ export interface ContextoVista {
    *  desenhado agora. A abscissa é proporcional entre o primeiro e o último nó, o que
    *  vale também para a viga inclinada da escada. Undefined se a peça não é viga. */
   pontoDaViga(chave: string, xCm: number): Vector3 | undefined;
+  /** As barras e os estribos calculados da peça, prontos para desenhar: viga e viga da
+   *  escada (todas as posições, menos grampos) ou o lance do pilar (longitudinais com o
+   *  traspasse e estribos da região estribada). Undefined quando `detalhamentoDe` é
+   *  undefined e para laje e fundação. Lista vazia para seção poligonal ou T de pilar. A
+   *  regra de posição (cobrimento, estribo, distribuição) está em
+   *  dominio/armaduraGeometria.ts. Para a coluna inteira, chame para cada lance de
+   *  `modelo.colunas`. */
+  barrasDe(chave: string): ArmaduraNaCena[] | undefined;
   /** Chave do elemento selecionado. */
   readonly selecao: string | null;
   selecionar(chave: string | null): void;
@@ -445,6 +461,32 @@ export type Calculo =
   /** A norma da obra ainda não tem implementação no motor. */
   | { tipo: "semNorma"; norma: NormaId }
   | { tipo: "erro"; mensagem: string };
+```
+
+`src/dominio/armaduraGeometria.ts` (em `api.ts`: `P3, PosicaoGeometria`):
+
+```ts
+export interface P3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/** Uma posição de armadura (N1, N2…): a forma de uma barra no sistema local da peça e o
+ *  deslocamento de cada barra igual. Cada barra é `forma` somada a uma `copia`. */
+export interface PosicaoGeometria {
+  nome: string;
+  tipo: "positiva" | "negativa" | "porta-estribos" | "pele" | "construtiva" | "estribo";
+  /** Bitola, mm. */
+  phi: number;
+  aco: string;
+  /** Comprimento de cada barra, cm (o do detalhamento). */
+  comprimento: number;
+  /** Polilinha da barra, m. O estribo é aberto: termina 2φ antes do início. */
+  forma: P3[];
+  /** Deslocamento de cada barra em relação à forma, m. */
+  copias: P3[];
+}
 ```
 
 `src/telas/detalhamento.ts` (em `api.ts`: `DetalhamentoLajeObra, DetalhamentoObra, DetalhamentoPilarObra, DetalhamentoVigaObra, LanceDetalhadoObra`):
@@ -744,7 +786,15 @@ Só uma animação de câmera corre por vez: `moverCamera` e `enquadrarEm` cance
 
 ### Armadura e detalhamento
 
-A camada de armadura desenha as barras do detalhamento calculado, não um esquema. `ctx.detalhamento` é o `DetalhamentoObra` da obra, o mesmo das abas Resultados e Relatório e do DXF de armação (`src/telas/detalhamento.ts`, `detalharObra`). `ctx.detalhamentoDe(chave)` devolve o da peça (`DetalhamentoElemento`, em "Referência da API"). As posições (`PosicaoArmadura`, `PosicaoLaje`, `PosicaoPilar`) trazem bitola (`phi`, mm), quantidade, comprimento, trecho reto e ganchos (cm), espaçamento dos estribos (cm) e as abscissas `xInicio` e `xFim` (cm). O referencial de cada tipo está no comentário da declaração:
+A camada de armadura desenha as barras do detalhamento calculado, não um esquema, e não calcula posição nenhuma. `ctx.barrasDe(chave)` devolve as posições da peça (`ArmaduraNaCena`) com cada barra já como polilinha em coordenadas da cena, com o explodido. A regra de posição fica num lugar só, `src/dominio/armaduraGeometria.ts`, a mesma do exportador IFC:
+
+- **viga** (e viga da escada): longitudinais numa camada, positivas embaixo, negativas e porta-estribos em cima, pele nas faces, a `cobrimento + φestribo + φ/2` das faces, distribuídas na largura útil e com os ganchos voltados para dentro; estribos retangulares a `cobrimento + φ/2` das faces, um em cada abscissa da região estribada. As longitudinais podem passar das pontas da viga até a face do apoio (ancoragem). Na escada, a seção segue a inclinação, e o lado é horizontal, perpendicular ao eixo;
+- **pilar**: o lance da peça, com as longitudinais da distribuição por face do cálculo (ou em círculo na seção circular), das cotas reais do detalhamento (a ponta de cima passa do topo pelo traspasse), e os estribos da região estribada, girados com a `rotacao` do pilar. Seção poligonal ou T: lista vazia. Para a coluna inteira, chame `barrasDe` para cada chave de `ctx.modelo.colunas[k].chaves`;
+- grampos, lajes e fundação não têm barras na cena ainda (`undefined`).
+
+Para desenhar, cada polilinha vira um tubo (`TubeGeometry` sobre uma `CatmullRomCurve3` ou `CylinderGeometry` por segmento, raio `phi / 2000` m) ou uma linha (`Line`). Os dados da posição (`nome`, `tipo`, `phi` em mm, `aco`, `comprimento` em cm) servem à legenda e ao Painel.
+
+O detalhamento cru continua disponível para quem precisa dele. `ctx.detalhamento` é o `DetalhamentoObra` da obra, o mesmo das abas Resultados e Relatório e do DXF de armação (`src/telas/detalhamento.ts`, `detalharObra`). `ctx.detalhamentoDe(chave)` devolve o da peça (`DetalhamentoElemento`, em "Referência da API"). As posições (`PosicaoArmadura`, `PosicaoLaje`, `PosicaoPilar`) trazem bitola (`phi`, mm), quantidade, comprimento, trecho reto e ganchos (cm), espaçamento dos estribos (cm) e as abscissas `xInicio` e `xFim` (cm). O referencial de cada tipo está no comentário da declaração:
 
 - **Viga** (e as vigas da escada): `xInicio` e `xFim` ao longo do eixo, a partir do primeiro nó da viga. `viga.nos` dá a abscissa de cada nó e `viga.bw`, `viga.h` e `viga.cobrimento` a seção e o cobrimento (cm). `ctx.pontoDaViga(chave, xCm)` converte a abscissa em ponto da cena, na face de cima, no centro da largura, já com o explodido. A face de baixo fica `h/100` m abaixo; uma barra positiva fica a `(cobrimento + φestribo + φ/2)/100` m da face de baixo.
 - **Laje**: `xInicio` e `xFim` ao longo da barra, a partir do eixo do bordo esquerdo (barras em x) ou inferior (barras em y) da laje, que são `laje.x` e `laje.y` do retângulo da laje na obra. `direcao` e `bordo` dizem a direção e o bordo da negativa.

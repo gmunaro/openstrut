@@ -16,6 +16,7 @@ import type {
   WebGLRenderer,
 } from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import type { PosicaoGeometria } from "../../dominio/armaduraGeometria";
 import type { Obra } from "../../dominio/obra";
 import type {
   DetalhamentoLajeObra,
@@ -43,6 +44,14 @@ export type DetalhamentoElemento =
       niveis: number[];
       cotaBase: number;
     };
+
+/** Uma posição de armadura da peça na cena: os dados da posição (nome, tipo, bitola em
+ *  mm, aço, comprimento em cm) e cada barra como polilinha em coordenadas da cena, m,
+ *  com o explodido desenhado agora. O estribo é uma polilinha aberta (termina 2φ antes
+ *  do início). Calculado por dominio/armaduraGeometria.ts, o mesmo do exportador IFC. */
+export interface ArmaduraNaCena extends Omit<PosicaoGeometria, "forma" | "copias"> {
+  barras: Vector3[][];
+}
 
 /** Como uma peça aparece pelo foco e pela visibilidade por tipo e pavimento: sólida,
  *  transparente (contexto) ou oculta. Filtros e planos de corte não entram aqui. */
@@ -96,6 +105,14 @@ export interface ContextoVista {
    *  desenhado agora. A abscissa é proporcional entre o primeiro e o último nó, o que
    *  vale também para a viga inclinada da escada. Undefined se a peça não é viga. */
   pontoDaViga(chave: string, xCm: number): Vector3 | undefined;
+  /** As barras e os estribos calculados da peça, prontos para desenhar: viga e viga da
+   *  escada (todas as posições, menos grampos) ou o lance do pilar (longitudinais com o
+   *  traspasse e estribos da região estribada). Undefined quando `detalhamentoDe` é
+   *  undefined e para laje e fundação. Lista vazia para seção poligonal ou T de pilar. A
+   *  regra de posição (cobrimento, estribo, distribuição) está em
+   *  dominio/armaduraGeometria.ts. Para a coluna inteira, chame para cada lance de
+   *  `modelo.colunas`. */
+  barrasDe(chave: string): ArmaduraNaCena[] | undefined;
   /** Chave do elemento selecionado. */
   readonly selecao: string | null;
   selecionar(chave: string | null): void;
