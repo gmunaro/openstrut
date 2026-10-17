@@ -3,7 +3,7 @@
 // maior no original, azul menor no original e verde-azulado quando a situação muda. O
 // Painel mostra os modos, a tolerância, a contagem, a legenda e a lista das peças que
 // diferem, cada uma levando à peça na vista.
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { normaPorId } from "../../../calculo/normas";
 import type { ModoCalculo, Obra } from "../../../dominio/obra";
 import { calcular, NOME_MODO, NOME_NORMA } from "../../calculo";
@@ -49,8 +49,18 @@ const estado = {
 /** O cálculo do outro modo da última obra, para não refazer ao religar a camada. */
 let cache: { obra: Obra; outro: Calculo } | null = null;
 
+// o Painel lê `estado` pela versão (useSyncExternalStore): um aviso entre o primeiro desenho
+// e a assinatura (o cálculo que termina antes) não se perde
 const ouvintes = new Set<() => void>();
-const avisar = () => ouvintes.forEach((f) => f());
+let versao = 0;
+const avisar = () => {
+  versao++;
+  ouvintes.forEach((f) => f());
+};
+const assinar = (f: () => void) => {
+  ouvintes.add(f);
+  return () => void ouvintes.delete(f);
+};
 
 const outroModo = (m: ModoCalculo): ModoCalculo => (m === "original" ? "corrigido" : "original");
 
@@ -113,12 +123,7 @@ function mudarEsconder(ctx: ContextoVista, sim: boolean) {
 }
 
 function Painel({ ctx }: { ctx: ContextoVista }) {
-  const [, redesenhar] = useState(0);
-  useEffect(() => {
-    const f = () => redesenhar((n) => n + 1);
-    ouvintes.add(f);
-    return () => void ouvintes.delete(f);
-  }, []);
+  useSyncExternalStore(assinar, () => versao);
   const unidades = useSessao((s) => s.unidades);
   const [texto, setTexto] = useState(formatarNumero(estado.tolerancia * 100, 1));
   const { fase, modoObra } = estado;
@@ -232,7 +237,7 @@ function grandeza(tipo: Elemento3D["tipo"], u: SistemaUnidades) {
     };
   return {
     nome: "ρ",
-    fmt: (v: number) => `${formatarNumero(v)} ${GRANDEZAS.taxaVigas.unidade(u)}`,
+    fmt: (v: number) => `${formatarNumero(v, 3)} ${GRANDEZAS.taxaVigas.unidade(u)}`,
   };
 }
 
