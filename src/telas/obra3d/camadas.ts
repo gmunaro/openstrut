@@ -214,4 +214,11 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Corta o prédio na horizontal acima de um pavimento, como a planta de fôrma.",
     carregar: () => import("./camadas/corte").then((m) => m.camada),
   },
+  {
+    id: "render",
+    nome: "Render realista",
+    descricao:
+      "Materiais com luz de estúdio e sombras, nas cores da vista; path tracing opcional com a câmera parada.",
+    carregar: () => import("./render/camada").then((m) => m.camada),
+  },
 ];
