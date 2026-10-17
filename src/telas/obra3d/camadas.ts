@@ -215,6 +215,13 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     carregar: () => import("./camadas/corte").then((m) => m.camada),
   },
   {
+    id: "armadura",
+    nome: "Armadura",
+    descricao:
+      "Mostra a armadura calculada dentro da viga ou da coluna selecionada, com as peças transparentes.",
+    carregar: () => import("./armadura/camada").then((m) => m.camada),
+  },
+  {
     id: "sequencia",
     nome: "Sequência construtiva 4D",
     descricao: "Mostra a obra etapa por etapa (fundação, pilares, vigas e lajes), com datas.",
