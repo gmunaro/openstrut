@@ -36,7 +36,7 @@ Convenções:
 
 ## 2. Parametrização (`.LAP`, `.PIP`, `.DSP`, `.FOP`)
 
-Ficam no diretório de parametrização da instalação (`C:\SISTRUT\EXEC40\` no padrão), não na pasta da obra. Por isso, ao receber uma obra, peça também os `.LAP`, `.DSP`, `.PIP` e `.INI` desse diretório. Sem eles, a V2 usa os de fábrica, e o detalhamento e o quantitativo podem divergir do `.TAB` gravado pelo original. Com o nome `SISTRUT` o original não lê o arquivo e usa a tabela embutida (LAJE.BAS:1262, DESENHO.BAS:4837, PILAREDI.BAS:1885), que a V2 transcreveu em [`parametros.ts`](../../src/calculo/sistrut/base/parametros.ts). Quem grava é o SISEDIT, editor de texto genérico (ver a seção 6).
+Ficam no diretório de parametrização da instalação (`C:\SISTRUT\EXEC40\` no padrão), não na pasta da obra. Por isso, ao receber uma obra, peça também os `.LAP`, `.DSP`, `.PIP` e `.INI` desse diretório. Sem eles, a V2 usa os de fábrica, e o detalhamento e o quantitativo podem divergir do `.TAB` gravado pelo original. A pasta inteira traz vários `.DSP`: a importação usa o da linha 1 do `DESENHO.INI` ou, sem ele, o da parametrização que o `.COL` aponta, e pergunta na tela quando nenhum dos dois decide (`docs/MODO-CALCULO.md`, "Vários .DSP"). Com o nome `SISTRUT` o original não lê o arquivo e usa a tabela embutida (LAJE.BAS:1262, DESENHO.BAS:4837, PILAREDI.BAS:1885), que a V2 transcreveu em [`parametros.ts`](../../src/calculo/sistrut/base/parametros.ts). Quem grava é o SISEDIT, editor de texto genérico (ver a seção 6).
 
 | Ext. | Quem grava | Quem lê | Formato | Conteúdo | Decisão na importação |
 |---|---|---|---|---|---|
