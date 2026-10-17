@@ -262,12 +262,12 @@ test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e C
   // invade L2 (x de 4 a 8 m): a mensagem de sobreposição nomeia a laje
   await lx.fill("6");
   await lx.press("Enter");
-  await expect(page.getByText("A laje se sobrepõe à L2.", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^A laje se sobrepõe à L2\. /)).toBeVisible();
 
   await lx.fill("4");
   await lx.press("Enter");
   await expect(lx).toHaveAttribute("aria-invalid", "false");
-  await expect(page.getByText("A laje se sobrepõe à L2.", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/^A laje se sobrepõe à L2\. /)).toHaveCount(0);
   await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   // Ctrl+Z com o foco fora do campo desfaz a última gravação válida (4 m → 3 m)
