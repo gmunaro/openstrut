@@ -682,12 +682,16 @@ export interface DetalhamentoVigaObra {
   nos: number[];
   /** Largura de cada apoio na direção da viga, cm (0 na ponta livre). */
   larguraApoios: number[];
+  /** Nome de cada apoio (pilar ou viga), na ordem dos nós; "" na ponta livre. */
+  nomesApoios: string[];
   detalhamento: VigaDetalhamento;
 }
 
 export interface LanceDetalhadoObra {
   /** Rótulo do nível, como na tabela de pilares ("Tipo (2/3)"). */
   nivel: string;
+  /** Nome do pilar neste nível (pode mudar de um pavimento para outro). */
+  nome: string;
   pavimentoId: string;
   repeticao: number;
   /** Pé-direito do lance e seção, cm. */
@@ -705,6 +709,8 @@ export interface LanceDetalhadoObra {
   /** Quanto as barras deste lance passam do topo dele (traspasse com o lance de
    *  cima, já arredondado), cm; null no último lance ou sem barras. */
   traspasse: number | null;
+  /** Seção retangular b × h (false: seção em L, T ou U, que a tela não desenha). */
+  retangular: boolean;
 }
 ```
 
