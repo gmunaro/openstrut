@@ -126,7 +126,6 @@ describe("edição que não serve mais à viga", () => {
   const automatico = quadro({});
 
   it.each([
-    [{ comprimento: 830 }, /comprimento de 830 cm na edição e 820 cm na viga/],
     [{ tramos: 3 }, /3 tramos na edição e 2 na viga/],
     [{ balancoDireito: true }, /balanço direito: com na edição e sem na viga/],
   ] as const)("%o: descartada com aviso, vale o automático", (troca, motivo) => {
@@ -141,6 +140,33 @@ describe("edição que não serve mais à viga", () => {
     expect(d.avisos[0]).toMatch(motivo);
     expect(quadro({ armaduraEditada: mudada }).comprimentoPorBitola).toEqual(
       automatico.comprimentoPorBitola,
+    );
+  });
+
+  // O DESEDITA lê a linha 2 do .EDV (o comprimento) para uma variável que descarta
+  // (DESEDITA.BAS:747) e aplica a edição à viga atual: o .TAB sai da edição com a forma da
+  // viga nova. Edição de 830 cm numa viga de 820 cm: no original, o quadro é o da edição
+  // (as bitolas trocadas para φ16), com aviso; no corrigido, a edição é descartada.
+  it("comprimento diferente: o original aplica a edição e avisa; o corrigido descarta", () => {
+    const mudada = {
+      ...base,
+      negativas: base.negativas.map((b) => ({ ...b, bitola: 16 })),
+      comprimento: 830,
+    };
+    const original = detalha({ armaduraEditada: mudada });
+    expect(original.avisos).toHaveLength(1);
+    expect(original.avisos[0]).toMatch(
+      /V1: a viga mudou depois da edição \(comprimento de 830 cm na edição e 820 cm na viga\).*R1__E2E\.EDV\) foi aplicada à viga atual/,
+    );
+    const comEdicao = quadro({ armaduraEditada: mudada }).comprimentoPorBitola;
+    expect(comEdicao).not.toEqual(automatico.comprimentoPorBitola);
+    expect(comEdicao[indice(16)]).toBeGreaterThan(0);
+
+    const corrigido = detalha({ armaduraEditada: mudada }, "corrigido");
+    expect(corrigido.avisos).toHaveLength(1);
+    expect(corrigido.avisos[0]).toMatch(/descartada porque a viga mudou depois da edição/);
+    expect(quadro({ armaduraEditada: mudada }, "corrigido").comprimentoPorBitola).toEqual(
+      quadro({}, "corrigido").comprimentoPorBitola,
     );
   });
 

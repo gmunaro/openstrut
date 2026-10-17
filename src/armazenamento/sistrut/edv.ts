@@ -502,7 +502,7 @@ export function aplicarEdv(
     return `${p?.nome ?? pav} ${n.join(", ")}`;
   });
   avisos.push(
-    `Armadura editada no DESEDCAO (.EDV) em ${nomes.join("; ")}: o detalhamento e o quadro de ferros dessas vigas saem da armadura editada, como no original. Se a viga mudar (tramos, balanços ou comprimento), a edição é descartada com aviso.`,
+    `Armadura editada no DESEDCAO (.EDV) em ${nomes.join("; ")}: o detalhamento e o quadro de ferros dessas vigas saem da armadura editada, como no original. Se a viga mudar de tramos ou de balanços, a edição é descartada com aviso. Se só o comprimento mudar, o modo original aplica a edição à viga atual, como o SISTRUT, e o corrigido a descarta, os dois com aviso.`,
   );
   return {
     obra: {
