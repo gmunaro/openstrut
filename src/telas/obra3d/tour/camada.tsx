@@ -188,7 +188,7 @@ function mostrarPiso(s: Sessao) {
   const l = s.livre;
   const p = l ? pisos(s.ctx.modelo.niveis)[l.piso] : undefined;
   const piso = p
-    ? `${p.nome} (+${p.cota.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} m)`
+    ? `${p.nome} (+${p.cota.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} m)`
     : "";
   s.legenda.mostrar(`Caminhando: ${piso}`, [
     toque()

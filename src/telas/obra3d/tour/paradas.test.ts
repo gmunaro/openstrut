@@ -87,7 +87,7 @@ describe("descreverParada", () => {
 
   it("nível com a cota da laje", () => {
     expect(descreverParada({ tipo: "nivel", nivel: 0 }, m, dados)).toEqual({
-      titulo: "Primeiro (+3,00 m)",
+      titulo: "Primeiro (+3,00 m)",
       linhas: ["4 peças (lajes, vigas e pilares)", "2 com falha"],
     });
   });

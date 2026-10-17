@@ -66,7 +66,7 @@ const SITUACAO: Record<DadosElemento["estado"], string> = {
 };
 
 const metros = (m: number) =>
-  `+${m.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m`;
+  `+${m.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m`;
 
 /** Título e linhas de texto da parada, para a legenda na tela e o Painel. */
 export function descreverParada(

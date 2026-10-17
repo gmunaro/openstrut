@@ -3,14 +3,7 @@
 // próprio. A vista desenha o quadro normal (raster) e, logo depois, no `onAfterRender` da
 // cena, o traçador soma uma amostra e cobre o canvas com a imagem acumulada. Com a câmera
 // mexendo, ele recomeça e deixa o raster aparecer.
-import {
-  CubeCamera,
-  HalfFloatType,
-  type Scene,
-  type Texture,
-  WebGLCubeRenderTarget,
-  type WebGLRenderer,
-} from "three";
+import { CubeCamera, HalfFloatType, type Scene, type Texture, WebGLCubeRenderTarget } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { WebGLPathTracer } from "three-gpu-pathtracer";
 import type { ContextoVista } from "../api";
