@@ -26,6 +26,23 @@ async function botaoComCapturaFalsa() {
 }
 
 describe("botão Relatar problema", () => {
+  test("módulo do relato que não carrega: avisa, oferece recarregar e o botão volta a responder", async () => {
+    vi.resetModules();
+    vi.doMock("./captura", () => {
+      throw new Error("Failed to fetch dynamically imported module");
+    });
+    const { BotaoRelatar } = await import("./BotaoRelatar");
+    const user = userEvent.setup();
+    render(<BotaoRelatar />);
+    const botao = screen.getByRole("button", { name: "Relatar problema" });
+    await user.click(botao);
+    expect((await screen.findByRole("alert")).textContent).toContain("Recarregue a página");
+    expect(screen.getByRole("button", { name: "Recarregar" })).toBeTruthy();
+    // não ficou preso em "capturando"
+    expect(botao).toHaveProperty("disabled", false);
+    vi.doUnmock("./captura");
+  });
+
   test("está na moldura do app, na tela inicial e na da obra", async () => {
     renderizarApp("/");
     const botao = await screen.findByRole("button", { name: "Relatar problema" });

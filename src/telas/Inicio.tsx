@@ -14,6 +14,7 @@ import {
 } from "react";
 import { Badge } from "@/components/ui/badge";
 import { DicaUso } from "@/components/ui/dica-uso";
+import { LimiteCarga } from "@/components/ui/falha-carga";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -284,9 +285,11 @@ export function Inicio() {
             className="hidden"
             onChange={(e) => void importar(e)}
           />
-          <Suspense fallback={<div className="h-40" aria-hidden />}>
-            <ImportarSistrut aoAbrir={abrirImportada} />
-          </Suspense>
+          <LimiteCarga className="mt-2">
+            <Suspense fallback={<div className="h-40" aria-hidden />}>
+              <ImportarSistrut aoAbrir={abrirImportada} />
+            </Suspense>
+          </LimiteCarga>
 
           <h3 className="text-muted-foreground mt-6 mb-2 text-xs font-semibold uppercase tracking-wide">
             Rascunhos recentes (neste navegador)

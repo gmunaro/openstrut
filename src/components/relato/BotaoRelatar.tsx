@@ -21,6 +21,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { FalhaCarga, LimiteCarga } from "@/components/ui/falha-carga";
 import { useObra } from "../../estado/obra";
 import type { Captura } from "./DialogoRelato";
 import { cobreControle, deslocamentoLivre } from "./posicao";
@@ -31,6 +32,9 @@ const DialogoRelato = lazy(() =>
 );
 
 export const ATALHO = "Alt+Shift+R";
+
+/** Aviso de falha de carga, acima do botão no canto da tela. */
+const AVISO_FIXO = "fixed right-3 bottom-20 z-[100] max-w-sm shadow-md print:hidden";
 
 /** Alt+Shift+R pelo código da tecla (no Mac, Alt+Shift+R produz outro caractere). */
 export const ehAtalho = (e: KeyboardEvent) =>
@@ -113,6 +117,7 @@ function useDeslocamentoLivre(caixa: RefObject<HTMLDivElement | null>, ativo: bo
 export function BotaoRelatar() {
   const [captura, setCaptura] = useState<Captura | null>(null);
   const [capturando, setCapturando] = useState(false);
+  const [falhaCarga, setFalhaCarga] = useState(false);
   const ocupado = useRef(false);
   const caixa = useRef<HTMLDivElement>(null);
   const deslocamento = useDeslocamentoLivre(caixa, captura === null);
@@ -121,18 +126,27 @@ export function BotaoRelatar() {
     if (ocupado.current) return;
     ocupado.current = true;
     setCapturando(true);
+    setFalhaCarga(false);
     // obra e diagnóstico do mesmo instante do print
     const obra = useObra.getState().obra;
     const caminho = location.pathname;
     const agora = new Date();
-    const [{ coletarDiagnostico }, { capturarTela }] = await Promise.all([
-      import("./diagnostico"),
-      import("./captura"),
-    ]);
-    const diagnostico = coletarDiagnostico(obra, caminho);
-    const print = await capturarTela();
-    setCapturando(false);
-    setCaptura({ print, diagnostico, obra, agora });
+    try {
+      const [{ coletarDiagnostico }, { capturarTela }] = await Promise.all([
+        import("./diagnostico"),
+        import("./captura"),
+      ]);
+      const diagnostico = coletarDiagnostico(obra, caminho);
+      const print = await capturarTela();
+      setCaptura({ print, diagnostico, obra, agora });
+    } catch {
+      // módulo do relato que não carregou (versão nova publicada, sem conexão): o botão
+      // volta a responder e o aviso oferece recarregar
+      ocupado.current = false;
+      setFalhaCarga(true);
+    } finally {
+      setCapturando(false);
+    }
   }, []);
 
   const fechar = useCallback(() => {
@@ -191,10 +205,13 @@ export function BotaoRelatar() {
           <span className="sr-only">{capturando ? "Capturando a tela…" : ""}</span>
         </div>
       )}
+      {falhaCarga && !captura && <FalhaCarga className={AVISO_FIXO} />}
       {captura && (
-        <Suspense fallback={null}>
-          <DialogoRelato captura={captura} aoFechar={fechar} />
-        </Suspense>
+        <LimiteCarga className={AVISO_FIXO}>
+          <Suspense fallback={null}>
+            <DialogoRelato captura={captura} aoFechar={fechar} />
+          </Suspense>
+        </LimiteCarga>
       )}
     </>
   );
