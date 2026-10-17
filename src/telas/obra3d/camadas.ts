@@ -214,4 +214,11 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Corta o prédio na horizontal acima de um pavimento, como a planta de fôrma.",
     carregar: () => import("./camadas/corte").then((m) => m.camada),
   },
+  {
+    id: "comparar",
+    nome: "Original × Corrigido",
+    descricao:
+      "Calcula a obra no outro modo da NB-1/78 e pinta as peças em que o SISTRUT original difere do corrigido.",
+    carregar: () => import("./comparar/camada").then((m) => m.camada),
+  },
 ];
