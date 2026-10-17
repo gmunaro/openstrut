@@ -47,7 +47,7 @@ O e2e (`e2e/drive.spec.ts`) confere esse fluxo em 390x844 e 1366x768 com o Googl
 
 ## Configuração no Google Cloud (passo a passo do dono)
 
-Feito em 17/10/2026, na conta do dono: projeto `openstrut` (número 939144067082), Drive API e Picker API ativas, tela de consentimento externa, Client ID web e API key `OpenStrut Pages`, e as duas variáveis no GitHub. Falta publicar o app (passo 3.6). Os passos ficam aqui para refazer a configuração noutro projeto. Sem as duas variáveis, o build mostra a opção desabilitada com a explicação "não está ligada nesta versão do app".
+Feito em 17/10/2026, na conta do dono: projeto `openstrut` (número 939144067082), Drive API e Picker API ativas, tela de consentimento externa, Client ID web e API key `OpenStrut Pages`, e as duas variáveis no GitHub. O app foi publicado ("Em produção") no mesmo dia: entra qualquer conta Google, sem lista de usuários de teste. Os passos ficam aqui para refazer a configuração noutro projeto. Sem as duas variáveis, o build mostra a opção desabilitada com a explicação "não está ligada nesta versão do app".
 
 ### 1. Criar o projeto
 
