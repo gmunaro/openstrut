@@ -1,8 +1,8 @@
 // Barra de pavimentos: escolhe o pavimento ativo e edita o ativo (nome,
-// pé-direito, repetições, posição, apagar, copiar a planta de outro).
+// pé-direito, repetições, posição, duplicar, apagar, copiar a planta de outro).
 // No celular os pavimentos rolam na horizontal numa linha só e os campos do ativo
 // ficam recolhidos atrás do botão "Editar pavimento".
-import { ArrowDown, ArrowUp, Copy, Plus, Settings2, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, CopyPlus, Plus, Settings2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
   alterarRepeticoes,
   apagarPavimento,
   copiarPlanta,
+  duplicarPavimento,
   moverPavimento,
   problemaNomePavimento,
   problemaPeDireito,
@@ -46,6 +47,15 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
   const novo = () => {
     // a criação precisa do id do pavimento novo para selecioná-lo depois
     const r = adicionarPavimento(obra, Math.max(indice, 0));
+    editar(() => r.obra);
+    selecionarPavimento(r.pavimento.id);
+  };
+
+  /** Cópia do ativo logo acima dele, já selecionada. */
+  const duplicar = () => {
+    if (!ativo) return;
+    const r = duplicarPavimento(obra, ativo.id);
+    if (!r.pavimento) return;
     editar(() => r.obra);
     selecionarPavimento(r.pavimento.id);
   };
@@ -117,7 +127,11 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
             )}
           >
             {p.nome}
-            {p.repeticoes > 1 && <span className="ml-1 opacity-70">×{p.repeticoes}</span>}
+            {p.repeticoes > 1 && (
+              <span className="ml-1 opacity-70" title={`Repete ${p.repeticoes} vezes`}>
+                ×{p.repeticoes}
+              </span>
+            )}
           </button>
         ))}
         <Button
@@ -202,6 +216,16 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
           >
             <ArrowDown />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className={icone}
+            title="Duplicar pavimento (a cópia entra acima, com a mesma planta)"
+            aria-label="Duplicar pavimento"
+            onClick={duplicar}
+          >
+            <CopyPlus />
+          </Button>
           {obra.pavimentos.length > 1 && (
             <Select value="" onValueChange={(id) => void copiarDe(id)}>
               <SelectTrigger
@@ -227,7 +251,11 @@ export function BarraPavimentos({ obra, ativoId }: { obra: Obra; ativoId: string
             variant="ghost"
             size="icon-xs"
             className={cn("hover:text-destructive", icone)}
-            title="Apagar pavimento"
+            title={
+              obra.pavimentos.length <= 1
+                ? "A obra precisa de pelo menos um pavimento"
+                : "Apagar pavimento"
+            }
             aria-label="Apagar pavimento"
             disabled={obra.pavimentos.length <= 1}
             onClick={() => void apagar()}

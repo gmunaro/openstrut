@@ -8,6 +8,7 @@ import {
   alterarRepeticoes,
   apagarPavimento,
   copiarPlanta,
+  duplicarPavimento,
   moverPavimento,
   problemaNomePavimento,
   renomearPavimento,
@@ -106,5 +107,40 @@ describe("pavimentos", () => {
     // a origem não muda e copiar para si mesmo não faz nada
     expect(copiada.pavimentos[2]).toBe(terreo);
     expect(copiarPlanta(obra, terreo.id, terreo.id)).toBe(obra);
+  });
+});
+
+describe("duplicarPavimento", () => {
+  it("cria a cópia logo acima, com a planta (ids novos), o pé-direito e as repetições", () => {
+    const base = obraTres();
+    const tipo = base.pavimentos[1]!;
+    tipo.lajes.push(lajeNova(tipo, { x: 0, y: 0, lx: 4, ly: 5 }));
+    const comLaje: Obra = {
+      ...base,
+      pavimentos: base.pavimentos.map((p) => (p.id === tipo.id ? gerarEstrutura(tipo) : p)),
+    };
+    const { obra, pavimento } = duplicarPavimento(comLaje, tipo.id);
+    expect(nomes(obra)).toEqual(["Cobertura", "Tipo (cópia)", "Tipo", "Térreo"]);
+    expect(pavimento?.peDireito).toBe(2.8);
+    expect(pavimento?.repeticoes).toBe(3);
+    const original = obra.pavimentos[2]!;
+    expect(pavimento?.lajes.map((l) => [l.nome, l.x, l.lx])).toEqual([["L1", 0, 4]]);
+    expect(pavimento?.vigas).toHaveLength(original.vigas.length);
+    expect(pavimento?.pilares).toHaveLength(4);
+    expect(pavimento?.lajes[0]?.id).not.toBe(original.lajes[0]?.id);
+    expect(pavimento?.id).not.toBe(original.id);
+  });
+
+  it("numera as cópias seguintes", () => {
+    let o = obraTres();
+    const id = o.pavimentos[0]!.id;
+    o = duplicarPavimento(o, id).obra;
+    o = duplicarPavimento(o, id).obra;
+    expect(nomes(o).slice(0, 3)).toEqual(["Cobertura (cópia)", "Cobertura (cópia 2)", "Cobertura"]);
+  });
+
+  it("id que não existe não muda nada", () => {
+    const o = obraTres();
+    expect(duplicarPavimento(o, "x")).toEqual({ obra: o, pavimento: undefined });
   });
 });

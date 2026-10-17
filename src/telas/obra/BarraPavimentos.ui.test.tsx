@@ -34,6 +34,19 @@ describe("barra de pavimentos", () => {
     expect(screen.getByText(/Pavimento 2: 0 lajes/)).toBeTruthy();
   });
 
+  it("duplica o pavimento ativo com a planta, seleciona a cópia e desfaz", async () => {
+    const { user } = await abrir(obraDuasLajes("nb1-78", "Casa"));
+    await user.click(screen.getByRole("button", { name: "Duplicar pavimento" }));
+    expect(nomes()).toEqual(["Pavimento 1 (cópia)", "Pavimento 1"]);
+    expect(ativo()?.nome).toBe("Pavimento 1 (cópia)");
+    expect(ativo()?.lajes.map((l) => l.nome)).toEqual(["L1", "L2"]);
+    expect(screen.getByText(/Pavimento 1 \(cópia\): 2 lajes, \d+ vigas, 6 pilares/)).toBeTruthy();
+    // desfazer tira a cópia e volta para um pavimento que existe
+    await user.keyboard("{Control>}z{/Control}");
+    expect(nomes()).toEqual(["Pavimento 1"]);
+    expect(ativo()?.nome).toBe("Pavimento 1");
+  });
+
   it("renomeia com Enter e recusa nome repetido ou vazio", async () => {
     const { user, nav } = await abrir();
     await user.click(within(nav).getByRole("button", { name: "Novo pavimento" }));

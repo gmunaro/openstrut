@@ -96,3 +96,24 @@ export function copiarPlanta(obra: Obra, origemId: string, destinoId: string) {
     pilaresRemovidos: origem.pilaresRemovidos.map((r) => ({ ...r })),
   }));
 }
+
+/** Nome livre para a cópia de um pavimento: "<nome> (cópia)", "<nome> (cópia 2)"… */
+function nomeDaCopia(obra: Obra, nome: string) {
+  const usados = new Set(obra.pavimentos.map((p) => p.nome.trim()));
+  let candidato = `${nome} (cópia)`;
+  for (let n = 2; usados.has(candidato); n++) candidato = `${nome} (cópia ${n})`;
+  return candidato;
+}
+
+/** Pavimento novo, logo acima do `id`, com a mesma planta (ids novos), o mesmo pé-direito
+ *  e as mesmas repetições. Devolve a obra e o pavimento criado (undefined se `id` não existe). */
+export function duplicarPavimento(obra: Obra, id: string) {
+  const i = obra.pavimentos.findIndex((p) => p.id === id);
+  const origem = obra.pavimentos[i];
+  if (!origem) return { obra, pavimento: undefined };
+  const novo = pavimentoNovo(nomeDaCopia(obra, origem.nome), origem.peDireito, origem.repeticoes);
+  const pavimentos = [...obra.pavimentos];
+  pavimentos.splice(i, 0, novo);
+  const comCopia = copiarPlanta({ ...obra, pavimentos }, origem.id, novo.id);
+  return { obra: comCopia, pavimento: comCopia.pavimentos[i] };
+}
