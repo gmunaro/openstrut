@@ -89,7 +89,7 @@ for (const vp of VIEWPORTS) {
     await desenharObra(page, svg);
     // as 4 lajes 4×5 m aparecem com o rótulo de dimensão; 9 pilares P1–P9
     // exato: o <title> de cada laje traz "L1: 4,00 × 5,00 m, h = …" e não entra na conta
-    await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+    await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
     // a dica (<title>) de cada pilar traz o nome em qualquer escala
     for (let n = 1; n <= 9; n++)
       await expect(svg.locator("title").filter({ hasText: new RegExp(`^P${n}:`) })).toHaveCount(1);
@@ -179,7 +179,7 @@ test("setas selecionam a planta pelo teclado e Delete apaga a laje", async ({ pa
 
   const svg = await abrirPlanta(page);
   await desenharObra(page, svg);
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   // ao soltar o desenho, a última laje fica selecionada; Escape limpa para a seta partir do início
   await page.keyboard.press("Escape");
@@ -193,7 +193,7 @@ test("setas selecionam a planta pelo teclado e Delete apaga a laje", async ({ pa
 
   await page.keyboard.press("Delete");
   await expect(page.getByRole("button", { name: "Apagar (Delete)" })).toHaveCount(0);
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(3);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(3);
   await page.screenshot({ path: `${SAIDA}/teclado-02-apagada.png` });
 
   writeFileSync(`${SAIDA}/teclado-erros.txt`, erros.join("\n") || "(nenhum)");
@@ -232,12 +232,12 @@ test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e C
 
   await lx.fill("3");
   await lx.press("Enter");
-  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+  await expect(svg.getByText("3,00 × 5,00 m", { exact: true })).toHaveCount(1);
 
   await lx.fill("2");
   await lx.press("Escape");
   await expect(lx).toHaveValue(/^3([,.]0+)?$/);
-  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+  await expect(svg.getByText("3,00 × 5,00 m", { exact: true })).toHaveCount(1);
   await expect(painel.getByText("Laje", { exact: true })).toBeVisible();
 
   await lx.fill("abc");
@@ -257,7 +257,7 @@ test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e C
   await lx.fill("0,05");
   await lx.press("Enter");
   await expect(lx).toHaveAttribute("aria-invalid", "true");
-  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+  await expect(svg.getByText("3,00 × 5,00 m", { exact: true })).toHaveCount(1);
 
   // invade L2 (x de 4 a 8 m): a mensagem de sobreposição nomeia a laje
   await lx.fill("6");
@@ -268,12 +268,12 @@ test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e C
   await lx.press("Enter");
   await expect(lx).toHaveAttribute("aria-invalid", "false");
   await expect(page.getByText("A laje se sobrepõe à L2.", { exact: true })).toHaveCount(0);
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   // Ctrl+Z com o foco fora do campo desfaz a última gravação válida (4 m → 3 m)
   await painel.getByText("Laje", { exact: true }).click();
   await page.keyboard.press("Control+z");
-  await expect(svg.getByText("3,00 × 5,00", { exact: true })).toHaveCount(1);
+  await expect(svg.getByText("3,00 × 5,00 m", { exact: true })).toHaveCount(1);
 
   expect(erros).toEqual([]);
 });
@@ -386,12 +386,12 @@ test("atalhos V, L, P trocam a ferramenta; Ctrl+Z e Ctrl+Y desfazem e refazem", 
   await page.keyboard.press("v");
   await expect(ferramenta(/^Selec/)).toHaveAttribute("aria-pressed", "true");
 
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
   await svg.focus();
   await page.keyboard.press("Control+z");
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(3);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(3);
   await page.keyboard.press("Control+y");
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   expect(erros).toEqual([]);
 });
@@ -409,7 +409,7 @@ test("erros de geometria: sobreposição e pilar fora de viga aparecem na mensag
   await page.getByRole("button", { name: "Laje", exact: true }).click();
   await arrastar(page, svg, { x: 1, y: 1 }, { x: 3, y: 3 });
   await expect(mensagem).toContainText("A laje se sobrepõe à L1.");
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   // pilar no miolo de uma laje, sem viga: recusado
   await page.getByRole("button", { name: /^Pilar/ }).click();
@@ -467,7 +467,7 @@ test("Shift+setas movem a laje e o pilar selecionados em um passo de grade; erro
   await svg.focus();
   await page.keyboard.press("Shift+ArrowLeft");
   await expect(x).toHaveValue(/^-0([,.]5)0*$/);
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   // empurrar L1 de volta para x = 0 não sobrepõe nada
   await page.keyboard.press("Shift+ArrowRight");
@@ -495,7 +495,7 @@ test("cálculo nos dois modos: a aba Resultados mostra o total nos modos Corrigi
 
   const svg = await abrirPlanta(page);
   await desenharObra(page, svg);
-  await expect(svg.getByText("4,00 × 5,00", { exact: true })).toHaveCount(4);
+  await expect(svg.getByText("4,00 × 5,00 m", { exact: true })).toHaveCount(4);
 
   // modo padrão: Corrigido
   await page.getByRole("tab", { name: "Resultados" }).click();
@@ -572,7 +572,7 @@ test("sondagem: Backspace apaga a laje selecionada?", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Apagar (Delete)" })).toBeVisible();
   await page.keyboard.press("Backspace");
   await pintar(page);
-  const restantes = await svg.getByText("4,00 × 5,00", { exact: true }).count();
+  const restantes = await svg.getByText("4,00 × 5,00 m", { exact: true }).count();
   anotar("backspace", [
     `Após Backspace com laje selecionada: ${restantes} rótulos 4,00 × 5,00 (4 antes).`,
     restantes === 4 ? "Backspace não apaga; só Delete." : "Backspace apagou a laje.",

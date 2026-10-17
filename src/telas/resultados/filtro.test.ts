@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { filtroDeTexto } from "./filtro";
+import type { Aviso } from "../calculo";
+import { filtroDeTexto, MOSTRA_TUDO } from "./filtro";
+import { avisosDoFiltro } from "./Resultados";
 
 describe("filtroDeTexto", () => {
   it("vazio mostra tudo", () => {
@@ -31,5 +33,33 @@ describe("filtroDeTexto", () => {
   it("caractere especial do usuário não quebra o filtro", () => {
     expect(() => filtroDeTexto("V(")("V1")).not.toThrow();
     expect(filtroDeTexto("V(")("V1")).toBe(false);
+  });
+});
+
+describe("avisosDoFiltro", () => {
+  const aviso = (elemento: string): Aviso => ({
+    local: "Tipo",
+    elemento,
+    texto: `aviso de ${elemento}`,
+  });
+  const todos = [
+    aviso("V1"),
+    aviso("V1 (detalhamento)"),
+    aviso("V10"),
+    aviso("P3"),
+    aviso(""),
+    aviso("equilíbrio"),
+  ];
+
+  it("sem filtro, todos", () => {
+    expect(avisosDoFiltro(todos, MOSTRA_TUDO)).toBe(todos);
+  });
+
+  it("com filtro, só os dos elementos mostrados (o detalhamento conta como o elemento)", () => {
+    expect(avisosDoFiltro(todos, filtroDeTexto("V1")).map((a) => a.elemento)).toEqual([
+      "V1",
+      "V1 (detalhamento)",
+    ]);
+    expect(avisosDoFiltro(todos, filtroDeTexto("P")).map((a) => a.elemento)).toEqual(["P3"]);
   });
 });

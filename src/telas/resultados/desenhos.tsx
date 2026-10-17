@@ -142,6 +142,9 @@ export function EsquemaViga({ d }: { d: DetalhamentoVigaObra }) {
         })}
         <CotasVaos d={d} px={px} y={yCota} />
       </svg>
+      <p className="text-muted-foreground compacto:block hidden text-xs print:hidden">
+        Deslize para o lado para ver a viga inteira.
+      </p>
     </div>
   );
 }

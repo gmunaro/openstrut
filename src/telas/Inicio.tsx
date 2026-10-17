@@ -243,7 +243,7 @@ export function Inicio() {
               Sobrado com duas lajes de piso (5 lajes, 7 vigas e 11 pilares por pavimento), aberto
               já calculado. Altere à vontade: o original não muda.
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 lg:grid-cols-2">
               <Button variant="secondary" onClick={() => abrirExemplo("nbr6118-2023")}>
                 <Building2 /> Exemplo NBR 6118:2023
               </Button>

@@ -170,11 +170,11 @@ function DesenhoLaje({
 }) {
   const rt = retanguloTela(vista, { xmin: l.x, ymin: l.y, xmax: l.x + l.lx, ymax: l.y + l.ly });
   const c = mundoParaTela(vista, { x: l.x + l.lx / 2, y: l.y + l.ly / 2 });
-  const cotas = `${fmt(l.lx)} × ${fmt(l.ly)}`;
+  const cotas = `${fmt(l.lx)} × ${fmt(l.ly)} m`;
   const cabeCotas = rt.width > 70 && rt.height > 36;
   return (
     <g>
-      <title>{dica(`${l.nome}: ${cotas} m, h = ${fmt(l.h, 0)} cm`, d)}</title>
+      <title>{dica(`${l.nome}: ${cotas}, h = ${fmt(l.h, 0)} cm`, d)}</title>
       <rect
         {...rt}
         fill={d ? COR_SITUACAO[d.situacao] : NEUTRO_LAJE}

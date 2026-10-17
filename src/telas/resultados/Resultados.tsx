@@ -18,13 +18,14 @@ import {
   mensagemSemNorma,
   obraSemElementos,
   SELO_MODO_ORIGINAL,
+  type Aviso,
   type Calculo,
 } from "../calculo";
 import { DetalhamentoContexto, type DetalhamentoObra } from "../detalhamento";
 import { formatarNumero } from "../formato";
 import { ListaAvisos, ListaFalhas } from "./avisos";
 import { TabelaEquilibrio } from "./equilibrio";
-import { FiltroContexto, filtroDeTexto, MOSTRA_TUDO, useFiltro } from "./filtro";
+import { type Filtro, FiltroContexto, filtroDeTexto, MOSTRA_TUDO, useFiltro } from "./filtro";
 import { TabelasLajes } from "./lajes";
 import { BlocoMotorSistrut, semMarcasDuplicadas, vazioComMarcas } from "./motorSistrut";
 import { TabelaPilares } from "./pilares";
@@ -177,15 +178,17 @@ function ResultadosCalculados({
         etapa. Filtre por elemento (V1, P3, ou V para todas as vigas), clique no título de uma
         coluna para ordenar e use <strong>Copiar</strong> para colar a tabela no Excel.
       </DicaUso>
-      <div className="bg-background/95 sticky top-0 z-20 -mx-1 mb-2 flex flex-wrap items-center gap-2 px-1 py-1.5 backdrop-blur print:hidden">
-        <label className="relative flex min-w-0 flex-1 items-center sm:max-w-sm">
+      <div className="bg-background/95 compacto:static sticky top-0 z-20 -mx-1 mb-2 flex flex-wrap items-center gap-2 px-1 py-1.5 backdrop-blur print:hidden">
+        <label className="relative flex min-w-56 flex-1 items-center sm:max-w-sm">
           <span className="sr-only">Filtrar elementos</span>
           <Search
             aria-hidden
             className="text-muted-foreground pointer-events-none absolute left-2 size-4"
           />
           <input
-            type="search"
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Filtrar: V1, P3 ou V (todas as vigas)"
@@ -204,7 +207,8 @@ function ResultadosCalculados({
         </label>
         {adiado.trim() && (
           <span role="status" className="text-muted-foreground text-xs">
-            Filtro: {adiado.trim()} · equilíbrio e resumo da obra ficam de fora
+            Filtro: {adiado.trim()} · vale para as tabelas e os avisos; as falhas, o equilíbrio e o
+            resumo da obra ficam fora
           </span>
         )}
       </div>
@@ -221,8 +225,8 @@ function ResultadosCalculados({
       </p>
       <ListaFalhas falhas={coletarFalhas(r)} comOpcoes />
       <ListaAvisos
-        avisos={semMarcasDuplicadas(coletarAvisos(r, detalhamento), r)}
-        vazio={vazioComMarcas(r)}
+        avisos={avisosDoFiltro(semMarcasDuplicadas(coletarAvisos(r, detalhamento), r), filtro)}
+        vazio={filtro === MOSTRA_TUDO ? vazioComMarcas(r) : "Nenhum aviso nos elementos do filtro."}
         comOpcoes
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
@@ -236,6 +240,14 @@ function ResultadosCalculados({
       )}
     </div>
   );
+}
+
+/** Avisos dos elementos que o filtro mostra; sem filtro, todos. Aviso do pavimento ou da
+ *  obra (sem elemento) e do equilíbrio sai com o filtro ligado. O elemento do detalhamento
+ *  vem como "V1 (detalhamento)". */
+export function avisosDoFiltro(avisos: Aviso[], mostra: Filtro) {
+  if (mostra === MOSTRA_TUDO) return avisos;
+  return avisos.filter((a) => a.elemento !== "" && mostra(a.elemento.replace(/ \(.*\)$/, "")));
 }
 
 /** Obras com até este número de etapas (pavimentos + pilares) aparecem de uma vez. */

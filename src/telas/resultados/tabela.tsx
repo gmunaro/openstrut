@@ -272,7 +272,7 @@ function BotaoCopiar({ nome }: { nome: string }) {
       onClick={(e) => void copiar(e.currentTarget)}
       aria-label={`Copiar a tabela ${nome}`}
       title="Copia a tabela para colar no Excel ou na planilha"
-      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto inline-flex items-center gap-1 self-center rounded px-1.5 py-0.5 text-xs outline-none focus-visible:ring-2 print:hidden"
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto inline-flex min-h-6 items-center gap-1 self-center rounded px-1.5 py-1 text-xs outline-none focus-visible:ring-2 print:hidden"
     >
       {estado === "ok" ? (
         <Check aria-hidden className="size-3.5" />

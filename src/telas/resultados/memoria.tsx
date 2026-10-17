@@ -87,7 +87,7 @@ export function LinhaElemento({
               <button
                 type="button"
                 onClick={() => setAberta((a) => !a)}
-                className="text-muted-foreground hover:text-foreground -ml-1 rounded p-0.5"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -my-1 -ml-1.5 rounded p-1.5 outline-none focus-visible:ring-2"
                 aria-expanded={aberta}
                 aria-label={aberta ? "Fechar memória de cálculo" : "Abrir memória de cálculo"}
                 title="Memória de cálculo"
