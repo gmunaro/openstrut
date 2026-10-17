@@ -151,14 +151,14 @@ test("adicionar sem mouse: botão e tecla A abrem o formulário; laje e pilar en
   await dialogo.getByRole("button", { name: "Adicionar", exact: true }).click();
   await expect(dialogo).toBeVisible();
   await expect(dialogo.getByLabel("x (m)", { exact: true })).toHaveAccessibleDescription(
-    "A laje se sobrepõe à L1.",
+    /^A laje se sobrepõe à L1\. /,
   );
 
-  // campo vazio: não chega ao domínio, vira "Valor numérico inválido."
+  // campo vazio: não chega ao domínio, vira "Digite um número, com vírgula ou ponto decimal."
   await dialogo.getByLabel("y (m)", { exact: true }).fill("");
   await dialogo.getByRole("button", { name: "Adicionar", exact: true }).click();
   await expect(dialogo.getByLabel("y (m)", { exact: true })).toHaveAccessibleDescription(
-    "Valor numérico inválido.",
+    "Digite um número, com vírgula ou ponto decimal.",
   );
 
   // Cancelar fecha sem gravar: a laje 2 × 2 em (1; 1) não entra na planta
@@ -242,12 +242,12 @@ test("propriedades: Enter grava, Esc descarta, erro no campo, sobreposição e C
 
   await lx.fill("abc");
   await lx.press("Enter");
-  await expect(page.getByText("Número inválido.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Digite um número, com vírgula ou ponto decimal.", { exact: true })).toBeVisible();
   await expect(lx).toHaveAttribute("aria-invalid", "true");
   // o erro é o texto apontado por aria-describedby, e fica fora do nome do campo
   const idErro = await lx.getAttribute("aria-describedby");
   expect(idErro).not.toBeNull();
-  await expect(page.locator(`[id="${idErro}"]`)).toHaveText("Número inválido.");
+  await expect(page.locator(`[id="${idErro}"]`)).toHaveText("Digite um número, com vírgula ou ponto decimal.");
   await expect(painel.getByLabel(/^lx/)).toHaveAccessibleName(/^lx/);
   expect(
     (await lx.evaluate((el) => el.closest("label")?.textContent ?? "")).includes("Número"),
@@ -551,7 +551,7 @@ test("pavimentos: pé-direito e repetições inválidos mostram a mensagem no ca
   // texto que não é número: mensagem própria
   await peDireito.fill("abc");
   await peDireito.press("Enter");
-  await expect(peDireito).toHaveAccessibleDescription("Valor numérico inválido.");
+  await expect(peDireito).toHaveAccessibleDescription("Digite um número, com vírgula ou ponto decimal.");
 
   // valor aceito: a mensagem some e o valor fica
   await peDireito.fill("2,85");

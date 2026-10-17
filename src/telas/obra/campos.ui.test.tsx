@@ -76,7 +76,7 @@ describe("CampoNumero", () => {
     expect(screen.getByText("m")).toBeTruthy();
   });
 
-  it("valor inválido mostra 'Número inválido.' ligado ao campo, sem gravar", async () => {
+  it("valor inválido mostra a recusa ligada ao campo, sem gravar", async () => {
     const user = userEvent.setup();
     const confirmar = vi.fn();
     render(
@@ -96,7 +96,7 @@ describe("CampoNumero", () => {
 
     expect(confirmar).not.toHaveBeenCalled();
     expect(campo.getAttribute("aria-invalid")).toBe("true");
-    expect(descricaoDo(campo)).toBe("Número inválido.");
+    expect(descricaoDo(campo)).toBe("Digite um número, com vírgula ou ponto decimal.");
     expect(screen.getByRole("textbox", { name: "Pé-direito" })).toBe(campo);
     expect(screen.getByText("Pé-direito", { selector: "label" }).textContent).toBe("Pé-direito");
   });
@@ -111,7 +111,7 @@ describe("CampoNumero", () => {
     await user.clear(campo);
     await user.type(campo, "abc{Enter}");
     expect(confirmar).not.toHaveBeenCalled();
-    expect(descricaoDo(campo)).toBe("Número inválido.");
+    expect(descricaoDo(campo)).toBe("Digite um número, com vírgula ou ponto decimal.");
   });
 
   it("corrigir o valor tira o erro e grava", async () => {
@@ -129,14 +129,14 @@ describe("CampoNumero", () => {
     const campo = screen.getByRole("textbox", { name: "Pé-direito" });
     await user.clear(campo);
     await user.type(campo, "-1{Enter}");
-    expect(descricaoDo(campo)).toBe("Número inválido.");
+    expect(descricaoDo(campo)).toBe("Digite um número, com vírgula ou ponto decimal.");
 
     await user.clear(campo);
     await user.type(campo, "3{Enter}");
     expect(confirmar).toHaveBeenCalledWith(3);
     expect(campo.getAttribute("aria-invalid")).toBe("false");
     expect(campo.getAttribute("aria-describedby")).toBeNull();
-    expect(screen.queryByText("Número inválido.")).toBeNull();
+    expect(screen.queryByText("Digite um número, com vírgula ou ponto decimal.")).toBeNull();
   });
 
   it("Esc descarta o texto inválido e volta ao valor atual", async () => {

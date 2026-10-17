@@ -12,6 +12,9 @@ export const fmt = (n: number, casas = 2) =>
 export const fmtCampo = (n: number) =>
   n.toLocaleString("pt-BR", { maximumFractionDigits: 4, useGrouping: false });
 
+/** Recusa de campo numérico vazio ou com texto que não é número. */
+export const NUMERO_INVALIDO = "Digite um número, com vírgula ou ponto decimal.";
+
 /** Número digitado com vírgula ou ponto decimal; NaN se vazio ou inválido. */
 export function numeroDoTexto(s: string) {
   const t = s.trim().replace(",", ".");

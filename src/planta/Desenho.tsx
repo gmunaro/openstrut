@@ -1,5 +1,6 @@
 // Conteúdo SVG da planta: grade, lajes (nome e cotas), vigas, pilares, posições
-// de pilares removidos, prévia do retângulo da laje e cursor. Só desenha; os eventos ficam no EditorPlanta.
+// de pilares removidos, prévia do retângulo da laje (com cotas), guias do snap, medida
+// e cursor. Só desenha; os eventos ficam no EditorPlanta.
 // Tudo é convertido para coordenadas de tela aqui (mundoParaTela), para o texto
 // não sair espelhado pela inversão do eixo y.
 import { eixoDoBordo } from "../dominio/gerar";
@@ -8,10 +9,12 @@ import type { Retangulo } from "../dominio/criar";
 import type { Selecao } from "../estado/obra";
 import { fmt } from "./formato";
 import {
+  medir,
   mundoParaTela,
   passoVisivel,
   retanguloTela,
   telaParaMundo,
+  type Guias,
   type Ponto,
   type Vista,
 } from "./geometria";
@@ -47,6 +50,10 @@ interface Props {
   diag: Diagnosticos | undefined;
   previa: { r: Retangulo; invalida: boolean } | undefined;
   cursor: Ponto | undefined;
+  /** Bordos de laje em que o snap do cursor prendeu (linhas de guia). */
+  guias: Guias | undefined;
+  /** Medida da ferramenta Medir: do ponto `a` ao `b`, m. */
+  medida: { a: Ponto; b: Ponto } | undefined;
 }
 
 export function Desenho({
@@ -59,6 +66,8 @@ export function Desenho({
   diag,
   previa,
   cursor,
+  guias,
+  medida,
 }: Props) {
   const sel = (tipo: "laje" | "viga" | "pilar", id: string) =>
     selecao?.tipo === tipo && selecao.id === id;
@@ -97,7 +106,9 @@ export function Desenho({
         />
       ))}
       {selLaje && <ContornoLaje l={selLaje} vista={vista} />}
+      {guias && <LinhasGuia guias={guias} vista={vista} largura={largura} altura={altura} />}
       {previa && <Previa {...previa} vista={vista} />}
+      {medida && <Medida {...medida} vista={vista} />}
       {cursor && <Cursor p={mundoParaTela(vista, cursor)} />}
     </>
   );
@@ -335,9 +346,58 @@ function PilarRemovido({ p }: { p: Ponto }) {
   );
 }
 
+/** Cota de um segmento da tela (px) com o texto `rotulo`: linha com traços nas pontas e o
+ *  texto no meio, afastado `lado` px (positivo: abaixo ou à direita). */
+function Cota({
+  a,
+  b,
+  rotulo,
+  cor,
+  lado,
+}: {
+  a: Ponto;
+  b: Ponto;
+  rotulo: string;
+  cor: string;
+  lado: number;
+}) {
+  const horizontal = Math.abs(b.y - a.y) < Math.abs(b.x - a.x);
+  const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const traco = (p: Ponto) =>
+    horizontal ? (
+      <line x1={p.x} x2={p.x} y1={p.y - 5} y2={p.y + 5} />
+    ) : (
+      <line x1={p.x - 5} x2={p.x + 5} y1={p.y} y2={p.y} />
+    );
+  const texto = horizontal ? { x: m.x, y: m.y + (lado > 0 ? 15 : -6) } : { x: m.x + lado, y: m.y };
+  return (
+    <g pointerEvents="none" stroke={cor} strokeWidth={1}>
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+      {traco(a)}
+      {traco(b)}
+      <text
+        {...texto}
+        transform={horizontal ? undefined : `rotate(-90 ${texto.x} ${texto.y})`}
+        textAnchor="middle"
+        fontSize="0.75rem"
+        fontWeight={600}
+        fill={cor}
+        stroke="#0f172a"
+        strokeWidth={3}
+        paintOrder="stroke"
+      >
+        {rotulo}
+      </text>
+    </g>
+  );
+}
+
+/** Retângulo da laje sendo desenhada, com as cotas lx (embaixo) e ly (à esquerda). */
 function Previa({ r, invalida, vista }: { r: Retangulo; invalida: boolean; vista: Vista }) {
   const rt = retanguloTela(vista, { xmin: r.x, ymin: r.y, xmax: r.x + r.lx, ymax: r.y + r.ly });
   const cor = invalida ? COR_SITUACAO.falha : COR_SELECAO;
+  const base = rt.y + rt.height + 14;
+  const esquerda = rt.x - 14;
   return (
     <g pointerEvents="none">
       <rect
@@ -348,9 +408,101 @@ function Previa({ r, invalida, vista }: { r: Retangulo; invalida: boolean; vista
         strokeDasharray="6 4"
         strokeWidth={1.5}
       />
-      <text x={rt.x + rt.width / 2} y={rt.y - 6} textAnchor="middle" fontSize="0.75rem" fill={cor}>
-        {`${fmt(r.lx)} × ${fmt(r.ly)} m`}
-      </text>
+      {r.lx > 0 && (
+        <Cota
+          a={{ x: rt.x, y: base }}
+          b={{ x: rt.x + rt.width, y: base }}
+          rotulo={`lx = ${fmt(r.lx)} m`}
+          cor={cor}
+          lado={1}
+        />
+      )}
+      {r.ly > 0 && (
+        <Cota
+          a={{ x: esquerda, y: rt.y + rt.height }}
+          b={{ x: esquerda, y: rt.y }}
+          rotulo={`ly = ${fmt(r.ly)} m`}
+          cor={cor}
+          lado={-8}
+        />
+      )}
+    </g>
+  );
+}
+
+const COR_GUIA = "#22d3ee";
+
+/** Guias do snap: a reta inteira do bordo de laje em que o cursor prendeu. */
+function LinhasGuia({
+  guias,
+  vista,
+  largura,
+  altura,
+}: {
+  guias: Guias;
+  vista: Vista;
+  largura: number;
+  altura: number;
+}) {
+  return (
+    <g pointerEvents="none" stroke={COR_GUIA} strokeOpacity={0.7} strokeDasharray="4 4">
+      {guias.x !== null && (
+        <line
+          x1={mundoParaTela(vista, { x: guias.x, y: 0 }).x}
+          x2={mundoParaTela(vista, { x: guias.x, y: 0 }).x}
+          y1={0}
+          y2={altura}
+        />
+      )}
+      {guias.y !== null && (
+        <line
+          y1={mundoParaTela(vista, { x: 0, y: guias.y }).y}
+          y2={mundoParaTela(vista, { x: 0, y: guias.y }).y}
+          x1={0}
+          x2={largura}
+        />
+      )}
+    </g>
+  );
+}
+
+const COR_MEDIDA = "#facc15";
+
+/** Linha da ferramenta Medir, com a distância no meio e os catetos tracejados. */
+function Medida({ a, b, vista }: { a: Ponto; b: Ponto; vista: Vista }) {
+  const ta = mundoParaTela(vista, a);
+  const tb = mundoParaTela(vista, b);
+  const { d } = medir(a, b);
+  const canto = { x: tb.x, y: ta.y };
+  const m = { x: (ta.x + tb.x) / 2, y: (ta.y + tb.y) / 2 };
+  return (
+    <g pointerEvents="none" stroke={COR_MEDIDA}>
+      {d > 0 && (
+        <path
+          d={`M${ta.x},${ta.y} L${canto.x},${canto.y} L${tb.x},${tb.y}`}
+          fill="none"
+          strokeOpacity={0.5}
+          strokeDasharray="3 3"
+        />
+      )}
+      <line x1={ta.x} y1={ta.y} x2={tb.x} y2={tb.y} strokeWidth={1.5} />
+      <circle cx={ta.x} cy={ta.y} r={3} fill={COR_MEDIDA} />
+      <circle cx={tb.x} cy={tb.y} r={3} fill={COR_MEDIDA} />
+      {d > 0 && (
+        <text
+          x={m.x}
+          y={m.y - 8}
+          textAnchor="middle"
+          fontSize="0.8125rem"
+          fontWeight={600}
+          fill={COR_MEDIDA}
+          stroke="#0f172a"
+          strokeWidth={3}
+          paintOrder="stroke"
+        >
+          {`${fmt(d)} m`}
+        </text>
+      )}
     </g>
   );
 }

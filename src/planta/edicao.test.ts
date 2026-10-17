@@ -46,7 +46,7 @@ describe("acrescentarLaje", () => {
   });
   it("recusa sobreposição com mensagem", () => {
     expect(erro(acrescentarLaje(duasLajes(), { x: 3, y: 1, lx: 2, ly: 2 }))).toBe(
-      "A laje se sobrepõe à L1.",
+      "A laje se sobrepõe à L1. Encoste-a no bordo da L1 sem invadir (o snap prende no bordo) ou ajuste x, y, lx e ly no painel.",
     );
   });
   it("aceita laje encostada", () => {
@@ -66,7 +66,9 @@ describe("alterarLaje", () => {
     expect(erro(alterarLaje(p, id, { sobrecarga: -1 }))).toMatch(/negativa/);
     expect(erro(alterarLaje(p, id, { nome: "L2" }))).toMatch(/Já existe/);
     expect(erro(alterarLaje(p, id, { nome: " " }))).toMatch(/vazio/);
-    expect(erro(alterarLaje(p, id, { h: Number.NaN }))).toMatch(/inválido/);
+    expect(erro(alterarLaje(p, id, { h: Number.NaN }))).toBe(
+      "Digite um número, com vírgula ou ponto decimal.",
+    );
   });
   it("carga não regenera; geometria regenera", () => {
     const p = duasLajes();
@@ -81,7 +83,9 @@ describe("alterarLaje", () => {
   });
   it("recusa geometria que sobrepõe outra laje", () => {
     const p = duasLajes();
-    expect(erro(alterarLaje(p, p.lajes[0]!.id, { lx: 4.5 }))).toBe("A laje se sobrepõe à L2.");
+    expect(erro(alterarLaje(p, p.lajes[0]!.id, { lx: 4.5 }))).toMatch(
+      /^A laje se sobrepõe à L2\. /,
+    );
   });
 });
 

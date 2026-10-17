@@ -19,7 +19,7 @@ import { EditorPilar, resumoPilar } from "../telas/obra/editores/DialogoPilar";
 import { EditorViga, resumoViga } from "../telas/obra/editores/DialogoViga";
 import { COR_SITUACAO, ROTULO_SITUACAO } from "./Desenho";
 import { alterarLaje, alterarPilar, alterarViga, type Edicao } from "./edicao";
-import { fmt, fmtCampo, numeroDoTexto } from "./formato";
+import { fmt, fmtCampo, NUMERO_INVALIDO, numeroDoTexto } from "./formato";
 import type { Diagnostico } from "./situacao";
 
 /** Sobrecargas de uso, kN/m² (NBR 6120:2019, tabela 10). Valores além de residencial,
@@ -97,7 +97,8 @@ function SemSelecao({ pav, toque }: { pav: Pavimento; toque: boolean }) {
       <p>{toque ? "Toque" : "Clique"} num elemento para ver e editar as propriedades.</p>
       <ul className={toque ? "hidden" : "space-y-0.5 text-xs"}>
         <li>
-          <Tecla>V</Tecla> selecionar · <Tecla>L</Tecla> laje · <Tecla>P</Tecla> pilar
+          <Tecla>V</Tecla> selecionar · <Tecla>L</Tecla> laje · <Tecla>P</Tecla> pilar ·{" "}
+          <Tecla>M</Tecla> medir
         </li>
         <li>
           <Tecla>Delete</Tecla> apagar · <Tecla>Esc</Tecla> cancelar
@@ -106,6 +107,9 @@ function SemSelecao({ pav, toque }: { pav: Pavimento; toque: boolean }) {
           <Tecla>Ctrl+Z</Tecla> desfazer · <Tecla>Ctrl+Y</Tecla> refazer
         </li>
         <li>Roda: zoom · botão do meio ou espaço + arrastar: mover</li>
+        <li>
+          <Tecla>?</Tecla> todos os atalhos
+        </li>
       </ul>
       {nb178 && (
         <div className="space-y-1 border-t border-slate-700 pt-2 text-slate-300">
@@ -419,7 +423,7 @@ function CampoNumero(props: {
       numerico
       confirmar={(t) => {
         const v = numeroDoTexto(t);
-        return Number.isFinite(v) ? props.confirmar(v) : "Número inválido.";
+        return Number.isFinite(v) ? props.confirmar(v) : NUMERO_INVALIDO;
       }}
     />
   );

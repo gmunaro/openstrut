@@ -6,6 +6,7 @@
 import { useEffect, useId, useState, type ComponentProps, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { NUMERO_INVALIDO } from "../../planta/formato";
 import { formatarNumero, lerNumero } from "../formato";
 
 type PropsInput = Omit<ComponentProps<typeof Input>, "value" | "onChange" | "onBlur" | "onKeyDown">;
@@ -108,7 +109,7 @@ export function CampoNumero({
   casas = 2,
   valido,
   confirmar,
-  mensagemInvalido = "Número inválido.",
+  mensagemInvalido = NUMERO_INVALIDO,
   className,
   id,
   ...props

@@ -211,7 +211,7 @@ test("fluxo NBR 6118:2023 de ponta a ponta", async ({ page }) => {
   await espessura.fill("abc");
   await espessura.press("Enter");
   await expect(espessura).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByText("Número inválido.")).toBeVisible();
+  await expect(page.getByText("Digite um número, com vírgula ou ponto decimal.")).toBeVisible();
   await foto("erro-espessura-laje-texto");
   await espessura.press("Escape");
 

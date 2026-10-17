@@ -4,6 +4,7 @@
 import { useEffect, useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { NUMERO_INVALIDO } from "../../planta/formato";
 import { formatarNumero, lerNumero } from "../formato";
 
 /** Número para editar: sem separador de milhar. */
@@ -39,7 +40,7 @@ export function CampoPavimentoNumero({
 
   const aplicar = () => {
     const n = lerNumero(texto);
-    if (n === null) return setErro("Valor numérico inválido.");
+    if (n === null) return setErro(NUMERO_INVALIDO);
     const msg = problema(n);
     if (msg) return setErro(msg);
     setErro(undefined);

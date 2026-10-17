@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { obraNova } from "../dominio/criar";
 import { useObra } from "../estado/obra";
 import { abrirObra, renderizarApp } from "../test-setup";
+import { PILAR_FORA_DA_VIGA } from "./edicao";
 
 // Vista inicial de um pavimento vazio numa área de 800 × 600 px (test-setup):
 // enquadrar a caixa 10 × 8 m com margem de 48 px dá
@@ -59,7 +60,8 @@ describe("editor de planta", () => {
     ]);
     // durante o arrasto: coordenada do cursor e prévia com as cotas
     expect(screen.getByText(/x = 4,00\s+y = 5,00 m/)).toBeTruthy();
-    expect(within(svg).getByText("4,00 × 5,00 m")).toBeTruthy();
+    expect(within(svg).getByText("lx = 4,00 m")).toBeTruthy();
+    expect(within(svg).getByText("ly = 5,00 m")).toBeTruthy();
     await user.pointer({ keys: "[/MouseLeft]", target: svg, coords: tela(4, 5) });
 
     const pav = pavimento();
@@ -93,7 +95,7 @@ describe("editor de planta", () => {
     await user.click(botao("Laje"));
     await arrastar(user, svg, [0, 0], [4, 5]);
     await arrastar(user, svg, [2, 0], [6, 5]);
-    expect(mensagem()?.textContent).toBe("A laje se sobrepõe à L1.");
+    expect(mensagem()?.textContent).toMatch(/^A laje se sobrepõe à L1\. Encoste-a/);
     expect(pavimento().lajes).toHaveLength(1);
 
     await arrastar(user, svg, [4, 0], [8, 5]);
@@ -107,7 +109,9 @@ describe("editor de planta", () => {
     const { user, svg } = await abrirEditor();
     await user.click(botao("Laje"));
     await arrastar(user, svg, [1, 1], [1, 1]);
-    expect(mensagem()?.textContent).toBe("Arraste para desenhar o retângulo da laje.");
+    expect(mensagem()?.textContent).toBe(
+      "Para desenhar a laje, arraste de um canto ao canto oposto.",
+    );
     expect(pavimento().lajes).toHaveLength(0);
   });
 
@@ -190,7 +194,7 @@ describe("editor de planta", () => {
     expect(botao("Pilar").getAttribute("aria-pressed")).toBe("true");
 
     await user.pointer({ keys: "[MouseLeft]", target: svg, coords: tela(2, 2) });
-    expect(mensagem()?.textContent).toBe("O pilar precisa ficar sobre o eixo de uma viga.");
+    expect(mensagem()?.textContent).toBe(PILAR_FORA_DA_VIGA);
     expect(pavimento().pilares).toHaveLength(4);
 
     await user.pointer({ keys: "[MouseLeft]", target: svg, coords: tela(2, 0) });

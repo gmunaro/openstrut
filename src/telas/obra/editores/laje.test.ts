@@ -344,7 +344,10 @@ describe("pavimentoComLaje", () => {
         ["5", "0"],
       ]),
     }));
-    expect(sobre).toEqual({ ok: false, erro: "A laje se sobrepõe à L2." });
+    expect(sobre).toMatchObject({
+      ok: false,
+      erro: expect.stringMatching(/^A laje se sobrepõe à L2\. /),
+    });
   });
 });
 

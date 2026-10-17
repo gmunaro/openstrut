@@ -1,6 +1,7 @@
 // Editor gráfico da planta do pavimento ativo (useObra / usePavimentoAtivo):
-// grade com snap, zoom na roda, pan (botão do meio ou espaço + arrastar),
-// ferramentas Selecionar / Laje / Pilar, apagar, desfazer/refazer, painel de
+// grade com snap (e a guia do bordo de laje em que o cursor prendeu), zoom na roda, pan
+// (botão do meio ou espaço + arrastar), ferramentas Selecionar / Laje (com cotas ao
+// desenhar) / Pilar / Medir, apagar, desfazer/refazer, lista de atalhos (?), painel de
 // propriedades e, com `resultado`, a cor de cada laje e viga pela situação do cálculo
 // (com `pilares`, também a dos pilares: a pior entre os níveis do pavimento).
 // No toque: pinça com dois dedos dá zoom e move a vista; com Selecionar, arrastar um
@@ -13,7 +14,9 @@ import {
   Grid3x3,
   MousePointer2,
   PanelBottomOpen,
+  Keyboard,
   Plus,
+  Ruler,
   Scan,
   Square,
   Trash2,
@@ -44,7 +47,9 @@ import {
   substituirPavimento,
   type Edicao,
 } from "./edicao";
+import { DicaUso } from "@/components/ui/dica-uso";
 import { DialogoAdicionar } from "./DialogoAdicionar";
+import { DialogoAtalhos } from "./DialogoAtalhos";
 import { fmt } from "./formato";
 import {
   type Alvo,
@@ -56,10 +61,12 @@ import {
   enquadrar,
   lajeSobreposta,
   linhasDeSnap,
+  medir,
   normalizarRetangulo,
   proximoAlvo,
-  snap,
+  snapComGuias,
   telaParaMundo,
+  type Guias,
   zoomNoPonto,
   type Ponto,
   type Vista,
@@ -68,9 +75,11 @@ import { PainelPropriedades } from "./PainelPropriedades";
 import { diagnosticos, SEM_CALCULO, type Situacao } from "./situacao";
 import { useCompacto, usePaisagem } from "../telas/tela";
 
-type Ferramenta = "selecionar" | "laje" | "pilar";
+type Ferramenta = "selecionar" | "laje" | "pilar" | "medir";
 type Arrasto = { tipo: "pan"; inicio: Ponto; vista: Vista } | { tipo: "laje"; a: Ponto; b: Ponto };
 type Mensagem = { tipo: "erro" | "aviso" | "info"; texto: string };
+/** Medida da ferramenta Medir: `fixa` depois do segundo clique (o `b` para de seguir o cursor). */
+type Medida = { a: Ponto; b: Ponto; fixa: boolean };
 /** Gesto de toque em andamento. `um`: um dedo (toque ou arrasto); `pinca`: dois dedos,
  *  com a distância, o ponto médio e a vista do início; depois dela, os dedos que
  *  sobram não fazem nada até todos saírem da tela. */
@@ -131,6 +140,9 @@ function Editor({
   const [vistaSalva, setVistaSalva] = useState<{ pavId: string; vista: Vista }>();
   const [arrasto, setArrasto] = useState<Arrasto>();
   const [cursor, setCursor] = useState<Ponto>();
+  const [guias, setGuias] = useState<Guias>();
+  const [medida, setMedida] = useState<Medida>();
+  const [atalhos, setAtalhos] = useState(false);
   const [espaco, setEspaco] = useState(false);
   const [mensagem, setMensagem] = useState<Mensagem>();
   const [adicionando, setAdicionando] = useState(false);
@@ -239,7 +251,11 @@ function Editor({
   function moverSelecao(dx: number, dy: number) {
     if (!selecao) return;
     if (selecao.tipo === "viga") {
-      setMensagem({ tipo: "info", texto: "Vigas não se movem: a posição delas vem das lajes." });
+      setMensagem({
+        tipo: "info",
+        texto:
+          "Vigas não se movem: a posição delas vem dos bordos das lajes. Mova a laje ou mude x, y, lx e ly no painel dela.",
+      });
       return;
     }
     const erro =
@@ -298,15 +314,19 @@ function Editor({
       if (e.key === " ") {
         e.preventDefault();
         setEspaco(true);
-      } else if (k === "v") setFerramenta("selecionar");
-      else if (k === "l") setFerramenta("laje");
-      else if (k === "p") setFerramenta("pilar");
+      } else if (e.key === "?") setAtalhos(true);
+      else if (k === "v") trocarFerramenta("selecionar");
+      else if (k === "l") trocarFerramenta("laje");
+      else if (k === "p") trocarFerramenta("pilar");
+      else if (k === "m") trocarFerramenta("medir");
+      else if (k === "e" && tamanho.largura > 0) setVista(enquadrarTudo());
       else if (k === "a") setAdicionando(true);
       else if (e.key === "Delete") apagarSelecao();
       else if (e.key === "Escape") {
         setMensagem(undefined);
         if (arrasto) setArrasto(undefined);
-        else if (ferramenta !== "selecionar") setFerramenta("selecionar");
+        else if (medida) setMedida(undefined);
+        else if (ferramenta !== "selecionar") trocarFerramenta("selecionar");
         else selecionar(null);
       }
     };
@@ -328,8 +348,22 @@ function Editor({
     const r = e.currentTarget.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  const pontoSnap = (v: Vista, t: Ponto, px = SNAP_PX) =>
-    snap(telaParaMundo(v, t), grade, linhas, px / v.escala);
+  const snapEm = (v: Vista, t: Ponto, px = SNAP_PX) =>
+    snapComGuias(telaParaMundo(v, t), grade, linhas, px / v.escala);
+  const pontoSnap = (v: Vista, t: Ponto, px = SNAP_PX) => snapEm(v, t, px).ponto;
+
+  /** Troca a ferramenta; a medida e as guias da anterior saem da tela. */
+  function trocarFerramenta(f: Ferramenta) {
+    setFerramenta(f);
+    setMedida(undefined);
+    setGuias(undefined);
+  }
+
+  /** Clique da ferramenta Medir: o primeiro marca o início, o segundo fixa o fim; um
+   *  terceiro começa outra medida. */
+  function marcarMedida(p: Ponto) {
+    setMedida((m) => (m && !m.fixa ? { ...m, b: p, fixa: true } : { a: p, b: p, fixa: false }));
+  }
 
   /** Acrescenta um pilar no ponto da tela `t` (com snap) ou mostra por que não dá. */
   function lancarPilar(v: Vista, t: Ponto, px: number) {
@@ -386,7 +420,11 @@ function Editor({
     if (g?.tipo !== "um") return true;
     if (!g.moveu && distancia(t, g.inicio) > TOQUE_PX) g.moveu = true;
     // pilar não arrasta; no Selecionar a vista só anda depois de passar da folga do toque
-    return ferramenta === "pilar" || (ferramenta === "selecionar" && !g.moveu);
+    return (
+      ferramenta === "pilar" ||
+      (ferramenta === "medir" && !g.moveu) ||
+      (ferramenta === "selecionar" && !g.moveu)
+    );
   }
 
   /** Dedo saiu: fecha o toque (seleção ou pilar) ou a laje; a pinça acaba com o último dedo. */
@@ -401,6 +439,8 @@ function Editor({
     gesto.current = null;
     if (vista && !g.moveu && ferramenta === "selecionar") selecionarEm(vista, t, CLIQUE_TOQUE_PX);
     else if (vista && !g.moveu && ferramenta === "pilar") lancarPilar(vista, t, SNAP_TOQUE_PX);
+    else if (vista && !g.moveu && ferramenta === "medir")
+      marcarMedida(pontoSnap(vista, t, SNAP_TOQUE_PX));
     aoSoltar();
   }
 
@@ -421,6 +461,8 @@ function Editor({
       setArrasto({ tipo: "laje", a: p, b: p });
     } else if (ferramenta === "pilar") {
       lancarPilar(vista, t, SNAP_PX);
+    } else if (ferramenta === "medir") {
+      marcarMedida(pontoSnap(vista, t));
     } else {
       selecionarEm(vista, t, CLIQUE_PX);
     }
@@ -436,19 +478,26 @@ function Editor({
       setVista({ ...v, ox: v.ox + t.x - arrasto.inicio.x, oy: v.oy + t.y - arrasto.inicio.y });
       return;
     }
-    const p =
-      ferramenta === "selecionar"
-        ? telaParaMundo(vista, t)
-        : pontoSnap(vista, t, toque ? SNAP_TOQUE_PX : SNAP_PX);
+    if (ferramenta === "selecionar") {
+      setCursor(telaParaMundo(vista, t));
+      return;
+    }
+    const s = snapEm(vista, t, toque ? SNAP_TOQUE_PX : SNAP_PX);
+    const p = s.ponto;
     setCursor(p);
+    setGuias(s.guias.x === null && s.guias.y === null ? undefined : s.guias);
     if (arrasto?.tipo === "laje") setArrasto({ ...arrasto, b: p });
+    if (medida && !medida.fixa) setMedida({ ...medida, b: p });
   }
 
   function aoSoltar() {
     if (arrasto?.tipo === "laje") {
       const r = normalizarRetangulo(arrasto.a, arrasto.b);
       if (r.lx === 0 || r.ly === 0) {
-        setMensagem({ tipo: "info", texto: "Arraste para desenhar o retângulo da laje." });
+        setMensagem({
+          tipo: "info",
+          texto: "Para desenhar a laje, arraste de um canto ao canto oposto.",
+        });
       } else {
         const res = acrescentarLaje(pav, r);
         if (!res.ok) setMensagem({ tipo: "erro", texto: res.erro });
@@ -510,23 +559,30 @@ function Editor({
       <BotaoCompacto
         icone={MousePointer2}
         ativo={ferramenta === "selecionar"}
-        onClick={() => setFerramenta("selecionar")}
+        onClick={() => trocarFerramenta("selecionar")}
       >
         Selecionar
       </BotaoCompacto>
       <BotaoCompacto
         icone={Square}
         ativo={ferramenta === "laje"}
-        onClick={() => setFerramenta("laje")}
+        onClick={() => trocarFerramenta("laje")}
       >
         Laje
       </BotaoCompacto>
       <BotaoCompacto
         icone={Columns2}
         ativo={ferramenta === "pilar"}
-        onClick={() => setFerramenta("pilar")}
+        onClick={() => trocarFerramenta("pilar")}
       >
         Pilar
+      </BotaoCompacto>
+      <BotaoCompacto
+        icone={Ruler}
+        ativo={ferramenta === "medir"}
+        onClick={() => trocarFerramenta("medir")}
+      >
+        Medir
       </BotaoCompacto>
       <BotaoCompacto icone={Plus} rotulo="Adicionar…" onClick={() => setAdicionando(true)}>
         Adicionar
@@ -567,16 +623,19 @@ function Editor({
         <div className="flex flex-wrap items-center gap-1 border-b border-slate-800 px-2 py-1 text-sm">
           <Botao
             ativo={ferramenta === "selecionar"}
-            onClick={() => setFerramenta("selecionar")}
+            onClick={() => trocarFerramenta("selecionar")}
             dica="V"
           >
             Selecionar
           </Botao>
-          <Botao ativo={ferramenta === "laje"} onClick={() => setFerramenta("laje")} dica="L">
+          <Botao ativo={ferramenta === "laje"} onClick={() => trocarFerramenta("laje")} dica="L">
             Laje
           </Botao>
-          <Botao ativo={ferramenta === "pilar"} onClick={() => setFerramenta("pilar")} dica="P">
+          <Botao ativo={ferramenta === "pilar"} onClick={() => trocarFerramenta("pilar")} dica="P">
             Pilar
+          </Botao>
+          <Botao ativo={ferramenta === "medir"} onClick={() => trocarFerramenta("medir")} dica="M">
+            Medir
           </Botao>
           <Botao onClick={() => setAdicionando(true)} dica="A">
             Adicionar…
@@ -585,14 +644,41 @@ function Editor({
             Apagar
           </Botao>
           <Separador />
-          <Botao onClick={() => setVista(enquadrarTudo())} desabilitado={tamanho.largura === 0}>
+          <Botao
+            onClick={() => setVista(enquadrarTudo())}
+            desabilitado={tamanho.largura === 0}
+            dica="E"
+          >
             Enquadrar tudo
           </Botao>
           <label className="ml-1 flex items-center gap-1 text-xs text-slate-400">
             Grade
             {seletorGrade}
           </label>
+          <button
+            type="button"
+            onClick={() => setAtalhos(true)}
+            title="Atalhos de teclado (?)"
+            className="ml-auto flex items-center gap-1 rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-400"
+          >
+            <Keyboard aria-hidden className="size-4" /> Atalhos
+            <kbd className="rounded border border-slate-600 px-1 font-mono text-[10px]">?</kbd>
+          </button>
         </div>
+      )}
+
+      <DialogoAtalhos aberto={atalhos} aoMudarAberto={setAtalhos} />
+      {!compacto && (
+        <DicaUso
+          id="planta"
+          titulo="Como desenhar a planta"
+          className="m-2 mb-0 border-sky-700/60 bg-sky-950/40"
+        >
+          Escolha <strong>Laje</strong> (tecla L) e arraste de um canto ao outro; o cursor prende na
+          grade e nos bordos das outras lajes, e as vigas e os pilares nascem dos bordos. Clique num
+          elemento para editar no painel à direita. <strong>Medir</strong> (M) mede distâncias, e{" "}
+          <strong>?</strong> lista todos os atalhos.
+        </DicaUso>
       )}
 
       <DialogoAdicionar
@@ -613,7 +699,7 @@ function Editor({
             role="application"
             aria-label="Planta do pavimento"
             tabIndex={0}
-            className="absolute inset-0 size-full touch-none select-none outline-none focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-sky-400"
+            className="absolute inset-0 size-full touch-none select-none outline-none focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-sky-400 focus-visible:outline-solid"
             style={{ cursor: cursorSvg }}
             onPointerDown={aoPressionar}
             onPointerMove={aoMover}
@@ -640,9 +726,12 @@ function Editor({
                   previa && { r: previa, invalida: lajeSobreposta(pav.lajes, previa) !== undefined }
                 }
                 cursor={ferramenta === "selecionar" ? undefined : cursor}
+                guias={ferramenta === "selecionar" ? undefined : guias}
+                medida={medida}
               />
             )}
           </svg>
+          {pav.lajes.length === 0 && !arrasto && <PavimentoVazio toque={compacto} />}
           {diag && <Legenda compacta={compacto} />}
         </div>
         {!compacto ? (
@@ -696,7 +785,8 @@ function Editor({
         <span className={cn("tabular-nums", compacto ? "shrink-0" : "w-44")}>
           {cursor ? `x = ${fmt(cursor.x)}  y = ${fmt(cursor.y)} m` : " "}
         </span>
-        {!(compacto && mensagem) && (
+        {medida && <TextoMedida medida={medida} />}
+        {!(compacto && mensagem) && !medida && (
           <span className={cn(compacto && "min-w-0 truncate font-sans")}>
             {(compacto ? DICAS_TOQUE : DICAS)[ferramenta]}
           </span>
@@ -719,16 +809,45 @@ function Editor({
 }
 
 const DICAS: Record<Ferramenta, string> = {
-  selecionar: "Clique num elemento para selecionar.",
-  laje: "Arraste o retângulo da laje (snap à grade e aos bordos).",
+  selecionar: "Clique num elemento para selecionar. ? mostra os atalhos.",
+  laje: "Arraste o retângulo da laje (snap à grade e aos bordos; a guia tracejada mostra o bordo).",
   pilar: "Clique sobre o eixo de uma viga para acrescentar um pilar 20 × 20 cm.",
+  medir: "Clique no primeiro ponto e depois no segundo (com snap). Esc limpa a medida.",
 };
 
 const DICAS_TOQUE: Record<Ferramenta, string> = {
   selecionar: "Toque para selecionar; arraste para mover, pinça para zoom.",
   laje: "Arraste o dedo de um canto ao outro da laje.",
   pilar: "Toque sobre o eixo de uma viga: pilar 20 × 20 cm.",
+  medir: "Toque no primeiro ponto e depois no segundo.",
 };
+
+/** Rodapé da ferramenta Medir: distância e componentes, m. */
+function TextoMedida({ medida }: { medida: Medida }) {
+  const { d, dx, dy } = medir(medida.a, medida.b);
+  return (
+    <span role="status" className="text-yellow-300 tabular-nums">
+      {`d = ${fmt(d)} m  (Δx = ${fmt(dx)}  Δy = ${fmt(dy)} m)`}
+      {!medida.fixa && <span className="font-sans text-slate-400"> · marque o segundo ponto</span>}
+    </span>
+  );
+}
+
+/** Pavimento sem lajes: diz por onde começar, por cima do desenho (sem bloquear o mouse). */
+function PavimentoVazio({ toque }: { toque: boolean }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+      <div className="max-w-sm rounded-md border border-slate-700 bg-slate-950/85 px-4 py-3 text-center text-sm text-slate-200">
+        <p className="font-medium">Pavimento sem lajes</p>
+        <p className="mt-1 text-xs text-slate-300">
+          {toque
+            ? "Toque em Laje e arraste o dedo de um canto ao outro para desenhar a primeira. As vigas e os pilares nascem dos bordos das lajes."
+            : "Escolha Laje (tecla L) e arraste de um canto ao outro para desenhar a primeira. As vigas e os pilares nascem dos bordos das lajes. Para digitar as coordenadas, use Adicionar… (A)."}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /** Barra de ferramentas do celular: rola de lado (ou, deitado, de cima a baixo). */
 function BarraCompacta({

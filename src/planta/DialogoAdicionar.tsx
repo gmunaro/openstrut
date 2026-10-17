@@ -24,7 +24,7 @@ import {
 import type { Pavimento } from "../dominio/obra";
 import { acrescentarLaje, acrescentarPilar } from "./edicao";
 import type { Alvo } from "./geometria";
-import { numeroDoTexto } from "./formato";
+import { NUMERO_INVALIDO, numeroDoTexto } from "./formato";
 
 type Tipo = "laje" | "pilar";
 type Campo = "x" | "y" | "lx" | "ly";
@@ -89,7 +89,7 @@ function Formulario({
     const lx = numeroDoTexto(valores.lx);
     const ly = numeroDoTexto(valores.ly);
     const usados = tipo === "laje" ? [x, y, lx, ly] : [x, y];
-    if (!usados.every((n) => Number.isFinite(n))) return setErro("Valor numérico inválido.");
+    if (!usados.every((n) => Number.isFinite(n))) return setErro(NUMERO_INVALIDO);
     const res =
       tipo === "laje" ? acrescentarLaje(pav, { x, y, lx, ly }) : acrescentarPilar(pav, { x, y });
     if (!res.ok) return setErro(res.erro);

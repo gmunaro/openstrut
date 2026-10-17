@@ -14,7 +14,9 @@ import {
   passoVisivel,
   proximoAlvo,
   retanguloTela,
+  medir,
   snap,
+  snapComGuias,
   sobrepoe,
   telaParaMundo,
   zoomNoPonto,
@@ -108,6 +110,14 @@ describe("snap", () => {
     // fora da tolerância: grade
     expect(snap({ x: 3.9, y: 2.2 }, 0.5, linhas, 0.1)).toEqual({ x: 4, y: 2 });
   });
+  it("guias: o eixo que pegou bordo de laje dá a linha; o que foi à grade, null", () => {
+    expect(snapComGuias({ x: 4.08, y: 2.2 }, 0.5, linhas, 0.1)).toEqual({
+      ponto: { x: 4.13, y: 2 },
+      guias: { x: 4.13, y: null },
+    });
+    expect(snapComGuias({ x: 1.6, y: 2.2 }, 0.5, linhas, 0.1).guias).toEqual({ x: null, y: null });
+    expect(snapComGuias({ x: 4.2, y: 4.95 }, 0.5, linhas, 0.1).guias).toEqual({ x: 4.13, y: 5 });
+  });
   it("arredonda sem ruído de ponto flutuante", () => {
     expect(snap({ x: 0.3, y: 0.7 }, 0.1, { xs: [], ys: [] }, 0)).toEqual({ x: 0.3, y: 0.7 });
   });
@@ -175,5 +185,12 @@ describe("passoVisivel", () => {
   it("dobra o passo até ficar legível", () => {
     expect(passoVisivel(0.5, 50)).toBe(0.5); // 25 px
     expect(passoVisivel(0.25, 10)).toBe(1); // 2,5 → 5 → 10 px
+  });
+});
+
+describe("medir", () => {
+  it("dá a distância e as componentes positivas (triângulo 3-4-5)", () => {
+    expect(medir({ x: 4, y: 5 }, { x: 1, y: 1 })).toEqual({ d: 5, dx: 3, dy: 4 });
+    expect(medir({ x: 2, y: 2 }, { x: 2, y: 2 })).toEqual({ d: 0, dx: 0, dy: 0 });
   });
 });

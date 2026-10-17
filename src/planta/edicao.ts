@@ -32,6 +32,7 @@ import {
   type Pilar,
   type Viga,
 } from "../dominio/obra";
+import { NUMERO_INVALIDO } from "./formato";
 import { lajeSobreposta, type Ponto } from "./geometria";
 
 export type Edicao = { ok: true; pavimento: Pavimento } | { ok: false; erro: string };
@@ -50,18 +51,28 @@ export const substituirPavimento = (obra: Obra, id: string, pav: Pavimento): Obr
 
 const numeroOk = (v: number) => Number.isFinite(v);
 
+const VALOR_INVALIDO = NUMERO_INVALIDO;
+
+/** Pilar fora das vigas: gerarEstrutura o removeria. A mensagem diz onde clicar. */
+export const PILAR_FORA_DA_VIGA =
+  "O pilar precisa ficar sobre o eixo de uma viga. Clique sobre uma linha de viga; as vigas nascem nos bordos das lajes.";
+
+const pilarNoPonto = (p: Pilar) =>
+  `Já existe o pilar ${p.nome} neste ponto. Escolha outro ponto do eixo ou selecione o ${p.nome} para editá-lo.`;
+
 function validarNome(nome: string, outros: readonly { nome: string }[]) {
   if (nome.trim() === "") return "O nome não pode ficar vazio.";
-  if (outros.some((o) => o.nome === nome)) return `Já existe um elemento chamado ${nome}.`;
+  if (outros.some((o) => o.nome === nome))
+    return `Já existe um elemento chamado ${nome} neste pavimento. Escolha outro nome.`;
   return undefined;
 }
 
 /** Primeiro erro dos valores da laje, ou undefined se ela é válida. */
 export function validarLaje(l: Laje) {
   if (![l.x, l.y, l.lx, l.ly, l.h, l.revestimento, l.sobrecarga, l.mu].every(numeroOk))
-    return "Valor numérico inválido.";
+    return VALOR_INVALIDO;
   if (l.lx < VAO_MINIMO || l.ly < VAO_MINIMO)
-    return "Os vãos lx e ly precisam ser de pelo menos 0,10 m.";
+    return "Os vãos lx e ly precisam ser de pelo menos 0,10 m. Arraste um retângulo maior ou digite os vãos no painel.";
   if (l.h <= 0) return "A espessura h precisa ser maior que zero.";
   if (l.revestimento < 0) return "O revestimento não pode ser negativo.";
   if (l.sobrecarga < 0) return "A sobrecarga não pode ser negativa.";
@@ -71,7 +82,7 @@ export function validarLaje(l: Laje) {
 
 /** Primeiro erro dos valores da viga, ou undefined. */
 export function validarViga(v: Viga) {
-  if (![v.bw, v.h, v.cargaLinear].every(numeroOk)) return "Valor numérico inválido.";
+  if (![v.bw, v.h, v.cargaLinear].every(numeroOk)) return VALOR_INVALIDO;
   if (v.bw <= 0) return "A largura bw precisa ser maior que zero.";
   if (v.h <= 0) return "A altura h precisa ser maior que zero.";
   if (v.cargaLinear < 0) return "A carga linear não pode ser negativa.";
@@ -80,12 +91,14 @@ export function validarViga(v: Viga) {
 
 /** Primeiro erro dos valores do pilar, ou undefined. */
 export function validarPilar(p: Pilar) {
-  if (![p.b, p.h].every(numeroOk)) return "Valor numérico inválido.";
+  if (![p.b, p.h].every(numeroOk)) return VALOR_INVALIDO;
   if (p.b <= 0 || p.h <= 0) return "Os lados b e h precisam ser maiores que zero.";
   return undefined;
 }
 
-const mensagemSobreposicao = (l: Laje) => `A laje se sobrepõe à ${l.nome}.`;
+/** Recusa de laje que invade outra; diz como resolver (encostar no bordo ou ajustar no painel). */
+const mensagemSobreposicao = (l: Laje) =>
+  `A laje se sobrepõe à ${l.nome}. Encoste-a no bordo da ${l.nome} sem invadir (o snap prende no bordo) ou ajuste x, y, lx e ly no painel.`;
 
 /** Acrescenta uma laje nova no retângulo e regenera a estrutura. Recusa vão pequeno e sobreposição. */
 export function acrescentarLaje(
@@ -233,9 +246,8 @@ export function acrescentarPilar(
   p: Ponto,
 ): { ok: true; pavimento: Pavimento; id: string } | { ok: false; erro: string } {
   const existente = pav.pilares.find((q) => mesmoPonto(q, p));
-  if (existente) return { ok: false, erro: `Já existe o pilar ${existente.nome} neste ponto.` };
-  if (!sobreEixoDeViga(pav, p))
-    return { ok: false, erro: "O pilar precisa ficar sobre o eixo de uma viga." };
+  if (existente) return { ok: false, erro: pilarNoPonto(existente) };
+  if (!sobreEixoDeViga(pav, p)) return { ok: false, erro: PILAR_FORA_DA_VIGA };
   const pilar: Pilar = {
     id: novoId(),
     nome: nomeLivre(
@@ -266,8 +278,8 @@ export function moverPilar(pav: Pavimento, id: string, p: Ponto): Edicao {
   if (!atual) return falha("Pilar não encontrado.");
   if (mesmoPonto(atual, p)) return sucesso(pav);
   const outro = pav.pilares.find((q) => mesmoPonto(q, p));
-  if (outro) return falha(`Já existe o pilar ${outro.nome} neste ponto.`);
-  if (!sobreEixoDeViga(pav, p)) return falha("O pilar precisa ficar sobre o eixo de uma viga.");
+  if (outro) return falha(pilarNoPonto(outro));
+  if (!sobreEixoDeViga(pav, p)) return falha(PILAR_FORA_DA_VIGA);
   const semDestino = pav.pilaresRemovidos.filter((r) => !mesmoPonto(r, p));
   const registra = pilarGerado(pav, atual) && !semDestino.some((r) => mesmoPonto(r, atual));
   return sucesso({

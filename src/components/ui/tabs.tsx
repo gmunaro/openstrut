@@ -73,7 +73,11 @@ function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPr
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none", className)}
+      className={cn(
+        // o painel recebe foco (Radix põe tabIndex 0): o anel mostra onde o teclado está
+        "focus-visible:ring-ring/60 flex-1 outline-none focus-visible:ring-[3px] focus-visible:ring-inset",
+        className,
+      )}
       {...props}
     />
   );

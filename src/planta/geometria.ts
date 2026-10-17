@@ -132,25 +132,56 @@ export function linhasDeSnap(lajes: readonly Laje[]) {
 export const arredondaGrade = (v: number, grade: number) =>
   Number((Math.round(v / grade) * grade).toFixed(6));
 
-/** Snap de uma coordenada: à linha de laje mais próxima dentro da tolerância; senão, à grade. */
+/** Snap de uma coordenada: à linha de laje mais próxima dentro da tolerância; senão, à grade.
+ *  `linha` diz se o valor veio de uma linha de laje (para a tela desenhar a guia). */
 function snapEixo(v: number, grade: number, linhas: readonly number[], tol: number) {
   let melhor: number | undefined;
   for (const c of linhas) {
     const d = Math.abs(c - v);
     if (d <= tol && (melhor === undefined || d < Math.abs(melhor - v))) melhor = c;
   }
-  return melhor ?? arredondaGrade(v, grade);
+  return melhor === undefined
+    ? { valor: arredondaGrade(v, grade), linha: false }
+    : { valor: melhor, linha: true };
 }
 
-/** Snap de um ponto, eixo por eixo: bordos e cantos de lajes existentes (dentro de `tol`, m)
- *  têm prioridade sobre a grade. Assim o ponto cai no canto, ou no bordo e na grade. */
-export function snap(
+/** Linhas de laje em que o ponto do snap caiu: x de um bordo vertical, y de um horizontal
+ *  (null quando o eixo foi para a grade). */
+export interface Guias {
+  x: number | null;
+  y: number | null;
+}
+
+/** Snap de um ponto e as guias: bordos e cantos de lajes existentes (dentro de `tol`, m)
+ *  têm prioridade sobre a grade, eixo por eixo. */
+export function snapComGuias(
   p: Ponto,
   grade: number,
   linhas: { xs: readonly number[]; ys: readonly number[] },
   tol: number,
-): Ponto {
-  return { x: snapEixo(p.x, grade, linhas.xs, tol), y: snapEixo(p.y, grade, linhas.ys, tol) };
+): { ponto: Ponto; guias: Guias } {
+  const x = snapEixo(p.x, grade, linhas.xs, tol);
+  const y = snapEixo(p.y, grade, linhas.ys, tol);
+  return {
+    ponto: { x: x.valor, y: y.valor },
+    guias: { x: x.linha ? x.valor : null, y: y.linha ? y.valor : null },
+  };
+}
+
+/** Snap de um ponto, eixo por eixo: bordos e cantos de lajes existentes (dentro de `tol`, m)
+ *  têm prioridade sobre a grade. Assim o ponto cai no canto, ou no bordo e na grade. */
+export const snap = (
+  p: Ponto,
+  grade: number,
+  linhas: { xs: readonly number[]; ys: readonly number[] },
+  tol: number,
+): Ponto => snapComGuias(p, grade, linhas, tol).ponto;
+
+/** Distância entre dois pontos da planta, m, e as componentes (sempre positivas). */
+export function medir(a: Ponto, b: Ponto) {
+  const dx = Math.abs(b.x - a.x);
+  const dy = Math.abs(b.y - a.y);
+  return { d: Math.hypot(dx, dy), dx, dy };
 }
 
 export type Alvo = { tipo: "laje" | "viga" | "pilar"; id: string };
