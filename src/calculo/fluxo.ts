@@ -137,10 +137,28 @@ export interface ResultadoObra {
   /** NB-1/78: os avisos que a tela liga a uma opção do elemento, com id estável
    *  (`calculo/avisos.ts`); o texto é o mesmo das listas de avisos e falhas. */
   avisosComOpcao?: AvisoComOpcao[];
+  /** NB-1/78: o γf e os materiais (fcd e fyd com o γc e o γs) com que cada família foi
+   *  dimensionada: os γ do .LAP, do .DSP e do PILAR.INI, que a obra pode editar. Ausente
+   *  no fluxo da V2: valem `gamaFDe` e `materiaisDe`. */
+  porFamilia?: Record<FamiliaElemento, { gamaF: number; materiais: MateriaisCalc }>;
   /** NB-1/78: o resultado do caminho do SISTRUT nas unidades do original (t, m, cm,
    *  t/cm², t·m), do qual os campos acima são a projeção em SI (fluxoSistrut.ts). */
   sistrut?: ResultadoSistrut;
 }
+
+export type FamiliaElemento = "lajes" | "vigas" | "pilares";
+
+/** γf com que os elementos da família foram dimensionados, para a tela e o detalhamento:
+ *  o do SISTRUT na NB-1/78; no fluxo da V2, máx(γg, γq), porque a envoltória não separa
+ *  g e q. */
+export const gamaFDe = (r: Pick<ResultadoObra, "norma" | "porFamilia">, familia: FamiliaElemento) =>
+  r.porFamilia?.[familia].gamaF ?? Math.max(r.norma.gamaG, r.norma.gamaQ);
+
+/** Materiais com que os elementos da família foram dimensionados, para o detalhamento. */
+export const materiaisDe = (
+  r: Pick<ResultadoObra, "materiais" | "porFamilia">,
+  familia: FamiliaElemento,
+) => r.porFamilia?.[familia].materiais ?? r.materiais;
 
 /** Pilares de pavimentos diferentes são o mesmo quando estão na mesma posição. */
 const chavePilar = (p: Pick<Pilar, "x" | "y">) => `${p.x.toFixed(3)};${p.y.toFixed(3)}`;

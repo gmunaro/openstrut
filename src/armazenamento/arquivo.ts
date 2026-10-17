@@ -1365,6 +1365,9 @@ class Validador {
     };
     tamanho("bitolas", t.bitolas, 10);
     tamanho("bitolasEstribo", t.bitolasEstribo, 6);
+    // os γ dividem as resistências no DESDIM (nos dois modos)
+    for (const k of ["gamaF", "gamaC", "gamaS"] as const)
+      if (!(t[k] > 0)) this.erro(`${c}.${k}`, "esperado um número maior que zero", t[k]);
     tamanho("dobrasPorBitola", t.dobrasPorBitola, 10);
     t.dobrasPorBitola.forEach((l, i) => tamanho(`dobrasPorBitola[${i}]`, l, 5));
     tamanho("tabelaBitola1", t.tabelaBitola1, 5);

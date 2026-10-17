@@ -16,6 +16,8 @@ import {
   detalharLajesObra,
   detalharObra,
   detalharVigasObra,
+  entradaDetalhamentoViga,
+  entradasDetalhamentoLajes,
   larguraApoios,
   tabelaAcoObra,
   type DetalhamentoObra,
@@ -546,5 +548,40 @@ describe("negativa do bordo de laje em balanço (obra q1, regressão)", () => {
     expect(negativas("L1", "direito")).toEqual([]);
     expect(negativas("L2", "esquerdo")).toHaveLength(1);
     expect(det.lajes.map((l) => l.negativoNaVizinha)).toEqual([["direito"], []]);
+  });
+});
+
+describe("γf do detalhamento: o do dimensionamento de cada família (issue #2)", () => {
+  const resultadoDe = (obra: Obra) => {
+    const c = calcular(obra);
+    if (c.tipo !== "ok") throw new Error(`cálculo: ${c.tipo}`);
+    return c.resultado;
+  };
+  it("NB-1/78 com γf editados no .DSP e no .LAP: vigas 1,5, lajes 1,6", () => {
+    const base = obraDuasLajes("nb1-78");
+    const obra: Obra = {
+      ...base,
+      modoCalculo: "original",
+      parametrosViga: { dsp: { gamaF: 1.5, gamaS: 1.2 } },
+      parametrosLaje: { gamaF: 1.6 },
+    };
+    const resultado = resultadoDe(obra);
+    const pr = resultado.pavimentos[0]!;
+    const pav = obra.pavimentos[0]!;
+    const viga = pr.vigas.find((v) => v.analise.ok && v.tramos.length > 0)!;
+    const ev = entradaDetalhamentoViga(viga, pav, resultado, 2)!;
+    expect(ev.gamaF).toBe(1.5);
+    // a ancoragem usa o fyd do DESDIM: fyk/1,2, não fyk/1,15
+    expect(ev.mat.fyd).toBeCloseTo(resultado.materiais.fyk / 1.2, 3);
+    const lajes = entradasDetalhamentoLajes(pr.lajes, pav, resultado, 2);
+    expect(lajes.map((l) => l.gamaF)).toEqual([1.6, 1.6]);
+  });
+
+  it("NBR 6118: máx(γg, γq) = 1,4", () => {
+    const obra = obraDuasLajes("nbr6118-2023");
+    const resultado = resultadoDe(obra);
+    const pr = resultado.pavimentos[0]!;
+    const lajes = entradasDetalhamentoLajes(pr.lajes, obra.pavimentos[0]!, resultado, 2);
+    expect(lajes[0]?.gamaF).toBe(1.4);
   });
 });

@@ -7,7 +7,7 @@ import { startTransition, useContext, useDeferredValue, useEffect, useMemo, useS
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DicaUso } from "@/components/ui/dica-uso";
-import type { ResultadoObra } from "../../calculo/fluxo";
+import { gamaFDe, type ResultadoObra } from "../../calculo/fluxo";
 import { calcularQuantitativos } from "../../calculo/quantitativos";
 import type { Obra } from "../../dominio/obra";
 import { useObra } from "../../estado/obra";
@@ -90,7 +90,7 @@ export function TabelasObra({
   ate?: number;
   naTela?: boolean;
 }) {
-  const gamaF = Math.max(resultado.norma.gamaG, resultado.norma.gamaQ);
+  const gamaF = gamaFDe(resultado, "vigas");
   const mostra = useFiltro();
   const filtrando = mostra !== MOSTRA_TUDO;
   // `ate` conta os pavimentos da obra (as etapas da montagem); o filtro vem depois. Com

@@ -150,6 +150,13 @@ describe("arquivo: parâmetros do VIGA.INI e do .DSP (revisão do 1d12659)", () 
       "obra.parametrosViga.dsp.espacamentosEstribo: esperada uma lista de ao menos 2 espaçamentos, veio 0.",
     ]);
   });
+  it("γ do .DSP: maior que zero (dividem as resistências nos dois modos; issue #2)", () => {
+    expect(erros({ dsp: { gamaF: 1.5, gamaC: 1.54, gamaS: 1.2 } })).toEqual([]);
+    expect(erros({ dsp: { gamaC: 0, gamaS: -1 } })).toEqual([
+      "obra.parametrosViga.dsp.gamaC: esperado um número maior que zero, veio 0.",
+      "obra.parametrosViga.dsp.gamaS: esperado um número maior que zero, veio -1.",
+    ]);
+  });
   it("4 grupos de bitolas pedem 4 listas de arranjos e de grupo de corte", () => {
     expect(erros({ dsp: { gruposBitolas: 4 } })).toEqual([
       "obra.parametrosViga.dsp.arranjosPorIntervalo: esperada uma lista de 4 itens, veio 3.",

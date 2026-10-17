@@ -29,6 +29,7 @@ import type {
   DadosViga,
   DivisaoCarga,
   FlexaoViga,
+  MateriaisSistrut,
   MomentosDeLaje,
   PosicaoLajeproc,
   TramoDimensionado,
@@ -80,8 +81,7 @@ const etapaV2 = (descricao: string, valor?: number, unidade?: string): Etapa => 
 
 // ---------------------------------------------------------------- materiais
 
-function materiaisCalc(r: ResultadoSistrut, obra: Obra): MateriaisCalc {
-  const m = r.materiais;
+function materiaisCalc(m: MateriaisSistrut, obra: Obra): MateriaisCalc {
   const fck = tcm2ParaMpa(m.fck);
   const fyk = tcm2ParaMpa(m.fyk);
   const fcd = fck / m.gamaC;
@@ -103,6 +103,21 @@ function materiaisCalc(r: ResultadoSistrut, obra: Obra): MateriaisCalc {
 /** Valor de tabela do original (bitola em mm, espaçamento em cm) guardado em SINGLE:
  *  na fronteira SI vale o nominal, com 1 casa (6,3000002 → 6,3). */
 const nominal = (x: number) => Math.round(x * 10) / 10;
+/** Coeficiente sem o arredondamento do SINGLE do modo original (1,3999999761 → 1,4). */
+const semRuidoSingle = (x: number) => Math.round(x * 1e6) / 1e6;
+
+/** Aviso de γ diferente do padrão 1,4 / 1,4 / 1,15 numa família (editado nos parâmetros):
+ *  o engenheiro vê com que coeficientes de segurança a família foi calculada. */
+function avisoCoeficientes(sujeito: string, fonte: string, m: MateriaisSistrut) {
+  const f = semRuidoSingle(m.gamaF);
+  const c = semRuidoSingle(m.gamaC);
+  const s = semRuidoSingle(m.gamaS);
+  if (f === 1.4 && c === 1.4 && s === 1.15) return null;
+  return (
+    `${sujeito} com γf = ${numAte(f)}, γc = ${numAte(c)} e γs = ${numAte(s)}, ` +
+    `dos parâmetros ${fonte} (padrão: 1,4, 1,4 e 1,15).`
+  );
+}
 
 // ---------------------------------------------------------------- lajes
 
@@ -906,16 +921,36 @@ function extrasDoLance(
 export function calcularObraPeloSistrut(obra: Obra, norma: Norma): ResultadoObra {
   const modo = obra.modoCalculo ?? "corrigido";
   const sistrut = calcularObraSistrut(obra, { modo });
+  // os γ das lajes são os do .LAP (sistrut/obra.ts, matL)
+  const { gamaF, gamaC, gamaS } = sistrut.parametros.laje;
+  const materiaisDasLajes = { ...sistrut.materiais, gamaF, gamaC, gamaS };
+  const daFamilia = (m: MateriaisSistrut) => ({
+    gamaF: modo === "original" ? semRuidoSingle(m.gamaF) : m.gamaF,
+    materiais: materiaisCalc(m, obra),
+  });
+  // só nas famílias que a obra tem
+  const tem = (k: "lajes" | "vigas" | "pilares") => obra.pavimentos.some((p) => p[k].length > 0);
+  const avisosCoeficientes = [
+    tem("lajes") && avisoCoeficientes("Lajes calculadas", "do .LAP", materiaisDasLajes),
+    tem("vigas") && avisoCoeficientes("Vigas calculadas", "do .DSP", sistrut.materiaisViga),
+    tem("pilares") &&
+      avisoCoeficientes("Pilares calculados", "do PILAR.INI", sistrut.materiaisPilar),
+  ].flatMap((a) => (a ? [a] : []));
   const pavimentos = obra.pavimentos.map((pav) => {
     const ps = sistrut.pavimentos.find((p) => p.pavimentoId === pav.id)!;
     return resultadoPavimento(pav, ps, sistrut);
   });
   return {
     norma,
-    materiais: materiaisCalc(sistrut, obra),
+    materiais: materiaisCalc(sistrut.materiais, obra),
+    porFamilia: {
+      lajes: daFamilia(materiaisDasLajes),
+      vigas: daFamilia(sistrut.materiaisViga),
+      pilares: daFamilia(sistrut.materiaisPilar),
+    },
     pavimentos,
     pilares: resultadosPilares(obra, sistrut, pavimentos),
-    avisos: [...sistrut.avisos],
+    avisos: [...sistrut.avisos, ...avisosCoeficientes],
     avisosComOpcao: sistrut.avisosComOpcao,
     sistrut,
   };

@@ -489,7 +489,7 @@ function AbaVigas({
       </Grupo>
       <Grupo
         titulo=".DSP: materiais e cobrimento"
-        extra="No modo corrigido, fck, fyk, classe do aço, γ e cobrimento das vigas são os da obra (materiais); estes só valem no original. Vazio no original = os materiais da obra (fck e fyk em t/cm², MPa/100) e o cobrimento de fábrica."
+        extra="Os γ valem nos dois modos, só nas vigas (vazio = 1,4, 1,4 e 1,15). No modo corrigido, fck, fyk, classe do aço e cobrimento das vigas são os da obra (materiais); os daqui só valem no original. Vazio no original = os materiais da obra (fck e fyk em t/cm², MPa/100) e o cobrimento de fábrica."
       >
         {escalaresDsp("mat")}
         <Escolha
