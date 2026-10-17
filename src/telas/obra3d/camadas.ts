@@ -287,4 +287,18 @@ export const CAMADAS: readonly DefinicaoCamada[] = [
     descricao: "Põe o prédio na mesa, como maquete, ou no terreno pela câmera do celular.",
     carregar: () => import("./ar/camada").then((m) => m.camada),
   },
+  {
+    id: "render",
+    nome: "Render realista",
+    descricao:
+      "Materiais com luz de estúdio e sombras, nas cores da vista; path tracing opcional com a câmera parada.",
+    carregar: () => import("./render/camada").then((m) => m.camada),
+  },
+  {
+    id: "tour",
+    nome: "Tour",
+    descricao:
+      "Percorre o prédio, os níveis e as peças com falha; ou anda pela estrutura em primeira pessoa.",
+    carregar: () => import("./tour/camada").then((m) => m.camada),
+  },
 ];
