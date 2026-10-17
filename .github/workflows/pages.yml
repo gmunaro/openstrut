@@ -30,6 +30,10 @@ jobs:
       - run: bun run check
       # base /openstrut/ e 404.html = index.html (recarregar uma rota interna abre o app)
       - run: bun run build:pages
+        env:
+          # importação pelo Google Drive (docs/GOOGLE-DRIVE.md); vazias, a opção fica desabilitada
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ vars.GOOGLE_API_KEY }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
