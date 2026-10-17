@@ -6,17 +6,20 @@
 // Puro: recebe o levantamento já montado (telas/orcamento/levantamento.ts monta a
 // partir da obra calculada) e a tabela de preços; não lê a obra nem o motor.
 //
-// Composições (cada linha = quantidade × fator × preço unitário do item vinculado):
-// - concreto: m³ × (1 + perda de concreto) × preço do concreto do fck da obra;
-// - concretagem (mão de obra): m³ líquido × preço;
-// - aço: kg de cada categoria e bitola × (1 + perda de aço) × preço da bitola;
-// - armação (mão de obra): kg líquido × preço;
-// - fôrma (material): área a fabricar × (1 + perda de fôrma) × preço, com a área a
-//   fabricar = máx(maior área de um nível; área total ÷ usos), rateada pelos
-//   elementos na proporção da área de cada um (reaproveitamento entre pavimentos);
-// - fôrma (mão de obra: fabricação, montagem e desmontagem): área total × preço;
-// - fundação (paramétrica, opcional, só com o papel vinculado): carga na fundação,
-//   tf × preço por tf.
+// Composições: cada papel (concreto do fck, aço de uma bitola, fôrma de um tipo,
+// mão de obra...) tem uma composição = lista de itens da tabela × coeficiente; o preço
+// unitário do papel é Σ coeficiente × preço do item. Cada linha de custo é
+// quantidade × preço unitário:
+// - concreto: m³ × (1 + perda de concreto), composição do concreto do fck da obra;
+// - concretagem (lançamento, adensamento e acabamento): m³ líquido;
+// - aço: kg de cada categoria e bitola × (1 + perda de aço);
+// - armação (mão de obra): kg líquido;
+// - fôrma (fabricação) de laje, viga e pilar: área a fabricar × (1 + perda de fôrma),
+//   com a área a fabricar do tipo = máx(maior área de um nível; área total ÷ usos),
+//   rateada pelos elementos do tipo na proporção da área (reaproveitamento entre
+//   pavimentos);
+// - fôrma (montagem e desmontagem) de laje, viga e pilar: área total (cada uso);
+// - fundação (paramétrica, opcional, só com o papel vinculado): carga na fundação, tf.
 import type { Aco } from "./obra";
 
 // ---- tabela de preços ---------------------------------------------------------------
@@ -46,12 +49,16 @@ export interface TabelaPrecos {
 
 // ---- papéis: o que a composição precisa de preço -------------------------------------
 
-/** Papel de preço: cada um se vincula a um código da tabela. */
+/** Tipos de elemento com fôrma (a fabricação e a montagem custam diferente). */
+export type TipoForma = "laje" | "viga" | "pilar";
+export const TIPOS_FORMA: readonly TipoForma[] = ["laje", "viga", "pilar"];
+
+/** Papel de preço: cada um tem uma composição de itens da tabela. */
 export type Papel =
   | `concreto:${number}`
   | `aco:${Aco}:${number}`
-  | "forma"
-  | "mo-forma"
+  | `forma:${TipoForma}`
+  | `mo-forma:${TipoForma}`
   | "mo-armacao"
   | "mo-concretagem"
   | "fundacao";
@@ -59,7 +66,7 @@ export type Papel =
 export const papelConcreto = (fck: number): Papel => `concreto:${fck}`;
 export const papelAco = (aco: Aco, phi: number): Papel => `aco:${aco}:${phi}`;
 
-/** Unidade esperada do item de cada papel (aviso quando a do item é outra). */
+/** Unidade da quantidade de cada papel. */
 export function unidadePapel(p: Papel): string {
   if (p.startsWith("concreto:") || p === "mo-concretagem") return "m³";
   if (p.startsWith("aco:") || p === "mo-armacao") return "kg";
@@ -67,23 +74,26 @@ export function unidadePapel(p: Papel): string {
   return "m²";
 }
 
+const DO_TIPO: Record<TipoForma, string> = { laje: "laje", viga: "viga", pilar: "pilar" };
+
 /** Rótulo do papel para a tela: "Concreto fck 25 MPa", "Aço CA-50 φ 12,5 mm". */
 export function rotuloPapel(p: Papel): string {
-  if (p.startsWith("concreto:")) return `Concreto fck ${p.split(":")[1]} MPa`;
-  if (p.startsWith("aco:")) {
-    const [, aco, phi] = p.split(":");
-    return `Aço ${aco} φ ${String(phi).replace(".", ",")} mm`;
-  }
-  return ROTULO_PAPEL_FIXO[p as keyof typeof ROTULO_PAPEL_FIXO];
+  const [base, a, b] = p.split(":");
+  if (base === "concreto") return `Concreto fck ${a} MPa`;
+  if (base === "aco") return `Aço ${a} φ ${String(b).replace(".", ",")} mm`;
+  if (base === "forma") return `Fôrma de ${DO_TIPO[a as TipoForma]} (fabricação)`;
+  if (base === "mo-forma") return `Fôrma de ${DO_TIPO[a as TipoForma]} (montagem e desmontagem)`;
+  if (base === "mo-armacao") return "Armação: corte, dobra e montagem (sem o aço)";
+  if (base === "mo-concretagem") return "Concretagem (lançamento e adensamento)";
+  return "Fundação (paramétrica)";
 }
 
-const ROTULO_PAPEL_FIXO = {
-  forma: "Fôrma (material)",
-  "mo-forma": "Fôrma (mão de obra)",
-  "mo-armacao": "Armação (mão de obra)",
-  "mo-concretagem": "Concretagem (mão de obra)",
-  fundacao: "Fundação (paramétrica)",
-} as const;
+/** Um item da composição de um papel: código da tabela × coeficiente
+ *  (unidades do item por unidade do papel, ex. H de armador por kg). */
+export interface Componente {
+  codigo: string;
+  coef: number;
+}
 
 // ---- configuração -------------------------------------------------------------------
 
@@ -91,8 +101,8 @@ const ROTULO_PAPEL_FIXO = {
 export interface ConfigOrcamento {
   /** Tabela de preços em uso. */
   tabelaId: string;
-  /** Papel → código do item da tabela. Sem vínculo, o papel fica sem preço. */
-  vinculos: Partial<Record<Papel, string>>;
+  /** Composição de cada papel. Sem composição (ou vazia), o papel fica sem preço. */
+  vinculos: Partial<Record<Papel, Componente[]>>;
   perdaConcreto: number;
   perdaAco: number;
   perdaForma: number;
@@ -176,7 +186,7 @@ export interface Levantamento {
   elementos: ElementoQuant[];
 }
 
-// ---- resultado ----------------------------------------------------------------------
+/// ---- resultado ----------------------------------------------------------------------
 
 /** Uma linha de custo de um elemento. `custo` null quando o papel não tem preço. */
 export interface LinhaCusto {
@@ -197,6 +207,15 @@ export interface Grupo {
   semPreco: number;
 }
 
+export interface GrupoInsumo extends Grupo {
+  papel: Papel;
+  componentes: Componente[];
+  quantidade: number;
+  unidade: string;
+  /** Preço unitário da composição (null sem preço). */
+  preco: number | null;
+}
+
 export interface Orcamento {
   linhas: LinhaCusto[];
   elementos: ElementoQuant[];
@@ -207,21 +226,15 @@ export interface Orcamento {
   total: number;
   porPavimento: Grupo[];
   porTipo: Grupo[];
-  porInsumo: (Grupo & {
-    papel: Papel;
-    codigo: string;
-    quantidade: number;
-    unidade: string;
-    preco: number | null;
-  })[];
+  porInsumo: GrupoInsumo[];
   porElemento: (Grupo & { pavimento: string; tipo: TipoElemento; nome: string })[];
-  /** Papéis com quantidade e sem preço (sem vínculo, código fora da tabela ou preço vazio). */
+  /** Papéis com quantidade e sem preço (sem composição, código fora da tabela ou preço vazio). */
   semPreco: Papel[];
-  /** Vínculos com unidade diferente da esperada ("Concreto fck 25 MPa: item em kg, esperado m³"). */
+  /** Composições de um item só com unidade diferente da do papel. */
   avisos: string[];
   indicadores: Indicadores;
-  /** Área de fôrma a fabricar com o reaproveitamento, m². */
-  formaFabricada: number;
+  /** Área de fôrma a fabricar de cada tipo, com o reaproveitamento, m². */
+  formaFabricada: Record<TipoForma, number>;
 }
 
 export interface Indicadores {
@@ -250,46 +263,68 @@ export function areaFormaFabricada(niveis: readonly number[], usos: number) {
   return Math.min(total, Math.max(Math.max(0, ...niveis), total / u));
 }
 
-/** Área de fôrma de cada nível (pavimento ÷ repetições, repetido), m². */
-function niveisForma(lev: Levantamento) {
+/** Área de fôrma do tipo em cada nível (pavimento ÷ repetições, repetido), m². */
+function niveisForma(lev: Levantamento, tipo: TipoForma) {
   const niveis: number[] = [];
   for (const p of lev.pavimentos) {
     const rep = Math.max(1, Math.floor(p.repeticoes));
     const area = lev.elementos
-      .filter((e) => e.pavimento === p.nome)
+      .filter((e) => e.pavimento === p.nome && e.tipo === tipo)
       .reduce((a, e) => a + e.forma, 0);
     for (let k = 0; k < rep; k++) niveis.push(area / rep);
   }
   return niveis;
 }
 
+/** Preço unitário de uma composição: Σ coef × preço; null se vazia ou com item sem preço. */
+export function precoComposicao(
+  componentes: readonly Componente[] | undefined,
+  porCodigo: ReadonlyMap<string, ItemPreco>,
+): number | null {
+  if (!componentes || componentes.length === 0) return null;
+  let soma = 0;
+  for (const c of componentes) {
+    const preco = porCodigo.get(c.codigo)?.preco;
+    if (preco === null || preco === undefined || !Number.isFinite(c.coef)) return null;
+    soma += c.coef * preco;
+  }
+  return soma;
+}
+
 /** Calcula o orçamento: linhas por elemento e papel, grupos, indicadores. */
 export function orcar(lev: Levantamento, tabela: TabelaPrecos, cfg: ConfigOrcamento): Orcamento {
   const porCodigo = new Map(tabela.itens.map((i) => [i.codigo, i]));
   const avisos = new Set<string>();
-  const itemDo = (p: Papel) => {
-    const codigo = cfg.vinculos[p];
-    const item = codigo === undefined ? undefined : porCodigo.get(codigo);
-    if (
-      item &&
-      item.unidade &&
-      normalizaUnidade(item.unidade) !== normalizaUnidade(unidadePapel(p))
-    )
+  const precos = new Map<Papel, number | null>();
+  const precoDo = (p: Papel): number | null => {
+    const memo = precos.get(p);
+    if (memo !== undefined) return memo;
+    const comp = cfg.vinculos[p];
+    // composição de um item com coeficiente 1: a unidade do item tem de ser a do papel
+    const so =
+      comp?.length === 1 && comp[0]?.coef === 1 ? porCodigo.get(comp[0].codigo) : undefined;
+    if (so?.unidade && normalizaUnidade(so.unidade) !== normalizaUnidade(unidadePapel(p)))
       avisos.add(
-        `${rotuloPapel(p)}: o item ${item.codigo} é em ${item.unidade}, esperado ${unidadePapel(p)}.`,
+        `${rotuloPapel(p)}: o item ${so.codigo} é em ${so.unidade}, e a quantidade em ${unidadePapel(p)}.`,
       );
-    return item;
+    const preco = precoComposicao(comp, porCodigo);
+    precos.set(p, preco);
+    return preco;
   };
 
-  const formaTotal = lev.elementos.reduce((a, e) => a + e.forma, 0);
-  const formaFabricada = areaFormaFabricada(niveisForma(lev), cfg.usosForma);
-  const fatorForma = formaTotal > 0 ? formaFabricada / formaTotal : 0;
+  const formaFabricada: Record<TipoForma, number> = { laje: 0, viga: 0, pilar: 0 };
+  const fatorForma: Record<TipoForma, number> = { laje: 0, viga: 0, pilar: 0 };
+  for (const t of TIPOS_FORMA) {
+    const niveis = niveisForma(lev, t);
+    const total = niveis.reduce((a, b) => a + b, 0);
+    formaFabricada[t] = areaFormaFabricada(niveis, cfg.usosForma);
+    fatorForma[t] = total > 0 ? formaFabricada[t] / total : 0;
+  }
 
   const linhas: LinhaCusto[] = [];
   const linha = (elemento: number, papel: Papel, quantidade: number) => {
     if (!(quantidade > 0)) return;
-    const item = itemDo(papel);
-    const preco = item?.preco ?? null;
+    const preco = precoDo(papel);
     linhas.push({
       elemento,
       papel,
@@ -306,10 +341,12 @@ export function orcar(lev: Levantamento, tabela: TabelaPrecos, cfg: ConfigOrcame
     const massa = e.aco.reduce((a, m) => a + m.massa, 0);
     for (const m of e.aco) linha(i, papelAco(m.aco, m.phi), m.massa * (1 + cfg.perdaAco));
     linha(i, "mo-armacao", massa);
-    linha(i, "forma", e.forma * fatorForma * (1 + cfg.perdaForma));
-    linha(i, "mo-forma", e.forma);
-    // fundação é opcional: só entra com o papel vinculado a um item da tabela
-    if (e.carga !== undefined && cfg.vinculos.fundacao) linha(i, "fundacao", e.carga);
+    if (e.tipo !== "fundacao") {
+      linha(i, `forma:${e.tipo}`, e.forma * fatorForma[e.tipo] * (1 + cfg.perdaForma));
+      linha(i, `mo-forma:${e.tipo}`, e.forma);
+    }
+    // fundação é opcional: só entra com composição
+    if (e.carga !== undefined && cfg.vinculos.fundacao?.length) linha(i, "fundacao", e.carga);
   });
 
   const custoDireto = linhas.reduce((a, l) => a + (l.custo ?? 0), 0);
@@ -337,17 +374,16 @@ export function orcar(lev: Levantamento, tabela: TabelaPrecos, cfg: ConfigOrcame
   );
   const porTipo = (Object.keys(ROTULO_TIPO) as TipoElemento[]).flatMap((t) => tipos.get(t) ?? []);
   const ins = agrupa((l) => l.papel, rotuloPapel);
-  const porInsumo = [...ins.values()]
+  const porInsumo: GrupoInsumo[] = [...ins.values()]
     .map((g) => {
       const papel = g.chave as Papel;
-      const doPapel = linhas.filter((l) => l.papel === papel);
       return {
         ...g,
         papel,
-        codigo: cfg.vinculos[papel] ?? "",
-        quantidade: doPapel.reduce((a, l) => a + l.quantidade, 0),
+        componentes: cfg.vinculos[papel] ?? [],
+        quantidade: linhas.filter((l) => l.papel === papel).reduce((a, l) => a + l.quantidade, 0),
         unidade: unidadePapel(papel),
-        preco: doPapel[0]?.preco ?? null,
+        preco: precoDo(papel),
       };
     })
     .sort((a, b) => ordemPapel(a.papel) - ordemPapel(b.papel) || a.papel.localeCompare(b.papel));
@@ -361,6 +397,7 @@ export function orcar(lev: Levantamento, tabela: TabelaPrecos, cfg: ConfigOrcame
   });
 
   const concreto = lev.elementos.reduce((a, e) => a + e.concreto, 0);
+  const forma = lev.elementos.reduce((a, e) => a + e.forma, 0);
   const aco = lev.elementos.reduce((a, e) => a + e.aco.reduce((s, m) => s + m.massa, 0), 0);
   const areaConstruida = lev.pavimentos.reduce((a, p) => a + p.area * Math.max(1, p.repeticoes), 0);
   const total = custoDireto * (1 + cfg.bdi);
@@ -381,22 +418,25 @@ export function orcar(lev: Levantamento, tabela: TabelaPrecos, cfg: ConfigOrcame
       areaConstruida,
       custoPorArea: div(total, areaConstruida),
       acoPorConcreto: div(aco, concreto),
-      formaPorConcreto: div(formaTotal, concreto),
+      formaPorConcreto: div(forma, concreto),
       concreto,
-      forma: formaTotal,
+      forma,
       aco,
     },
   };
 }
 
-/** Ordem dos insumos na tabela: concreto, aço, fôrma, mão de obra, fundação. */
-function ordemPapel(p: Papel) {
-  if (p.startsWith("concreto:")) return 0;
-  if (p.startsWith("aco:")) return 1;
-  return (
-    { forma: 2, "mo-concretagem": 3, "mo-armacao": 4, "mo-forma": 5, fundacao: 6 }[p as string] ?? 9
-  );
-}
+const ORDEM_PAPEL: Record<string, number> = {
+  concreto: 0,
+  aco: 1,
+  forma: 2,
+  "mo-forma": 3,
+  "mo-armacao": 4,
+  "mo-concretagem": 5,
+  fundacao: 6,
+};
+/** Ordem dos insumos: concreto, aço, fôrma, mão de obra, fundação. */
+const ordemPapel = (p: Papel) => ORDEM_PAPEL[p.split(":")[0]!] ?? 9;
 
 /** "M3" = "m³" = "m3"; "KG" = "kg"; "H" = "h". */
 const normalizaUnidade = (u: string) =>
