@@ -646,8 +646,11 @@ function propriedadesLaje(r: ResultadoLaje): Propriedades {
     Asy_cm2_m: r2(a.asy),
     ArmaduraX: a.barrasX.phi > 0 ? rotuloBarra(a.barrasX) : "-",
     ArmaduraY: a.barrasY.phi > 0 ? rotuloBarra(a.barrasY) : "-",
-    Flecha_cm: r2(r.esforcos.flecha),
-    FlechaLimite_cm: r2(r.esforcos.flechaLimite),
+    // o caminho do SISTRUT não calcula flecha (limite 0): sem a propriedade, para o 0
+    // não passar por resultado
+    ...(r.esforcos.flechaLimite > 0
+      ? { Flecha_cm: r2(r.esforcos.flecha), FlechaLimite_cm: r2(r.esforcos.flechaLimite) }
+      : {}),
     Avisos: { inteiro: avisos.length },
     ...(avisos.length > 0 ? { TextoAvisos: avisos.join(" | ") } : {}),
   };

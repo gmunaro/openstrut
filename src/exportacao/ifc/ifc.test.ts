@@ -123,6 +123,8 @@ describe("modelo da obra de 3 pavimentos", () => {
     expect(v.propriedades.AsPositiva_cm2).toBeGreaterThan(0);
     expect(v.armadura.some((x) => x.tipo === "estribo")).toBe(true);
     expect(v.armadura.some((x) => x.tipo === "positiva")).toBe(true);
+    const l = m.elementos.find((e) => e.tipo === "laje")!;
+    expect(l.propriedades.FlechaLimite_cm).toBeGreaterThan(0);
     // sem armadura quando pedido
     const sem = modeloIfc(obra, calculado(obra), { armadura: false });
     expect(sem.elementos.every((e) => e.armadura.length === 0)).toBe(true);
@@ -260,6 +262,13 @@ describe("obra E2E do oráculo (NB-1/78 pelo SISTRUT)", () => {
       ModoCalculo: obra.modoCalculo,
       Calculado: true,
     });
+  });
+
+  it("laje sem flecha no Pset: o caminho do SISTRUT não a calcula", () => {
+    const l1 = m.elementos.find((e) => e.tipo === "laje" && e.nome === "L1")!;
+    expect(l1.propriedades.Asx_cm2_m).toBeGreaterThan(0);
+    expect(l1.propriedades).not.toHaveProperty("Flecha_cm");
+    expect(l1.propriedades).not.toHaveProperty("FlechaLimite_cm");
   });
 });
 
