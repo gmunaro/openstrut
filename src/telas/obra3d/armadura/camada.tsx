@@ -148,7 +148,8 @@ function ativar(ctx: ContextoVista) {
     const itens: PosicaoDesenhada[] = [];
     const chaves: string[] = [];
     for (const k of visiveis) {
-      const e = ctx.elemento(k)!;
+      const e = ctx.elemento(k);
+      if (!e) continue;
       const barras = ctx.barrasDe(k);
       const motivo = motivoSemBarras(barras, secaoDoPilar(k));
       if (motivo || !barras) {
@@ -166,6 +167,7 @@ function ativar(ctx: ContextoVista) {
         grupo = new Group();
         grupo.name = `armadura ${ctx.modelo.niveis[g.nivel]?.nome ?? g.nivel}`;
         grupo.position.y = ctx.alturaNaCena(g.nivel, 0);
+        grupo.userData = { nivel: g.nivel };
         niveis.set(g.nivel, grupo);
         raiz.add(grupo);
       }
@@ -280,7 +282,7 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
             <tbody key={b.k}>
               {coluna && (
                 <tr>
-                  <th colSpan={5} className="pt-1 text-left font-medium">
+                  <th colSpan={5} scope="rowgroup" className="pt-1 text-left font-medium">
                     {b.linhas[0]?.lance}
                   </th>
                 </tr>
