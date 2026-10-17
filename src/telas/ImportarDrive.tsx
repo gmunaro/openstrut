@@ -129,7 +129,10 @@ export function ImportarDrive({
   const [link, setLink] = useState("");
   const [etapa, setEtapa] = useState<Etapa>({ tipo: "inicio" });
   const [marcados, setMarcados] = useState<EscolhidoNoPicker[]>([]);
-  const [gisPronto, setGisPronto] = useState(() => !!gisCarregado());
+  /** O login do Google (GIS): os botões de entrar esperam por ele. */
+  const [gis, setGis] = useState<"carregando" | "pronto" | "falhou">(() =>
+    gisCarregado() ? "pronto" : "carregando",
+  );
   /** A tentativa em andamento; abortada ao fechar, ao abrir e ao começar outra. */
   const tentativa = useRef<AbortController | null>(null);
   /** O último link lido, para o Picker abrir nele quando a importação pedir login. */
@@ -141,17 +144,21 @@ export function ImportarDrive({
     return tentativa.current.signal;
   };
 
-  /** Abre o diálogo e carrega o login do Google, que os botões de entrar esperam. */
+  /** Abre o diálogo e carrega o login do Google, que os botões de entrar esperam (uma
+   *  falha de carga tenta de novo na próxima abertura). */
   const abrir = (inicial: Etapa = { tipo: "inicio" }) => {
     novaTentativa();
     setEtapa(inicial);
     setAberto(true);
-    if (!gisCarregado())
-      carregarGis().then(
-        () => setGisPronto(true),
-        (e: unknown) => setEtapa({ tipo: "erro", mensagem: mensagemDe(e) }),
-      );
-    else setGisPronto(true);
+    if (gisCarregado()) return setGis("pronto");
+    setGis("carregando");
+    carregarGis().then(
+      () => setGis("pronto"),
+      (e: unknown) => {
+        setGis("falhou");
+        setEtapa({ tipo: "erro", mensagem: mensagemDe(e) });
+      },
+    );
   };
 
   const fechar = () => {
@@ -293,7 +300,7 @@ export function ImportarDrive({
   };
 
   const ocupado = etapa.tipo === "ocupado";
-  const podeEntrar = gisPronto && !ocupado;
+  const podeEntrar = gis === "pronto" && !ocupado;
 
   return (
     <>
@@ -354,7 +361,11 @@ export function ImportarDrive({
           </form>
           <div className="grid gap-2">
             <Button variant="outline" onClick={() => escolher({})} disabled={!podeEntrar}>
-              {gisPronto ? "Escolher no Drive" : "Carregando o login do Google…"}
+              {gis === "pronto"
+                ? "Escolher no Drive"
+                : gis === "carregando"
+                  ? "Carregando o login do Google…"
+                  : "O login do Google não carregou"}
             </Button>
             <p className="text-muted-foreground text-xs">
               Pede login no Google. O app recebe acesso só aos arquivos que você marcar na janela do
