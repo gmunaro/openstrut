@@ -1,0 +1,44 @@
+# Verifica os branches de trabalho (tudo que não é a main) numa máquina limpa:
+# check (typecheck, lint, formatação, testes) e a suíte e2e do Playwright.
+# A main tem o mesmo check no pages.yml, antes do deploy.
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun x playwright install --with-deps chromium
+      - run: bun x playwright test --reporter=line
+      - if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-falhas
+          path: test-results
+          retention-days: 7
