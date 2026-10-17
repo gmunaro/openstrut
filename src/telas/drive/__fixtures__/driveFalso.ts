@@ -11,6 +11,7 @@ export interface NoDrive {
   dados?: Uint8Array;
   filhos?: NoDrive[];
   resourceKey?: string;
+  modifiedTime?: string;
   shortcutDetails?: { targetId: string; targetMimeType: string };
 }
 
@@ -23,6 +24,10 @@ export interface OpcoesDriveFalso {
   token?: string;
   /** Ids que respondem 403 mesmo com token. */
   proibidos?: string[];
+  /** Com token, só estes ids existem para o app, como no escopo drive.file: o que o
+   *  usuário marcou no Picker. A listagem de uma pasta concedida mostra só os filhos
+   *  concedidos; o resto dá 404. Ausente: o token vê tudo. */
+  concedidos?: string[];
 }
 
 export interface RespostaFalsa {
@@ -48,6 +53,7 @@ const metadados = (n: NoDrive) => ({
   name: n.name,
   mimeType: tipoDe(n),
   ...(n.resourceKey ? { resourceKey: n.resourceKey } : {}),
+  ...(n.modifiedTime ? { modifiedTime: n.modifiedTime } : {}),
   ...(n.shortcutDetails ? { shortcutDetails: n.shortcutDetails } : {}),
 });
 
@@ -62,7 +68,8 @@ export function responderDrive(
   const auth = cabecalhos.authorization ?? cabecalhos.Authorization;
   if (auth && opcoes.token && auth !== `Bearer ${opcoes.token}`) return erro(401, "authError");
   if (!auth && opcoes.publico === false) return erro(404, "notFound");
-  const nos = new Map([...todos(raiz)].map((n) => [n.id, n]));
+  const visivel = (id: string) => !auth || !opcoes.concedidos || opcoes.concedidos.includes(id);
+  const nos = new Map([...todos(raiz)].filter((n) => visivel(n.id)).map((n) => [n.id, n]));
   const m = /\/drive\/v3\/files(?:\/([^/?]+))?$/.exec(url.pathname);
   if (!m) return erro(404, "notFound");
   const id = m[1] && decodeURIComponent(m[1]);
@@ -78,7 +85,7 @@ export function responderDrive(
   const pasta = pai ? nos.get(pai) : undefined;
   if (!pasta) return erro(404, "notFound");
   if (opcoes.proibidos?.includes(pasta.id)) return erro(403, "insufficientFilePermissions");
-  const filhos = pasta.filhos ?? [];
+  const filhos = (pasta.filhos ?? []).filter((n) => visivel(n.id));
   const inicio = Number(url.searchParams.get("pageToken") ?? 0);
   const fim = Math.min(filhos.length, inicio + (opcoes.porPagina ?? filhos.length));
   return {

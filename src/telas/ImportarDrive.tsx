@@ -1,16 +1,20 @@
 // A opção "Importar do Google Drive" da importação de obra do SISTRUT: colar o link de
-// uma pasta (ou de um arquivo) ou escolher no Drive pelo Google Picker. A listagem vira a
-// mesma lista de arquivos com caminho que a pasta do disco dá, e a tela de importação
-// (ImportarSistrut.tsx) segue igual: pergunta a subpasta e o .DSP, baixa só o que a
-// importação lê e mostra o resumo.
+// uma pasta (ou de um arquivo) ou marcar os arquivos no Drive pelo Google Picker. A
+// listagem vira a mesma lista de arquivos com caminho que a pasta do disco dá, e a tela
+// de importação (ImportarSistrut.tsx) segue igual: pergunta a subpasta e o .DSP, baixa só
+// o que a importação lê e mostra o resumo.
 //
 // O link tenta primeiro sem login, só com a API key (pasta pública, "qualquer pessoa com o
 // link"). Se o Google responde 403/404, a tela pede para entrar: o login usa drive.file,
-// e o Picker abre já na pasta do link para o usuário confirmar a escolha (com drive.file o
-// app só lê o que o usuário escolhe no Picker; ver drive/google.ts). Se o Google der
-// acesso só à pasta e não aos arquivos dela, a tela pede para marcar os arquivos.
+// que dá acesso só aos arquivos que o usuário marca no Picker (escolher a pasta não
+// basta; ver drive/google.ts). O Picker abre já na pasta do link, ou mostrando só o
+// arquivo do link. Os parâmetros que ficam em outra pasta (a EXEC40) entram numa segunda
+// rodada do Picker: os arquivos marcados se somam até o usuário mandar importar.
+//
+// Cada ação abre uma tentativa com AbortController: fechar o diálogo, abri-lo de novo ou
+// começar outra ação interrompe a anterior, e o resultado dela é descartado.
 import { CloudDownload } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,62 +28,159 @@ import { Input } from "@/components/ui/input";
 import {
   alvoDoLink,
   baixarArquivo,
+  ErroDrive,
   lerAlvo,
   lerItens,
   limitador,
+  nomesRepetidos,
   pedeLogin,
   type AcessoDrive,
   type AlvoDrive,
   type ConteudoDrive,
-  type ItemDrive,
 } from "./drive/api";
-import { configuracaoGoogle, entrar, escolherNoDrive, precarregar } from "./drive/google";
+import {
+  carregarGis,
+  carregarPicker,
+  configuracaoGoogle,
+  entrar,
+  esquecerToken,
+  gisCarregado,
+  mostrarPicker,
+  tokenAtual,
+  type EscolhidoNoPicker,
+} from "./drive/google";
+import { extensaoDoSistrut } from "./InicioSistrut";
 import type { Escolhido } from "./selecao";
 
-const PASTA = "application/vnd.google-apps.folder";
 /** Downloads em paralelo: poucos, para não engasgar a conexão do celular. */
 const DOWNLOADS_JUNTOS = 4;
 
+/** Onde o Picker abre: na pasta do link, só no arquivo do link, ou no Drive todo. */
+type Onde = { pasta?: string | undefined; arquivo?: string | undefined };
+const ondeDo = (alvo?: AlvoDrive): Onde =>
+  alvo?.tipo === "pasta"
+    ? { pasta: alvo.id }
+    : alvo?.tipo === "arquivo"
+      ? { arquivo: alvo.id }
+      : {};
+
 type Etapa =
   | { tipo: "inicio" }
-  | { tipo: "lendo" }
-  /** A pasta do link não abriu sem login. */
-  | { tipo: "login"; alvo: AlvoDrive; mensagem: string }
-  /** O Picker deu acesso só à pasta, não aos arquivos dentro dela. */
-  | { tipo: "soPasta"; pasta: string }
+  /** Lendo a pasta, entrando no Google ou com o Picker aberto: as ações esperam. */
+  | { tipo: "ocupado"; texto: string }
+  /** O Drive pediu login (pasta privada, login vencido, arquivo não marcado). */
+  | { tipo: "login"; mensagem: string; onde: Onde }
   | { tipo: "erro"; mensagem: string };
 
 const mensagemDe = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/** O toque foi no app (o fundo do diálogo ou a página), e não no que o Google põe na
+ *  página: o Picker fica fora do app, e o Radix entregava o toque nele como "fora do
+ *  diálogo", fechando o diálogo logo depois de reabri-lo com os arquivos marcados. */
+const doApp = (alvo: EventTarget | null) =>
+  alvo instanceof Element &&
+  (alvo.closest('[data-slot="dialog-overlay"]') !== null ||
+    document.getElementById("root")?.contains(alvo) === true);
+
 /** Os arquivos listados como a tela de importação os recebe: o conteúdo é baixado só
- *  quando lido, com no máximo DOWNLOADS_JUNTOS de cada vez. */
+ *  quando lido, com no máximo DOWNLOADS_JUNTOS de cada vez. Um token recusado no
+ *  download é esquecido, para o próximo "Entrar" pedir outro. */
 function escolhidosDo(conteudo: ConteudoDrive, acesso: AcessoDrive): Escolhido[] {
   const limite = limitador(DOWNLOADS_JUNTOS);
   return conteudo.arquivos.map((a) => ({
     nome: a.nome,
     caminho: a.caminho,
-    ler: (signal) => limite(() => baixarArquivo(a, acesso, fetch, signal)),
+    ler: (signal) =>
+      limite(() =>
+        baixarArquivo(a, acesso, { signal }).catch((e: unknown) => {
+          if (e instanceof ErroDrive && e.tipo === "login") esquecerToken();
+          throw e;
+        }),
+      ),
+  }));
+}
+
+/** Os marcados com a pasta no caminho: vindos de mais de uma pasta do Drive, cada pasta
+ *  vira "Pasta 1", "Pasta 2"..., para a tela separar a obra dos parâmetros como faz com
+ *  as pastas do disco. */
+function comPastas(marcados: readonly EscolhidoNoPicker[]) {
+  const pastas = [...new Set(marcados.map((m) => m.pastaId ?? ""))];
+  return marcados.map((m) => ({
+    ...m,
+    pasta: pastas.length > 1 ? `Pasta ${pastas.indexOf(m.pastaId ?? "") + 1}` : "",
   }));
 }
 
 /** Botão e diálogo do Drive. `aoEscolher` recebe os arquivos e as notas (atalhos,
- *  documentos do Google) para a importação seguir como numa pasta do disco. */
+ *  documentos do Google) para a importação seguir como numa pasta do disco.
+ *  `pedirLogin` muda quando a importação não conseguiu baixar sem login: o diálogo abre
+ *  oferecendo entrar. */
 export function ImportarDrive({
   desabilitado,
   aoEscolher,
+  pedirLogin = 0,
 }: {
   desabilitado: boolean;
   aoEscolher: (escolhidos: Escolhido[], notas: string[]) => void;
+  pedirLogin?: number;
 }) {
   const config = configuracaoGoogle();
   const [aberto, setAberto] = useState(false);
   const [link, setLink] = useState("");
   const [etapa, setEtapa] = useState<Etapa>({ tipo: "inicio" });
+  const [marcados, setMarcados] = useState<EscolhidoNoPicker[]>([]);
+  const [gisPronto, setGisPronto] = useState(() => !!gisCarregado());
+  /** A tentativa em andamento; abortada ao fechar, ao abrir e ao começar outra. */
+  const tentativa = useRef<AbortController | null>(null);
+  /** O último link lido, para o Picker abrir nele quando a importação pedir login. */
+  const ultimoAlvo = useRef<AlvoDrive | undefined>(undefined);
 
-  const abrir = () => {
-    precarregar();
-    setEtapa({ tipo: "inicio" });
+  const novaTentativa = () => {
+    tentativa.current?.abort();
+    tentativa.current = new AbortController();
+    return tentativa.current.signal;
+  };
+
+  /** Abre o diálogo e carrega o login do Google, que os botões de entrar esperam. */
+  const abrir = (inicial: Etapa = { tipo: "inicio" }) => {
+    novaTentativa();
+    setEtapa(inicial);
     setAberto(true);
+    if (!gisCarregado())
+      carregarGis().then(
+        () => setGisPronto(true),
+        (e: unknown) => setEtapa({ tipo: "erro", mensagem: mensagemDe(e) }),
+      );
+    else setGisPronto(true);
+  };
+
+  const fechar = () => {
+    tentativa.current?.abort();
+    tentativa.current = null;
+    setAberto(false);
+  };
+
+  // a importação não baixou sem login: abre oferecendo entrar na pasta do último link
+  const pedidoAtendido = useRef(pedirLogin);
+  useEffect(() => {
+    if (pedirLogin === pedidoAtendido.current) return;
+    pedidoAtendido.current = pedirLogin;
+    abrir({
+      tipo: "login",
+      mensagem:
+        "Sem login, o Google Drive não deixou baixar alguns arquivos. Entre com Google e marque os arquivos da obra.",
+      onde: ondeDo(ultimoAlvo.current),
+    });
+  }, [pedirLogin]);
+
+  /** Erro de uma ação: login vencido ou recusado leva a entrar de novo. */
+  const falhou = (erro: unknown, onde: Onde) => {
+    if (erro instanceof ErroDrive && erro.tipo === "login") esquecerToken();
+    setEtapa(
+      pedeLogin(erro)
+        ? { tipo: "login", mensagem: mensagemDe(erro), onde }
+        : { tipo: "erro", mensagem: mensagemDe(erro) },
+    );
   };
 
   /** Entrega o que foi lido à importação e fecha. */
@@ -88,14 +189,24 @@ export function ImportarDrive({
       setEtapa({
         tipo: "erro",
         mensagem: [
-          "Não há arquivos comuns aqui: a pasta está vazia ou só tem documentos do Google.",
+          conteudo.notas.length > 0
+            ? "Nenhum arquivo comum para importar:"
+            : "Não há arquivos aqui: a pasta está vazia.",
           ...conteudo.notas,
         ].join(" "),
       });
       return;
     }
+    const repetidos = nomesRepetidos(conteudo.arquivos, extensaoDoSistrut);
+    if (repetidos) {
+      setEtapa({ tipo: "erro", mensagem: repetidos });
+      return;
+    }
+    tentativa.current = null;
     setAberto(false);
     setLink("");
+    setMarcados([]);
+    setEtapa({ tipo: "inicio" });
     aoEscolher(escolhidosDo(conteudo, acesso), conteudo.notas);
   };
 
@@ -112,56 +223,83 @@ export function ImportarDrive({
       });
       return;
     }
-    setEtapa({ tipo: "lendo" });
+    ultimoAlvo.current = alvo;
+    const signal = novaTentativa();
+    setEtapa({ tipo: "ocupado", texto: "Lendo a pasta no Google Drive…" });
     const acesso = { apiKey: config.apiKey };
     try {
-      entregar(await lerAlvo(alvo, acesso), acesso);
+      const conteudo = await lerAlvo(alvo, acesso, { signal });
+      if (!signal.aborted) entregar(conteudo, acesso);
     } catch (erro) {
-      setEtapa(
-        pedeLogin(erro)
-          ? { tipo: "login", alvo, mensagem: mensagemDe(erro) }
-          : { tipo: "erro", mensagem: mensagemDe(erro) },
-      );
+      if (!signal.aborted) falhou(erro, ondeDo(alvo));
     }
   };
 
-  /** Entra (popup do Google, no clique) e abre o Picker; lê o que o usuário escolher. */
-  const escolher = async (onde: { pasta?: string } = {}) => {
+  /** Entra (o popup do Google sai neste clique) e abre o Picker; os arquivos marcados se
+   *  somam aos de antes. */
+  const escolher = (onde: Onde) => {
     if (!config) return;
-    let token: string;
-    let itens: ItemDrive[] | undefined;
-    try {
-      token = await entrar(config.clientId);
-      // o Picker fica por cima da página: o diálogo (modal) sai da frente enquanto isso
-      setAberto(false);
-      itens = await escolherNoDrive(config, token, onde);
-    } catch (erro) {
-      setAberto(true);
-      setEtapa({ tipo: "erro", mensagem: mensagemDe(erro) });
+    const signal = novaTentativa();
+    // sem await antes: o pedido do token sai na pilha do clique
+    const token = entrar(config.clientId);
+    setEtapa({ tipo: "ocupado", texto: "Entrando no Google…" });
+    void (async () => {
+      try {
+        const t = await token;
+        if (signal.aborted) return;
+        setEtapa({ tipo: "ocupado", texto: "Abrindo o Google Drive…" });
+        const picker = await carregarPicker();
+        if (signal.aborted) return;
+        // o Picker fica por cima da página: o diálogo (modal) sai da frente enquanto isso
+        setAberto(false);
+        const novos = await mostrarPicker(picker, config, t, onde);
+        if (signal.aborted) return;
+        setAberto(true);
+        setEtapa({ tipo: "inicio" });
+        if (novos)
+          setMarcados((antes) => [
+            ...antes,
+            ...novos.filter((n) => !antes.some((a) => a.id === n.id)),
+          ]);
+      } catch (erro) {
+        if (signal.aborted) return;
+        setAberto(true);
+        falhou(erro, onde);
+      }
+    })();
+  };
+
+  /** Importa os arquivos marcados no Picker. */
+  const importarMarcados = async () => {
+    if (!config) return;
+    const token = tokenAtual();
+    if (!token) {
+      setEtapa({
+        tipo: "login",
+        mensagem: "O login no Google expirou. Entre de novo para continuar.",
+        onde: {},
+      });
       return;
     }
-    setAberto(true);
-    if (!itens) return; // cancelou no Picker: volta ao diálogo como estava
-    setEtapa({ tipo: "lendo" });
+    const signal = novaTentativa();
+    setEtapa({ tipo: "ocupado", texto: "Lendo os arquivos marcados…" });
     const acesso = { apiKey: config.apiKey, token };
     try {
-      const conteudo = await lerItens(itens, acesso);
-      const pasta = itens.find((i) => i.mimeType === PASTA);
-      if (conteudo.arquivos.length === 0 && pasta) {
-        setEtapa({ tipo: "soPasta", pasta: pasta.id });
-        return;
-      }
-      entregar(conteudo, acesso);
+      const conteudo = await lerItens(comPastas(marcados), acesso, { signal });
+      if (!signal.aborted) entregar(conteudo, acesso);
     } catch (erro) {
-      setEtapa({ tipo: "erro", mensagem: mensagemDe(erro) });
+      if (!signal.aborted) falhou(erro, {});
     }
   };
+
+  const ocupado = etapa.tipo === "ocupado";
+  const podeEntrar = gisPronto && !ocupado;
 
   return (
     <>
       <Button
         variant="outline"
-        onClick={abrir}
+        onClick={() => abrir()}
         className="mt-2 w-full"
         title="Importe a pasta da obra direto de um link ou do seu Google Drive"
         disabled={desabilitado || !config}
@@ -174,32 +312,39 @@ export function ImportarDrive({
           Google no build). Baixe a pasta e use "Importar pasta do SISTRUT".
         </p>
       )}
-      <Dialog open={aberto} onOpenChange={setAberto}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+      <Dialog open={aberto} onOpenChange={(a) => (a ? setAberto(true) : fechar())}>
+        <DialogContent
+          className="max-h-[85vh] overflow-y-auto sm:max-w-xl"
+          onInteractOutside={(e) => {
+            if (!doApp(e.target)) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Importar do Google Drive</DialogTitle>
             <DialogDescription>
-              Cole o link da pasta da obra (ou de um arquivo) ou escolha no seu Drive. Os arquivos
-              vão do Google direto para este navegador; nada passa por servidor do OpenStrut, e a
-              obra fica só aqui.
+              Cole o link da pasta da obra (ou de um arquivo) ou marque os arquivos no seu Drive. Os
+              arquivos vão do Google direto para este navegador; nada passa por servidor do
+              OpenStrut, e a obra fica só aqui.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={(e) => void abrirLink(e)} className="grid gap-2">
+          <form onSubmit={(e) => void abrirLink(e)} noValidate className="grid gap-2">
             <label htmlFor="link-drive" className="text-sm font-medium">
               Link da pasta ou do arquivo no Drive
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
                 id="link-drive"
-                type="url"
+                type="text"
                 inputMode="url"
                 autoComplete="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 placeholder="https://drive.google.com/drive/folders/…"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
-                disabled={etapa.tipo === "lendo"}
+                disabled={ocupado}
               />
-              <Button type="submit" disabled={etapa.tipo === "lendo" || !link.trim()}>
+              <Button type="submit" disabled={ocupado || !link.trim()}>
                 Abrir link
               </Button>
             </div>
@@ -208,22 +353,28 @@ export function ImportarDrive({
             </p>
           </form>
           <div className="grid gap-2">
-            <Button
-              variant="outline"
-              onClick={() => void escolher()}
-              disabled={etapa.tipo === "lendo"}
-            >
-              Escolher no Drive
+            <Button variant="outline" onClick={() => escolher({})} disabled={!podeEntrar}>
+              {gisPronto ? "Escolher no Drive" : "Carregando o login do Google…"}
             </Button>
             <p className="text-muted-foreground text-xs">
-              Pede login no Google. O app recebe acesso só ao que você escolher na janela do Drive
-              (permissão "drive.file"); ele não vê o resto do seu Drive. O acesso fica na memória
-              desta página, não é gravado e expira em até 1 hora.
+              Pede login no Google. O app recebe acesso só aos arquivos que você marcar na janela do
+              Drive (permissão "drive.file"); ele não vê o resto do seu Drive. Abra a pasta da obra
+              e marque todos os arquivos dela. O acesso fica na memória desta página, não é gravado
+              e expira em até 1 hora.
             </p>
           </div>
-          <Situacao etapa={etapa} aoEscolher={(pasta) => void escolher({ pasta })} />
+          {marcados.length > 0 && (
+            <Marcados
+              marcados={marcados}
+              ocupado={!podeEntrar}
+              aoMarcarMais={() => escolher({})}
+              aoImportar={() => void importarMarcados()}
+              aoLimpar={() => setMarcados([])}
+            />
+          )}
+          <Situacao etapa={etapa} podeEntrar={podeEntrar} aoEntrar={(onde) => escolher(onde)} />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setAberto(false)}>
+            <Button variant="ghost" onClick={fechar}>
               Fechar
             </Button>
           </DialogFooter>
@@ -233,15 +384,70 @@ export function ImportarDrive({
   );
 }
 
+/** Os arquivos marcados no Picker até agora, por pasta, com importar e marcar mais. */
+function Marcados({
+  marcados,
+  ocupado,
+  aoMarcarMais,
+  aoImportar,
+  aoLimpar,
+}: {
+  marcados: readonly EscolhidoNoPicker[];
+  ocupado: boolean;
+  aoMarcarMais: () => void;
+  aoImportar: () => void;
+  aoLimpar: () => void;
+}) {
+  const porPasta = new Map<string, EscolhidoNoPicker[]>();
+  for (const m of comPastas(marcados)) porPasta.set(m.pasta, [...(porPasta.get(m.pasta) ?? []), m]);
+  return (
+    <section aria-label="Arquivos marcados no Drive" className="grid gap-2 text-sm">
+      <h3 className="text-xs font-semibold uppercase tracking-wide">
+        {marcados.length === 1 ? "1 arquivo marcado" : `${marcados.length} arquivos marcados`}
+      </h3>
+      <ul className="text-xs">
+        {[...porPasta].map(([pasta, itens]) => (
+          <li key={pasta}>
+            {pasta && <span className="font-medium">{pasta}: </span>}
+            {itens.map((i) => i.name).join(", ")}
+          </li>
+        ))}
+      </ul>
+      <p className="text-muted-foreground text-xs">
+        Os parâmetros (.DSP, .PIP, .INI) estão em outra pasta, como a EXEC40? Marque-os também.
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button onClick={aoImportar} disabled={ocupado}>
+          Importar os arquivos marcados
+        </Button>
+        <Button variant="outline" onClick={aoMarcarMais} disabled={ocupado}>
+          Marcar arquivos de outra pasta
+        </Button>
+        <Button variant="ghost" onClick={aoLimpar} disabled={ocupado}>
+          Limpar
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 /** O andamento ou o problema da etapa atual, com a ação que resolve. */
-function Situacao({ etapa, aoEscolher }: { etapa: Etapa; aoEscolher: (pasta: string) => void }) {
+function Situacao({
+  etapa,
+  podeEntrar,
+  aoEntrar,
+}: {
+  etapa: Etapa;
+  podeEntrar: boolean;
+  aoEntrar: (onde: Onde) => void;
+}) {
   switch (etapa.tipo) {
     case "inicio":
       return null;
-    case "lendo":
+    case "ocupado":
       return (
         <p role="status" className="text-sm">
-          Lendo a pasta no Google Drive…
+          {etapa.texto}
         </p>
       );
     case "erro":
@@ -252,25 +458,18 @@ function Situacao({ etapa, aoEscolher }: { etapa: Etapa; aoEscolher: (pasta: str
       );
     case "login":
       return (
-        <section aria-label="A pasta pede login" className="grid gap-2 text-sm">
+        <section aria-label="O Drive pede login" className="grid gap-2 text-sm">
           <p role="alert">{etapa.mensagem}</p>
           <p className="text-muted-foreground text-xs">
-            A janela do Drive abre nesta pasta: marque a pasta (ou os arquivos da obra) e toque em
-            Selecionar.
+            {etapa.onde.arquivo
+              ? "A janela do Drive mostra o arquivo do link: marque-o e toque em Selecionar."
+              : etapa.onde.pasta
+                ? "A janela do Drive abre nesta pasta: marque todos os arquivos da obra e toque em Selecionar. Marcar só a pasta não basta."
+                : "Na janela do Drive, abra a pasta da obra, marque todos os arquivos e toque em Selecionar."}
           </p>
-          <Button onClick={() => aoEscolher(etapa.alvo.id)}>
-            Entrar com Google e escolher a pasta
+          <Button onClick={() => aoEntrar(etapa.onde)} disabled={!podeEntrar}>
+            Entrar com Google e marcar os arquivos
           </Button>
-        </section>
-      );
-    case "soPasta":
-      return (
-        <section aria-label="Escolha os arquivos" className="grid gap-2 text-sm">
-          <p role="alert">
-            O Google deu acesso só à pasta, não aos arquivos dentro dela. Abra a pasta e marque os
-            arquivos da obra (dá para marcar vários).
-          </p>
-          <Button onClick={() => aoEscolher(etapa.pasta)}>Escolher os arquivos</Button>
         </section>
       );
   }

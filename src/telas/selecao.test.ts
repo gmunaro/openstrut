@@ -24,12 +24,12 @@ const pasta = (extras: NoDrive[] = []): NoDrive => ({
 async function doDrive(raiz: NoDrive, opcoes: Parameters<typeof fetchFalso>[1] = {}) {
   const falso = fetchFalso(raiz, opcoes);
   const acesso: AcessoDrive = { apiKey: "chave" };
-  const conteudo = await lerAlvo({ id: raiz.id }, acesso, falso.fetch);
+  const conteudo = await lerAlvo({ id: raiz.id, tipo: "pasta" }, acesso, { f: falso.fetch });
   const limite = limitador(4);
   const escolhidos: Escolhido[] = conteudo.arquivos.map((a) => ({
     nome: a.nome,
     caminho: a.caminho,
-    ler: (signal) => limite(() => baixarArquivo(a, acesso, falso.fetch, signal)),
+    ler: (signal) => limite(() => baixarArquivo(a, acesso, { f: falso.fetch, signal })),
   }));
   return { escolhidos, falso };
 }

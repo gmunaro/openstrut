@@ -3,19 +3,23 @@
 // públicos por natureza e vêm do build (VITE_GOOGLE_CLIENT_ID, VITE_GOOGLE_API_KEY; ver
 // docs/GOOGLE-DRIVE.md). A API key fica restrita por referrer e por API no console.
 //
-// Escopo: só drive.file (não sensível). O app lê o que o usuário escolhe no Picker; uma
-// pasta pública abre só com a API key, sem login (api.ts). drive.readonly, que leria
+// Escopo: só drive.file (não sensível). Com ele o app lê só os arquivos que o usuário
+// marca no Picker; escolher uma pasta não dá acesso aos arquivos dela (o escopo é "por
+// arquivo"), então o Picker não deixa escolher pasta e aceita vários arquivos de uma vez.
+// Uma pasta pública abre só com a API key, sem login (api.ts). drive.readonly, que leria
 // qualquer pasta pelo link, é escopo restrito do Google e não é pedido.
 //
 // O token vem do Google Identity Services (token client, popup), fica só nesta variável
-// do módulo, nunca em localStorage, e vence em cerca de 1 h. O popup tem de abrir no
-// clique do usuário: por isso o script é carregado antes (precarregar) e o pedido sai
-// síncrono quando ele já está na página.
+// do módulo, nunca em localStorage, e vence em cerca de 1 h. O popup só abre no clique
+// do usuário: a tela carrega o script antes (carregarGis) e só libera o botão de entrar
+// quando ele está pronto, e `entrar` pede o token na mesma pilha do clique.
 import type { ItemDrive } from "./api";
 
 export const ESCOPO = "https://www.googleapis.com/auth/drive.file";
 const SCRIPT_GIS = "https://accounts.google.com/gsi/client";
 const SCRIPT_GAPI = "https://apis.google.com/js/api.js";
+/** Tempo máximo para o Picker carregar (o gapi.load não avisa quando trava). */
+const ESPERA_PICKER_MS = 20_000;
 
 /** Credenciais públicas do build; undefined quando faltam (a opção fica desabilitada). */
 export function configuracaoGoogle() {
@@ -53,6 +57,7 @@ interface DocumentoPicker {
   name: string;
   mimeType: string;
   resourceKey?: string;
+  parentId?: string;
 }
 interface RespostaPicker {
   action: string;
@@ -76,7 +81,7 @@ interface ConstrutorPicker {
   setCallback: (cb: (r: RespostaPicker) => void) => ConstrutorPicker;
   build: () => { setVisible: (v: boolean) => void };
 }
-interface ApiPicker {
+export interface ApiPicker {
   PickerBuilder: new () => ConstrutorPicker;
   DocsView: new (viewId?: string) => VistaDocs;
   ViewId: { DOCS: string };
@@ -97,7 +102,7 @@ declare global {
 const carregando = new Map<string, Promise<void>>();
 
 /** Injeta o script uma vez; uma falha deixa tentar de novo. */
-function carregarScript(src: string): Promise<void> {
+function carregarScript(src: string, falhou: string): Promise<void> {
   let p = carregando.get(src);
   if (!p) {
     p = new Promise<void>((ok, falha) => {
@@ -108,7 +113,7 @@ function carregarScript(src: string): Promise<void> {
       s.onerror = () => {
         carregando.delete(src);
         s.remove();
-        falha(new Error("Não foi possível carregar o login do Google. Confira a internet."));
+        falha(new Error(falhou));
       };
       document.head.append(s);
     });
@@ -117,33 +122,44 @@ function carregarScript(src: string): Promise<void> {
   return p;
 }
 
-async function carregarGis(): Promise<Oauth2> {
-  if (!window.google?.accounts?.oauth2) await carregarScript(SCRIPT_GIS);
-  const o = window.google?.accounts?.oauth2;
-  if (!o) throw new Error("O login do Google não carregou direito. Recarregue a página.");
-  return o;
-}
+/** O login do Google já carregado, ou undefined. */
+export const gisCarregado = () => window.google?.accounts?.oauth2;
 
-async function carregarPicker(): Promise<ApiPicker> {
-  if (window.google?.picker) return window.google.picker;
-  if (!window.gapi) await carregarScript(SCRIPT_GAPI);
-  const gapi = window.gapi;
-  if (!gapi) throw new Error("O seletor do Google Drive não carregou. Recarregue a página.");
-  await new Promise<void>((ok, falha) =>
-    gapi.load("picker", {
-      callback: ok,
-      onerror: () => falha(new Error("O seletor do Google Drive não carregou.")),
-    }),
+/** Carrega o login do Google (Google Identity Services). */
+export async function carregarGis(): Promise<void> {
+  if (gisCarregado()) return;
+  await carregarScript(
+    SCRIPT_GIS,
+    "Não foi possível carregar o login do Google. Confira a internet e tente de novo.",
   );
-  const p = window.google?.picker;
-  if (!p) throw new Error("O seletor do Google Drive não carregou. Recarregue a página.");
-  return p;
+  if (!gisCarregado())
+    throw new Error("O login do Google não carregou direito. Recarregue a página.");
 }
 
-/** Carrega o login e o Picker antes do clique, para o popup sair no gesto do usuário. */
-export function precarregar() {
-  void carregarGis().catch(() => {});
-  void carregarPicker().catch(() => {});
+/** Carrega o Google Picker (api.js e a biblioteca "picker"), com tempo máximo. */
+export async function carregarPicker(): Promise<ApiPicker> {
+  if (window.google?.picker) return window.google.picker;
+  const naoCarregou =
+    "Não foi possível carregar a janela do Google Drive. Confira a internet e tente de novo.";
+  if (!window.gapi) await carregarScript(SCRIPT_GAPI, naoCarregou);
+  const gapi = window.gapi;
+  if (!gapi) throw new Error(naoCarregou);
+  await new Promise<void>((ok, falha) => {
+    const prazo = setTimeout(() => falha(new Error(naoCarregou)), ESPERA_PICKER_MS);
+    gapi.load("picker", {
+      callback: () => {
+        clearTimeout(prazo);
+        ok();
+      },
+      onerror: () => {
+        clearTimeout(prazo);
+        falha(new Error(naoCarregou));
+      },
+    });
+  });
+  const p = window.google?.picker;
+  if (!p) throw new Error(naoCarregou);
+  return p;
 }
 
 // ------------------------------------------------------------------ token
@@ -158,17 +174,20 @@ export function tokenAtual(agora = Date.now()): string | undefined {
   return undefined;
 }
 
-/** Esquece o token (o Google o invalida sozinho quando vence). */
+/** Esquece o token: ele venceu ou o Google o recusou. */
 export function esquecerToken() {
   sessao = undefined;
 }
 
-/** Pede o token com drive.file. Chame no clique: o Google abre um popup. */
-export async function entrar(clientId: string): Promise<string> {
+/** Pede o token com drive.file. Chame direto no clique, com o login já carregado
+ *  (gisCarregado): o popup do Google só abre no gesto do usuário. Com um token válido
+ *  em memória, não abre nada. */
+export function entrar(clientId: string): Promise<string> {
   const atual = tokenAtual();
-  if (atual) return atual;
-  // com o script já na página, o pedido sai no mesmo tique do clique (sem await antes)
-  const oauth2 = window.google?.accounts?.oauth2 ?? (await carregarGis());
+  if (atual) return Promise.resolve(atual);
+  const oauth2 = gisCarregado();
+  if (!oauth2)
+    return Promise.reject(new Error("O login do Google ainda está carregando. Tente de novo."));
   return new Promise<string>((ok, falha) => {
     const cliente = oauth2.initTokenClient({
       client_id: clientId,
@@ -205,18 +224,22 @@ export async function entrar(clientId: string): Promise<string> {
 
 // ------------------------------------------------------------------ Picker
 
-/** Abre o Google Picker (pastas e arquivos, vários de uma vez). `pasta` abre direto
- *  nela; `arquivo` mostra só ele. Devolve os escolhidos, ou undefined se cancelou. */
-export async function escolherNoDrive(
+/** Um arquivo marcado no Picker, com a pasta de onde veio (parentId). */
+export type EscolhidoNoPicker = ItemDrive & { pastaId?: string | undefined };
+
+/** Mostra o Picker (já carregado) para marcar arquivos, vários de uma vez; as pastas
+ *  aparecem só para navegar. `pasta` abre direto nela; `arquivo` mostra só ele.
+ *  Devolve os marcados, ou undefined se cancelou. */
+export function mostrarPicker(
+  p: ApiPicker,
   config: ConfiguracaoGoogle,
   token: string,
-  onde: { pasta?: string; arquivo?: string } = {},
-): Promise<ItemDrive[] | undefined> {
-  const p = await carregarPicker();
+  onde: { pasta?: string | undefined; arquivo?: string | undefined } = {},
+): Promise<EscolhidoNoPicker[] | undefined> {
   return new Promise((ok) => {
     const vista = new p.DocsView(p.ViewId.DOCS)
       .setIncludeFolders(true)
-      .setSelectFolderEnabled(true)
+      .setSelectFolderEnabled(false)
       .setMode(p.DocsViewMode.LIST);
     if (onde.pasta) vista.setParent(onde.pasta);
     if (onde.arquivo) vista.setFileIds(onde.arquivo);
@@ -227,7 +250,7 @@ export async function escolherNoDrive(
       .setOAuthToken(token)
       .setDeveloperKey(config.apiKey)
       .setLocale("pt-BR")
-      .setTitle("Escolha a pasta da obra ou os arquivos do SISTRUT")
+      .setTitle("Marque os arquivos da obra (vários de uma vez)")
       .setCallback((r) => {
         if (r.action === p.Action.PICKED)
           ok(
@@ -236,6 +259,7 @@ export async function escolherNoDrive(
               name: d.name,
               mimeType: d.mimeType,
               resourceKey: d.resourceKey || undefined,
+              pastaId: d.parentId || undefined,
             })),
           );
         else if (r.action === p.Action.CANCEL) ok(undefined);

@@ -166,6 +166,10 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
   const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
   /** A seleção veio do Drive: o progresso aparece num diálogo, com Cancelar. */
   const [doDrive, setDoDrive] = useState(false);
+  /** Arquivos do Drive que não baixaram sem login: o diálogo oferece entrar. */
+  const [faltouLogin, setFaltouLogin] = useState(false);
+  /** Muda para o diálogo do Drive abrir oferecendo entrar. */
+  const [pedirLoginDrive, setPedirLoginDrive] = useState(0);
   const [sobre, setSobre] = useState(false);
   /** A leitura mais recente: o resultado de uma anterior que termina depois é descartado. */
   const leitura = useRef(0);
@@ -180,13 +184,18 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setPerguntaDsp(null);
     setPerguntaParametros(null);
     setFalhas(falhasAntes);
+    setFaltouLogin(false);
     setLendo(true);
     interromper.current?.abort();
     const controle = new AbortController();
     interromper.current = controle;
     try {
       // o que a importação não lê só entra no resumo: não carrega nem baixa o conteúdo
-      const { lidos, falhas: falhasLeitura } = await lerSelecao(
+      const {
+        lidos,
+        falhas: falhasLeitura,
+        pedemLogin,
+      } = await lerSelecao(
         escolhidos,
         (feitos, total) => {
           if (minha === leitura.current) setProgresso({ feitos, total });
@@ -195,6 +204,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       );
       if (minha !== leitura.current) return;
       setFalhas([...falhasAntes, ...falhasLeitura]);
+      setFaltouLogin(pedemLogin);
       const dsps = dspsAEscolher(lidos);
       if (dsps) setPerguntaDsp({ lidos, dsps });
       else setResultado(importarObraSistrut(lidos));
@@ -266,6 +276,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     interromper.current = null;
     setLendo(false);
     setProgresso(null);
+    setFaltouLogin(false);
     setResultado(null);
     setFalhas([]);
     setEscolha(null);
@@ -317,6 +328,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       />
       <ImportarDrive
         desabilitado={lendo}
+        pedirLogin={pedirLoginDrive}
         aoEscolher={(arquivos, notas) => {
           setDoDrive(true);
           separar(arquivos, notas);
@@ -462,6 +474,17 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
             </ul>
           )}
           <DialogFooter>
+            {faltouLogin && !pergunta && !baixando && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  fechar();
+                  setPedirLoginDrive((n) => n + 1);
+                }}
+              >
+                Entrar com Google e marcar os arquivos
+              </Button>
+            )}
             {resultado?.ok && !pergunta && (
               <Button
                 onClick={() => {
