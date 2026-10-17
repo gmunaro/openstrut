@@ -6,6 +6,7 @@
 import { Printer } from "lucide-react";
 import { useContext, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { type FamiliaElemento, materiaisDe } from "../../calculo/fluxo";
 import { calcularQuantitativos } from "../../calculo/quantitativos";
 import type { Obra } from "../../dominio/obra";
 import {
@@ -34,10 +35,25 @@ import { SemCalculo, TabelasObra } from "../resultados/Resultados";
 import { Cabecalho, Corpo, Linha, Tabela, Td, Th, TituloBloco } from "../resultados/tabela";
 import { useUnidades } from "../sessao";
 
+const FAMILIAS: [FamiliaElemento, string][] = [
+  ["lajes", "das lajes"],
+  ["vigas", "das vigas"],
+  ["pilares", "dos pilares"],
+];
+
 export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
   const s = useUnidades();
   const m = obra.materiais;
   const mc = calculo.tipo === "ok" ? calculo.resultado.materiais : null;
+  // NB-1/78: famílias calculadas com γc ou γs editados (.LAP, .DSP, PILAR.INI) têm fcd e
+  // fyd próprios; a tabela mostra os da obra e, abaixo, os dessas famílias
+  const proprios =
+    calculo.tipo === "ok" && mc
+      ? FAMILIAS.flatMap(([f, nome]) => {
+          const x = materiaisDe(calculo.resultado, f);
+          return x.fcd !== mc.fcd || x.fyd !== mc.fyd ? [{ nome, x }] : [];
+        })
+      : [];
   const uT = unidade("tensao", s);
   const quant = useMemo(
     () => (calculo.tipo === "ok" ? calcularQuantitativos(obra, calculo.resultado) : null),
@@ -144,6 +160,20 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
                             unidade={uT}
                           />
                         )}
+                        {proprios.flatMap(({ nome, x }) => [
+                          <LinhaValor
+                            key={`fcd ${nome}`}
+                            rotulo={`fcd ${nome}`}
+                            valor={formatarGrandeza(x.fcd, "tensao", s)}
+                            unidade={uT}
+                          />,
+                          <LinhaValor
+                            key={`fyd ${nome}`}
+                            rotulo={`fyd ${nome}`}
+                            valor={formatarGrandeza(x.fyd, "tensao", s, 1)}
+                            unidade={uT}
+                          />,
+                        ])}
                         <LinhaValor rotulo="Aço do estribo" valor={m.acoEstribo} unidade="" />
                         {mc && (
                           <LinhaValor

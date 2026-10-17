@@ -5,8 +5,8 @@
 // escritas em cada caso; nenhum número vem da própria projeção.
 import { describe, expect, it } from "vitest";
 import type { Obra } from "../dominio/obra";
-import { calcularObra } from "./fluxo";
-import { nb178 } from "./normas";
+import { calcularObra, gamaFDe, materiaisDe } from "./fluxo";
+import { nb178, nbr6118 } from "./normas";
 import { obraE2E } from "./sistrut/__e2e__/obraE2E";
 import { obraVBX } from "./sistrut/__e2e__/obraVBX";
 import type { DadosViga, TramoViga } from "./sistrut/base/tipos";
@@ -343,5 +343,86 @@ describe("falhas que o caminho do SISTRUT marca", () => {
     expect(semViga.map((a) => a.split(",")[0]).sort()).toEqual(["Laje Lb", "Laje Lc"]);
     expect(ps.montagem.totais.pilares).toBeGreaterThan(0);
     expect(r.pavimentos[0]!.falhas.some((f) => f.startsWith("Bordos de laje sem viga"))).toBe(true);
+  });
+});
+
+describe("γ editados por família (issue #2)", () => {
+  /** Obra E2E com cargas maiores, para tirar as vigas da armadura mínima. */
+  const carregada = (modo: "original" | "corrigido"): Obra => {
+    const o = obraE2E(modo);
+    return {
+      ...o,
+      pavimentos: o.pavimentos.map((p) => ({
+        ...p,
+        lajes: p.lajes.map((l) => ({
+          ...l,
+          sobrecarga: l.sobrecarga * 3,
+          revestimento: l.revestimento * 2,
+        })),
+        vigas: p.vigas.map((v) => ({ ...v, cargaLinear: v.cargaLinear + 4 })),
+      })),
+    };
+  };
+  const comDsp = (o: Obra, dsp: NonNullable<Obra["parametrosViga"]>["dsp"]): Obra => ({
+    ...o,
+    parametrosViga: { ...o.parametrosViga, dsp: { ...o.parametrosViga?.dsp, ...dsp } },
+  });
+  const asV2 = (o: Obra) => {
+    const v = calcularObra(o, nb178).pavimentos[0]!.vigas.find((x) => x.viga.nome === "V2")!;
+    return v.tramos[0]!.positivo.flexao!.as;
+  };
+
+  it("corrigido: os γ do .DSP chegam ao DESDIM; fck e fyk continuam os da obra", () => {
+    const o = comDsp(carregada("corrigido"), { gamaF: 1.5, gamaC: 1.54, gamaS: 1.2, fck: 0.3 });
+    const m = calcularObra(o, nb178).sistrut!.materiaisViga;
+    expect([m.gamaF, m.gamaC, m.gamaS]).toEqual([1.5, 1.54, 1.2]);
+    expect(m.fck).toBeCloseTo(15 / 98.0665, 12);
+    expect(m.fyk).toBeCloseTo(500 / 98.0665, 12);
+  });
+
+  it("corrigido: γf 1,5 no .DSP aumenta a As da viga na mesma proporção do original", () => {
+    // o original sempre leu os γ do .DSP (DESENHO.BAS:5225-5255): é a referência
+    const razao = (modo: "original" | "corrigido") =>
+      asV2(comDsp(carregada(modo), { gamaF: 1.5 })) / asV2(carregada(modo));
+    expect(razao("original")).toBeGreaterThan(1.05);
+    expect(razao("corrigido")).toBeCloseTo(razao("original"), 2);
+  });
+
+  const editada = (modo: "original" | "corrigido"): Obra => ({
+    ...comDsp(carregada(modo), { gamaF: 1.5, gamaS: 1.2 }),
+    parametrosLaje: { gamaF: 1.6, gamaC: 1.54 },
+    parametrosPilar: { ini: { gamaF: 1.45 } },
+  });
+  it.each(["original", "corrigido"] as const)(
+    "%s: γf de cada família (sem o ruído do SINGLE) e fcd e fyd com o γc e o γs dela",
+    (modo) => {
+      const r = calcularObra(editada(modo), nb178);
+      expect(gamaFDe(r, "lajes")).toBe(1.6);
+      expect(gamaFDe(r, "vigas")).toBe(1.5);
+      expect(gamaFDe(r, "pilares")).toBe(1.45);
+      const fck = r.materiais.fck;
+      const fyk = r.materiais.fyk;
+      expect(materiaisDe(r, "lajes").fcd).toBeCloseTo(fck / 1.54, 3);
+      expect(materiaisDe(r, "vigas").fyd).toBeCloseTo(fyk / 1.2, 3);
+      expect(materiaisDe(r, "pilares").fyd).toBeCloseTo(fyk / 1.15, 3);
+    },
+  );
+  it("aviso por família com γ diferente do padrão; obra sem γ editado não avisa", () => {
+    const r = calcularObra(editada("corrigido"), nb178);
+    expect(r.avisos).toContain(
+      "Lajes calculadas com γf = 1,6, γc = 1,54 e γs = 1,15, dos parâmetros do .LAP (padrão: 1,4, 1,4 e 1,15).",
+    );
+    expect(r.avisos).toContain(
+      "Vigas calculadas com γf = 1,5, γc = 1,4 e γs = 1,2, dos parâmetros do .DSP (padrão: 1,4, 1,4 e 1,15).",
+    );
+    expect(r.avisos.filter((a) => a.includes("γf ="))).toHaveLength(3);
+    expect(calcularObra(carregada("original"), nb178).avisos.some((a) => a.includes("γf ="))).toBe(
+      false,
+    );
+  });
+  it("fluxo da V2 (NBR 6118): máx(γg, γq) e os materiais da obra", () => {
+    const r = { norma: nbr6118, materiais: calcularObra(carregada("corrigido"), nb178).materiais };
+    expect(gamaFDe(r, "vigas")).toBe(1.4);
+    expect(materiaisDe(r, "vigas")).toBe(r.materiais);
   });
 });

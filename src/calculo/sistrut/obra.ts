@@ -224,23 +224,29 @@ export function tabelasDaObra(pv: ParametrosVigaObra | undefined): {
   };
 }
 
-/** Materiais do DESDIM/DESINIT. No modo original, o fck, o fyk, a classe do aço e os γ do
- *  .DSP da obra, quando ela os dá (o DESDIM lê os do .DSP, DESENHO.BAS:4774-4789); no
- *  corrigido, sempre os da obra. */
+/** Materiais do DESDIM/DESINIT: os γ do .DSP da obra, quando ela os dá, nos dois modos,
+ *  como os do .LAP nas lajes e os do PILAR.INI nos pilares (o DESDIM lê os do .DSP,
+ *  DESENHO.BAS:4774-4789). O fck, o fyk e a classe do aço do .DSP só no original; no
+ *  corrigido, os da obra. */
 export function materiaisDaViga(
   mat: MateriaisSistrut,
   pv: ParametrosVigaObra | undefined,
   modo: ModoSistrut,
 ): MateriaisSistrut {
   const d = pv?.dsp;
-  if (modo !== "original" || !d) return mat;
+  if (!d) return mat;
+  const s = (v: number) => (modo === "original" ? sng(v) : v);
+  const gamas = {
+    gamaF: d.gamaF !== undefined ? s(d.gamaF) : mat.gamaF,
+    gamaC: d.gamaC !== undefined ? s(d.gamaC) : mat.gamaC,
+    gamaS: d.gamaS !== undefined ? s(d.gamaS) : mat.gamaS,
+  };
+  if (modo !== "original") return { ...mat, ...gamas };
   return {
     fck: d.fck !== undefined ? sng(d.fck) : mat.fck,
     fyk: d.fyk !== undefined ? sng(d.fyk) : mat.fyk,
     classeAco: d.classeAco ?? mat.classeAco,
-    gamaF: d.gamaF !== undefined ? sng(d.gamaF) : mat.gamaF,
-    gamaC: d.gamaC !== undefined ? sng(d.gamaC) : mat.gamaC,
-    gamaS: d.gamaS !== undefined ? sng(d.gamaS) : mat.gamaS,
+    ...gamas,
   };
 }
 
@@ -367,6 +373,9 @@ export interface ResultadoSistrut {
   avisosComOpcao: AvisoComOpcao[];
   /** Materiais dos pilares: os da obra com os do PILAR.INI da obra por cima. */
   materiaisPilar: MateriaisSistrut;
+  /** Materiais das vigas (DESDIM/DESINIT): os da obra com os do .DSP por cima
+   *  (`materiaisDaViga`). Os das lajes são `materiais` com os γ de `parametros.laje`. */
+  materiaisViga: MateriaisSistrut;
   /** PILAR opção 6 de cada `Pilar.verificacoes` (pilaresDaObra.ts). */
   verificacoes: VerificacaoPilarSistrut[];
   /** PILAREDI 3.1 por coluna, com `obra.parametrosPilar.predimensionamento`. */
@@ -1071,8 +1080,8 @@ function calcularPavimentoSistrut(
       fim: { x: s(a.fim.x), y: s(a.fim.y) },
       carga: s(knPorMParaTPorM(a.carga)),
     });
-  // γ das lajes (matL): os do .LAP (LAJE 7), que a obra pode editar; vigas e pilares
-  // seguem com `mat` (os γ de fábrica de PARAMETROS_LAJE)
+  // γ das lajes (matL): os do .LAP (LAJE 7), que a obra pode editar; as vigas usam
+  // `matViga` (os do .DSP) e os pilares os do PILAR.INI
   const matL: MateriaisSistrut = {
     ...mat,
     gamaF: par.laje.gamaF,
@@ -1879,6 +1888,7 @@ export function calcularObraSistrut(obra: Obra, opcoes: { modo: ModoSistrut }): 
     resumoVigas: resumoGeralVigas(quadros, par.dsp, modo),
     avisos,
     materiaisPilar: matPilar,
+    materiaisViga: matViga,
     verificacoes,
     predimensionamentos,
     fundacoes,

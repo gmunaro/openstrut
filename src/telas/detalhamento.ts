@@ -29,7 +29,14 @@ import {
   type ItemAco,
   type TabelaAco,
 } from "../calculo/detalhamento/tabelaAco";
-import type { ResultadoLaje, ResultadoObra, ResultadoPilar, ResultadoViga } from "../calculo/fluxo";
+import {
+  gamaFDe,
+  materiaisDe,
+  type ResultadoLaje,
+  type ResultadoObra,
+  type ResultadoPilar,
+  type ResultadoViga,
+} from "../calculo/fluxo";
 import { areaBarra } from "../calculo/barras";
 import { BORDO_OPOSTO, contatos, linhaDoBordo, TOL } from "../calculo/lajes/vinculacao";
 import type { VigaMontada } from "../calculo/montagem";
@@ -107,9 +114,9 @@ export function entradaDetalhamentoViga(
     larguraApoios: larguraApoios(r.viga, pav),
     tramos: r.analise.tramos,
     dimensionamento: r.tramos,
-    // o mesmo γf do dimensionamento (fluxo.ts dimensionarViga)
-    gamaF: Math.max(resultado.norma.gamaG, resultado.norma.gamaQ),
-    mat: resultado.materiais,
+    // o mesmo γf do dimensionamento (o do .DSP na NB-1/78; fluxo.ts dimensionarViga na 6118)
+    gamaF: gamaFDe(resultado, "vigas"),
+    mat: materiaisDe(resultado, "vigas"),
   };
 }
 
@@ -345,12 +352,12 @@ export function entradasDetalhamentoLajes(
       larguraApoios: larguraBordos(r.laje, pav),
       armadura,
       reacoes: r.esforcos.reacoes,
-      // o mesmo γf das vigas: máx(γg, γq)
-      gamaF: Math.max(resultado.norma.gamaG, resultado.norma.gamaQ),
+      // o mesmo γf do dimensionamento da laje (o do .LAP na NB-1/78)
+      gamaF: gamaFDe(resultado, "lajes"),
       vaoMenorVizinha: vaosMenores[i] ?? {},
       hVizinhaMin: hMinimos[i] ?? {},
       negativoNaVizinha,
-      mat: resultado.materiais,
+      mat: materiaisDe(resultado, "lajes"),
     };
   });
 }
@@ -493,7 +500,7 @@ export function detalharPilaresObra(resultado: ResultadoObra, obra: Obra): Detal
     }));
     const nome = g.niveis[0]?.pilar.nome ?? "";
     const detalhamento = detalharPilar(
-      { nome, cobrimento, lances: entradas, mat: resultado.materiais },
+      { nome, cobrimento, lances: entradas, mat: materiaisDe(resultado, "pilares") },
       regras,
     );
     const lances = g.niveis.map((p, i): LanceDetalhadoObra => {
