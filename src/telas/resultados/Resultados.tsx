@@ -178,7 +178,7 @@ function ResultadosCalculados({
         etapa. Filtre por elemento (V1, P3, ou V para todas as vigas), clique no título de uma
         coluna para ordenar e use <strong>Copiar</strong> para colar a tabela no Excel.
       </DicaUso>
-      <div className="bg-background/95 compacto:static sticky top-0 z-20 -mx-1 mb-2 flex flex-wrap items-center gap-2 px-1 py-1.5 backdrop-blur print:hidden">
+      <div className="bg-background/95 compacto:static sticky -top-3 z-20 -mx-1 -mt-3 mb-2 flex flex-wrap items-center gap-2 px-1 pt-4.5 pb-1.5 backdrop-blur print:hidden">
         <label className="relative flex min-w-56 flex-1 items-center sm:max-w-sm">
           <span className="sr-only">Filtrar elementos</span>
           <Search

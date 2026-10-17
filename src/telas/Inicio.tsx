@@ -162,6 +162,9 @@ export function Inicio() {
         vigas e pilares, os resultados com a memória de cálculo e o relatório. Para começar a sua,
         dê um nome em <strong>Nova obra</strong> e desenhe as lajes na aba Planta; as vigas e os
         pilares nascem dos bordos das lajes.
+        <Button size="sm" className="mt-2 flex" onClick={() => abrirExemplo("nbr6118-2023")}>
+          <Building2 /> Abrir a obra-exemplo
+        </Button>
       </DicaUso>
 
       <Erros erros={erros} aoFechar={limparErros} />

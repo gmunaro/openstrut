@@ -1,6 +1,6 @@
 // Primeiro uso na tela inicial: a obra-exemplo abre com um clique, já calculada, e a dica
 // de boas-vindas some ao ser fechada e não volta ao remontar a tela.
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { NOME_EXEMPLO } from "../dominio/exemplo";
 import { useObra } from "../estado/obra";
@@ -26,6 +26,14 @@ describe("primeiro uso", () => {
     await user.click(await screen.findByRole("button", { name: /Exemplo NB-1\/78/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
     expect(useObra.getState().obra?.norma).toBe("nb1-78");
+  });
+
+  it("o botão da dica de boas-vindas abre a obra-exemplo (no celular ela fica no topo)", async () => {
+    const { router, user } = renderizarApp("/");
+    const dica = await screen.findByRole("region", { name: "Primeira vez no OpenStrut?" });
+    await user.click(within(dica).getByRole("button", { name: /Abrir a obra-exemplo/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/obra"));
+    expect(useObra.getState().obra?.nome).toBe(NOME_EXEMPLO);
   });
 
   it("fecha a dica de boas-vindas para sempre", async () => {
