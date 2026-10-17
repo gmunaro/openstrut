@@ -38,6 +38,7 @@ import {
 } from "./instalar";
 import { AVISO_RECONSTRUCAO, NOME_APP } from "./marca";
 import { ImportarSistrut } from "./ImportarSistrut";
+import { ListaAvisosImportacao } from "./resultados/avisos";
 import { useConfirmacao } from "./useConfirmacao";
 
 const NORMAS: { id: NormaId; rotulo: string }[] = [
@@ -147,11 +148,9 @@ export function Inicio() {
             Obra {importada.obra.nome} importada da V1 com {avisos(importada.avisos.length)}:
           </p>
           {importada.avisos.length > 0 && (
-            <ul className="mt-1 list-disc pl-5 text-xs">
-              {importada.avisos.map((a, i) => (
-                <li key={i}>{a}</li>
-              ))}
-            </ul>
+            <div className="mt-2">
+              <ListaAvisosImportacao avisos={importada.avisos} />
+            </div>
           )}
           <div className="mt-3 flex gap-2">
             <Button size="sm" onClick={() => abrirImportada(importada.obra)}>

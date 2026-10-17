@@ -140,6 +140,7 @@ export function Resultados({ calculo }: { calculo: Calculo }) {
         avisos={semMarcasDuplicadas(coletarAvisos(r, detalhamento), r)}
         vazio={vazioComMarcas(r)}
         comOpcoes
+        modo={r.sistrut?.modo}
       />
       <BlocoMotorSistrut resultado={r} comOpcoes />
       <ErrosOriginalContexto.Provider value={porElemento}>

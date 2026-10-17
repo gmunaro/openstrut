@@ -162,7 +162,7 @@ function CartaoErro({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" |
         <Badge variant="outline" className="border-primary/60 text-primary font-mono">
           {erro.id}
         </Badge>
-        {erro.titulo}
+        <span className="compacto:basis-full min-w-0">{erro.titulo}</span>
         <Badge variant="outline" className={sentido.classe}>
           {sentido.rotulo}
         </Badge>
@@ -185,7 +185,8 @@ function CartaoErro({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" |
         </Parte>
       </dl>
       <p className="text-muted-foreground mt-2 text-xs">
-        Referência no original: {erro.referencia.replace(/@[0-9a-f]+/g, "")}. Defeito {erro.id} de docs/MODO-CALCULO.md.
+        Referência no original: {erro.referencia.replace(/@[0-9a-f]+/g, "")}. Defeito {erro.id} de
+        docs/MODO-CALCULO.md.
       </p>
     </article>
   );

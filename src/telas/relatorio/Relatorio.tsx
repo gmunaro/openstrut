@@ -236,6 +236,8 @@ export function Relatorio({ obra, calculo }: { obra: Obra; calculo: Calculo }) {
                               ? AVISOS_OBRA_VAZIA
                               : vazioComMarcas(calculo.resultado)
                           }
+                          modo={calculo.resultado.sistrut?.modo}
+                          expandido
                         />
                         {!obraSemElementos(obra) && (
                           <BlocoMotorSistrut resultado={calculo.resultado} />
