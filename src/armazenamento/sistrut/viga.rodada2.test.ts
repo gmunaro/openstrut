@@ -537,3 +537,57 @@ describe('"Continuo com o processamento desta Viga" (DESDIM.BAS:3062-3080)', () 
     expect(roda(o, "original").v.interrompida?.impressa).toBe(false);
   });
 });
+
+describe("peso próprio das vigas tirado do .VIG (o .LAJ não grava o peso do LAJEMONT)", () => {
+  // o E2E do caso_a_laje foi montado com V1-V3 12 × 40 e V4-V6 12 × 50: 0,12 e 0,15 t/m
+  // (bw·h·2,5 t/m³). A obra do .LAJ com vigas 20 × 50 monta com 0,25 t/m; completada
+  // pelo E2E.VIG, cada viga recebe o peso do .VIG e nenhuma vira "cargas diferentes".
+  const imp = importarLaj(readFileSync(arquivoOraculo(`${CASO_A}/E2E.LAJ`), "latin1"), {
+    secaoVigas: { bw: 20, h: 50 },
+  });
+  if (!imp.ok) throw new Error(imp.erros.join("\n"));
+  const vigF = new Uint8Array(readFileSync(arquivoOraculo(`${CASO_A}/E2E.VIG`)));
+  const r = importa([{ nome: "E2E.VIG", dados: vigF }], imp.obra);
+  const vigas = r.obra.pavimentos[0]!.vigas;
+
+  it("V1-V3 com 120 kg/m e V4-V6 com 150 kg/m, sem aviso de cargas diferentes", () => {
+    const kg = (nome: string) =>
+      Math.round((vigas.find((v) => v.nome === nome)!.pesoProprio! / KN_POR_TF) * 1000);
+    expect(["V1", "V2", "V3", "V4", "V5", "V6"].map(kg)).toEqual([120, 120, 120, 150, 150, 150]);
+    expect(vigas.some((v) => v.somenteCargasProprias)).toBe(false);
+    expect(r.avisos.filter((a) => /diferentes das da montagem/.test(a))).toEqual([]);
+    expect(r.avisos).toContain(
+      "Peso próprio de 120 kg/m nas vigas V1, V2, V3, tirado das cargas do .VIG: o .LAJ não grava o peso que o usuário digita no LAJEMONT.",
+    );
+  });
+
+  it("com o peso do .VIG, a montagem grava de novo o .VIG do LAJEMONT bit a bit", () => {
+    const regs = lerVig(vigF);
+    const montagem = calcularObraSistrut(r.obra, { modo: "original" }).pavimentos[0]!.montagem
+      .vigas;
+    const ps = (d: ReturnType<typeof dadosDoRegistro>) =>
+      [d.balancoEsquerdo, ...d.tramos, d.balancoDireito].flatMap((t) =>
+        t ? t.divisoes.map((x) => [x.p, x.pAcidental, x.d]) : [],
+      );
+    for (const reg of regs)
+      expect(ps(montagem.find((x) => x.nome === reg.nome)!), reg.nome).toEqual(
+        ps(
+          dadosDoRegistro(
+            reg,
+            regs.map((x) => x.nome),
+          ),
+        ),
+      );
+  });
+
+  it("a mesma seção da montagem do original: nenhum peso gravado", () => {
+    const igual = importarLaj(readFileSync(arquivoOraculo(`${CASO_A}/E2E.LAJ`), "latin1"), {
+      secaoVigas: { bw: 12, h: 40 },
+      vigas: { V4: { h: 50 }, V5: { h: 50 }, V6: { h: 50 } },
+    });
+    if (!igual.ok) throw new Error(igual.erros.join("\n"));
+    const s = importa([{ nome: "E2E.VIG", dados: vigF }], igual.obra);
+    expect(s.obra.pavimentos[0]!.vigas.map((v) => v.pesoProprio)).toEqual(Array(6).fill(undefined));
+    expect(s.avisos.filter((a) => /Peso próprio/.test(a))).toEqual([]);
+  });
+});

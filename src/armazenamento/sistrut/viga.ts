@@ -1030,6 +1030,35 @@ function completar(
   // (E2E V3/V6, VBX V2): isso não é edição do usuário
   const igual = (a: number, b: number) =>
     Math.abs(a - b) <= 1e-5 * Math.max(Math.abs(a), Math.abs(b));
+  // peso próprio: o .LAJ não grava o peso que o usuário digita no LAJEMONT, e a planta
+  // monta com o da obra (o da seção ou o padrão). Ele está em toda divisão do .VIG
+  // (LAJEMONT.BAS:5124), e cada divisão que casa com a montagem dá um candidato. O
+  // predominante é o mais frequente do .VIG; uma viga fica com outro (a exceção do
+  // LAJEMONT) só quando todas as divisões dela, duas ou mais, dão esse outro. Uma viga de
+  // uma divisão só que difere do predominante é edição no VIGA, não peso.
+  const candidatos = new Map(
+    registros.map((reg) => {
+      const m = montagem.find((v) => v.nome === reg.nome);
+      const pp = m?.alvenariasSobreViga?.[0]?.peso;
+      if (!m || pp === undefined) return [reg.nome, []];
+      return [
+        reg.nome,
+        candidatosDePeso(
+          trechosDoRegistro(dadosDoRegistro(reg, nomes)),
+          trechosDoRegistro(m),
+          pp,
+          igual,
+        ),
+      ];
+    }),
+  );
+  const predominante = maisFrequente([...candidatos.values()].flat());
+  const kgDa = (nome: string) => {
+    const c = candidatos.get(nome) ?? [];
+    return c.length >= 2 && c.every((x) => x === c[0]) ? c[0] : predominante;
+  };
+  /** Peso próprio tirado do .VIG, kg/m: as vigas que o recebem (para o aviso). */
+  const pesosDoVig = new Map<number, string[]>();
   registros.forEach((reg, iv) => {
     const viga = pav.vigas.find((v) => v.nome === reg.nome);
     const m = montagem.find((v) => v.nome === reg.nome);
@@ -1051,6 +1080,14 @@ function completar(
     // D das divisões em que a planta já traz a reação de uma viga apoiada (indexada)
     const indexadas = (i: number) => tm[i]!.t.divisoes.flatMap((dv) => (dv.indexada ? [dv.d] : []));
     const indexadaEm = (i: number, d: number) => indexadas(i).some((x) => igual(x, d));
+    const ppMontagem = m.alvenariasSobreViga?.[0]?.peso;
+    const kg = kgDa(reg.nome);
+    let dp = 0;
+    if (kg !== undefined && ppMontagem !== undefined && kg !== Math.round(ppMontagem * 1000)) {
+      dp = kg / 1000 - ppMontagem;
+      viga.pesoProprio = tPorMParaKnPorM(kg / 1000);
+      pesosDoVig.set(kg, [...(pesosDoVig.get(kg) ?? []), reg.nome]);
+    }
     const mesmasCargas = td.every(({ t }, i) => {
       const a = t.divisoes;
       const b = tm[i]!.t.divisoes;
@@ -1059,7 +1096,7 @@ function completar(
         a.every(
           (x, k) =>
             igual(x.d, b[k]!.d) &&
-            igual(x.p, b[k]!.p) &&
+            igual(x.p, b[k]!.p + dp) &&
             igual(x.pAcidental, b[k]!.pAcidental) &&
             (indexadaEm(i, x.d) || (igual(x.f, b[k]!.f) && igual(x.fAcidental, b[k]!.fAcidental))),
         )
@@ -1091,5 +1128,40 @@ function completar(
     if (entrada.secoes) viga.secoes = entrada.secoes;
     if (entrada.forma) viga.forma = entrada.forma;
   });
+  for (const [kg, vigas] of pesosDoVig) {
+    const lista = [...vigas].sort((a, b) => nomes.indexOf(a) - nomes.indexOf(b));
+    avisos.push(
+      `Peso próprio de ${kg} kg/m ${lista.length === registros.length ? "em todas as vigas" : `nas vigas ${lista.join(", ")}`}, tirado das cargas do .VIG: o .LAJ não grava o peso que o usuário digita no LAJEMONT.`,
+    );
+  }
   return nova;
+}
+
+/** O valor mais frequente da lista (o primeiro, no empate). */
+function maisFrequente(xs: readonly number[]) {
+  const n = new Map<number, number>();
+  for (const x of xs) n.set(x, (n.get(x) ?? 0) + 1);
+  let melhor: number | undefined;
+  for (const [x, k] of n) if (melhor === undefined || k > n.get(melhor)!) melhor = x;
+  return melhor;
+}
+
+/** Candidatos a peso próprio da viga, kg/m inteiro como o LAJEMONT o guarda (CINT,
+ *  LAJEMONT.BAS:5124): P do .VIG − P da montagem + `ppMontagem`, um por divisão do .VIG
+ *  que casa com a da montagem (mesmo trecho, mesmo número de divisões, mesmo D). */
+function candidatosDePeso(
+  td: ReturnType<typeof trechosDoRegistro>,
+  tm: ReturnType<typeof trechosDoRegistro>,
+  ppMontagem: number,
+  igual: (a: number, b: number) => boolean,
+): number[] {
+  if (td.length !== tm.length) return [];
+  return td.flatMap(({ t }, i) => {
+    const b = tm[i]!.t.divisoes;
+    if (t.divisoes.length !== b.length) return [];
+    return t.divisoes.flatMap((x, k) => {
+      const c = Math.round((x.p - b[k]!.p + ppMontagem) * 1000);
+      return igual(x.d, b[k]!.d) && c > 0 ? [c] : [];
+    });
+  });
 }
