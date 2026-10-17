@@ -1,10 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
-import { serializarObra } from "../src/armazenamento/arquivo";
-import { lajeNova, obraNova, pavimentoNovo } from "../src/dominio/criar";
-import { gerarEstrutura } from "../src/dominio/gerar";
-import type { Obra } from "../src/dominio/obra";
+import { abrirGrade } from "./obras";
 
 // Botão "Relatar problema" no navegador de verdade, no celular (360 × 800, densidade 3)
 // e no desktop (1920 × 1080): abre a obra, abre o diálogo de materiais, clica no botão
@@ -19,40 +16,6 @@ const ALT_PRINT = "Print da tela no momento do clique";
 test.beforeAll(() => {
   fs.mkdirSync(PASTA, { recursive: true });
 });
-
-/** Grade 2x2 de lajes 4 x 5 m, com vigas e pilares gerados. */
-function obraGrade(): Obra {
-  const pavimento = [
-    { x: 0, y: 0 },
-    { x: 4, y: 0 },
-    { x: 0, y: 5 },
-    { x: 4, y: 5 },
-  ].reduce(
-    (pav, p) => ({ ...pav, lajes: [...pav.lajes, lajeNova(pav, { ...p, lx: 4, ly: 5 })] }),
-    pavimentoNovo("Tipo"),
-  );
-  return { ...obraNova("Grade 2x2", "nb1-78"), pavimentos: [gerarEstrutura(pavimento)] };
-}
-
-async function abrirGrade(page: Page) {
-  // os seletores nativos do Chrome abrem janela do sistema, fora do alcance do Playwright
-  await page.addInitScript(() => {
-    const w = window as Window & { showOpenFilePicker?: unknown; showSaveFilePicker?: unknown };
-    delete w.showOpenFilePicker;
-    delete w.showSaveFilePicker;
-  });
-  await page.goto("/");
-  const [escolha] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.getByRole("button", { name: /Abrir arquivo \.openstrut\.json/ }).click(),
-  ]);
-  await escolha.setFiles({
-    name: "Grade 2x2.openstrut.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(serializarObra(obraGrade())),
-  });
-  await expect(page.getByRole("heading", { name: "Grade 2x2" })).toBeVisible();
-}
 
 type Regiao = { x: number; y: number; w: number; h: number };
 
@@ -149,9 +112,11 @@ for (const t of TAMANHOS) {
       await abrirGrade(page);
       const botao = page.getByRole("button", { name: "Relatar problema" });
       await expect(botao).toBeVisible();
+      // alvo de toque de 44 px no celular; 32 px no desktop, no canto do rodapé
+      const minimo = t.nome === "celular" ? 44 : 32;
       const caixaBotao = await botao.boundingBox();
-      expect(caixaBotao?.width).toBeGreaterThanOrEqual(44);
-      expect(caixaBotao?.height).toBeGreaterThanOrEqual(44);
+      expect(caixaBotao?.width).toBeGreaterThanOrEqual(minimo);
+      expect(caixaBotao?.height).toBeGreaterThanOrEqual(minimo);
       await page.screenshot({ path: path.join(PASTA, `${t.nome}-01-obra.png`) });
 
       const semDialogo = await page.screenshot();

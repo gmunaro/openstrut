@@ -1,8 +1,8 @@
-// Onde o botão flutuante fica sem cobrir controle: no canto inferior direito ou, se ali
-// houver algo clicável (a barra Aplicar/Cancelar de um diálogo ou folha em tela cheia no
-// celular, por exemplo), subindo pela borda direita até o primeiro lugar livre.
+// Onde o botão flutuante fica sem cobrir controle: no canto do rodapé ou, se ali houver
+// algo (a barra Aplicar/Cancelar de um diálogo ou folha em tela cheia no celular, por
+// exemplo), subindo pela borda direita até o primeiro lugar livre.
 
-/** O que conta como controle: o que o usuário clica ou digita. */
+/** O que o botão não pode cobrir: o que o usuário clica ou digita e as células de tabela. */
 export const SELETOR_CONTROLE = [
   "button",
   "a[href]",
@@ -12,6 +12,8 @@ export const SELETOR_CONTROLE = [
   "summary",
   "label",
   '[contenteditable="true"]',
+  "td",
+  "th",
   ...[
     "button",
     "tab",

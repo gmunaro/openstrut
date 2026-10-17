@@ -126,10 +126,8 @@ export function TelaOrcamento({
     o.mudarConfig((g) => ({ ...g, ...parcial }));
 
   return (
-    // coluna minmax(0, 1fr): as tabelas rolam por dentro e nada passa da largura da tela;
-    // pb-28: o fim da aba sobe acima do botão flutuante de relatar problema; no celular,
-    // pr-14 deixa livre a faixa da direita onde o botão fica (nada passa por baixo dele)
-    <div className="compacto:pr-14 grid max-w-[110rem] grid-cols-[minmax(0,1fr)] gap-1 pb-28">
+    // coluna minmax(0, 1fr): as tabelas rolam por dentro e nada passa da largura da tela
+    <div className="grid max-w-[110rem] grid-cols-[minmax(0,1fr)] gap-1">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-semibold">Orçamento da estrutura</h2>
         <span className="flex-1" />

@@ -113,8 +113,17 @@
     height: 100dvh;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   }
+  /* O rodapé do aviso também guarda, na ponta direita, o botão de relatar problema
+     (components/relato/BotaoRelatar.tsx, fixo por cima desse canto): fica fora da área
+     que rola e não cobre tabela nem campo de nenhuma tela. A faixa lateral dos dois
+     lados mantém o aviso centrado; a altura mínima é a do botão (2rem) com folga. */
   #root > div:first-child > footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 3rem;
     padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+    min-height: calc(2.25rem + max(0.25rem, env(safe-area-inset-bottom)));
   }
 }
 /* celular: o aviso de conferência continua à vista, em letra menor */
@@ -123,6 +132,9 @@
     padding-top: 0.125rem;
     font-size: 11px;
     line-height: 1.25;
+    /* botão de 2,75rem (alvo de toque) */
+    padding-inline: 3.5rem;
+    min-height: calc(3rem + max(0.25rem, env(safe-area-inset-bottom)));
   }
 }
 

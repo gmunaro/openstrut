@@ -1,6 +1,9 @@
-// Botão flutuante "Relatar problema", montado uma vez na raiz do app (routes/__root.tsx).
+// Botão "Relatar problema", montado uma vez na raiz do app (routes/__root.tsx).
 // No clique (ou Alt+Shift+R) tira o print da tela como está, com diálogo ou menu aberto,
 // e só depois abre o diálogo do relato. Fica por cima de tudo, fora da impressão.
+// Fixo na ponta direita do rodapé do aviso de conferência, que reserva a faixa dele
+// (index.css): assim não cobre tabela nem campo, em tela nenhuma. 32 px no desktop e
+// 44 px (alvo de toque) no celular.
 //
 // Por que funciona com um diálogo Radix aberto: o Radix põe aria-hidden nos irmãos, mas
 // poupa os elementos com aria-live (o contêiner do botão); deixa o body sem eventos de
@@ -183,7 +186,7 @@ export function BotaoRelatar() {
           aria-live="polite"
           style={deslocamento ? { transform: `translateY(-${deslocamento}px)` } : undefined}
           data-relato-ignorar=""
-          className="pointer-events-auto fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(2rem,calc(env(safe-area-inset-bottom)+1.5rem))] z-[100] transition-transform print:hidden"
+          className="pointer-events-auto fixed right-[calc(env(safe-area-inset-right)+0.5rem)] bottom-[max(0.25rem,env(safe-area-inset-bottom))] z-[100] transition-transform print:hidden"
         >
           <button
             type="button"
@@ -194,12 +197,12 @@ export function BotaoRelatar() {
             onPointerDown={segurar}
             onMouseDown={segurar}
             onClick={() => void iniciar()}
-            className="flex size-11 items-center justify-center rounded-full border bg-secondary/90 text-secondary-foreground shadow-md backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-70"
+            className="compacto:size-11 flex size-8 items-center justify-center rounded-full border bg-secondary/90 text-secondary-foreground shadow-md backdrop-blur transition-colors outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-70"
           >
             {capturando ? (
-              <LoaderCircle className="size-5 animate-spin" />
+              <LoaderCircle className="compacto:size-5 size-4 animate-spin" />
             ) : (
-              <Bug className="size-5" />
+              <Bug className="compacto:size-5 size-4" />
             )}
           </button>
           <span className="sr-only">{capturando ? "Capturando a tela…" : ""}</span>
