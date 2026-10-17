@@ -5,6 +5,7 @@
 import type { ComponentType } from "react";
 import type {
   Box3,
+  Light,
   Material,
   Object3D,
   OrthographicCamera,
@@ -141,6 +142,18 @@ export interface ContextoVista {
   /** Os `id` das fontes registradas pelas camadas (filtros, cores, transparências,
    *  materiais, planos de corte e legendas). */
   fontesAtivas(): FontesAtivas;
+  /** As luzes da vista (céu, ambiente e sol; valores em `LUZES`). A camada pode mudar a
+   *  intensidade ou a visibilidade delas e deve devolver como achou na limpeza. */
+  readonly luzes: readonly Light[];
+  /** Os planos de corte de todas as fontes, juntos (o pórtico, a camada de corte e os de
+   *  outras camadas), como o renderer usa. */
+  planosCorte(): Plane[];
+  /** Desenho da camada no lugar do `renderer.render(cena, camera)` do núcleo (ex.: sessão
+   *  WebXR com `renderer.setAnimationLoop`). O núcleo continua com LOD, rótulos e planos
+   *  de corte; só não desenha. `null` devolve o desenho ao núcleo. */
+  assumirDesenho(f: (() => void) | null): void;
+  /** O modelo visível em glTF binário (.glb), como o botão "glTF (.glb)" da vista. */
+  exportarGlb(): Promise<ArrayBuffer>;
   /** Legenda desta fonte (`id`) na legenda da vista; `null` remove. Avisa "legenda". */
   definirLegenda(id: string, legenda: LegendaCamada | null): void;
   /** Chave do elemento selecionado. */

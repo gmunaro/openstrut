@@ -13,6 +13,7 @@ import {
   Float32BufferAttribute,
   Group,
   HemisphereLight,
+  type Light,
   LineBasicMaterial,
   LineSegments,
   type Material,
@@ -222,11 +223,13 @@ export class Cena3D implements ContextoVista {
     this.materiais = this.criarMateriais(materiaisPadrao);
     this.cena.background = new Color(opcoes.fundoEscuro ? FUNDO.escuro : FUNDO.claro);
     const { ceu, ambiente, sol: luzSol } = LUZES;
-    this.cena.add(new HemisphereLight(ceu.cor, ceu.chao, ceu.intensidade));
-    this.cena.add(new AmbientLight(ambiente.cor, ambiente.intensidade));
+    const luzCeu = new HemisphereLight(ceu.cor, ceu.chao, ceu.intensidade);
+    const luzAmbiente = new AmbientLight(ambiente.cor, ambiente.intensidade);
+    this.cena.add(luzCeu, luzAmbiente);
     const sol = new DirectionalLight(luzSol.cor, luzSol.intensidade);
     sol.position.set(...luzSol.direcao);
     this.cena.add(sol);
+    this.luzes = [luzCeu, luzAmbiente, sol];
     this.cena.add(this.raiz);
     this.cena.add(this.destaque);
 
@@ -267,8 +270,26 @@ export class Cena3D implements ContextoVista {
     this.sujo = false;
     this.lodArestas();
     this.ajustarPlacas();
-    this.renderer.clippingPlanes = [...this.planos.values()].flat();
-    this.renderer.render(this.cena, this.camera);
+    this.renderer.clippingPlanes = this.planosCorte();
+    if (this.desenhoAssumido) this.desenhoAssumido();
+    else this.renderer.render(this.cena, this.camera);
+  }
+
+  /** Desenho de uma camada no lugar do `renderer.render` do núcleo (sessão WebXR). */
+  private desenhoAssumido: (() => void) | null = null;
+
+  assumirDesenho(f: (() => void) | null) {
+    this.desenhoAssumido = f;
+    this.sujo = true;
+  }
+
+  /** Os planos de corte de todas as fontes, juntos (o que o renderer usa). */
+  planosCorte(): Plane[] {
+    return [...this.planos.values()].flat();
+  }
+
+  exportarGlb() {
+    return this.glb();
   }
 
   pedirRender = () => {
@@ -372,6 +393,9 @@ export class Cena3D implements ContextoVista {
     else this.transparencias.delete(id);
     this.reconstruir();
   }
+
+  /** As luzes da vista: céu, ambiente e sol (LUZES em materiais.ts). */
+  luzes: Light[] = [];
 
   private legendas = new Map<string, LegendaCamada>();
 

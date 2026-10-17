@@ -26,7 +26,9 @@
 //   `materiaisPadrao`. Para só ver através das peças, prefira `definirTransparencia`.
 // - cor atual de uma peça: `ctx.corDe(chave)`; fontes registradas: `ctx.fontesAtivas()`.
 // - legenda da camada: `ctx.definirLegenda(id, { titulo, itens, substitui? } | null)`.
-// - redesenhar: `ctx.pedirRender()`.
+// - redesenhar: `ctx.pedirRender()`; desenhar no lugar do núcleo (WebXR):
+//   `ctx.assumirDesenho(f | null)`; planos de corte juntos: `ctx.planosCorte()`.
+// - luzes da vista: `ctx.luzes`; exportar .glb: `ctx.exportarGlb()`.
 export type {
   ArmaduraNaCena,
   Camada,

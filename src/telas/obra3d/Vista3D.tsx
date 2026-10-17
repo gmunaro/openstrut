@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DetalhamentoContexto } from "../detalhamento";
 import { useSessao } from "../sessao";
+import { useCompacto } from "../tela";
 import type { PropsVista3D } from "./AbaVista3D";
 import { CAMADAS, type Camada, type ContextoVista, type LegendaCamada } from "./camadas";
 import { Cena3D, ESTADO_INICIAL, type EstadoVisual, type ModoCor, TIPOS, type Vista } from "./cena";
@@ -89,6 +90,7 @@ export default function Vista3D({
   aoVerNosResultados,
 }: PropsVista3D) {
   const unidades = useSessao((s) => s.unidades);
+  const compacto = useCompacto();
   const detalhamento = useContext(DetalhamentoContexto);
   const modelo = useMemo(() => montarModelo(obra), [obra]);
   const dados = useMemo(
@@ -270,6 +272,110 @@ export default function Vista3D({
       </div>
     );
 
+  // cartão do elemento: sobre o desenho no desktop; no celular, logo abaixo dele, para não
+  // cobrir a vista
+  const cartao = sel && (
+    <section
+      aria-label={`Elemento selecionado: ${sel.nome}`}
+      className={
+        compacto
+          ? "bg-background w-full border-b p-3 text-xs"
+          : "bg-background/95 absolute right-2 bottom-2 max-h-[45%] w-[min(24rem,calc(100%-1rem))] overflow-auto rounded-md border p-3 text-xs shadow-md"
+      }
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h2 className="text-sm font-semibold">
+          {NOME_TIPO[sel.tipo]} {sel.nome}
+        </h2>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          aria-label="Fechar seleção"
+          onClick={() => cena?.selecionar(null)}
+        >
+          <X />
+        </Button>
+      </div>
+      <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+        <dt className="text-muted-foreground">Nível</dt>
+        <dd>{modelo.niveis[sel.nivel]?.nome ?? "—"}</dd>
+        <dt className="text-muted-foreground">Seção</dt>
+        <dd>{sel.secao}</dd>
+        <dt className="text-muted-foreground">Situação</dt>
+        <dd>
+          <EstadoTexto estado={dadosSel?.estado ?? "sem"} />
+        </dd>
+        {dadosSel?.principal && (
+          <>
+            <dt className="text-muted-foreground">Resultado</dt>
+            <dd className="tabular-nums">{dadosSel.principal}</dd>
+          </>
+        )}
+      </dl>
+      {sel.notas.length > 0 && (
+        <ul className="text-muted-foreground mt-1 list-disc pl-4">
+          {sel.notas.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {original && (dadosSel?.defeitos.length ?? 0) > 0 && (
+        <div className="mt-2 rounded border p-1.5" style={{ borderColor: COR_DEFEITO }}>
+          <p className="font-semibold" style={{ color: COR_DEFEITO }}>
+            ! Afetado por defeito do SISTRUT original
+          </p>
+          <ul className="list-disc pl-4">
+            {dadosSel?.defeitos.map((d) => (
+              <li key={d}>{d}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {(dadosSel?.mensagens.length ?? 0) > 0 && dadosSel?.estado !== "sem" && (
+        <details className="mt-1">
+          <summary className="cursor-pointer">Avisos ({dadosSel?.mensagens.length})</summary>
+          <ul className="list-disc pl-4">
+            {dadosSel?.mensagens.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <div className="mt-2 flex flex-wrap gap-1">
+        {(sel.tipo === "pilar" || sel.tipo === "fundacao") && (
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
+          >
+            Coluna inteira
+          </Button>
+        )}
+        {sel.tipo !== "pilar" && sel.tipo !== "fundacao" && (
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
+          >
+            Isolar com vizinhos
+          </Button>
+        )}
+        {verDe(sel) && (
+          <>
+            <Button size="xs" variant="outline" onClick={() => aoVerNaPlanta(verDe(sel)!)}>
+              Ver na planta
+            </Button>
+            {calculado && (
+              <Button size="xs" variant="outline" onClick={() => aoVerNosResultados(verDe(sel)!)}>
+                Ver nos resultados
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+
   const barra = "flex flex-wrap items-center gap-1";
   return (
     <div
@@ -377,113 +483,14 @@ export default function Vista3D({
           camadas={legendas}
         />
 
-        {sel && (
-          <section
-            aria-label={`Elemento selecionado: ${sel.nome}`}
-            className="bg-background/95 compacto:max-h-[40%] absolute right-2 bottom-2 max-h-[45%] w-[min(24rem,calc(100%-1rem))] overflow-auto rounded-md border p-3 text-xs shadow-md"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="text-sm font-semibold">
-                {NOME_TIPO[sel.tipo]} {sel.nome}
-              </h2>
-              <Button
-                size="icon-xs"
-                variant="ghost"
-                aria-label="Fechar seleção"
-                onClick={() => cena?.selecionar(null)}
-              >
-                <X />
-              </Button>
-            </div>
-            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
-              <dt className="text-muted-foreground">Nível</dt>
-              <dd>{modelo.niveis[sel.nivel]?.nome ?? "—"}</dd>
-              <dt className="text-muted-foreground">Seção</dt>
-              <dd>{sel.secao}</dd>
-              <dt className="text-muted-foreground">Situação</dt>
-              <dd>
-                <EstadoTexto estado={dadosSel?.estado ?? "sem"} />
-              </dd>
-              {dadosSel?.principal && (
-                <>
-                  <dt className="text-muted-foreground">Resultado</dt>
-                  <dd className="tabular-nums">{dadosSel.principal}</dd>
-                </>
-              )}
-            </dl>
-            {sel.notas.length > 0 && (
-              <ul className="text-muted-foreground mt-1 list-disc pl-4">
-                {sel.notas.map((n) => (
-                  <li key={n}>{n}</li>
-                ))}
-              </ul>
-            )}
-            {original && (dadosSel?.defeitos.length ?? 0) > 0 && (
-              <div className="mt-2 rounded border p-1.5" style={{ borderColor: COR_DEFEITO }}>
-                <p className="font-semibold" style={{ color: COR_DEFEITO }}>
-                  ! Afetado por defeito do SISTRUT original
-                </p>
-                <ul className="list-disc pl-4">
-                  {dadosSel?.defeitos.map((d) => (
-                    <li key={d}>{d}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {(dadosSel?.mensagens.length ?? 0) > 0 && dadosSel?.estado !== "sem" && (
-              <details className="mt-1">
-                <summary className="cursor-pointer">Avisos ({dadosSel?.mensagens.length})</summary>
-                <ul className="list-disc pl-4">
-                  {dadosSel?.mensagens.map((m) => (
-                    <li key={m}>{m}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
-            <div className="mt-2 flex flex-wrap gap-1">
-              {(sel.tipo === "pilar" || sel.tipo === "fundacao") && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
-                >
-                  Coluna inteira
-                </Button>
-              )}
-              {sel.tipo !== "pilar" && sel.tipo !== "fundacao" && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
-                >
-                  Isolar com vizinhos
-                </Button>
-              )}
-              {verDe(sel) && (
-                <>
-                  <Button size="xs" variant="outline" onClick={() => aoVerNaPlanta(verDe(sel)!)}>
-                    Ver na planta
-                  </Button>
-                  {calculado && (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onClick={() => aoVerNosResultados(verDe(sel)!)}
-                    >
-                      Ver nos resultados
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
-          </section>
-        )}
+        {!compacto && cartao}
         <p role="status" aria-live="polite" className="sr-only">
           {sel
             ? `Selecionado: ${NOME_TIPO[sel.tipo]} ${sel.nome}, ${modelo.niveis[sel.nivel]?.nome ?? ""}`
             : ""}
         </p>
       </div>
+      {compacto && cartao}
 
       {painel && (
         <aside

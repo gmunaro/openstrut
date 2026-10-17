@@ -197,7 +197,9 @@ O cabeçalho de `api.ts` traz a referência rápida:
 //   `materiaisPadrao`. Para só ver através das peças, prefira `definirTransparencia`.
 // - cor atual de uma peça: `ctx.corDe(chave)`; fontes registradas: `ctx.fontesAtivas()`.
 // - legenda da camada: `ctx.definirLegenda(id, { titulo, itens, substitui? } | null)`.
-// - redesenhar: `ctx.pedirRender()`.
+// - redesenhar: `ctx.pedirRender()`; desenhar no lugar do núcleo (WebXR):
+//   `ctx.assumirDesenho(f | null)`; planos de corte juntos: `ctx.planosCorte()`.
+// - luzes da vista: `ctx.luzes`; exportar .glb: `ctx.exportarGlb()`.
 ```
 
 Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
@@ -261,6 +263,18 @@ export interface ContextoVista {
   /** Os `id` das fontes registradas pelas camadas (filtros, cores, transparências,
    *  materiais, planos de corte e legendas). */
   fontesAtivas(): FontesAtivas;
+  /** As luzes da vista (céu, ambiente e sol; valores em `LUZES`). A camada pode mudar a
+   *  intensidade ou a visibilidade delas e deve devolver como achou na limpeza. */
+  readonly luzes: readonly Light[];
+  /** Os planos de corte de todas as fontes, juntos (o pórtico, a camada de corte e os de
+   *  outras camadas), como o renderer usa. */
+  planosCorte(): Plane[];
+  /** Desenho da camada no lugar do `renderer.render(cena, camera)` do núcleo (ex.: sessão
+   *  WebXR com `renderer.setAnimationLoop`). O núcleo continua com LOD, rótulos e planos
+   *  de corte; só não desenha. `null` devolve o desenho ao núcleo. */
+  assumirDesenho(f: (() => void) | null): void;
+  /** O modelo visível em glTF binário (.glb), como o botão "glTF (.glb)" da vista. */
+  exportarGlb(): Promise<ArrayBuffer>;
   /** Legenda desta fonte (`id`) na legenda da vista; `null` remove. Avisa "legenda". */
   definirLegenda(id: string, legenda: LegendaCamada | null): void;
   /** Chave do elemento selecionado. */
@@ -840,7 +854,11 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `pedirRender()` | redesenhar no próximo quadro, depois de mexer em objetos fora de um `aoQuadro` |
 | `moverCamera(posicao, alvo, animar?)` | leva a câmera em 0,45 s (sem animação com `prefers-reduced-motion` ou `animar` false). Uma chamada nova cancela a anterior, cuja Promise resolve `"cancelada"`; a que termina resolve `"concluida"` |
 | `travarControles(sim)` | trava só a órbita, o zoom e o pan do mouse e do toque. Os botões de vista do usuário e `moverCamera` continuam valendo |
-| `definirMateriais(fabrica)` | troca os materiais dos papéis `"solido"`, `"fantasma"`, `"arestas"` e `"destaque"` (PBR). `null` volta aos padrão. Refaz a geometria |
+| `definirMateriais(id, fabrica)` | materiais desta fonte para os papéis `"solido"`, `"fantasma"`, `"arestas"` e `"destaque"` (PBR). As fábricas formam uma pilha: vale a última; `null` tira a desta fonte e volta a anterior. Refaz a geometria |
+| `definirTransparencia(id, f)` | peças transparentes desta fonte (papel `"fantasma"`), sem trocar materiais: é o jeito de "ver através" que convive com o render PBR. Refaz a geometria |
+| `definirLegenda(id, legenda)` | a legenda da camada na legenda da vista (`{ titulo, itens: [{ cor, rotulo }], substitui? }`); com `substitui`, esconde a legenda de situação ou grandeza |
+| `corDe(chave)`, `fontesAtivas()` | a cor com que a peça está desenhada e os `id` das fontes registradas por tipo (para testes) |
+| `assumirDesenho(f)`, `planosCorte()`, `luzes`, `exportarGlb()` | desenhar no lugar do núcleo (WebXR), os planos de corte juntos, as luzes da vista e o .glb do modelo visível |
 | `definirPlanosCorte(id, planos)` | planos de corte desta fonte (`Plane` do three, na cena). A vista junta os de todas as fontes e mantém o lado positivo de todos (`plano.distanceToPoint(p) >= 0`). Lista vazia remove |
 | `definirCores(id, f)` | cor por peça desta fonte (`f` devolve uma cor CSS ou `null` para deixar a da vista); a última fonte com cor vale. Refaz a geometria: use para mapas que mudam pouco (comparação, etapas do 4D), não a cada quadro. A legenda da vista não mostra essas cores |
 | `definirFiltro(id, f)` | esconde as peças para as quais `f` devolve `false`; `null` remove o filtro desta fonte. Vários filtros valem juntos: a peça aparece só se todos devolvem `true` |
@@ -859,7 +877,7 @@ Para saber se uma peça aparece depois de qualquer mudança, ouça `"visibilidad
 
 **Filtro.** `definirFiltro` não refaz a geometria e não emite `"cena"`; emite `"visibilidade"`. Ele só zera os vértices das peças escondidas, o que custa cerca de 1 ms na obra de 20 pavimentos. Dá para chamar a cada quadro de uma animação. Peça filtrada não aparece, não é selecionável e perde a seleção. O filtro continua valendo depois que a obra é editada e o modelo muda. Por isso ele deve tolerar níveis e chaves que deixaram de existir (compare o índice com `ctx.modelo.niveis.length`).
 
-**Materiais.** `definirMateriais(fabrica)` recebe uma função `(papel) => Material` (`FabricaMateriais`). A vista chama a fábrica uma vez para cada papel e usa a mesma instância em todas as malhas daquele papel, em todos os níveis, até a próxima troca. Por isso mudar uma propriedade da instância ao vivo (`material.roughness = 0.4`, depois `ctx.pedirRender()`) vale na hora, sem chamar a fábrica de novo; guarde as instâncias que a fábrica criou. Quem faz o `dispose` é a vista: ela descarta os materiais anteriores ao trocar (inclusive ao voltar aos padrão com `definirMateriais(null)`) e ao fechar. A camada não descarta os materiais que entregou. `definirMateriais` refaz a geometria (eventos `"cena"` e `"visibilidade"`).
+**Materiais.** `definirMateriais(id, fabrica)` recebe uma função `(papel) => Material` (`FabricaMateriais`). A vista chama a fábrica uma vez para cada papel e usa a mesma instância em todas as malhas daquele papel, em todos os níveis, até a próxima troca. Por isso mudar uma propriedade da instância ao vivo (`material.roughness = 0.4`, depois `ctx.pedirRender()`) vale na hora, sem chamar a fábrica de novo; guarde as instâncias que a fábrica criou. Quem faz o `dispose` é a vista: ela descarta os materiais anteriores ao trocar (inclusive ao voltar à fábrica anterior com `definirMateriais(id, null)`) e ao fechar. As fábricas das camadas formam uma pilha: vale a última definida, e tirar uma devolve a anterior. Duas camadas que querem materiais próprios ao mesmo tempo não se somam; a que só precisa ver através das peças (armadura, 4D) usa `definirTransparencia` e deixa os materiais para quem renderiza (render PBR). A camada não descarta os materiais que entregou. `definirMateriais` refaz a geometria (eventos `"cena"` e `"visibilidade"`).
 
 Os papéis são estes:
 
@@ -880,7 +898,7 @@ A camada de armadura desenha as barras do detalhamento calculado, não um esquem
 
 - **viga** (e viga da escada): longitudinais numa camada, positivas embaixo, negativas e porta-estribos em cima, pele nas faces, a `cobrimento + φestribo + φ/2` das faces, distribuídas na largura útil e com os ganchos voltados para dentro; estribos retangulares a `cobrimento + φ/2` das faces, um em cada abscissa da região estribada. As longitudinais podem passar das pontas da viga até a face do apoio (ancoragem). Na escada, a seção segue a inclinação, e o lado é horizontal, perpendicular ao eixo;
 - **pilar**: o lance da peça, com as longitudinais da distribuição por face do cálculo (ou em círculo na seção circular), das cotas reais do detalhamento (a ponta de cima passa do topo pelo traspasse), e os estribos da região estribada, girados com a `rotacao` do pilar. Seção poligonal ou T: lista vazia. Para a coluna inteira, chame `barrasDe` para cada chave de `ctx.modelo.colunas[k].chaves`;
-- grampos, lajes e fundação não têm barras na cena ainda (`undefined`).
+- grampos e lajes não têm barras na cena ainda (`undefined`). A fundação também devolve `undefined` em `barrasDe`: ela não é detalhada (a espera do pilar na fundação não sai no detalhamento). Já `detalhamentoDe` de uma fundação devolve o detalhamento da coluna dela (`tipo: "pilar"`, com o lance de baixo), para a camada achar as barras pelos lances do pilar.
 
 Para desenhar, cada polilinha vira um tubo (`TubeGeometry` sobre uma `CatmullRomCurve3` ou `CylinderGeometry` por segmento, raio `phi / 2000` m) ou uma linha (`Line`). Os dados da posição (`nome`, `tipo`, `phi` em mm, `aco`, `comprimento` em cm) servem à legenda e ao Painel.
 

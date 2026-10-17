@@ -57,10 +57,15 @@ export default defineConfig({
       output: {
         // pedaços que só a vista 3D carrega (entrada em src/telas/obra3d ou no three.js)
         // levam o prefixo "3d-"
-        chunkFileNames: (c) =>
-          /[\/](telas[\/]obra3d|node_modules[\/]three)[\/]/.test(c.facadeModuleId ?? "")
+        chunkFileNames: (c) => {
+          const id = c.facadeModuleId ?? "";
+          // camada numa pasta própria (obra3d/<pasta>/camada.tsx): 3d-<pasta>-camada-<hash>
+          const pasta = /[\/]telas[\/]obra3d[\/]([^\/]+)[\/][^\/]+$/.exec(id)?.[1];
+          if (pasta) return `assets/3d-${pasta}-[name]-[hash].js`;
+          return /[\/](telas[\/]obra3d|node_modules[\/]three)[\/]/.test(id)
             ? "assets/3d-[name]-[hash].js"
-            : "assets/[name]-[hash].js",
+            : "assets/[name]-[hash].js";
+        },
       },
     },
   },
