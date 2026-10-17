@@ -369,7 +369,12 @@ for (const tela of TELAS)
     }) => {
       const { contexto, page, erros } = await novaPagina(browser, tela, null);
       await expect(nota(page)).toContainText("indisponível neste aparelho");
-      await expect(nota(page)).toContainText("Exportar › glTF (.glb)");
+      // a alternativa: o .glb baixa direto do Painel (ctx.exportarGlb)
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        nota(page).getByRole("button", { name: "Baixar .glb" }).click(),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/-3d\.glb$/);
       await expect(page.getByRole("button", { name: /Ver na mesa|Ver no terreno/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "glTF (.glb)" })).toBeVisible();
       await nota(page).scrollIntoViewIfNeeded();
@@ -411,7 +416,8 @@ for (const tela of TELAS)
         pai: true,
         xrLigado: true,
         apresentando: true,
-        renderIgual: false,
+        // a sessão desenha por ctx.assumirDesenho, sem trocar o renderer.render
+        renderIgual: true,
         luzesVisiveis: 0,
         controles: false,
       });
@@ -519,7 +525,7 @@ for (const tela of TELAS)
 test("sem WebXR (Safari do iPhone): fala do iPhone e da exportação", async ({ browser }) => {
   const { contexto, page, erros } = await novaPagina(browser, TELAS[0], "semWebxr");
   await expect(nota(page)).toContainText("No iPhone e no iPad, o Safari não abre");
-  await expect(nota(page)).toContainText("Exportar › glTF (.glb)");
+  await expect(nota(page).getByRole("button", { name: "Baixar .glb" })).toBeVisible();
   await nota(page).scrollIntoViewIfNeeded();
   await page.screenshot({ path: path.join(PRINTS, "sem-webxr-360.png") });
   expect(erros).toEqual([]);

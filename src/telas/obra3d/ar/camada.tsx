@@ -52,6 +52,17 @@ function tamanhoNaEscala(ctx: ContextoVista, escala: EscalaAr) {
   return `${n(t.x)} × ${n(t.z)} ${u} de planta e ${n(t.y)} ${u} de altura`;
 }
 
+/** Baixa o modelo visível em .glb (a alternativa sem realidade aumentada). */
+async function baixarGlb(ctx: ContextoVista) {
+  const dados = await ctx.exportarGlb();
+  const url = URL.createObjectURL(new Blob([dados], { type: "model/gltf-binary" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(ctx.obra.nome || "obra").replace(/[^\w\-. ]+/g, "_")}-3d.glb`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function Painel({ ctx }: { ctx: ContextoVista }) {
   const { suporte, fase, escala, erro } = useEstadoAr();
   // o tamanho acompanha foco, filtros e cortes
@@ -71,11 +82,14 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
         <p className="font-medium">Realidade aumentada indisponível neste aparelho.</p>
         <p>{MOTIVO[suporte.motivo]}</p>
         <p>
-          Alternativa: em <strong>Exportar › glTF (.glb)</strong>, logo abaixo neste painel, baixe
-          as peças visíveis com as cores da vista e abra o arquivo num visualizador de glTF ou de
-          realidade aumentada que aceite .glb. O visualizador de RA do iPhone (Quick Look) só abre
-          .usdz: converta o .glb antes.
+          Alternativa: baixe as peças visíveis em glTF (.glb), com as cores da vista (o mesmo do
+          botão <strong>glTF (.glb)</strong> em Exportar), e abra o arquivo num visualizador de glTF
+          ou de realidade aumentada que aceite .glb. O visualizador de RA do iPhone (Quick Look) só
+          abre .usdz: converta o .glb antes.
         </p>
+        <Button size="sm" variant="outline" className="w-fit" onClick={() => void baixarGlb(ctx)}>
+          Baixar .glb
+        </Button>
       </div>
     );
 

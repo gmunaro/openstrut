@@ -87,14 +87,11 @@ class SessaoAr {
   );
   private readonly cameraXr = new PerspectiveCamera(50, 1, 0.01, 500);
   private readonly renderer: WebGLRenderer;
-  private readonly renderOriginal: WebGLRenderer["render"];
   private readonly razaoPixel: number;
   private readonly tamanho = new Vector2();
   private readonly controlesLigados: boolean;
   private luzesDaVista: { luz: Light; visivel: boolean }[] = [];
-  private planosDaVista: Plane[];
   private planosAr: Plane[] = [];
-  private planosAplicados: Plane[] | null = null;
   private caixa = new Box3();
   /** Onde está o prédio (mundo AR); null antes do primeiro toque. */
   private ponto: Vector3 | null = null;
@@ -110,11 +107,9 @@ class SessaoAr {
 
   constructor(private readonly ctx: ContextoVista) {
     this.renderer = ctx.renderer;
-    this.renderOriginal = ctx.renderer.render;
     this.razaoPixel = ctx.renderer.getPixelRatio();
     ctx.renderer.getSize(this.tamanho);
     this.controlesLigados = ctx.controles.enabled;
-    this.planosDaVista = ctx.renderer.clippingPlanes;
   }
 
   async iniciar(xr: XRSystem) {
@@ -211,24 +206,18 @@ class SessaoAr {
     this.maquete.matrixAutoUpdate = false;
     this.maquete.visible = false;
     this.cenaAr.add(this.anel, this.maquete);
-    ctx.cena.traverse((o) => {
-      if ((o as Light).isLight) {
-        this.luzesDaVista.push({ luz: o as Light, visivel: o.visible });
-        o.visible = false;
-      }
-    });
+    for (const luz of ctx.luzes) {
+      this.luzesDaVista.push({ luz, visivel: luz.visible });
+      luz.visible = false;
+    }
     this.maquete.add(ctx.cena);
     this.montada = true;
   }
 
-  /** O núcleo segue chamando render no laço dele: com o XR ligado, esse render tomaria a
-   *  câmera da vista (xr.updateCamera). Daqui até `restaurar`, só a cena AR é desenhada, e
-   *  do render do núcleo fica só a lista de planos de corte que ele acabou de montar. */
+  /** Daqui até `restaurar`, o núcleo não desenha (com o XR ligado, o render dele tomaria a
+   *  câmera da vista); a sessão desenha a cena AR no laço do XR. */
   private desviarRender() {
-    this.renderer.render = (cena, camera) => {
-      if (cena === this.cenaAr) this.renderOriginal.call(this.renderer, cena, camera);
-      else this.planosDaVista = this.renderer.clippingPlanes;
-    };
+    this.ctx.assumirDesenho(() => {});
   }
 
   /** Caixa do que aparece na vista agora; o modelo inteiro se nada aparece. */
@@ -247,7 +236,6 @@ class SessaoAr {
     const fator = fatorDaEscala(lerEstadoAr().escala);
     this.maquete.matrix.copy(matrizDaMaquete(this.caixa, this.ponto, fator, this.rotacao));
     this.maquete.matrixWorldNeedsUpdate = true;
-    this.planosAplicados = null; // os planos de corte vão junto
   }
 
   // ---- quadro --------------------------------------------------------------------------
@@ -271,10 +259,8 @@ class SessaoAr {
       this.mira = null;
     }
     if (!this.ponto) this.mudarFase(this.mira ? "mirando" : "procurando");
-    if (this.planosAplicados !== this.planosDaVista) {
-      this.planosAplicados = this.planosDaVista;
-      this.planosAr = this.planosDaVista.map((p) => p.clone().applyMatrix4(this.maquete.matrix));
-    }
+    // os planos de corte da vista (pórtico, camada de corte) levados à maquete
+    this.planosAr = this.ctx.planosCorte().map((p) => p.clone().applyMatrix4(this.maquete.matrix));
     this.renderer.clippingPlanes = this.planosAr;
     this.renderer.render(this.cenaAr, this.cameraXr);
   };
@@ -392,8 +378,7 @@ class SessaoAr {
       this.luzesDaVista = [];
       this.montada = false;
     }
-    r.render = this.renderOriginal;
-    r.clippingPlanes = this.planosDaVista;
+    ctx.assumirDesenho(null);
     r.xr.enabled = false;
     this.devolverTamanho();
     ctx.travarControles(!this.controlesLigados);
