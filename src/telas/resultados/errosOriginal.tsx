@@ -154,7 +154,7 @@ function CartaoErro({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" |
     <article
       id={ancoraErro(erro.id)}
       aria-labelledby={`${ancoraErro(erro.id)}-titulo`}
-      className="bg-background min-w-0 scroll-mt-4 rounded-md border p-3 break-inside-avoid"
+      className="bg-background compacto:scroll-mt-4 min-w-0 scroll-mt-24 rounded-md border p-3 break-inside-avoid"
     >
       <h3
         id={`${ancoraErro(erro.id)}-titulo`}

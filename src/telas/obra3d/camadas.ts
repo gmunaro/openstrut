@@ -245,11 +245,21 @@ export interface ContextoVista {
   definirCores(id: string, f: ((e: Elemento3D) => string | null) | null): void;
 }
 
+/** O que a vista passa ao Painel e ao Cartao de uma camada. */
+export interface PropsCamada {
+  ctx: ContextoVista;
+  /** Abre a aba Resultados no pavimento da peça (`chave`) e, com `ancora`, rola até o
+   *  elemento com esse id quando ele aparecer (ex.: a explicação de um erro do original). */
+  verNosResultados(chave: string, ancora?: string): void;
+}
+
 export interface Camada {
   /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
   ativar(ctx: ContextoVista): (() => void) | void;
   /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
-  Painel?: ComponentType<{ ctx: ContextoVista }>;
+  Painel?: ComponentType<PropsCamada>;
+  /** Linhas da camada no cartão da peça selecionada (`chave`), enquanto ela estiver ligada. */
+  Cartao?: ComponentType<PropsCamada & { chave: string }>;
 }
 
 /** Entrada da barra: o botão liga/desliga e só então carrega o código da camada. */

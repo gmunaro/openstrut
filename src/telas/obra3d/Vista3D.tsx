@@ -14,15 +14,7 @@ import {
   MoveVertical,
   X,
 } from "lucide-react";
-import {
-  type ComponentType,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DetalhamentoContexto } from "../detalhamento";
@@ -72,6 +64,19 @@ function baixar(blob: Blob, nome: string) {
 
 const nomeArquivo = (obra: string, ext: string) =>
   `${(obra || "obra").replace(/[^\w\-. ]+/g, "_")}-3d.${ext}`;
+
+/** Rola até o topo do elemento de id `id` (o `scroll-margin-top` dele afasta das barras
+ *  fixas) quando ele aparecer: a aba de destino monta depois da troca e pode calcular por
+ *  alguns segundos antes. Desiste em 15 s. */
+function rolarAte(id: string) {
+  const fim = performance.now() + 15_000;
+  const tentar = () => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ block: "start" });
+    else if (performance.now() < fim) requestAnimationFrame(tentar);
+  };
+  requestAnimationFrame(tentar);
+}
 
 /** Elemento do modelo para o pedido "ver em 3D": o lance mais baixo do pavimento. */
 function chaveDoPedido(elementos: readonly Elemento3D[], v: Ver3d | null | undefined) {
@@ -255,6 +260,13 @@ export default function Vista3D({
       : e.tipo === "fundacao"
         ? { pavimentoId: e.pavimentoId, tipo: "pilar", id: e.id }
         : null;
+  /** `verNosResultados` das camadas: a escada vai como a viga avulsa que ela é. */
+  const verNosResultados = (chave: string, ancora?: string) => {
+    const e = modelo.elementos.find((x) => x.chave === chave);
+    if (!e) return;
+    aoVerNosResultados(verDe(e) ?? { pavimentoId: e.pavimentoId, tipo: "viga", id: e.id });
+    if (ancora) rolarAte(ancora);
+  };
 
   const exportarPng = async () => {
     const b = await cena?.png();
@@ -334,6 +346,13 @@ export default function Vista3D({
           </ul>
         </div>
       )}
+      {ctx &&
+        camadasLigadas.map((id) => {
+          const Cartao = ativas.current.get(id)?.camada.Cartao;
+          return Cartao ? (
+            <Cartao key={id} ctx={ctx} chave={sel.chave} verNosResultados={verNosResultados} />
+          ) : null;
+        })}
       {(dadosSel?.mensagens.length ?? 0) > 0 && dadosSel?.estado !== "sem" && (
         <details className="mt-1">
           <summary className="cursor-pointer">Avisos ({dadosSel?.mensagens.length})</summary>
@@ -686,10 +705,10 @@ export default function Vista3D({
             </div>
             {ctx &&
               camadasLigadas.map((id) => {
-                const Painel = ativas.current.get(id)?.camada.Painel as
-                  | ComponentType<{ ctx: ContextoVista }>
-                  | undefined;
-                return Painel ? <Painel key={id} ctx={ctx} /> : null;
+                const Painel = ativas.current.get(id)?.camada.Painel;
+                return Painel ? (
+                  <Painel key={id} ctx={ctx} verNosResultados={verNosResultados} />
+                ) : null;
               })}
           </section>
 

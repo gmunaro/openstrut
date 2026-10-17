@@ -157,16 +157,16 @@ Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original ×
 | `corte` | `camadas/` | corte horizontal acima de um pavimento |
 | `armadura` | `armadura/` | barras e estribos calculados da viga ou da coluna selecionada, com as peças transparentes |
 | `sequencia` | `sequencia/` | sequência construtiva 4D por etapas e datas, com CSV |
-| `comparar` | `comparar/` | Original × Corrigido: calcula o outro modo e pinta as diferenças |
+| `comparar` | `comparar/` | Original × Corrigido: calcula o outro modo, pinta as diferenças e diz, na lista e no cartão da peça, que defeitos do original a atingem, com link para a explicação em Resultados |
 | `ar` | `ar/` | realidade aumentada no celular (WebXR, maquete na mesa ou 1:1) |
 | `render` | `render/` | materiais PBR, luz de estúdio, sombras e path tracing progressivo |
 | `tour` | `tour/` | tour guiado pelas paradas (níveis, falhas e defeitos agrupados por nível) e caminhada em primeira pessoa |
 
 ### Ciclo de vida
 
-Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel` (as declarações estão em "Tipos", abaixo). Ela entra na barra por uma `DefinicaoCamada` no array `CAMADAS` de `src/telas/obra3d/camadas.ts`, com `id`, `nome` (texto do botão), `descricao` (dica do botão) e `carregar`, que faz o import dinâmico do arquivo dela. O arquivo da camada fica em `src/telas/obra3d/<recurso>/` e importa os tipos de `../api`.
+Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel` e um `Cartao` (as declarações estão em "Tipos", abaixo). Ela entra na barra por uma `DefinicaoCamada` no array `CAMADAS` de `src/telas/obra3d/camadas.ts`, com `id`, `nome` (texto do botão), `descricao` (dica do botão) e `carregar`, que faz o import dinâmico do arquivo dela. O arquivo da camada fica em `src/telas/obra3d/<recurso>/` e importa os tipos de `../api`.
 
-`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum, montado na seção "Camadas" do painel lateral, logo abaixo dos botões, enquanto a camada está ligada. Ele recebe só `{ ctx }` e some quando a camada desliga. O painel lateral já usa texto `text-xs` e tem 20 a 24 rem de largura (no celular, a largura da tela); o Painel não precisa de título, porque o botão da camada fica logo acima. Use as classes do Tailwind e os componentes do app de `src/components/ui/`, que já estão no pacote principal. O mais usado é o botão: `import { Button } from "@/components/ui/button";`, com `variant` `"default"`, `"outline"`, `"secondary"`, `"ghost"`, `"destructive"` ou `"link"` e `size` `"xs"`, `"sm"`, `"default"`, `"lg"`, `"icon"`, `"icon-xs"`, `"icon-sm"` ou `"icon-lg"`; os botões da vista usam `size="xs"`. Para listas, a vista usa `<select>` nativo com `className="border-input bg-background h-9 rounded-md border px-2"`. Erros e mensagens para o usuário vão no próprio Painel (não há canal de log da vista). Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
+`ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum, montado na seção "Camadas" do painel lateral, logo abaixo dos botões, enquanto a camada está ligada. Ele recebe `{ ctx, verNosResultados }` (`PropsCamada`) e some quando a camada desliga. O `Cartao` é outro componente, opcional, montado no cartão da peça selecionada, abaixo da situação e dos defeitos, enquanto a camada está ligada; recebe também a `chave` da peça e volta `null` quando não tem o que dizer dela. `verNosResultados(chave, ancora?)` troca para a aba Resultados no pavimento da peça e, com `ancora`, rola até o elemento com esse id quando ele aparecer (a camada `comparar` usa a âncora da explicação de um erro do original, `ancoraErro` de `telas/resultados/errosOriginal.tsx`). O painel lateral já usa texto `text-xs` e tem 20 a 24 rem de largura (no celular, a largura da tela); o Painel não precisa de título, porque o botão da camada fica logo acima. Use as classes do Tailwind e os componentes do app de `src/components/ui/`, que já estão no pacote principal. O mais usado é o botão: `import { Button } from "@/components/ui/button";`, com `variant` `"default"`, `"outline"`, `"secondary"`, `"ghost"`, `"destructive"` ou `"link"` e `size` `"xs"`, `"sm"`, `"default"`, `"lg"`, `"icon"`, `"icon-xs"`, `"icon-sm"` ou `"icon-lg"`; os botões da vista usam `size="xs"`. Para listas, a vista usa `<select>` nativo com `className="border-input bg-background h-9 rounded-md border px-2"`. Erros e mensagens para o usuário vão no próprio Painel (não há canal de log da vista). Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
 
 ### Objetos da camada
 
@@ -195,7 +195,9 @@ O cabeçalho de `api.ts` traz a referência rápida:
 // docs/VISTA-3D.md ("Ponto de extensão: camadas"), que copia as declarações abaixo.
 //
 // Referência rápida (ctx: ContextoVista; chave = Elemento3D.chave):
-// - ligar e limpar: `camada.ativar(ctx)` devolve a função de limpeza; `Painel({ ctx })`.
+// - ligar e limpar: `camada.ativar(ctx)` devolve a função de limpeza; `Painel({ ctx })`
+//   no painel lateral e `Cartao({ ctx, chave })` no cartão da peça selecionada; os dois
+//   recebem `verNosResultados(chave, ancora?)`, que leva à aba Resultados.
 // - peças: `ctx.modelo.elementos` (Elemento3D[]), `ctx.elemento(chave)`, níveis em
 //   `ctx.modelo.niveis` (0 = o de baixo), colunas em `ctx.modelo.colunas[k].chaves`.
 // - seleção: `ctx.selecao` (string | null, a chave), `ctx.selecionar(chave | null)`.
@@ -226,7 +228,7 @@ O cabeçalho de `api.ts` traz a referência rápida:
 
 Tudo o que uma camada usa sai de `src/telas/obra3d/api.ts`: os tipos (`import type { Camada, ContextoVista, Elemento3D } from "../api";`) e algumas constantes (`import { COR_ESTADO, materiaisPadrao } from "../api";`). Esta seção é gerada a partir das exportações de `api.ts` e copia cada declaração do código, com o comentário dela; `api.test.ts` falha se uma declaração mudar ou se `api.ts` exportar algo que não está aqui. `EstadoElemento` é o nome de `Estado` em `api.ts`. `OrbitControls` é o de `three/addons/controls/OrbitControls.js`; os outros tipos do three (`Scene`, `Box3`, `Vector3`…) são os do pacote `three`.
 
-`src/telas/obra3d/camadas.ts` (em `api.ts`: `ArmaduraNaCena, Camada, ContextoVista, FontesAtivas, LegendaCamada, DefinicaoCamada, DetalhamentoElemento, EventoVista, Exibicao, FabricaMateriais, PapelMaterial`):
+`src/telas/obra3d/camadas.ts` (em `api.ts`: `ArmaduraNaCena, Camada, ContextoVista, FontesAtivas, LegendaCamada, DefinicaoCamada, DetalhamentoElemento, EventoVista, Exibicao, FabricaMateriais, PapelMaterial, PropsCamada`):
 
 ```ts
 /** Uma posição de armadura da peça na cena: os dados da posição (nome, tipo, bitola em
@@ -237,11 +239,21 @@ export interface ArmaduraNaCena extends Omit<PosicaoGeometria, "forma" | "copias
   barras: Vector3[][];
 }
 
+/** O que a vista passa ao Painel e ao Cartao de uma camada. */
+export interface PropsCamada {
+  ctx: ContextoVista;
+  /** Abre a aba Resultados no pavimento da peça (`chave`) e, com `ancora`, rola até o
+   *  elemento com esse id quando ele aparecer (ex.: a explicação de um erro do original). */
+  verNosResultados(chave: string, ancora?: string): void;
+}
+
 export interface Camada {
   /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
   ativar(ctx: ContextoVista): (() => void) | void;
   /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
-  Painel?: ComponentType<{ ctx: ContextoVista }>;
+  Painel?: ComponentType<PropsCamada>;
+  /** Linhas da camada no cartão da peça selecionada (`chave`), enquanto ela estiver ligada. */
+  Cartao?: ComponentType<PropsCamada & { chave: string }>;
 }
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
