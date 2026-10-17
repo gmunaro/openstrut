@@ -255,3 +255,16 @@ export function cabeNaTela(v: Vista, c: Caixa, largura: number, altura: number):
   const r = retanguloTela(v, c);
   return r.x >= 0 && r.y >= 0 && r.x + r.width <= largura && r.y + r.height <= altura;
 }
+
+/** Ponto (m) para o nome da viga: o meio dela ou, se um pilar está a menos de `folga` m
+ *  dele (o nome cairia sobre o do pilar), a 1/4 ou 3/4 do comprimento; sem posição
+ *  livre, o meio. */
+export function posicaoRotuloViga(
+  v: { x1: number; y1: number; x2: number; y2: number },
+  pilares: readonly Ponto[],
+  folga: number,
+): Ponto {
+  const em = (t: number) => ({ x: v.x1 + (v.x2 - v.x1) * t, y: v.y1 + (v.y2 - v.y1) * t });
+  const livre = (p: Ponto) => pilares.every((q) => Math.hypot(q.x - p.x, q.y - p.y) >= folga);
+  return [0.5, 0.25, 0.75].map(em).find(livre) ?? em(0.5);
+}

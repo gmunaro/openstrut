@@ -11,6 +11,7 @@ import { fmt } from "./formato";
 import {
   medir,
   mundoParaTela,
+  posicaoRotuloViga,
   passoVisivel,
   retanguloTela,
   telaParaMundo,
@@ -88,6 +89,7 @@ export function Desenho({
         <DesenhoViga
           key={v.id}
           v={v}
+          pilares={pav.pilares}
           vista={vista}
           d={diag && (diag.vigas.get(v.id) ?? SEM_CALCULO)}
           selecionada={sel("viga", v.id)}
@@ -229,11 +231,13 @@ function DesenhoLaje({
 
 function DesenhoViga({
   v,
+  pilares,
   vista,
   d,
   selecionada,
 }: {
   v: Viga;
+  pilares: readonly Pilar[];
   vista: Vista;
   d: Diagnostico | undefined;
   selecionada: boolean;
@@ -242,7 +246,11 @@ function DesenhoViga({
   const b = mundoParaTela(vista, { x: v.x2, y: v.y2 });
   const largura = Math.max(3, (v.bw / 100) * vista.escala);
   const horizontal = Math.abs(a.y - b.y) < Math.abs(a.x - b.x);
-  const meio = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  // o nome fica longe dos pilares (a 0,6 m ou 40 px, o que for maior), para não cobrir o deles
+  const meio = mundoParaTela(
+    vista,
+    posicaoRotuloViga(v, pilares, Math.max(0.6, 40 / vista.escala)),
+  );
   const afasta = largura / 2 + 4;
   const comprimento = Math.hypot(v.x2 - v.x1, v.y2 - v.y1);
   return (

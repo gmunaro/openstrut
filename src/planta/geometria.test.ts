@@ -15,6 +15,7 @@ import {
   proximoAlvo,
   retanguloTela,
   medir,
+  posicaoRotuloViga,
   snap,
   snapComGuias,
   sobrepoe,
@@ -192,5 +193,36 @@ describe("medir", () => {
   it("dá a distância e as componentes positivas (triângulo 3-4-5)", () => {
     expect(medir({ x: 4, y: 5 }, { x: 1, y: 1 })).toEqual({ d: 5, dx: 3, dy: 4 });
     expect(medir({ x: 2, y: 2 }, { x: 2, y: 2 })).toEqual({ d: 0, dx: 0, dy: 0 });
+  });
+});
+
+describe("posicaoRotuloViga", () => {
+  const v = { x1: 0, y1: 0, x2: 8, y2: 0 };
+  it("no meio quando não há pilar perto", () => {
+    expect(
+      posicaoRotuloViga(
+        v,
+        [
+          { x: 0, y: 0 },
+          { x: 8, y: 0 },
+        ],
+        0.6,
+      ),
+    ).toEqual({ x: 4, y: 0 });
+  });
+  it("pilar no meio: vai para 1/4 do comprimento", () => {
+    expect(posicaoRotuloViga(v, [{ x: 4, y: 0 }], 0.6)).toEqual({ x: 2, y: 0 });
+  });
+  it("pilares no meio e a 1/4: vai para 3/4", () => {
+    expect(
+      posicaoRotuloViga(
+        v,
+        [
+          { x: 4, y: 0 },
+          { x: 2, y: 0 },
+        ],
+        0.6,
+      ),
+    ).toEqual({ x: 6, y: 0 });
   });
 });
