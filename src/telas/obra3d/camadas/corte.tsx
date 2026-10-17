@@ -44,7 +44,9 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
         </select>
       </label>
       <label className="grid gap-1">
-        <span>Altura do corte acima da laje: {altura.toLocaleString("pt-BR")} m</span>
+        <span>
+          Altura do corte acima da face de cima da laje: {altura.toLocaleString("pt-BR")} m
+        </span>
         <input
           type="range"
           min={0.1}

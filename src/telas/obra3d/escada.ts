@@ -165,8 +165,9 @@ export function posicionarEscadas(
     );
   }
 
-  for (const l of lances)
+  lances.forEach((l, k) =>
     elementos.push({
+      ...(k === 0 ? { rotulo: avulso.nome } : {}),
       chave: `escada:${avulso.id}:${l.viga.id}`,
       tipo: "escada",
       id: l.viga.id,
@@ -179,7 +180,8 @@ export function posicionarEscadas(
       notas: [
         `Escada (${avulso.nome}), posição deduzida pelas reações lançadas nas vigas que a recebem.`,
       ],
-    });
+    }),
+  );
 
   // Lance visual entre duas vigas da escada paralelas que vencem os mesmos níveis.
   for (let i = 0; i + 1 < lances.length; i += 2) {
@@ -215,6 +217,7 @@ export function posicionarEscadas(
     const s = v.secoes?.trechos?.[0];
     const y = y0 + k * 1.5;
     elementos.push({
+      ...(k === 0 ? { rotulo: `${avulso.nome}: posição desconhecida` } : {}),
       chave: `escada:${avulso.id}:${v.id}`,
       tipo: "escada",
       id: v.id,

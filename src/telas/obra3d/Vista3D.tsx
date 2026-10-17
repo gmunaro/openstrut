@@ -21,7 +21,7 @@ import { useSessao } from "../sessao";
 import type { PropsVista3D } from "./AbaVista3D";
 import { CAMADAS, type Camada, type ContextoVista } from "./camadas";
 import { Cena3D, ESTADO_INICIAL, type EstadoVisual, type ModoCor, TIPOS, type Vista } from "./cena";
-import { COR_ESTADO, NEUTRO, RAMPA, ROTULO_ESTADO } from "./cores";
+import { COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA, ROTULO_ESTADO } from "./cores";
 import { dadosDosElementos, type Estado, GRANDEZAS, type GrandezaMapa } from "./dados";
 import type { Ver3d } from "./link";
 import { type Elemento3D, montarModelo, type TipoElemento } from "./modelo";
@@ -218,6 +218,11 @@ export default function Vista3D({
     [original, modelo, dados],
   );
   const faixa = cena && ev.modoCor !== "estado" ? cena.faixa : undefined;
+  // as peças com falha, em lista (a vista não é o único jeito de achá-las)
+  const comFalha = useMemo(
+    () => modelo.elementos.filter((e) => dados.get(e.chave)?.estado === "falha"),
+    [modelo, dados],
+  );
   const tiposPresentes = TIPOS.filter((t) => modelo.elementos.some((e) => e.tipo === t));
   const verDe = (e: Elemento3D): Ver3d | null =>
     e.tipo === "laje" || e.tipo === "viga" || e.tipo === "pilar"
@@ -354,7 +359,7 @@ export default function Vista3D({
         {sel && (
           <section
             aria-label={`Elemento selecionado: ${sel.nome}`}
-            className="bg-background/95 absolute right-2 bottom-2 max-h-[45%] w-[min(24rem,calc(100%-1rem))] overflow-auto rounded-md border p-3 text-xs shadow-md"
+            className="bg-background/95 compacto:max-h-[40%] absolute right-2 bottom-2 max-h-[45%] w-[min(24rem,calc(100%-1rem))] overflow-auto rounded-md border p-3 text-xs shadow-md"
           >
             <div className="flex items-start justify-between gap-2">
               <h2 className="text-sm font-semibold">
@@ -393,8 +398,8 @@ export default function Vista3D({
               </ul>
             )}
             {original && (dadosSel?.defeitos.length ?? 0) > 0 && (
-              <div className="border-destructive/50 mt-2 rounded border p-1.5">
-                <p className="text-destructive font-semibold">
+              <div className="mt-2 rounded border p-1.5" style={{ borderColor: COR_DEFEITO }}>
+                <p className="font-semibold" style={{ color: COR_DEFEITO }}>
                   ! Afetado por defeito do SISTRUT original
                 </p>
                 <ul className="list-disc pl-4">
@@ -463,7 +468,7 @@ export default function Vista3D({
         <aside
           id="painel-3d"
           aria-label="Controles da vista 3D"
-          className="compacto:w-full compacto:border-t compacto:border-l-0 grid w-80 shrink-0 content-start gap-4 overflow-auto border-l p-3 text-xs 2xl:w-96"
+          className="compacto:w-full compacto:border-t compacto:border-l-0 grid w-80 shrink-0 content-start gap-4 overflow-auto border-l p-3 pb-20 text-xs 2xl:w-96"
         >
           <section className="grid gap-1.5">
             <h2 className="text-sm font-semibold">Partes</h2>
@@ -693,8 +698,32 @@ export default function Vista3D({
                         cena?.selecionar(e.chave);
                       }}
                     >
-                      <span className="text-destructive font-semibold">!</span> {NOME_TIPO[e.tipo]}{" "}
-                      {e.nome} · {modelo.niveis[e.nivel]?.nome}
+                      <span className="font-semibold" style={{ color: COR_DEFEITO }}>
+                        !
+                      </span>{" "}
+                      {NOME_TIPO[e.tipo]} {e.nome} · {modelo.niveis[e.nivel]?.nome}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {comFalha.length > 0 && (
+            <section className="grid gap-1">
+              <h2 className="text-sm font-semibold">Peças com falha ({comFalha.length})</h2>
+              <ul className="grid gap-0.5">
+                {comFalha.map((e) => (
+                  <li key={e.chave}>
+                    <button
+                      type="button"
+                      className="hover:bg-accent w-full rounded px-1 py-0.5 text-left"
+                      onClick={() => {
+                        irPara({ tipo: "elemento", chave: e.chave });
+                        cena?.selecionar(e.chave);
+                      }}
+                    >
+                      {NOME_TIPO[e.tipo]} {e.nome} · {modelo.niveis[e.nivel]?.nome}
                     </button>
                   </li>
                 ))}
@@ -763,6 +792,7 @@ function Legenda({
     >
       {modoCor === "estado" ? (
         <ul className="grid gap-0.5">
+          <li className="font-semibold">Lajes, vigas e pilares por situação</li>
           {(["ok", "aviso", "falha", "sem"] as const)
             .filter((e) => calculado || e === "sem")
             .map((e) => (
@@ -791,8 +821,10 @@ function Legenda({
       )}
       {original && (
         <span className="flex items-center gap-1">
-          <span className="rounded bg-red-700 px-1 font-bold text-white">!</span> afetado por
-          defeito do original
+          <span className="rounded px-1 font-bold text-white" style={{ background: COR_DEFEITO }}>
+            !
+          </span>{" "}
+          afetado por defeito do original (não é falha)
         </span>
       )}
     </div>

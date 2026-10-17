@@ -23,6 +23,9 @@ export const ROTULO_ESTADO: Record<Estado, string> = {
   sem: "Sem cálculo",
 };
 
+/** Marca dos defeitos do original: fúcsia, fora da paleta de estado (não é "falha"). */
+export const COR_DEFEITO = "#a21caf";
+
 /** Rampa azul 100 → 700 (passos 100, 200, …, 700). */
 export const RAMPA = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 /** Elemento do tipo do mapa sem valor (sem cálculo). */

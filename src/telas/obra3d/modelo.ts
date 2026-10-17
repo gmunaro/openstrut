@@ -53,6 +53,8 @@ export interface Elemento3D {
   coluna?: string;
   /** Notas que a vista mostra com o elemento (ex.: pilar que nasce em transição). */
   notas: string[];
+  /** Rótulo na cena, em cima da peça (ex.: "ESCADA"). */
+  rotulo?: string;
 }
 
 /** Lances de um pilar empilhados, da base ao topo (chaves de Elemento3D). */

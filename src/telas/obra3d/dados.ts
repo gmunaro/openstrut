@@ -88,7 +88,8 @@ export function dadosDosElementos(
         grandeza: m,
         defeitos: def,
       });
-    } else if (e.tipo === "viga") {
+    } else if (e.tipo === "viga" || e.tipo === "escada") {
+      // a escada do SISTRUT são vigas do pavimento avulso, calculadas como as outras
       const rv = rp?.vigas.find((v) => v.viga.id === e.id);
       if (!rv) {
         mapa.set(e.chave, { ...SEM, defeitos: def });
@@ -146,6 +147,7 @@ export function dadosDosElementos(
           : def,
       });
     } else mapa.set(e.chave, { estado: "sem", mensagens: [], defeitos: [] });
+    // lance visual da escada e fundação não têm cálculo
   }
   return mapa;
 }

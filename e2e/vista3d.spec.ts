@@ -206,6 +206,8 @@ test("obra de 3 pavimentos: gira, seleciona, oculta e explode, sem erro no conso
     return n;
   });
   expect(lajesVisiveis).toBe(0);
+  // a laje selecionada saiu da vista: a seleção deixa de valer
+  await expect(page.getByRole("region", { name: /Elemento selecionado/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Lajes", exact: true }).click();
 
   // explodido afasta os níveis
@@ -223,7 +225,12 @@ test("obra de 3 pavimentos: gira, seleciona, oculta e explode, sem erro no conso
   await page.keyboard.press("Enter");
   await expect(topo).toHaveAttribute("aria-pressed", "true");
 
-  // "Ver na planta" leva à aba Planta com o pavimento do elemento
+  // seleção pelo teclado (lista de elementos) e "Ver na planta" leva à aba Planta
+  const v1 = await cena(page, (c) =>
+    c.modelo.elementos.find((e) => e.tipo === "viga" && e.nivel === 1 && e.nome === "V1"),
+  );
+  await page.getByLabel("Elemento (com os vizinhos)").selectOption(v1!.chave);
+  await expect(page.getByRole("heading", { name: "Viga V1" })).toBeVisible();
   await page.getByRole("button", { name: "Ver na planta" }).click();
   await expect(page.getByRole("tab", { name: "Planta" })).toHaveAttribute("aria-selected", "true");
 
@@ -346,4 +353,64 @@ test.describe("obra do oráculo de vários pavimentos, importada do SISTRUT", ()
       expect(erros).toEqual([]);
       await contexto.close();
     });
+});
+
+/** 20 níveis (cobertura, tipo × 18, primeiro) com 50 pilares em malha 10 × 5 de 4 m. */
+function obraVintePavimentos() {
+  const obra = obraNova("Vinte pavimentos", "nbr6118-2023");
+  obra.pavimentos = [
+    ["Cobertura", 1],
+    ["Tipo", 18],
+    ["Primeiro", 1],
+  ].map(([nome, rep]) => {
+    const pav = pavimentoNovo(nome as string, 3, rep as number);
+    for (let i = 0; i < 9; i++)
+      for (let j = 0; j < 4; j++) pav.lajes.push(lajeNova(pav, { x: 4 * i, y: 4 * j, lx: 4, ly: 4 }));
+    return gerarEstrutura(pav);
+  });
+  return serializarObra(obra);
+}
+
+test("desempenho: 20 pavimentos × 50 pilares com a CPU 4× mais lenta", async ({ page }) => {
+  test.setTimeout(240_000);
+  const erros = vigiarErros(page);
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await abrirObraJson(page, obraVintePavimentos());
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  const t0 = Date.now();
+  await abrir3d(page);
+  const abrir = Date.now() - t0 - 800; // abrir3d espera 800 ms das animações
+  const medida = await page.evaluate(() => {
+    const c = (window as unknown as { __vista3d: {
+      modelo: { niveis: unknown[]; elementos: { tipo: string }[] };
+      renderer: { info: { render: { calls: number; triangles: number } } };
+      definirEstado: (p: object) => void;
+      desenhar: () => void;
+    } }).__vista3d;
+    const pilares = c.modelo.elementos.filter((e) => e.tipo === "pilar").length;
+    c.desenhar();
+    const { calls, triangles } = c.renderer.info.render;
+    // reconstrução inteira da geometria (troca de foco, cor ou visibilidade)
+    const t = performance.now();
+    c.definirEstado({ marcas: false });
+    const reconstruir = performance.now() - t;
+    c.definirEstado({ explodido: true });
+    const q = performance.now();
+    for (let i = 0; i < 10; i++) c.desenhar();
+    const quadro = (performance.now() - q) / 10;
+    return { niveis: c.modelo.niveis.length, pilares, calls, triangles, reconstruir, quadro };
+  });
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  test.info().annotations.push({
+    type: "desempenho",
+    description: JSON.stringify({ abrirMs: abrir, ...medida }),
+  });
+  console.log("desempenho 20×50:", JSON.stringify({ abrirMs: abrir, ...medida }));
+  expect(medida.niveis).toBe(20);
+  expect(medida.pilares).toBe(1000);
+  // geometria mesclada: no máximo 3 malhas por tipo e nível, mais rótulos e placas
+  expect(medida.calls).toBeLessThan(20 * 5 * 3 + 40);
+  await page.screenshot({ path: path.join(PRINTS, "20pav-explodido-1366.png") });
+  expect(erros).toEqual([]);
 });

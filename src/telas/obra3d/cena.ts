@@ -37,7 +37,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Obra } from "../../dominio/obra";
 import type { Calculo } from "../calculo";
 import type { ContextoVista, EventoVista, FabricaMateriais, PapelMaterial } from "./camadas";
-import { COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
+import { COR_DEFEITO, COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
 import { type DadosElemento, faixaDaGrandeza, GRANDEZAS, type GrandezaMapa } from "./dados";
 import { type Malha, malhaVazia, paraCena, triangular } from "./geometria";
 import type { Elemento3D, Modelo3D, TipoElemento } from "./modelo";
@@ -356,7 +356,29 @@ export class Cena3D implements ContextoVista {
 
   definirEstado(parcial: Partial<EstadoVisual>) {
     this.estado = { ...this.estado, ...parcial };
+    // o explodido só move os grupos dos níveis: não refaz a geometria
+    if (Object.keys(parcial).every((k) => k === "explodido")) {
+      this.definirDeslocamentos();
+      if (movimentoReduzido()) this.aplicarDeslocamentos();
+      this.sujo = true;
+      this.emitir("cena");
+      return;
+    }
     this.reconstruir();
+  }
+
+  /** Deslocamento vertical de cada nível no explodido (alvo da animação). */
+  private definirDeslocamentos() {
+    const n = this.modelo.niveis.length;
+    const gap = this.estado.explodido ? this.vaoExplodido() : 0;
+    this.deslocamentosAlvo = Array.from({ length: n }, (_, i) => i * gap);
+    if (this.deslocamentos.length !== n || movimentoReduzido())
+      this.deslocamentos = [...this.deslocamentosAlvo];
+  }
+
+  private aplicarDeslocamentos() {
+    this.niveis.forEach((n, i) => (n.grupo.position.y = this.deslocamentos[i] ?? 0));
+    this.atualizarPosicaoDestaque();
   }
 
   /** Como cada elemento aparece no foco e nos filtros atuais. */
@@ -435,13 +457,13 @@ export class Cena3D implements ContextoVista {
     this.limparGrupos();
     const exib = this.exibicoes();
     const n = this.modelo.niveis.length;
-    const gap = this.estado.explodido ? this.vaoExplodido() : 0;
-    this.deslocamentosAlvo = Array.from({ length: n }, (_, i) => i * gap);
-    if (this.deslocamentos.length !== n || movimentoReduzido())
-      this.deslocamentos = [...this.deslocamentosAlvo];
+    this.definirDeslocamentos();
     const cor = new Color();
     const original = this.obra.modoCalculo === "original";
-    const mostraRotulos = this.estado.foco.tipo === "todo" || this.estado.foco.tipo === "nivel";
+    const foco = this.estado.foco;
+    const mostraRotulos = foco.tipo !== "elemento";
+    const eixo =
+      foco.tipo === "eixo" ? this.modelo.eixos.find((x) => x.chave === foco.chave) : undefined;
 
     for (let i = 0; i < n; i++) {
       const grupo = new Group();
@@ -465,10 +487,12 @@ export class Cena3D implements ContextoVista {
             chaves.push(e.chave);
             inicios.push(sol.p.length / 9);
             for (let k = 0; k < m.arestas.length; k++) sol.a.push(m.arestas[k]!);
-            const d = this.dados.get(e.chave);
-            if (original && this.estado.marcas && d && d.defeitos.length > 0)
-              marcas.add(this.marcaDefeito(e));
           }
+          if (e.rotulo) marcas.add(this.rotuloDe(e, e.rotulo));
+          // a marca do defeito aparece também na peça transparente (mapa de grandeza)
+          const d = this.dados.get(e.chave);
+          if (original && this.estado.marcas && d && d.defeitos.length > 0)
+            marcas.add(this.marcaDefeito(e));
           for (let k = 0; k < m.posicoes.length; k++) {
             alvo.p.push(m.posicoes[k]!);
             alvo.n.push(m.normais[k]!);
@@ -503,16 +527,21 @@ export class Cena3D implements ContextoVista {
           20,
         );
         const c = this.modelo.caixa;
-        rotulo.position.set(...paraCena(c.min.x - 0.6, c.min.y - 0.6, nv.cota));
+        // no pórtico, o rótulo fica dentro da faixa do corte (senão o corte o apaga)
+        const rx = eixo?.direcao === "x" ? eixo.c : c.min.x - 0.6;
+        const ry = eixo?.direcao === "y" ? eixo.c : c.min.y - 0.6;
+        rotulo.position.set(...paraCena(rx, ry, nv.cota));
         rotulo.center.set(1, 0.5);
         grupo.add(rotulo);
       }
       this.raiz.add(grupo);
       this.niveis.push({ grupo, tipos, marcas, rotulo });
     }
-    const eixo = this.planosDoEixo();
-    if (eixo.length > 0) this.planos.set("eixo", eixo);
+    const planosEixo = this.planosDoEixo();
+    if (planosEixo.length > 0) this.planos.set("eixo", planosEixo);
     else this.planos.delete("eixo");
+    // a seleção que saiu do foco (oculta) deixa de valer
+    if (this._selecao && exib.get(this._selecao) === "oculto") this.selecionar(null);
     this.atualizarDestaque();
     this.sujo = true;
     this.emitir("cena");
@@ -533,8 +562,7 @@ export class Cena3D implements ContextoVista {
       return y + (alvo - y) * Math.min(1, dt * 8);
     });
     if (!mexeu) return;
-    this.niveis.forEach((n, i) => (n.grupo.position.y = this.deslocamentos[i] ?? 0));
-    this.atualizarPosicaoDestaque();
+    this.aplicarDeslocamentos();
     this.sujo = true;
     this.emitir("cena");
   }
@@ -542,10 +570,22 @@ export class Cena3D implements ContextoVista {
   alturaNaCena = (indiceNivel: number, cota: number) =>
     cota + (this.deslocamentosAlvo[indiceNivel] ?? 0);
 
+  /** Rótulo de uma peça (escada), em cima dela. */
+  private rotuloDe(e: Elemento3D, texto: string) {
+    const m = this.malhaDe(e.chave);
+    const s = placa(texto, "rgba(68,64,60,0.85)", "#fafaf9", 18);
+    const [x, , z] = centroDe(m.posicoes);
+    let topo = -Infinity;
+    for (let k = 1; k < m.posicoes.length; k += 3) topo = Math.max(topo, m.posicoes[k]!);
+    s.position.set(x, topo + 0.2, z);
+    s.center.set(0.5, 0);
+    return s;
+  }
+
   /** Marca de defeito do original: placa "!" em cima do elemento (não só a cor). */
   private marcaDefeito(e: Elemento3D) {
     const m = this.malhaDe(e.chave);
-    const s = placa("!", "#b91c1c", "#ffffff", 26);
+    const s = placa("!", COR_DEFEITO, "#ffffff", 26);
     const [x, , z] = centroDe(m.posicoes);
     let topo = -Infinity;
     for (let k = 1; k < m.posicoes.length; k += 3) topo = Math.max(topo, m.posicoes[k]!);
