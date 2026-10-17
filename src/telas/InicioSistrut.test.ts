@@ -602,6 +602,17 @@ describe("importarObraSistrut: vários .DSP (a pasta EXEC40 junto com a obra)", 
     );
   });
 
+  it("o .COL com a parametrização SISTRUT (a tabela de fábrica) não escolhe o .DSP: pergunta", () => {
+    expect(dspsAEscolher([...obra, arquivo("E2E.COL")])).toEqual(["ESC.DSP", "SISTRUT.DSP"]);
+  });
+
+  it("não pergunta sem .VIG nem com nomes repetidos (a importação recusa antes)", () => {
+    expect(dspsAEscolher([arquivo("E2E.LAJ"), sistrut, esc])).toBeUndefined();
+    const repetido = { ...arquivo("E2E.LAJ"), nome: "e2e.laj" };
+    expect(dspsAEscolher([...obra, repetido])).toBeUndefined();
+    expect(importarObraSistrut([...obra, repetido]).ok).toBe(false);
+  });
+
   it("um .DSP só: entra sem aviso", () => {
     const r = importa([arquivo("E2E.LAJ"), arquivo("E2E.VIG"), esc]);
     expect(r.resumo.lidos).toContain("ESC.DSP");

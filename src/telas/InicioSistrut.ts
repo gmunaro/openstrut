@@ -576,7 +576,8 @@ function escolhaDoDsp(
       return undefined;
     }
   })();
-  const doCol = chamado(pip);
+  // "SISTRUT" no .COL é a tabela de pilar de fábrica: não diz nada do .DSP das vigas
+  const doCol = pip?.trim().toUpperCase() === "SISTRUT" ? undefined : chamado(pip);
   if (doCol)
     return { dsp: doCol, porque: `a parametrização que o .COL usa (${pip!.trim().toUpperCase()})` };
   return {};
@@ -588,7 +589,16 @@ function escolhaDoDsp(
  *  resposta em `OpcoesImportacaoSistrut.dsp`. */
 export function dspsAEscolher(arquivos: readonly ArquivoEntrada[]): string[] | undefined {
   const dsps = arquivos.filter((a) => extensaoDe(a.nome) === "DSP").sort(porNome);
-  if (dsps.length <= 1) return undefined;
+  // sem .VIG o .DSP não é usado; com nomes repetidos a importação recusa antes
+  const nomes = arquivos.map((a) =>
+    a.nome
+      .replace(/^.*[\\/]/, "")
+      .trim()
+      .toUpperCase(),
+  );
+  const repetidos = new Set(nomes).size < nomes.length;
+  if (dsps.length <= 1 || repetidos || !arquivos.some((a) => extensaoDe(a.nome) === "VIG"))
+    return undefined;
   const desenhoIni = arquivos.find(
     (a) => extensaoDe(a.nome) === "INI" && baseDe(a.nome) === "DESENHO",
   );
@@ -777,7 +787,7 @@ function importar(
     opcoes.dsp,
   );
   const dsp = escolha.dsp ?? dsps.find((a) => baseDe(a.nome) === "SISTRUT") ?? dsps[0];
-  if (dsp && dsps.length > 1)
+  if (dsp && dsps.length > 1 && grupo("VIG").length > 0)
     c.ignora(
       dsps.filter((a) => a !== dsp),
       escolha.porque
