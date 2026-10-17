@@ -3,10 +3,12 @@
 // o que foi reconhecido: os pavimentos na ordem, os arquivos lidos e os ignorados com o
 // motivo, e os avisos. A leitura é `importarObraSistrut` (InicioSistrut.ts).
 //
-// Cada arquivo leva o caminho dentro do que foi escolhido. Com arquivos do SISTRUT em
-// mais de uma pasta (uma pasta de obras, por exemplo), a tela pergunta qual obra
-// importar: juntar pastas misturaria obras, e nomes iguais em pastas diferentes não têm
-// como ser escolhidos sozinhos. Só os arquivos que a importação lê vão para a memória.
+// Cada arquivo leva o caminho dentro do que foi escolhido. Com arquivos de obra do
+// SISTRUT em mais de uma pasta (uma pasta de obras, por exemplo), a tela pergunta qual
+// obra importar: juntar pastas misturaria obras, e nomes iguais em pastas diferentes não
+// têm como ser escolhidos sozinhos. Uma pasta só de parâmetros (.DSP, .PIP, .LAP, .INI,
+// como a EXEC40 do SISTRUT) vai junto com a obra. Com vários .DSP e nada que diga qual a
+// obra usou, a tela pergunta qual. Só os arquivos que a importação lê vão para a memória.
 import { FolderInput, Import } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Obra } from "../dominio/obra";
 import {
+  dspsAEscolher,
   extensaoDoSistrut,
   extensaoLida,
   importarObraSistrut,
@@ -77,21 +80,49 @@ const pastaDe = (caminho: string) => {
   return i < 0 ? "" : caminho.slice(0, i);
 };
 
-/** As pastas com arquivos do SISTRUT, cada uma com os arquivos dela (sem subpastas). */
+/** Extensões dos parâmetros da instalação (a pasta EXEC40), que valem para qualquer obra. */
+const PARAMETROS = new Set(["DSP", "PIP", "LAP", "INI"]);
+const extensao = (nome: string) => nome.slice(nome.lastIndexOf(".") + 1).toUpperCase();
+
+/** As pastas com arquivos do SISTRUT, cada uma com os arquivos dela (sem subpastas):
+ *  `obras`, as que têm arquivos de obra, e `parametros`, as que só têm parâmetros. */
 function porPasta(escolhidos: readonly Escolhido[]) {
   const pastas = new Map<string, Escolhido[]>();
   for (const e of escolhidos) {
     const p = pastaDe(e.caminho);
     pastas.set(p, [...(pastas.get(p) ?? []), e]);
   }
-  return [...pastas]
-    .map(([pasta, arquivos]) => ({
-      pasta,
-      arquivos,
-      doSistrut: arquivos.filter((a) => extensaoDoSistrut(a.arquivo.name)).length,
-    }))
+  const todas = [...pastas]
+    .map(([pasta, arquivos]) => {
+      const doSistrut = arquivos.filter((a) => extensaoDoSistrut(a.arquivo.name));
+      return {
+        pasta,
+        arquivos,
+        doSistrut: doSistrut.length,
+        soParametros: doSistrut.every((a) => PARAMETROS.has(extensao(a.arquivo.name))),
+      };
+    })
     .filter((p) => p.doSistrut > 0)
     .sort((a, b) => (a.pasta < b.pasta ? -1 : a.pasta > b.pasta ? 1 : 0));
+  return {
+    obras: todas.filter((p) => !p.soParametros),
+    parametros: todas.filter((p) => p.soParametros),
+  };
+}
+
+/** Os arquivos da obra com os das pastas de parâmetros. Um parâmetro com o nome de um
+ *  arquivo da obra fica de fora (vale o da obra), com a nota em `falhas`. */
+function comParametros(
+  obra: readonly Escolhido[],
+  parametros: readonly { arquivos: Escolhido[] }[],
+  falhas: string[],
+): Escolhido[] {
+  const nomes = new Set(obra.map((a) => a.arquivo.name.toUpperCase()));
+  const extras = parametros.flatMap((p) => p.arquivos);
+  for (const e of extras)
+    if (nomes.has(e.arquivo.name.toUpperCase()))
+      falhas.push(`${e.caminho}: a pasta da obra já tem um ${e.arquivo.name}; valeu o da obra.`);
+  return [...obra, ...extras.filter((e) => !nomes.has(e.arquivo.name.toUpperCase()))];
 }
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
@@ -104,6 +135,11 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
   const [resultado, setResultado] = useState<ResultadoImportacaoSistrut | null>(null);
   const [falhas, setFalhas] = useState<string[]>([]);
   const [escolha, setEscolha] = useState<ReturnType<typeof porPasta> | null>(null);
+  /** Os arquivos lidos à espera da escolha do .DSP, e os .DSP entre os quais escolher. */
+  const [perguntaDsp, setPerguntaDsp] = useState<{
+    lidos: ArquivoEntrada[];
+    dsps: string[];
+  } | null>(null);
   const [lendo, setLendo] = useState(false);
   const [sobre, setSobre] = useState(false);
   /** A leitura mais recente: o resultado de uma anterior que termina depois é descartado. */
@@ -114,6 +150,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     const minha = ++leitura.current;
     setResultado(null);
     setEscolha(null);
+    setPerguntaDsp(null);
     setFalhas(falhasAntes);
     setLendo(true);
     const falhasLeitura = [...falhasAntes];
@@ -137,23 +174,33 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       ).then((x) => x.filter((a) => a !== undefined));
       if (minha !== leitura.current) return;
       setFalhas(falhasLeitura);
-      setResultado(importarObraSistrut(lidos));
+      const dsps = dspsAEscolher(lidos);
+      if (dsps) setPerguntaDsp({ lidos, dsps });
+      else setResultado(importarObraSistrut(lidos));
     } finally {
       if (minha === leitura.current) setLendo(false);
     }
   };
 
-  /** Com uma pasta só (ou nenhuma do SISTRUT), importa; com várias, pergunta qual. */
+  /** Com uma obra só (ou nenhuma do SISTRUT), importa; com várias, pergunta qual. As
+   *  pastas só de parâmetros vão junto com a obra. */
   const separar = (escolhidos: readonly Escolhido[], falhasAntes: string[]) => {
     if (escolhidos.length === 0 && falhasAntes.length === 0) return;
     const pastas = porPasta(escolhidos);
-    if (pastas.length > 1) {
+    if (pastas.obras.length > 1) {
       setResultado(null);
       setFalhas(falhasAntes);
       setEscolha(pastas);
       return;
     }
-    void importar(pastas[0]?.arquivos ?? escolhidos, falhasAntes);
+    const obra = pastas.obras[0]?.arquivos;
+    const falhas = [...falhasAntes];
+    void importar(
+      obra || pastas.parametros.length > 0
+        ? comParametros(obra ?? [], pastas.parametros, falhas)
+        : escolhidos,
+      falhas,
+    );
   };
 
   const escolhidos = (e: ChangeEvent<HTMLInputElement>) => {
@@ -179,8 +226,10 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
     setResultado(null);
     setFalhas([]);
     setEscolha(null);
+    setPerguntaDsp(null);
   };
-  const aberto = resultado !== null || escolha !== null || (!lendo && falhas.length > 0);
+  const pergunta = escolha !== null || perguntaDsp !== null;
+  const aberto = resultado !== null || pergunta || (!lendo && falhas.length > 0);
 
   return (
     <>
@@ -244,22 +293,55 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               <DialogHeader>
                 <DialogTitle>Qual obra importar?</DialogTitle>
                 <DialogDescription>
-                  Há arquivos do SISTRUT em {escolha.length} pastas. Cada obra fica numa pasta:
-                  escolha uma. As subpastas dela não entram.
+                  Há arquivos do SISTRUT em {escolha.obras.length} pastas. Cada obra fica numa
+                  pasta: escolha uma. As subpastas dela não entram.
+                  {escolha.parametros.length > 0 &&
+                    ` Os parâmetros de ${escolha.parametros.map((p) => p.pasta || "(arquivos soltos)").join(", ")} vão junto.`}
                 </DialogDescription>
               </DialogHeader>
               <ul aria-label="Pastas com arquivos do SISTRUT" className="grid gap-2">
-                {escolha.map((p) => (
+                {escolha.obras.map((p) => (
                   <li key={p.pasta}>
                     <Button
                       variant="outline"
                       className="w-full justify-between"
-                      onClick={() => void importar(p.arquivos, falhas)}
+                      onClick={() => {
+                        const f = [...falhas];
+                        void importar(comParametros(p.arquivos, escolha.parametros, f), f);
+                      }}
                     >
                       <span>{p.pasta || "(arquivos soltos)"}</span>
                       <span className="text-muted-foreground text-xs">
                         {plural(p.doSistrut, "arquivo do SISTRUT", "arquivos do SISTRUT")}
                       </span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : perguntaDsp ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Qual parametrização do desenho?</DialogTitle>
+                <DialogDescription>
+                  Vieram {perguntaDsp.dsps.length} arquivos .DSP, e nem o DESENHO.INI nem o .COL
+                  dizem qual a obra usou. Escolha o .DSP com que as vigas foram detalhadas; os
+                  outros ficam de fora.
+                </DialogDescription>
+              </DialogHeader>
+              <ul aria-label="Arquivos .DSP" className="grid gap-2">
+                {perguntaDsp.dsps.map((nome) => (
+                  <li key={nome}>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => {
+                        const { lidos } = perguntaDsp;
+                        setPerguntaDsp(null);
+                        setResultado(importarObraSistrut(lidos, { dsp: nome }));
+                      }}
+                    >
+                      {nome}
                     </Button>
                   </li>
                 ))}
@@ -273,7 +355,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               <DialogDescription>Nada foi aberto. Veja o motivo abaixo.</DialogDescription>
             </DialogHeader>
           )}
-          {!escolha && (falhas.length > 0 || (resultado && !resultado.ok)) && (
+          {!pergunta && (falhas.length > 0 || (resultado && !resultado.ok)) && (
             <ul
               role="alert"
               className={`list-disc pl-5 text-sm ${resultado?.ok ? "text-aviso" : "text-destructive"}`}
@@ -285,7 +367,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
             </ul>
           )}
           <DialogFooter>
-            {resultado?.ok && !escolha && (
+            {resultado?.ok && !pergunta && (
               <Button
                 onClick={() => {
                   const { obra } = resultado;
@@ -297,7 +379,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               </Button>
             )}
             <Button variant="ghost" onClick={fechar}>
-              {resultado?.ok && !escolha ? "Cancelar" : "Voltar"}
+              {resultado?.ok && !pergunta ? "Cancelar" : "Voltar"}
             </Button>
           </DialogFooter>
         </DialogContent>

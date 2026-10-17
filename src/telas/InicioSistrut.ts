@@ -29,7 +29,7 @@ import {
   type NivelCol,
   type RepPilarSistrut,
 } from "../armazenamento/sistrut/pilar";
-import { importarVigasSistrut, lerVig } from "../armazenamento/sistrut/viga";
+import { importarVigasSistrut, lerDesenhoIni, lerVig } from "../armazenamento/sistrut/viga";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
 import { casaNome } from "../calculo/sistrut/pilares/carga";
 import type { Obra, Pavimento, Pilar } from "../dominio/obra";
@@ -60,6 +60,13 @@ export interface ResumoImportacao {
 export type ResultadoImportacaoSistrut =
   | { ok: true; obra: Obra; avisos: string[]; resumo: ResumoImportacao }
   | { ok: false; erros: string[]; resumo: ResumoImportacao };
+
+/** Escolhas do usuário que os arquivos não decidem. */
+export interface OpcoesImportacaoSistrut {
+  /** O .DSP (nome do arquivo) quando vêm vários e nem o DESENHO.INI nem o .COL dizem
+   *  qual a obra usou (`dspsAEscolher`). */
+  dsp?: string;
+}
 
 const TEXTO = new Set(["LAJ", "COL", "PIP", "PIL", "REP", "RLP"]);
 const VIGAS = new Set(["VIG", "SEC", "FOR", "TAB", "DSP", "INI"]);
@@ -531,6 +538,64 @@ function parametrosProprios(
   return `A obra parece usar parâmetros próprios (${indicios.join("; ")}): selecione também os arquivos de C:\\SISTRUT\\EXEC40 (o .DSP, o .LAP, o .PIP e os .INI), junto com os da obra. Sem eles valem os parâmetros de fábrica (SISTRUT), e o detalhamento e o quadro das vigas podem sair diferentes do .TAB do original.`;
 }
 
+/** A parametrização do desenho (.DSP) de uma seleção com vários: a da linha 1 do
+ *  DESENHO.INI, a parametrização padrão do DESENHO (DESENHO.BAS:738-767), ou a que o
+ *  .COL aponta (o usuário do original dá o mesmo nome ao .DSP, ao .PIP e ao .LAP da
+ *  instalação, como ESC). `escolhido` é a escolha do usuário na tela, que vale por cima.
+ *  Sem nenhum deles, `dsp` fica undefined. */
+function escolhaDoDsp(
+  dsps: readonly ArquivoEntrada[],
+  desenhoIni: ArquivoEntrada | undefined,
+  col: ArquivoEntrada | undefined,
+  escolhido?: string,
+): { dsp?: ArquivoEntrada; porque?: string } {
+  if (dsps.length <= 1) return dsps[0] ? { dsp: dsps[0] } : {};
+  const chamado = (nome: string | undefined) =>
+    nome ? dsps.find((a) => baseDe(a.nome) === nome.trim().toUpperCase()) : undefined;
+  const daTela = escolhido
+    ? dsps.find((a) => a.nome.toUpperCase() === escolhido.toUpperCase())
+    : undefined;
+  if (daTela) return { dsp: daTela, porque: "a escolhida na importação" };
+  const padrao = (() => {
+    if (!desenhoIni) return undefined;
+    try {
+      return lerDesenhoIni(textoDe(desenhoIni)).parametrizacao;
+    } catch {
+      return undefined;
+    }
+  })();
+  const doDesenho = chamado(padrao);
+  if (doDesenho)
+    return { dsp: doDesenho, porque: "a parametrização padrão da linha 1 do DESENHO.INI" };
+  const pip = (() => {
+    if (!col) return undefined;
+    try {
+      const r = lerCol(textoDe(col));
+      return r.ok ? r.valor.parametros.pip : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+  const doCol = chamado(pip);
+  if (doCol)
+    return { dsp: doCol, porque: `a parametrização que o .COL usa (${pip!.trim().toUpperCase()})` };
+  return {};
+}
+
+/** Os .DSP entre os quais o usuário tem de escolher: vêm vários (a pasta C:\SISTRUT\EXEC40
+ *  junto com a obra traz o SISTRUT.DSP e os da instalação) e nem o DESENHO.INI nem o .COL
+ *  dizem qual a obra usou. Sem escolha a fazer, undefined. A tela pergunta e passa a
+ *  resposta em `OpcoesImportacaoSistrut.dsp`. */
+export function dspsAEscolher(arquivos: readonly ArquivoEntrada[]): string[] | undefined {
+  const dsps = arquivos.filter((a) => extensaoDe(a.nome) === "DSP").sort(porNome);
+  if (dsps.length <= 1) return undefined;
+  const desenhoIni = arquivos.find(
+    (a) => extensaoDe(a.nome) === "INI" && baseDe(a.nome) === "DESENHO",
+  );
+  const col = arquivos.filter((a) => extensaoDe(a.nome) === "COL").sort(porNome)[0];
+  return escolhaDoDsp(dsps, desenhoIni, col).dsp ? undefined : dsps.map((a) => a.nome);
+}
+
 /**
  * Monta uma obra a partir dos arquivos de uma obra do SISTRUT. Cada .LAJ vira um
  * pavimento; sem .LAJ, a obra sai do .VIG ou do .COL. Nunca lança: o que um arquivo não
@@ -542,10 +607,11 @@ function parametrosProprios(
  */
 export function importarObraSistrut(
   arquivos: readonly ArquivoEntrada[],
+  opcoes: OpcoesImportacaoSistrut = {},
 ): ResultadoImportacaoSistrut {
   const c = new Coleta();
   try {
-    return importar(arquivos, c);
+    return importar(arquivos, c, opcoes);
   } catch (e) {
     return {
       ok: false,
@@ -555,7 +621,11 @@ export function importarObraSistrut(
   }
 }
 
-function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImportacaoSistrut {
+function importar(
+  arquivos: readonly ArquivoEntrada[],
+  c: Coleta,
+  opcoes: OpcoesImportacaoSistrut,
+): ResultadoImportacaoSistrut {
   const { avisos } = c;
   // dois arquivos com o mesmo nome (de pastas diferentes, ou só na caixa): qual valeria
   // seria escolha arbitrária
@@ -696,7 +766,30 @@ function importar(arquivos: readonly ArquivoEntrada[], c: Coleta): ResultadoImpo
           ? `parâmetros do ${baseDe(a.nome)} que a importação ainda não lê; valem os de fábrica.`
           : "configuração que a importação não conhece; ignorada."),
     );
-  const daObra = familia.filter((a) => VIGAS_DA_OBRA.has(extensaoDe(a.nome)) && ehIniDeViga(a));
+  // um .DSP só: com vários (a pasta EXEC40 junto com a obra), o do DESENHO.INI, o do .COL
+  // ou o que o usuário escolheu na tela; sem regra, o SISTRUT.DSP (o que o DESENHO adota
+  // quando não acha a parametrização, L_2041c) ou o primeiro, com aviso
+  const dsps = grupo("DSP");
+  const escolha = escolhaDoDsp(
+    dsps,
+    familia.find((a) => extensaoDe(a.nome) === "INI" && baseDe(a.nome) === "DESENHO"),
+    colOk?.arq,
+    opcoes.dsp,
+  );
+  const dsp = escolha.dsp ?? dsps.find((a) => baseDe(a.nome) === "SISTRUT") ?? dsps[0];
+  if (dsp && dsps.length > 1)
+    c.ignora(
+      dsps.filter((a) => a !== dsp),
+      escolha.porque
+        ? `outra parametrização do desenho; valeu o ${dsp.nome}, ${escolha.porque}.`
+        : `outra parametrização do desenho; nem o DESENHO.INI nem o .COL dizem qual a obra usou, e valeu o ${dsp.nome}. Importe de novo pela tela e escolha o .DSP da obra.`,
+    );
+  const daObra = familia.filter(
+    (a) =>
+      VIGAS_DA_OBRA.has(extensaoDe(a.nome)) &&
+      ehIniDeViga(a) &&
+      (extensaoDe(a.nome) !== "DSP" || a === dsp),
+  );
   const doBase = (b: string) =>
     familia.filter((a) => !VIGAS_DA_OBRA.has(extensaoDe(a.nome)) && baseDe(a.nome) === b);
   // a montagem de cada pavimento só depende da planta dele: a obra é calculada uma vez

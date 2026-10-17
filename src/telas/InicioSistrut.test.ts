@@ -25,7 +25,7 @@ import {
 } from "./__fixtures__/predioSistrut";
 import { calcular } from "./calculo";
 import { detalharObra } from "./detalhamento";
-import { importarObraSistrut, type ArquivoEntrada } from "./InicioSistrut";
+import { dspsAEscolher, importarObraSistrut, type ArquivoEntrada } from "./InicioSistrut";
 
 /** .COL com um nível MEIO sem .LAJ entre BASE e TETO; seção 20, 25 e 30 cm nos lances
  *  1→2, 2→3 e 3→4. */
@@ -519,5 +519,79 @@ describe("importarObraSistrut: armadura editada (.EDV)", () => {
     expect(importa([...comTab, dsp]).avisos).not.toContainEqual(
       expect.stringMatching(/parâmetros próprios/),
     );
+  });
+});
+
+describe("importarObraSistrut: vários .DSP (a pasta EXEC40 junto com a obra)", () => {
+  // ESC.DSP: o SISTRUT.DSP com cobrimento de 3 cm, para a escolha aparecer na obra
+  const sistrut = arquivo("SISTRUT.DSP");
+  const esc = comNome(
+    "ESC.DSP",
+    new TextDecoder("latin1")
+      .decode(sistrut.dados)
+      .replace(
+        "2.00              COBRIMENTO DA ARMADURA-CM",
+        "3.00              COBRIMENTO DA ARMADURA-CM",
+      ),
+  );
+  const obra = [arquivo("E2E.LAJ"), arquivo("E2E.VIG"), sistrut, esc];
+  const desenhoIni = (padrao: string) =>
+    comNome(
+      "DESENHO.INI",
+      readFileSync(arquivoOraculo("oraculo/orig/DESENHO.INI"), "latin1").replace(
+        /^SISTRUT=/,
+        `${padrao}=`,
+      ),
+    );
+  const colEsc = comNome(
+    "E2E.COL",
+    new TextDecoder("latin1").decode(arquivo("E2E.COL").dados).replace("{SISTRUT}", "{ESC}"),
+  );
+  /** Os parâmetros do desenho que a obra recebe com um .DSP só. */
+  const dspDe = (dsp: ArquivoEntrada) =>
+    importa([arquivo("E2E.LAJ"), arquivo("E2E.VIG"), dsp]).obra.parametrosViga?.dsp;
+  const motivo = (r: ReturnType<typeof importa>, nome: string) =>
+    r.resumo.ignorados.find((i) => i.arquivo === nome)?.motivo;
+
+  it("vale o da linha 1 do DESENHO.INI, e o outro fica de fora com o motivo", () => {
+    const arquivos = [...obra, desenhoIni("ESC")];
+    expect(dspsAEscolher(arquivos)).toBeUndefined();
+    const r = importa(arquivos);
+    expect(r.obra.parametrosViga?.dsp).toEqual(dspDe(esc));
+    expect(r.resumo.lidos).toContain("ESC.DSP");
+    expect(motivo(r, "SISTRUT.DSP")).toBe(
+      "outra parametrização do desenho; valeu o ESC.DSP, a parametrização padrão da linha 1 do DESENHO.INI.",
+    );
+  });
+
+  it("sem DESENHO.INI, vale o da parametrização que o .COL usa", () => {
+    const arquivos = [...obra, colEsc];
+    expect(dspsAEscolher(arquivos)).toBeUndefined();
+    const r = importa(arquivos);
+    expect(r.resumo.lidos).toContain("ESC.DSP");
+    expect(motivo(r, "SISTRUT.DSP")).toBe(
+      "outra parametrização do desenho; valeu o ESC.DSP, a parametrização que o .COL usa (ESC).",
+    );
+  });
+
+  it("sem nada que diga: a tela pergunta; sem a resposta vale o SISTRUT.DSP, com aviso", () => {
+    expect(dspsAEscolher(obra)).toEqual(["ESC.DSP", "SISTRUT.DSP"]);
+    const sem = importa(obra);
+    expect(sem.obra.parametrosViga?.dsp).toEqual(dspDe(sistrut));
+    expect(motivo(sem, "ESC.DSP")).toMatch(
+      /^outra parametrização do desenho; nem o DESENHO\.INI nem o \.COL dizem qual a obra usou, e valeu o SISTRUT\.DSP\./,
+    );
+    const r = importarObraSistrut(obra, { dsp: "ESC.DSP" });
+    if (!r.ok) throw new Error(r.erros.join("\n"));
+    expect(r.obra.parametrosViga?.dsp).toBeDefined();
+    expect(r.resumo.ignorados.find((i) => i.arquivo === "SISTRUT.DSP")?.motivo).toBe(
+      "outra parametrização do desenho; valeu o ESC.DSP, a escolhida na importação.",
+    );
+  });
+
+  it("um .DSP só: entra sem aviso", () => {
+    const r = importa([arquivo("E2E.LAJ"), arquivo("E2E.VIG"), esc]);
+    expect(r.resumo.lidos).toContain("ESC.DSP");
+    expect(r.avisos.join(" ")).not.toMatch(/parametrização do desenho/);
   });
 });

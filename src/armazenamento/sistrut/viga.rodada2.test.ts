@@ -26,7 +26,7 @@ import { nb178 } from "../../calculo/normas";
 import { calcularQuantitativos } from "../../calculo/quantitativos";
 import { materiaisPadrao } from "../../dominio/criar";
 import type { ArmaduraDigitada, Obra, ParametrosVigaIni } from "../../dominio/obra";
-import { type RegistroTeste, vig } from "./__teste__/vig";
+import { type RegistroTeste, V1, vig } from "./__teste__/vig";
 import { importarLaj } from "./laje";
 import { dadosDoRegistro, importarVigasSistrut, lerDesenhoIni, lerTab, lerVig } from "./viga";
 
@@ -589,5 +589,25 @@ describe("peso próprio das vigas tirado do .VIG (o .LAJ não grava o peso do LA
     const s = importa([{ nome: "E2E.VIG", dados: vigF }], igual.obra);
     expect(s.obra.pavimentos[0]!.vigas.map((v) => v.pesoProprio)).toEqual(Array(6).fill(undefined));
     expect(s.avisos.filter((a) => /Peso próprio/.test(a))).toEqual([]);
+  });
+});
+
+describe("vários .DSP no importador de vigas", () => {
+  const dsp = (nome: string) => ({ nome, dados: arquivo(`${ORIG}/SISTRUT.DSP`).dados });
+  const desenho = {
+    nome: "DESENHO.INI",
+    dados: new Uint8Array(readFileSync(arquivoOraculo(`${ORIG}/DESENHO.INI`))),
+  };
+
+  it("vale o da parametrização padrão do DESENHO.INI (SISTRUT), com aviso", () => {
+    const r = importa([vig([V1]), dsp("A.DSP"), dsp("SISTRUT.DSP"), desenho]);
+    expect(r.avisos).toContain(
+      "Mais de um .DSP (A.DSP, SISTRUT.DSP): valeu o SISTRUT.DSP, a parametrização padrão do DESENHO.INI.",
+    );
+  });
+
+  it("sem DESENHO.INI, o primeiro, com aviso", () => {
+    const r = importa([vig([V1]), dsp("A.DSP"), dsp("B.DSP")]);
+    expect(r.avisos).toContain("Mais de um .DSP (A.DSP, B.DSP): valeu o A.DSP, o primeiro.");
   });
 });

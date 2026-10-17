@@ -803,7 +803,6 @@ export function importarVigasSistrut(
       ) ?? arquivos.find((a) => extensao(a.nome) === ext);
     const sec = mesmo(".SEC");
     const forArq = mesmo(".FOR");
-    const dspArq = arquivos.find((a) => extensao(a.nome) === ".DSP");
     const iniArq = arquivos.find(
       (a) => base(a.nome).toUpperCase() === "VIGA" && extensao(a.nome) === ".INI",
     );
@@ -811,6 +810,17 @@ export function importarVigasSistrut(
     const desenhoIni = arquivos.find(
       (a) => base(a.nome).toUpperCase() === "DESENHO" && extensao(a.nome) === ".INI",
     );
+    const desenho = desenhoIni ? lerDesenhoIni(texto(desenhoIni.dados)) : undefined;
+    // vários .DSP: vale o da parametrização padrão do DESENHO.INI, senão o primeiro
+    const dsps = arquivos.filter((a) => extensao(a.nome) === ".DSP");
+    const peloDesenho = dsps.find(
+      (a) => base(a.nome).toUpperCase() === desenho?.parametrizacao.trim().toUpperCase(),
+    );
+    const dspArq = peloDesenho ?? dsps[0];
+    if (dspArq && dsps.length > 1)
+      avisos.push(
+        `Mais de um .DSP (${dsps.map((a) => a.nome).join(", ")}): valeu o ${dspArq.nome}, ${peloDesenho ? "a parametrização padrão do DESENHO.INI" : "o primeiro"}.`,
+      );
     for (const a of arquivos)
       if (
         a !== iniArq &&
@@ -846,7 +856,6 @@ export function importarVigasSistrut(
     });
     const formas = registros.map((_, i) => (forArq ? lerFor(forArq.dados, i) : undefined));
     const tab = tabArq ? lerTab(tabArq.dados) : [];
-    const desenho = desenhoIni ? lerDesenhoIni(texto(desenhoIni.dados)) : undefined;
 
     const nova = obra
       ? completar(obra, pavimentoId, registros, nomes, secoes, formas, avisos, montagem)

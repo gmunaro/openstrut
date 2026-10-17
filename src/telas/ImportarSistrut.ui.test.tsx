@@ -179,3 +179,80 @@ describe("importar obra do SISTRUT: pastas, leitura e arquivos repetidos", () =>
     );
   });
 });
+
+describe("importar obra do SISTRUT: a pasta EXEC40 junto com a obra", () => {
+  const naPasta = (pasta: string, a: ArquivoEntrada) => {
+    const f = comoFile(a);
+    Object.defineProperty(f, "webkitRelativePath", { value: `${pasta}/${a.nome}` });
+    return f;
+  };
+  const sistrut = arquivo("SISTRUT.DSP");
+  const esc: ArquivoEntrada = {
+    nome: "ESC.DSP",
+    dados: new TextEncoder().encode(
+      new TextDecoder("latin1")
+        .decode(sistrut.dados)
+        .replace(
+          "2.00              COBRIMENTO DA ARMADURA-CM",
+          "3.00              COBRIMENTO DA ARMADURA-CM",
+        ),
+    ),
+  };
+  const obra = [arquivo("E2E.LAJ"), arquivo("E2E.VIG")].map((a) => naPasta("ALPHA1", a));
+  const exec40 = [sistrut, esc].map((a) => naPasta("SISTRUT/EXEC40", a));
+
+  it("a pasta só de parâmetros vai junto; com dois .DSP e nada que diga qual, pergunta", async () => {
+    const { user } = renderizarApp("/");
+    const pasta = await screen.findByLabelText("Pasta da obra do SISTRUT");
+    await user.upload(pasta, [...obra, ...exec40]);
+    expect(screen.queryByRole("dialog", { name: "Qual obra importar?" })).toBeNull();
+    const pergunta = await screen.findByRole("dialog", {
+      name: "Qual parametrização do desenho?",
+    });
+    const dsps = within(pergunta).getByRole("list", { name: "Arquivos .DSP" });
+    expect(
+      within(dsps)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["ESC.DSP", "SISTRUT.DSP"]);
+    await user.click(within(dsps).getByRole("button", { name: "ESC.DSP" }));
+    const resumo = await screen.findByRole("dialog", { name: "Obra E2E lida do SISTRUT" });
+    expect(
+      within(within(resumo).getByRole("region", { name: "Arquivos lidos" })).getByText(/ESC\.DSP/),
+    ).toBeTruthy();
+    const ignorados = within(resumo).getByRole("region", { name: "Arquivos ignorados" });
+    expect(
+      within(ignorados).getByText(/valeu o ESC\.DSP, a escolhida na importação\./),
+    ).toBeTruthy();
+  });
+
+  it("com o DESENHO.INI na EXEC40, vale o .DSP dele, sem perguntar", async () => {
+    const { user } = renderizarApp("/");
+    const ini: ArquivoEntrada = {
+      nome: "DESENHO.INI",
+      // as 9 primeiras linhas do DESENHO.INI de fábrica, com a parametrização ESC
+      dados: new TextEncoder().encode(
+        [
+          "ESC=PARAMETRIZACAO UTILIZADA - NOME DO ARQUIVO PARAMETRIZACAO DEFAULT",
+          "C:\\=DRIVE E DIRETORIO DEFAULT PARA OS ARQUIVOS DE VIGAS (.VIG .SEC .FOR )",
+          "C:\\SISTRUT\\EXEC40\\=DRIVE E DIRETORIO DEFAULT PARA OS ARQUIVOS DE PARAMETRIZACAO (.DSP)",
+          "C:\\=DRIVE E DIRETORIO DEFAULT PARA OS ARQUIVOS DE VIGAS EDITADAS (.EDV)",
+          "C:\\=DRIVE E DIRETORIO DEFAULT PARA OS ARQUIVOS PADRAO CAD (.DXF ou .PUB)",
+          "m=UNIDADE DE MEDIDA LINEAR",
+          "t=UNIDADE DE FORCA",
+          "1=COEFICIENTE MULTIPLICADOR DA UNIDADE DE MEDIDA PARA TRANSFORMAR EM METROS",
+          "1=COEFICIENTE MULTIPLICADOR DA UNIDADE DE FORCA PARA TRANSFORMAR EM TONELADAS",
+        ].join("\r\n"),
+      ),
+    };
+    const pasta = await screen.findByLabelText("Pasta da obra do SISTRUT");
+    await user.upload(pasta, [...obra, ...exec40, naPasta("SISTRUT/EXEC40", ini)]);
+    const resumo = await screen.findByRole("dialog", { name: "Obra E2E lida do SISTRUT" });
+    const ignorados = within(resumo).getByRole("region", { name: "Arquivos ignorados" });
+    expect(
+      within(ignorados).getByText(
+        /valeu o ESC\.DSP, a parametrização padrão da linha 1 do DESENHO\.INI\./,
+      ),
+    ).toBeTruthy();
+  });
+});
