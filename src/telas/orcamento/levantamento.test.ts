@@ -6,7 +6,10 @@ import type { Obra } from "../../dominio/obra";
 import { lerObra } from "../../armazenamento/arquivo";
 import { calcular } from "../calculo";
 import { detalharObra } from "../detalhamento";
+import { orcar } from "../../dominio/orcamento";
 import { levantamentoDaObra, levantamentoNoModo, PAVIMENTO_FUNDACAO } from "./levantamento";
+import { orcamentoDe } from "./estado";
+import { TABELA_SINAPI } from "./sinapi";
 
 const obraDe = (arquivo: string): Obra => {
   const l = lerObra(readFileSync(resolve(process.cwd(), arquivo), "utf8"));
@@ -84,8 +87,61 @@ describe("levantamentoDaObra", () => {
       9,
     );
     expect(lev.pavimentos.at(-1)?.nome).toBe(PAVIMENTO_FUNDACAO);
+    // a fundação leva o nome do pilar da obra, não o da coluna interna ("P 1")
+    const pilares = new Set(corrigido.pavimentos.flatMap((p) => p.pilares.map((x) => x.nome)));
+    for (const e of fund) expect(pilares.has(e.nome), e.nome).toBe(true);
     const nbr = levantamentoNoModo({ ...corrigido, norma: "nbr6118-2023" }, "corrigido");
     expect(nbr?.cargaFundacao).toBeNull();
     expect(nbr?.elementos.some((e) => e.tipo === "fundacao")).toBe(false);
+  });
+
+  it("pavimentos de mesmo nome (e um chamado Fundação) ficam separados no orçamento", () => {
+    const p = corrigido.pavimentos[0]!;
+    const obra: Obra = {
+      ...corrigido,
+      pavimentos: [
+        { ...p, id: `${p.id}-a`, nome: PAVIMENTO_FUNDACAO, repeticoes: 2 },
+        { ...p, id: `${p.id}-b`, nome: PAVIMENTO_FUNDACAO },
+      ],
+    };
+    const c = calcular(obra);
+    if (c.tipo !== "ok") throw new Error(c.tipo);
+    const lev = levantamentoDaObra(obra, c.resultado, detalharObra(c.resultado, obra));
+    const quant = calcularQuantitativos(obra, c.resultado);
+    const { orc } = orcamentoDe(lev, [TABELA_SINAPI], {});
+    // dois pavimentos, cada um com o seu custo (a fundação, sem composição, não tem
+    // custo; o grupo dela tem id próprio e não se mistura com o pavimento "Fundação")
+    expect(orc.porPavimento.map((g) => g.rotulo)).toEqual([PAVIMENTO_FUNDACAO, PAVIMENTO_FUNDACAO]);
+    expect(new Set(lev.pavimentos.map((p) => p.id)).size).toBe(3);
+    // Σ dos grupos = custo direto; o pavimento repetido 2 vezes custa mais que o outro (lajes
+    // e vigas em dobro; o aço dos pilares muda de nível para nível)
+    expect(orc.porPavimento.reduce((a, g) => a + g.custo, 0)).toBeCloseTo(orc.custoDireto, 6);
+    const [a, b] = orc.porPavimento;
+    expect(a!.custo).toBeGreaterThan(1.5 * b!.custo);
+    // concreto do levantamento por pavimento = quantitativos
+    for (const [i, q] of quant.pavimentos.entries()) {
+      const id = obra.pavimentos[i]!.id;
+      const els = lev.elementos.filter((e) => e.pavimentoId === id);
+      expect(els.reduce((s, e) => s + e.concreto, 0)).toBeCloseTo(q.total.concreto, 9);
+    }
+    // um nível de fôrma por repetição: 3 níveis com a mesma área, 4 usos → 1 jogo de um nível
+    const so = orcar(lev, TABELA_SINAPI, {
+      ...orcamentoDe(lev, [TABELA_SINAPI], {}).cfg,
+      usosForma: 4,
+    });
+    const laje = lev.elementos.filter((e) => e.tipo === "laje").reduce((s, e) => s + e.forma, 0);
+    expect(so.formaFabricada.laje).toBeCloseTo(laje / 3, 9);
+  });
+
+  it("repetições inválidas: pavimento fora, com aviso", () => {
+    const obra: Obra = {
+      ...corrigido,
+      pavimentos: corrigido.pavimentos.map((p) => ({ ...p, repeticoes: 2.5 })),
+    };
+    const c = calcular(obra);
+    if (c.tipo !== "ok") throw new Error(c.tipo);
+    const lev = levantamentoDaObra(obra, c.resultado, null);
+    expect(lev.elementos.filter((e) => e.tipo !== "fundacao")).toEqual([]);
+    expect(lev.avisos[0]).toContain("repetições inválidas (2.5)");
   });
 });

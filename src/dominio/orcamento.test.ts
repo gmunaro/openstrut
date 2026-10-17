@@ -63,11 +63,12 @@ const cfg: ConfigOrcamento = {
 const lev: Levantamento = {
   fck: 25,
   pavimentos: [
-    { nome: "Tipo", repeticoes: 3, area: 100 },
-    { nome: "Cobertura", repeticoes: 1, area: 100 },
+    { id: "t", nome: "Tipo", repeticoes: 3, area: 100 },
+    { id: "c", nome: "Cobertura", repeticoes: 1, area: 100 },
   ],
   elementos: [
     {
+      pavimentoId: "t",
       pavimento: "Tipo",
       tipo: "laje",
       nome: "L1",
@@ -76,6 +77,7 @@ const lev: Levantamento = {
       aco: [{ aco: "CA-50", phi: 10, massa: 300 }],
     },
     {
+      pavimentoId: "t",
       pavimento: "Tipo",
       tipo: "pilar",
       nome: "P1",
@@ -87,6 +89,7 @@ const lev: Levantamento = {
       ],
     },
     {
+      pavimentoId: "c",
       pavimento: "Cobertura",
       tipo: "viga",
       nome: "V1",
@@ -136,6 +139,25 @@ describe("precoComposicao", () => {
 
 describe("orcar", () => {
   const o = orcar(lev, tabela, cfg);
+
+  it("pavimentos de mesmo nome são grupos diferentes (agrupa pelo id)", () => {
+    // a Cobertura renomeada "Tipo": os níveis de fôrma e os grupos não podem se misturar
+    const mesmoNome: Levantamento = {
+      ...lev,
+      pavimentos: lev.pavimentos.map((p) => ({ ...p, nome: "Tipo" })),
+      elementos: lev.elementos.map((e) => ({ ...e, pavimento: "Tipo" })),
+    };
+    const m = orcar(mesmoNome, tabela, cfg);
+    // mesmas contas do caso com nomes diferentes: 9571,5 e 3505
+    expect(m.custoDireto).toBeCloseTo(13076.5, 6);
+    expect(m.formaFabricada).toEqual({ laje: 15, viga: 20, pilar: 7.5 });
+    expect(m.porPavimento.map((g) => [g.chave, g.rotulo])).toEqual([
+      ["t", "Tipo"],
+      ["c", "Tipo"],
+    ]);
+    expect(m.porPavimento[0]?.custo).toBeCloseTo(9571.5, 6);
+    expect(m.porPavimento[1]?.custo).toBeCloseTo(3505, 6);
+  });
 
   it("custo direto, BDI e total, conta à mão", () => {
     // concreto: 5,2 m³ · 1,05 · 500 = 2730
@@ -233,10 +255,11 @@ describe("orcar", () => {
   it("fundação paramétrica por tf, e diferença entre dois orçamentos", () => {
     const comFund: Levantamento = {
       ...lev,
-      pavimentos: [...lev.pavimentos, { nome: "Fundação", repeticoes: 1, area: 0 }],
+      pavimentos: [...lev.pavimentos, { id: "f", nome: "Fundação", repeticoes: 1, area: 0 }],
       elementos: [
         ...lev.elementos,
         {
+          pavimentoId: "f",
           pavimento: "Fundação",
           tipo: "fundacao",
           nome: "P1",

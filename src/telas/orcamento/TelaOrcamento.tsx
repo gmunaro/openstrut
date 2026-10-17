@@ -453,8 +453,8 @@ function Parametros({
         />
       </div>
       <p className="text-muted-foreground max-w-3xl text-xs">
-        Fôrma fabricada de cada tipo = máx(maior área de um nível; área total ÷ usos), com a perda:
-        lajes {formatarNumero(orc.formaFabricada.laje, 1)} m², vigas{" "}
+        Fôrma fabricada de cada tipo = máx(maior área de um nível; área total ÷ usos), antes da
+        perda: lajes {formatarNumero(orc.formaFabricada.laje, 1)} m², vigas{" "}
         {formatarNumero(orc.formaFabricada.viga, 1)} m², pilares{" "}
         {formatarNumero(orc.formaFabricada.pilar, 1)} m² (de{" "}
         {formatarNumero(orc.indicadores.forma, 1)} m² de fôrma). Montagem e desmontagem em toda a
@@ -728,13 +728,13 @@ function PorElemento({ r }: { r: ResultadoOrcamento }) {
             <Th>Elemento</Th>
             <Th>Pavimento</Th>
             <Th>Tipo</Th>
-            <Th num unidade="m³">
+            <Th num unidade="m³, sem perda">
               Concreto
             </Th>
             <Th num unidade="m²">
               Fôrma
             </Th>
-            <Th num unidade="kg">
+            <Th num unidade="kg, sem perda">
               Aço
             </Th>
             <Th num unidade="R$">

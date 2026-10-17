@@ -23,14 +23,18 @@ import type { Aco, ModoCalculo, Obra } from "../../dominio/obra";
 import { calcular } from "../calculo";
 import { detalharObra, type DetalhamentoObra } from "../detalhamento";
 
-/** Nome do grupo das fundações no orçamento (não é pavimento da obra). */
+/** Nome e id do grupo das fundações no orçamento (não é pavimento da obra; o id não
+ *  colide com o de um pavimento, que é um UUID). */
 export const PAVIMENTO_FUNDACAO = "Fundação";
+export const ID_FUNDACAO = "fundacao";
 
 export interface LevantamentoObra extends Levantamento {
   /** Carga total na fundação, t (NB-1/78); null sem o resumo do SISTRUT. */
   cargaFundacao: number | null;
   /** Elementos sem barras no detalhamento (o aço deles fica fora). */
   semAco: string[];
+  /** O que ficou fora do levantamento e por quê. */
+  avisos: string[];
 }
 
 interface Posicao {
@@ -81,12 +85,18 @@ export function levantamentoDaObra(
   const acoPadrao = obra.materiais.aco;
   const elementos: ElementoQuant[] = [];
   const semAco: string[] = [];
+  const avisos: string[] = [];
   const umPav = obra.pavimentos.length === 1;
   const rotulo = (pav: string, nome: string) => (umPav ? nome : `${pav}: ${nome}`);
 
   for (const pav of obra.pavimentos) {
     const rep = repeticoes(pav.repeticoes);
-    if (rep === 0) continue;
+    if (rep === 0) {
+      avisos.push(
+        `${pav.nome}: repetições inválidas (${pav.repeticoes}); pavimento fora do orçamento.`,
+      );
+      continue;
+    }
     const ps = r.sistrut?.pavimentos.find((p) => p.pavimentoId === pav.id);
 
     for (const l of pav.lajes) {
@@ -95,6 +105,7 @@ export function levantamentoDaObra(
       const aco = d ? massas(d.detalhamento.posicoes, acoPadrao, rep) : [];
       if (aco.length === 0) semAco.push(rotulo(pav.nome, l.nome));
       elementos.push({
+        pavimentoId: pav.id,
         pavimento: pav.nome,
         tipo: "laje",
         nome: l.nome,
@@ -116,6 +127,7 @@ export function levantamentoDaObra(
       const aco = d ? massas(d.detalhamento.posicoes, acoPadrao, rep) : [];
       if (aco.length === 0) semAco.push(rotulo(pav.nome, v.nome));
       elementos.push({
+        pavimentoId: pav.id,
         pavimento: pav.nome,
         tipo: "viga",
         nome: v.nome,
@@ -144,6 +156,7 @@ export function levantamentoDaObra(
       }
       if (aco.length === 0) semAco.push(rotulo(pav.nome, p.nome));
       elementos.push({
+        pavimentoId: pav.id,
         pavimento: pav.nome,
         tipo: "pilar",
         nome: p.nome,
@@ -157,6 +170,7 @@ export function levantamentoDaObra(
   const pavimentos = obra.pavimentos
     .filter((p) => repeticoes(p.repeticoes) > 0)
     .map((p) => ({
+      id: p.id,
       nome: p.nome,
       repeticoes: p.repeticoes,
       area: p.lajes.reduce((a, l) => a + l.lx * l.ly, 0),
@@ -168,24 +182,33 @@ export function levantamentoDaObra(
   const s = r.sistrut;
   if (s && s.fundacoes.length > 0) {
     cargaFundacao = 0;
+    const base = obra.pavimentos.at(-1);
     for (const f of s.fundacoes) {
-      const base = Math.min(...s.lances.filter((l) => l.coluna === f.coluna).map((l) => l.nivel));
-      if (base !== 0) continue;
+      // a coluna nasce na fundação: lance mais baixo no nível 0; sem lance calculado, o
+      // pilar da base dela está no pavimento de baixo (a obra lista do topo para a base)
+      const niveis = s.lances.filter((l) => l.coluna === f.coluna).map((l) => l.nivel);
+      const naFundacao =
+        niveis.length > 0
+          ? Math.min(...niveis) === 0
+          : (base?.pilares.some((p) => p.id === f.pilarId) ?? false);
+      if (!naFundacao) continue;
       cargaFundacao += f.fundacao;
+      const pilar = obra.pavimentos.flatMap((p) => p.pilares).find((p) => p.id === f.pilarId);
       elementos.push({
+        pavimentoId: ID_FUNDACAO,
         pavimento: PAVIMENTO_FUNDACAO,
         tipo: "fundacao",
-        nome: f.coluna,
+        nome: pilar?.nome ?? f.coluna,
         concreto: 0,
         forma: 0,
         aco: [],
         carga: f.fundacao,
       });
     }
-    pavimentos.push({ nome: PAVIMENTO_FUNDACAO, repeticoes: 1, area: 0 });
+    pavimentos.push({ id: ID_FUNDACAO, nome: PAVIMENTO_FUNDACAO, repeticoes: 1, area: 0 });
   }
 
-  return { fck: obra.materiais.fck, pavimentos, elementos, cargaFundacao, semAco };
+  return { fck: obra.materiais.fck, pavimentos, elementos, cargaFundacao, semAco, avisos };
 }
 
 /** Levantamento da obra recalculada no outro modo (NB-1/78); null se o cálculo falhar. */

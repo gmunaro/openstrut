@@ -42,6 +42,8 @@ export function OrigemPrecos({ r }: { r: ResultadoOrcamento }) {
   );
 }
 
+const div = (a: number, b: number) => (b > 0 ? a / b : NaN);
+
 /** Custo direto, BDI, total e indicadores; lista os insumos sem preço. */
 export function Resumo({ r }: { r: ResultadoOrcamento }) {
   const { orc } = r;
@@ -51,8 +53,9 @@ export function Resumo({ r }: { r: ResultadoOrcamento }) {
     [`BDI (${formatarNumero(orc.bdi * 100, 2)} %)`, reais(orc.total - orc.custoDireto), "R$"],
     ["Total com BDI", reais(orc.total), "R$"],
     ["Área construída", formatarNumero(i.areaConstruida, 2), "m²"],
-    ["Custo por área", reais(i.custoPorArea), "R$/m²"],
-    ["Taxa de aço", formatarNumero(i.acoPorConcreto, 1), "kg/m³"],
+    ["Custo direto por área", reais(div(orc.custoDireto, i.areaConstruida)), "R$/m²"],
+    ["Custo com BDI por área", reais(i.custoPorArea), "R$/m²"],
+    ["Taxa de aço (sem perda)", formatarNumero(i.acoPorConcreto, 1), "kg/m³"],
     ["Fôrma por concreto", formatarNumero(i.formaPorConcreto, 2), "m²/m³"],
   ];
   return (
@@ -72,6 +75,10 @@ export function Resumo({ r }: { r: ResultadoOrcamento }) {
       </Tabela>
       <p className="text-aviso mt-1 text-xs font-medium">
         Estimativa da estrutura: não substitui o orçamento executivo.
+      </p>
+      <p className="text-muted-foreground mt-1 text-xs">
+        Não inclui escoramento além do que está nas composições de montagem, cura, juntas,
+        transporte vertical, canteiro nem a fundação dimensionada (só a carga, na NB-1/78).
       </p>
       <p className="text-muted-foreground mt-1 text-xs">
         Área construída: área das lajes pelos eixos × repetições. Taxa de aço: aço sem perda (barras
@@ -118,7 +125,7 @@ export function TabelaGrupos({
               Com BDI
             </Th>
             <Th num unidade="%">
-              Parte
+              Participação
             </Th>
           </Linha>
         </Cabecalho>
@@ -198,8 +205,8 @@ export function TabelaComparacao({ comp }: { comp: Comparacao }) {
       <TituloBloco
         extra={
           <span className="text-muted-foreground text-xs">
-            mesma tabela e mesmos parâmetros; diferença = {comp.rotulos[1].toLowerCase()} −{" "}
-            {comp.rotulos[0].toLowerCase()}
+            modo original (como o SISTRUT 4.0) × modo corrigido, com a mesma tabela e os mesmos
+            parâmetros
           </span>
         }
       >
@@ -208,14 +215,10 @@ export function TabelaComparacao({ comp }: { comp: Comparacao }) {
       <Tabela className="w-auto">
         <Cabecalho>
           <Linha>
-            <Th>Custo direto</Th>
-            <Th num unidade="R$">
-              {comp.rotulos[0]}
-            </Th>
-            <Th num unidade="R$">
-              {comp.rotulos[1]}
-            </Th>
-            <Th num unidade="R$">
+            <Th>Item</Th>
+            <Th num>{comp.rotulos[0]}</Th>
+            <Th num>{comp.rotulos[1]}</Th>
+            <Th num unidade={`${comp.rotulos[1].toLowerCase()} − ${comp.rotulos[0].toLowerCase()}`}>
               Diferença
             </Th>
           </Linha>
@@ -223,14 +226,14 @@ export function TabelaComparacao({ comp }: { comp: Comparacao }) {
         <Corpo>
           {d.porTipo.map((x) => (
             <Linha key={x.tipo}>
-              <Td>{x.rotulo}</Td>
+              <Td>{x.rotulo}, custo direto (R$)</Td>
               <Td num>{reais(x.a)}</Td>
               <Td num>{reais(x.b)}</Td>
               <Td num>{reais(x.dif)}</Td>
             </Linha>
           ))}
           <Linha className="font-semibold">
-            <Td>Total com BDI</Td>
+            <Td>Total com BDI (R$)</Td>
             <Td num>{reais(comp.a.total)}</Td>
             <Td num>{reais(comp.b.total)}</Td>
             <Td num data-rotulo="diferenca-total">
@@ -247,11 +250,18 @@ export function TabelaComparacao({ comp }: { comp: Comparacao }) {
           </Linha>
         </Corpo>
       </Tabela>
+      {(comp.a.semPreco.length > 0 || comp.b.semPreco.length > 0) && (
+        <p role="alert" className="text-aviso mt-1 text-xs font-medium">
+          Diferença parcial: há insumo sem preço em um dos modos (
+          {[...new Set([...comp.a.semPreco, ...comp.b.semPreco])].map(rotuloPapel).join("; ")}).
+        </p>
+      )}
       <p className="text-muted-foreground mt-1 max-w-3xl text-xs">
-        O app não dimensiona a fundação. A carga na fundação é o resumo do SISTRUT (colunas que
-        nascem na fundação). Um pilar que nasce sobre viga e continua a coluna de baixo leva a carga
-        dele à fundação duas vezes no original. Para pôr preço nessa diferença, dê uma composição à
-        fundação (R$ por tf) na aba Orçamento.
+        O modo original refaz o cálculo como o SISTRUT 4.0 de 1991, com os defeitos dele; o
+        corrigido troca só esses defeitos (docs/MODO-CALCULO.md). O app não dimensiona a fundação. A
+        carga na fundação é o resumo do SISTRUT (colunas que nascem na fundação). Um pilar que nasce
+        sobre viga e continua a coluna de baixo leva a carga dele à fundação duas vezes no original.
+        Para pôr preço nessa diferença, dê uma composição à fundação (R$ por tf) na aba Orçamento.
       </p>
     </section>
   );

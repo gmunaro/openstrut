@@ -161,6 +161,8 @@ export interface MassaAco {
 
 /** Um elemento, com as repetições do pavimento já multiplicadas. */
 export interface ElementoQuant {
+  /** Id do pavimento (PavimentoQuant.id): agrupa. O nome só rotula (pode repetir). */
+  pavimentoId: string;
   pavimento: string;
   tipo: TipoElemento;
   nome: string;
@@ -174,6 +176,7 @@ export interface ElementoQuant {
 }
 
 export interface PavimentoQuant {
+  id: string;
   nome: string;
   repeticoes: number;
   /** Área construída de um nível, m² (área das lajes pelos eixos). */
@@ -270,7 +273,7 @@ function niveisForma(lev: Levantamento, tipo: TipoForma) {
   for (const p of lev.pavimentos) {
     const rep = Math.max(1, Math.floor(p.repeticoes));
     const area = lev.elementos
-      .filter((e) => e.pavimento === p.nome && e.tipo === tipo)
+      .filter((e) => e.pavimentoId === p.id && e.tipo === tipo)
       .reduce((a, e) => a + e.forma, 0);
     for (let k = 0; k < rep; k++) niveis.push(area / rep);
   }
@@ -364,11 +367,12 @@ export function orcar(lev: Levantamento, tabela: TabelaPrecos, cfg: ConfigOrcame
   };
   const el = (l: LinhaCusto) => lev.elementos[l.elemento]!;
 
+  const nomePav = new Map(lev.pavimentos.map((p) => [p.id, p.nome]));
   const pav = agrupa(
-    (l) => el(l).pavimento,
-    (k) => k,
+    (l) => el(l).pavimentoId,
+    (k) => nomePav.get(k) ?? k,
   );
-  const porPavimento = lev.pavimentos.flatMap((p) => pav.get(p.nome) ?? []);
+  const porPavimento = lev.pavimentos.flatMap((p) => pav.get(p.id) ?? []);
   const tipos = agrupa(
     (l) => el(l).tipo,
     (k) => ROTULO_TIPO[k],
