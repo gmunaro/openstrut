@@ -112,13 +112,14 @@ export interface ConfigOrcamento {
 }
 
 /** Valores iniciais das perdas e do reaproveitamento: convenções do app, editáveis.
- *  Aço 10 %: a mesma perda da tabela de aço do detalhamento (PERDA_PADRAO). BDI 0:
+ *  Aço 10 %: a mesma perda da tabela de aço do detalhamento (PERDA_PADRAO). Fôrma: 4
+ *  usos, as utilizações das composições de montagem da SINAPI padrão. BDI 0:
  *  o usuário informa o da obra dele. */
 export const CONFIG_PADRAO: Omit<ConfigOrcamento, "tabelaId" | "vinculos"> = {
   perdaConcreto: 0.05,
   perdaAco: 0.1,
   perdaForma: 0.1,
-  usosForma: 3,
+  usosForma: 4,
   bdi: 0,
 };
 

@@ -41,6 +41,7 @@ import {
 } from "../acoes";
 import { calcular, NOME_NORMA } from "../calculo";
 import { DetalhamentoContexto, type DetalhamentoObra, detalharObra } from "../detalhamento";
+import { TelaOrcamento } from "../orcamento/TelaOrcamento";
 import { Erros } from "../Erros";
 import { Relatorio } from "../relatorio/Relatorio";
 import { Resultados } from "../resultados/Resultados";
@@ -230,6 +231,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
       <TabsTrigger value="planta">Planta</TabsTrigger>
       <TabsTrigger value="resultados">Resultados</TabsTrigger>
       <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+      <TabsTrigger value="orcamento">Orçamento</TabsTrigger>
     </TabsList>
   );
   /** Fecha a folha de ações e faz a ação escolhida. */
@@ -530,6 +532,9 @@ function ObraAberta({ obra }: { obra: Obra }) {
         <DetalhamentoContexto value={detalhamento}>
           <Relatorio obra={obra} calculo={calculo} />
         </DetalhamentoContexto>
+      </TabsContent>
+      <TabsContent value="orcamento" className="compacto:px-3 overflow-auto px-4 pt-3 pb-20">
+        <TelaOrcamento obra={obra} calculo={calculo} detalhamento={detalhamento} />
       </TabsContent>
 
       <DialogoMateriais
