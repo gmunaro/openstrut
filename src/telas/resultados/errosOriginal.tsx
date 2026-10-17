@@ -185,7 +185,7 @@ function CartaoErro({ erro, ativo }: { erro: ErroDoOriginal; ativo: "original" |
         </Parte>
       </dl>
       <p className="text-muted-foreground mt-2 text-xs">
-        Referência no original: {erro.referencia}. Defeito {erro.id} de docs/MODO-CALCULO.md.
+        Referência no original: {erro.referencia.replace(/@[0-9a-f]+/g, "")}. Defeito {erro.id} de docs/MODO-CALCULO.md.
       </p>
     </article>
   );
