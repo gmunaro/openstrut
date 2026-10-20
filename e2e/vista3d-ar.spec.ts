@@ -394,7 +394,8 @@ for (const tela of TELAS)
       const antes = await estadoDaVista(page);
       expect(antes.pai).toBe(false);
       expect(antes.luzesVisiveis).toBeGreaterThan(0);
-      const lacosAntes = await lacosNaJanela(page);
+      // só o laço do núcleo; espera o one-shot de BotaoRelatar (300 ms) passar
+      await expect.poll(() => lacosNaJanela(page)).toBe(1);
 
       // Painel com suporte: escala e tamanho da maquete
       const ver = page.getByRole("button", { name: "Ver na mesa" });
@@ -513,8 +514,9 @@ for (const tela of TELAS)
         () => (window as unknown as { __arFalso: { fins: number; cancelada: boolean } }).__arFalso,
       );
       expect(reg).toMatchObject({ fins: 1, cancelada: true });
-      // nenhum laço a mais na janela depois da sessão (o do WebGLRenderer foi desligado)
-      expect(await lacosNaJanela(page)).toBe(lacosAntes);
+      // nenhum laço a mais na janela depois da sessão (o do WebGLRenderer foi desligado); o
+      // one-shot de BotaoRelatar (300 ms) pode cair na janela de medida, então espera assentar
+      await expect.poll(() => lacosNaJanela(page)).toBe(1);
       await quadros(page);
       await page.screenshot({ path: path.join(PRINTS, `depois-de-sair-${tela.nome}.png`) });
       expect(erros).toEqual([]);
@@ -538,7 +540,9 @@ for (const modo of ["rejeita", "minimo"] as const)
   }) => {
     const { contexto, page, erros } = await novaPagina(browser, TELAS[0], modo);
     const antes = await estadoDaVista(page);
-    const lacosAntes = await lacosNaJanela(page);
+    // o laço do núcleo é o único; um one-shot de BotaoRelatar (reavalia 300 ms depois de cada
+    // mudança no DOM) pode cair na janela de medida, então espera-se o assentamento
+    await expect.poll(() => lacosNaJanela(page)).toBe(1);
     await page.getByRole("button", { name: "Ver na mesa" }).click();
     const alerta = page.getByRole("alert").filter({ hasText: "realidade aumentada" });
     await expect(alerta).toContainText("Não foi possível abrir a realidade aumentada");
@@ -551,7 +555,8 @@ for (const modo of ["rejeita", "minimo"] as const)
     expect(reg.pedidos).toBe(1);
     // a sessão mínima é encerrada; o pedido recusado não tem sessão
     expect(reg.fins).toBe(modo === "minimo" ? 1 : 0);
-    expect(await lacosNaJanela(page)).toBe(lacosAntes);
+    // sem laço sobrando: a contagem volta a 1 (o one-shot acima passa em até 300 ms)
+    await expect.poll(() => lacosNaJanela(page)).toBe(1);
     await alerta.scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(PRINTS, `erro-${modo}-360.png`) });
     expect(erros).toEqual([]);

@@ -3,8 +3,8 @@
 // numa obra do oráculo de vários pavimentos importada do SISTRUT (os arquivos da obra
 // E2E do oráculo em três pavimentos, empilhados por um .COL, como a fixture PREDIO do
 // importador). Rode com PORT=4407 bun x playwright test e2e/vista3d.spec.ts.
-// As fotos da obra do oráculo vão para docs/vista-3d/ (entram no repositório); as da
-// obra de 3 pavimentos, para e2e/prints/vista3d/.
+// As fotos da obra do oráculo vão para docs/vista-3d/ só com PRINTS_DOCS=1 (bun run
+// e2e:docs), porque são versionadas. Sem a variável, vão para e2e/prints/vista3d/ (ignorado).
 import { expect, type Page, test } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,9 +18,10 @@ import {
   SO_BURACOS,
 } from "../src/telas/__fixtures__/predioSistrut";
 
-const DOCS = path.resolve(process.cwd(), "docs/vista-3d");
 const PRINTS = path.resolve(process.cwd(), "e2e/prints/vista3d");
-fs.mkdirSync(DOCS, { recursive: true });
+const FOTOS =
+  process.env.PRINTS_DOCS === "1" ? path.resolve(process.cwd(), "docs/vista-3d") : PRINTS;
+fs.mkdirSync(FOTOS, { recursive: true });
 fs.mkdirSync(PRINTS, { recursive: true });
 
 // WebGL por software no Chrome sem GPU (CI e headless)
@@ -336,7 +337,7 @@ test.describe("obra do oráculo de vários pavimentos, importada do SISTRUT", ()
     await page.setViewportSize({ width: 1366, height: 768 });
     await importarPredio(page);
     await abrir3d(page);
-    const foto = (nome: string) => page.screenshot({ path: path.join(DOCS, `${nome}.png`) });
+    const foto = (nome: string) => page.screenshot({ path: path.join(FOTOS, `${nome}.png`) });
 
     // montagem automática: os 3 pavimentos pelas cotas do .COL, a escada fora do prédio
     expect(await cena(page, (c) => c.modelo.niveis.map((n) => [n.nome, n.cota]))).toEqual([
@@ -435,13 +436,13 @@ test.describe("obra do oráculo de vários pavimentos, importada do SISTRUT", ()
       const erros = vigiarErros(page);
       await importarPredio(page);
       await abrir3d(page);
-      await page.screenshot({ path: path.join(DOCS, `todo-${tela.nome}.png`) });
+      await page.screenshot({ path: path.join(FOTOS, `todo-${tela.nome}.png`) });
       const pilar = await cena(page, (c) =>
         c.modelo.elementos.find((e) => e.tipo === "laje" && e.nivel === 2),
       );
       await clicarElemento(page, pilar!.chave, tela.toque);
       await expect(page.getByRole("region", { name: /Elemento selecionado/ })).toBeVisible();
-      await page.screenshot({ path: path.join(DOCS, `selecao-${tela.nome}.png`) });
+      await page.screenshot({ path: path.join(FOTOS, `selecao-${tela.nome}.png`) });
       expect(erros).toEqual([]);
       await contexto.close();
     });

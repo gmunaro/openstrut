@@ -28,7 +28,8 @@ const taxaAswMin = (aco: MateriaisCalc["acoEstribo"]) =>
   aco === "CA-25" ? TAXA_ASW_MIN_CA25 : TAXA_ASW_MIN;
 /** As + As' ≤ 4 % de Ac (V1 ArmAsMax#; RECONSTRUCAO: NB-1/78 6.3.1.1 não conferido). */
 export const TAXA_AS_MAX = 0.04;
-/** As,min = 0,25 % bw·h para CA-25 (e CA-30) no modo "corrigido". Fonte secundária:
+/** As,min = 0,25 % bw·h para CA-25 no modo "corrigido" (a fonte também põe o CA-30
+ *  nessa faixa, mas o app não oferece CA-30: `Aco` em dominio/obra.ts). Fonte secundária:
  *  Silva e Araújo, "Estudo das taxas mínimas de armadura de tração em vigas...",
  *  Revista Essentia (Sobral) v. 16, 2015, citando a NB-1/1978 (0,25 % para CA-25 e
  *  CA-30; 0,15 % para CA-40, CA-50 e CA-60); docs/norma/pendencias.md item 7.

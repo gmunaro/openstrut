@@ -6,7 +6,7 @@ O código fica em `src/telas/obra3d/`. A tela da obra (`src/telas/obra/TelaObra.
 
 ## Fotos
 
-As fotos são de uma obra do oráculo de vários pavimentos: os arquivos da obra E2E do oráculo (`src/telas/__fixtures__/sistrut/`) em três pavimentos, TER, TIPO e COB, empilhados por um `.COL` com as cotas 0,40, 3,40 e 6,40 m. O `e2e/vista3d.spec.ts` gera essas fotos.
+As fotos são de uma obra do oráculo de vários pavimentos: os arquivos da obra E2E do oráculo (`src/telas/__fixtures__/sistrut/`) em três pavimentos, TER, TIPO e COB, empilhados por um `.COL` com as cotas 0,40, 3,40 e 6,40 m. Para regenerar essas fotos, rode `PORT=4407 bun run e2e:docs` (o script liga `PRINTS_DOCS=1`, que faz o `e2e/vista3d.spec.ts` gravar em `docs/vista-3d/`). Um `bun run e2e` comum não mexe nelas: sem a variável, os prints vão para `e2e/prints/vista3d/`, que é ignorado pelo git.
 
 | Arquivo | O que mostra |
 |---|---|
