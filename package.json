@@ -17,6 +17,7 @@
     "fmt:check": "oxfmt --check src",
     "test": "vitest run",
     "e2e": "playwright test",
+    "e2e:docs": "PRINTS_DOCS=1 playwright test e2e/vista3d.spec.ts",
     "check": "bun run typecheck && bun run lint && bun run fmt:check && bun run test"
   },
   "dependencies": {
