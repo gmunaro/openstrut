@@ -15,7 +15,16 @@
 // progresso num diálogo que dá para cancelar.
 import { FolderInput, Import } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import {
+  ligarRelatoAutomatico,
+  relatarProblemaImportacao,
+  relatoAutomaticoLigado,
+  type EstadoRelatoAutomatico,
+} from "@/components/relato/automatico";
+import { caminhoRelato } from "@/components/relato/relay";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -29,10 +38,11 @@ import { ImportarDrive } from "./ImportarDrive";
 import {
   dspsAEscolher,
   extensaoDoSistrut,
-  importarObraSistrut,
   type ArquivoEntrada,
+  type OpcoesImportacaoSistrut,
   type ResultadoImportacaoSistrut,
 } from "./InicioSistrut";
+import { importarSemExcecao, problemaDaImportacao } from "./relatoImportacao";
 import { ListaAvisosImportacao } from "./resultados/avisos";
 import { doDisco, lerSelecao, type Escolhido } from "./selecao";
 
@@ -172,10 +182,30 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
   /** Muda para o diálogo do Drive abrir oferecendo entrar. */
   const [pedirLoginDrive, setPedirLoginDrive] = useState(0);
   const [sobre, setSobre] = useState(false);
+  /** Relato automático do erro desta importação (components/relato/automatico.ts). */
+  const [relato, setRelato] = useState<EstadoRelatoAutomatico | "enviando" | null>(null);
+  const [relatoLigado, setRelatoLigado] = useState(relatoAutomaticoLigado);
   /** A leitura mais recente: o resultado de uma anterior que termina depois é descartado. */
   const leitura = useRef(0);
   /** Interrompe os downloads da leitura em andamento (Cancelar, outra seleção). */
   const interromper = useRef<AbortController | null>(null);
+
+  /** Importa e mostra o resumo. Se a importação ou o cálculo da obra dá erro, manda o
+   *  relato automático; o cálculo roda depois de o resumo aparecer. */
+  const importarERelatar = (lidos: ArquivoEntrada[], opcoes?: OpcoesImportacaoSistrut) => {
+    const r = importarSemExcecao(lidos, opcoes);
+    setResultado(r);
+    setRelato(null);
+    const minha = leitura.current;
+    setTimeout(() => {
+      const problema = problemaDaImportacao(r, lidos);
+      if (!problema || caminhoRelato().tipo !== "relay") return;
+      if (minha === leitura.current) setRelato("enviando");
+      void relatarProblemaImportacao(problema).then((e) => {
+        if (minha === leitura.current) setRelato(e);
+      });
+    }, 0);
+  };
 
   /** Lê os arquivos de uma pasta e importa. */
   const importar = async (escolhidos: readonly Escolhido[], falhasAntes: string[]) => {
@@ -208,7 +238,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       setFaltouLogin(pedemLogin);
       const dsps = dspsAEscolher(lidos);
       if (dsps) setPerguntaDsp({ lidos, dsps });
-      else setResultado(importarObraSistrut(lidos));
+      else importarERelatar(lidos);
     } catch (erro) {
       // só a interrupção chega aqui (Cancelar ou outra seleção), e quem interrompeu já
       // limpou a tela
@@ -446,7 +476,7 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
                       onClick={() => {
                         const { lidos } = perguntaDsp;
                         setPerguntaDsp(null);
-                        setResultado(importarObraSistrut(lidos, { dsp: nome }));
+                        importarERelatar(lidos, { dsp: nome });
                       }}
                     >
                       {nome}
@@ -473,6 +503,30 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
               ))}
               {resultado && !resultado.ok && resultado.erros.map((e, i) => <li key={i}>{e}</li>)}
             </ul>
+          )}
+          {!pergunta && !baixando && resultado && caminhoRelato().tipo === "relay" && (
+            <div className="grid gap-2 text-sm">
+              {relato && relato !== "enviando" && relato.tipo !== "nao-enviado" && (
+                <p role="status" className="text-muted-foreground">
+                  {textoRelato(relato)}
+                </p>
+              )}
+              <div className="flex items-start gap-2">
+                <Switch
+                  id="relato-automatico"
+                  checked={relatoLigado}
+                  onCheckedChange={(ligado) => {
+                    ligarRelatoAutomatico(ligado);
+                    setRelatoLigado(ligado);
+                  }}
+                />
+                <Label htmlFor="relato-automatico" className="font-normal text-muted-foreground">
+                  Enviar relato automático ao desenvolvedor quando a importação ou o cálculo der
+                  erro, com os arquivos da obra. Os arquivos ficam guardados de forma privada; a
+                  página pública do relato não leva o nome da obra.
+                </Label>
+              </div>
+            </div>
           )}
           <DialogFooter>
             {faltouLogin && !pergunta && !baixando && (
@@ -505,6 +559,18 @@ export function ImportarSistrut({ aoAbrir }: { aoAbrir: (obra: Obra) => void }) 
       </Dialog>
     </>
   );
+}
+
+/** O que aconteceu com o relato automático, para a linha de status do diálogo. */
+function textoRelato(e: Exclude<EstadoRelatoAutomatico, { tipo: "nao-enviado" }>) {
+  switch (e.tipo) {
+    case "enviado":
+      return `Enviamos um relato automático deste erro ao desenvolvedor (nº ${e.numero}), com os arquivos da obra.`;
+    case "fila":
+      return "O relato automático deste erro sai quando houver conexão.";
+    case "recusado":
+      return `O relato automático não foi aceito: ${e.mensagem}`;
+  }
 }
 
 /** O que a importação reconheceu: pavimentos, arquivos e avisos. */

@@ -2,7 +2,7 @@
 // arquivos escolhidos de uma vez ou soltos na área, o resumo antes de abrir (pavimentos
 // na ordem, lidos, ignorados, avisos), abrir e cancelar, e o erro sem obra.
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useObra } from "../estado/obra";
 import { renderizarApp } from "../test-setup";
 import { arquivo, PREDIO } from "./__fixtures__/predioSistrut";
@@ -277,5 +277,73 @@ describe("importar obra do SISTRUT: a pasta EXEC40 junto com a obra", () => {
         /valeu o ESC\.DSP, a parametrização padrão da linha 1 do DESENHO\.INI\./,
       ),
     ).toBeTruthy();
+  });
+});
+
+// Relato automático (components/relato/automatico.ts) com o relay do build simulado.
+describe("importar obra do SISTRUT: relato automático do erro", () => {
+  const fetchFalso = vi.fn<typeof fetch>();
+  beforeEach(() => {
+    vi.stubEnv("VITE_RELATO_URL", "https://relay.test/relato");
+    vi.stubEnv("VITE_TURNSTILE_SITEKEY", "");
+    localStorage.clear();
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    fetchFalso.mockReset();
+    fetchFalso.mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, numero: 12, url: "https://x/12" }), { status: 201 }),
+    );
+    vi.stubGlobal("fetch", fetchFalso);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("a importação com erro manda o relato com os arquivos e diz o número", async () => {
+    const { user } = renderizarApp("/");
+    const entrada = await screen.findByLabelText("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)");
+    await user.upload(entrada, [comoFile(arquivo("E2E.SEC"))]);
+    const dialogo = await screen.findByRole("dialog", {
+      name: "Não foi possível importar a obra do SISTRUT",
+    });
+    expect(
+      await within(dialogo).findByText(
+        "Enviamos um relato automático deste erro ao desenvolvedor (nº 12), com os arquivos da obra.",
+      ),
+    ).toBeTruthy();
+    expect(fetchFalso).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchFalso.mock.calls[0]!;
+    expect(url).toBe("https://relay.test/relato");
+    const corpo = JSON.parse(String(init?.body)) as {
+      titulo: string;
+      obra: { nome: string; json: string };
+    };
+    expect(corpo.titulo).toMatch(/^Importação do SISTRUT \(importação\): Nenhuma obra para abrir/);
+    expect(corpo.obra.nome).toBe("arquivos-sistrut.json");
+    expect(JSON.parse(corpo.obra.json).arquivos[0].nome).toBe("E2E.SEC");
+    const chave = within(dialogo).getByRole("switch", { name: /Enviar relato automático/ });
+    expect(chave.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("com a opção desligada, nada sai", async () => {
+    localStorage.setItem("openstrut.relatoAutomatico", "nao");
+    const { user } = renderizarApp("/");
+    const entrada = await screen.findByLabelText("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)");
+    await user.upload(entrada, [comoFile(arquivo("E2E.SEC"))]);
+    const dialogo = await screen.findByRole("dialog");
+    const chave = within(dialogo).getByRole("switch", { name: /Enviar relato automático/ });
+    expect(chave.getAttribute("aria-checked")).toBe("false");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fetchFalso).not.toHaveBeenCalled();
+  });
+
+  it("obra que importa e calcula sem erro: nenhum relato", async () => {
+    const { user } = renderizarApp("/");
+    const entrada = await screen.findByLabelText("Arquivos do SISTRUT (.LAJ, .VIG, .COL e demais)");
+    await user.upload(entrada, PREDIO.map(comoFile));
+    await screen.findByRole("dialog", { name: "Obra PREDIO lida do SISTRUT" });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(fetchFalso).not.toHaveBeenCalled();
   });
 });
