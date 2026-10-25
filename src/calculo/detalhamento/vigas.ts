@@ -4,7 +4,8 @@
 // O que muda entre as normas fica em RegrasDetalhamento (REGRAS_6118 e
 // REGRAS_NB178); a geometria do detalhamento é comum.
 // Unidades: comprimentos e abscissas em cm, φ em mm, cortantes em kN.
-import { num } from "../texto";
+import { areaBarra } from "../barras";
+import { num, numAte } from "../texto";
 import type { Aco, NormaId } from "../../dominio/obra";
 import { fctm, GAMA_C } from "../normas/nbr6118-2023/materiais";
 import type { Barra, BarrasLongitudinais, ComMemoria, Etapa, MateriaisCalc } from "../tipos";
@@ -502,11 +503,6 @@ export function detalharViga(
       if (balanco(t)) construtivaBalanco(t);
       return;
     }
-    if ((s.flexao?.asComprimida ?? 0) > 0) {
-      avisos.push(
-        `${e.nome} tramo ${t + 1}: armadura dupla; a armadura comprimida (A's = ${num(s.flexao?.asComprimida ?? 0, 2)} cm²) não está detalhada.`,
-      );
-    }
     const { phi, n: qtd, area } = s.barras;
     const nome = `N${posicoes.length + 1}`;
     const { lbNec, basica } = ancora(nome, phi, "inferior", s, lisa);
@@ -586,6 +582,56 @@ export function detalharViga(
     });
   };
 
+  /** Armadura dupla no vão: a comprimida fica com as barras de cima do meio do tramo,
+   *  os porta-estribos ou, onde os negativos cobrem o vão inteiro, o menor deles. Se
+   *  elas cobrem a A's, o aviso é informativo e pede para conferir o travamento delas
+   *  pelos estribos (barra comprimida); senão, a A's não está detalhada.
+   *  [VERIFICAR] contar o porta-estribos como armadura comprimida é prática corrente,
+   *  sem item da norma lido. */
+  const armaduraDupla = () => {
+    for (let t = 0; t < n; t++) {
+      const dim = e.dimensionamento[t];
+      const asComp = dim?.positivo.flexao?.asComprimida ?? 0;
+      if (!dim || asComp <= 0 || !dim.positivo.barras || dim.positivo.barras.n <= 0) continue;
+      const pe = posicoes.find((p) => p.tipo === "porta-estribos" && p.tramo === t);
+      const negativos = [dim.negativoEsq.barras, dim.negativoDir.barras].flatMap((b) =>
+        b && b.n > 0 ? [b] : [],
+      );
+      const menor = negativos.reduce<(typeof negativos)[number] | undefined>(
+        (m, b) => (m === undefined || b.area < m.area ? b : m),
+        undefined,
+      );
+      const cima = pe
+        ? {
+            quem: "os porta-estribos",
+            texto: `${pe.quantidade} φ${numAte(pe.phi, 1)}`,
+            area: pe.quantidade * areaBarra(pe.phi),
+          }
+        : menor
+          ? {
+              quem: "as barras do negativo",
+              texto: `${menor.n} φ${numAte(menor.phi, 1)}`,
+              area: menor.area,
+            }
+          : undefined;
+      const onde = `${e.nome} tramo ${t + 1}: armadura dupla; a armadura comprimida (A's = ${num(asComp, 2)} cm²)`;
+      if (!cima || cima.area < asComp) {
+        avisos.push(`${onde} não está detalhada.`);
+        continue;
+      }
+      avisos.push(
+        `${onde} fica com ${cima.quem} (${cima.texto} = ${num(cima.area, 2)} cm²); confira o travamento delas pelos estribos.`,
+      );
+      memoria.push({
+        descricao: `Tramo ${t + 1}: armadura comprimida com ${cima.quem}`,
+        formula: `A's = ${num(asComp, 2)} ≤ ${cima.texto} = ${num(cima.area, 2)} cm²`,
+        valor: cima.area,
+        unidade: "cm²",
+        ref: "detalhamento da V2 [VERIFICAR]",
+      });
+    }
+  };
+
   /** Porta-estribos do tramo t onde o negativo das pontas não chega. */
   const portaEstribos = (t: number) => {
     if (balanco(t)) return;
@@ -654,5 +700,6 @@ export function detalharViga(
     portaEstribos(t);
     estribos(t);
   }
+  armaduraDupla();
   return { nome: e.nome, posicoes, avisos, memoria };
 }

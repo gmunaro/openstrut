@@ -103,6 +103,12 @@ describe("classificarAviso", () => {
       "bordo 3",
     ],
     [
+      "V1 tramo 1: armadura dupla; a armadura comprimida (A's = 0,08 cm²) fica com os porta-estribos (2 φ6,3 = 0,62 cm²); confira o travamento delas pelos estribos.",
+      "Armadura comprimida nas barras de cima",
+      "info",
+      "tramo 1",
+    ],
+    [
       "V2 tramo 1: armadura dupla; a armadura comprimida (A's = 0,40 cm²) não está detalhada.",
       "Armadura dupla não detalhada",
       "atencao",
