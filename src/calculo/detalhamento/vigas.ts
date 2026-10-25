@@ -106,6 +106,41 @@ export interface RegrasDetalhamento {
   ganchosEstribo(phiT: number): number;
   /** Comprimento exigido dentro do apoio extremo para o positivo com gancho, cm. */
   ancoragemApoioExtremo(a: ApoioExtremoEntrada): ApoioExtremoExigido;
+  /** Grampo do positivo no apoio extremo onde a ancoragem não cabe. Ausente = a norma
+   *  não tem a regra aqui: fica o aviso. */
+  grampoApoio?(a: GrampoEntrada): Grampo;
+}
+
+/** O que o grampo precisa: a barra que não ancora, a área a ancorar e o apoio. */
+export interface GrampoEntrada {
+  basica: AncoragemBasica;
+  /** Armadura a ancorar e área efetiva que chega à face, cm². */
+  anec: number;
+  asEf: number;
+  /** Largura do apoio e cobrimento, cm. */
+  largura: number;
+  cobrimento: number;
+}
+
+/** Grampos de um apoio: bitola (mm), quantidade e quanto o ramo passa da face, cm. */
+export interface Grampo {
+  phi: number;
+  quantidade: number;
+  alemDaFace: number;
+}
+
+/** Grampo do positivo como o SISTRUT o põe (DESINIT.BAS:2092-2225; `novoGrampo` em
+ *  sistrut/vigas/desinitBarras.ts): bitola φ5 para barra até φ10, φ6,3 até φ16 e φ8
+ *  acima; quantidade máx(1; ⌊((lb/(b − c + φ))·Anec − As,ef)/(2·A_grampo)⌋), com φ em
+ *  mm como no original (cada grampo tem dois ramos); o ramo passa da face 7,5 × φ do
+ *  grampo (mm), em cm. */
+export function grampoNb178(a: GrampoEntrada): Grampo {
+  const phiBarra = a.basica.phi;
+  const phi = phiBarra <= 10 ? 5 : phiBarra <= 16 ? 6.3 : 8;
+  const q =
+    ((a.basica.lb / (a.largura - a.cobrimento + phiBarra)) * a.anec - a.asEf) /
+    (2 * areaBarra(phi));
+  return { phi, quantidade: Math.floor(Math.max(1, q)), alemDaFace: Math.round(7.5 * phi) };
 }
 
 /** O positivo que chega a um apoio extremo. */
@@ -124,6 +159,8 @@ export interface ApoioExtremoEntrada {
 
 export interface ApoioExtremoExigido {
   exigido: number;
+  /** Armadura a ancorar no apoio, cm². */
+  anec: number;
   memoria: Etapa[];
 }
 
@@ -142,6 +179,7 @@ export function apoioExtremo6118(
   const exigido = Math.max(anc.lbNec, r + (5.5 * phi) / 10, 6);
   return {
     exigido,
+    anec: asAnc,
     memoria: [
       ...anc.memoria.map((m) => ({
         ...m,
@@ -171,6 +209,7 @@ export function apoioExtremoNb178(a: ApoioExtremoEntrada): ApoioExtremoExigido {
   const exigido = Math.max(a.basica.lb * razao - phi, 1.35 * phi, 6);
   return {
     exigido,
+    anec,
     memoria: [
       {
         descricao: "Armadura a ancorar no apoio extremo",
@@ -211,6 +250,7 @@ export const REGRAS_NB178: RegrasDetalhamento = {
   gancho: (phi) => ganchoNb178(phi),
   ganchosEstribo: ganchosEstriboNb178,
   ancoragemApoioExtremo: apoioExtremoNb178,
+  grampoApoio: grampoNb178,
 };
 
 export const regrasDetalhamento = (id: NormaId) => (id === "nb1-78" ? REGRAS_NB178 : REGRAS_6118);
@@ -249,7 +289,13 @@ export interface VigaDetalhamentoEntrada {
   mat: MateriaisCalc;
 }
 
-export type TipoPosicao = "positiva" | "negativa" | "porta-estribos" | "construtiva" | "estribo";
+export type TipoPosicao =
+  | "positiva"
+  | "negativa"
+  | "porta-estribos"
+  | "construtiva"
+  | "estribo"
+  | "grampo";
 
 export interface PosicaoArmadura {
   numero: number;
@@ -276,6 +322,9 @@ export interface PosicaoArmadura {
   xFim: number;
   /** Espaçamento dos estribos, cm; null nas barras longitudinais. */
   espacamento: number | null;
+  /** Grampo: U deitado no fundo da viga, dois ramos de xInicio a xFim e a travessa na
+   *  largura, na ponta do apoio (`travessa`); `reto` = comprimento do U inteiro. */
+  travessa?: "inicio" | "fim";
 }
 
 export interface VigaDetalhamento extends ComMemoria {
@@ -438,11 +487,72 @@ export function detalharViga(
           ? "NB-1/78 pelo SISTRUT (DESINIT.BAS:2092-2225)"
           : "6118:2023 18.3.2.4.1",
     });
-    if (disponivel < exigido) {
-      avisos.push(
-        `${e.nome} ${nome}: ancoragem no apoio ${k + 1} insuficiente (lb,ef = ${num(disponivel, 1)} cm < ${num(exigido, 1)} cm); use grampos ou aumente o apoio.`,
-      );
+    return disponivel >= exigido;
+  };
+
+  /** Aviso da ancoragem que não cabe no apoio extremo k. */
+  const avisoAncoragem = (nome: string, k: number, exigido: number) =>
+    avisos.push(
+      `${e.nome} ${nome}: ancoragem no apoio ${k + 1} insuficiente (lb,ef = ${num(largura(k) - c, 1)} cm < ${num(exigido, 1)} cm); use grampos ou aumente o apoio.`,
+    );
+
+  /** Grampo do positivo `barra` no apoio extremo k do tramo t, onde a ancoragem não
+   *  cabe (`RegrasDetalhamento.grampoApoio`): U deitado no fundo, de dentro do apoio
+   *  (cobrimento) até `alemDaFace` além da face, limitado à face do outro apoio; a
+   *  travessa fecha a largura por dentro dos estribos (bw − 2c − 2φt, como o SISTRUT).
+   *  Sem a regra na norma, fica o aviso. */
+  const grampoNoApoio = (
+    t: number,
+    k: number,
+    barra: string,
+    basica: AncoragemBasica,
+    exig: ApoioExtremoExigido,
+    asEf: number,
+  ) => {
+    const g = regras.grampoApoio?.({
+      basica,
+      anec: exig.anec,
+      asEf,
+      largura: largura(k),
+      cobrimento: c,
+    });
+    if (!g) {
+      avisoAncoragem(barra, k, exig.exigido);
+      return;
     }
+    const esquerdo = k === t;
+    const face = esquerdo ? xNo(k) + largura(k) / 2 : xNo(k) - largura(k) / 2;
+    const outraFace = esquerdo
+      ? xNo(k + 1) - largura(k + 1) / 2 - c
+      : xNo(k - 1) + largura(k - 1) / 2 + c;
+    const [ini, fim] = esquerdo
+      ? [xNo(k) - largura(k) / 2 + c, Math.min(face + g.alemDaFace, outraFace)]
+      : [Math.max(face - g.alemDaFace, outraFace), xNo(k) + largura(k) / 2 - c];
+    const phiT = e.dimensionamento[t]?.estribo?.phi ?? 5;
+    const travessa = e.bw - 2 * c - (2 * phiT) / 10;
+    const pos = adiciona({
+      tipo: "grampo",
+      tramo: t,
+      phi: g.phi,
+      quantidade: g.quantidade,
+      aco: mat.aco,
+      reto: 2 * (fim - ini) + travessa,
+      ganchoInicio: 0,
+      ganchoFim: 0,
+      xInicio: ini,
+      xFim: fim,
+      espacamento: null,
+      travessa: esquerdo ? "inicio" : "fim",
+    });
+    memoria.push({
+      descricao: `${pos.nome}: grampo no apoio ${k + 1} para ancorar ${barra}`,
+      formula: `${g.quantidade} φ${numAte(g.phi, 1)}, ramos de ${num(fim - ini, 1)} cm e travessa de ${num(travessa, 1)} cm`,
+      valor: g.quantidade,
+      ref: "NB-1/78 pelo SISTRUT (DESINIT.BAS:2092-2225)",
+    });
+    avisos.push(
+      `${e.nome} ${barra}: ancoragem no apoio ${k + 1} com grampo ${pos.nome} (${g.quantidade} φ${numAte(g.phi, 1)}), como o SISTRUT: lb,ef = ${num(largura(k) - c, 1)} cm < ${num(exig.exigido, 1)} cm.`,
+    );
   };
 
   /** Numera a posição e arredonda reto e ganchos para cima (cm). */
@@ -554,12 +664,10 @@ export function detalharViga(
     const dir = k < n ? extensao(k, 1) : { ext: largura(k) / 2 - c, gancho: true };
     if (k > 0) cobFim[k - 1] = esq.ext;
     if (k < n) cobInicio[k] = dir.ext;
-    if (extremo(k))
-      confereApoioExtremo(
-        nome,
-        k,
-        apoioExtremo6118(basica, s.flexao?.as ?? 0, s.barras.area, mat.aco),
-      );
+    if (extremo(k)) {
+      const exig = apoioExtremo6118(basica, s.flexao?.as ?? 0, s.barras.area, mat.aco);
+      if (!confereApoioExtremo(nome, k, exig)) avisoAncoragem(nome, k, exig.exigido);
+    }
 
     adiciona({
       tipo: "negativa",
@@ -607,13 +715,17 @@ export function detalharViga(
         mat,
       });
 
+    /** Apoios extremos em que a ancoragem não cabe: grampo depois da positiva. */
+    const semAncoragem: { k: number; exig: ApoioExtremoExigido }[] = [];
+
     // início (nó t) e fim (nó t + 1), em abscissa do tramo
     let ini: number;
     let ganchoIni = 0;
     if (extremo(t)) {
       ini = -(largura(t) / 2 - c);
       ganchoIni = gancho;
-      confereApoioExtremo(nome, t, exigidoNoApoio(tr.vEsq));
+      const exig = exigidoNoApoio(tr.vEsq);
+      if (!confereApoioExtremo(nome, t, exig)) semAncoragem.push({ k: t, exig });
     } else if (livre(t)) {
       ini = c;
       ganchoIni = gancho;
@@ -627,7 +739,8 @@ export function detalharViga(
     if (extremo(t + 1)) {
       fim = vao(t) + largura(t + 1) / 2 - c;
       ganchoFim = gancho;
-      confereApoioExtremo(nome, t + 1, exigidoNoApoio(tr.vDir));
+      const exig = exigidoNoApoio(tr.vDir);
+      if (!confereApoioExtremo(nome, t + 1, exig)) semAncoragem.push({ k: t + 1, exig });
     } else if (livre(t + 1)) {
       fim = vao(t) - c;
       ganchoFim = gancho;
@@ -649,6 +762,7 @@ export function detalharViga(
       xFim: xNo(t) + fim,
       espacamento: null,
     });
+    for (const { k, exig } of semAncoragem) grampoNoApoio(t, k, nome, basica, exig, area);
   };
 
   /** Balanço sem positivo: 2 barras inferiores da ponta (menos o cobrimento)

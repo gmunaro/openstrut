@@ -271,6 +271,8 @@ function barrasSistrut(
   origem: number,
 ): BarraViga[] {
   const posEstribo = posicoes.filter((p) => p.tipo === "estribo");
+  // grampo: a travessa fecha na ponta do apoio, a mais perto da extremidade da viga
+  const comprimentoViga = Math.max(0, ...posicoes.map((p) => p.fim));
   return posicoes.map((p) => {
     const tipo = p.tipo === "porta-estribo" ? "porta-estribos" : p.tipo;
     const base = {
@@ -283,6 +285,9 @@ function barrasSistrut(
       fim: origem + p.fim / 100,
       ganchoInicio: p.dobras[0] / 100,
       ganchoFim: p.dobras[1] / 100,
+      ...(p.tipo === "grampo"
+        ? { travessa: p.inicio < comprimentoViga - p.fim ? ("inicio" as const) : ("fim" as const) }
+        : {}),
     } satisfies BarraViga;
     if (p.tipo !== "estribo") return base;
     const k = posEstribo.indexOf(p) + 1;
@@ -465,7 +470,6 @@ export function modeloIfc(
 
   const niveis = niveisDaObra(obra);
   const elementos: ElementoIfc[] = [];
-  const grampos = new Set<string>();
   const semArmaduraPoligonal = new Set<string>();
   const doNivel = (pav: Pavimento, nivel: NivelIfc) => ({ Pavimento: pav.nome, Nivel: nivel.nome });
 
@@ -502,7 +506,6 @@ export function modeloIfc(
         );
         if (dv) barras = barrasDaV2(dv.detalhamento.posicoes, origem);
       }
-      if (barras.some((b) => b.tipo === "grampo")) grampos.add(v.nome);
       armadura = paraIfc(
         armaduraViga(barras, (t) => secaoEm(trechos, t), m.cobrimentoViga, m.aco, m.acoEstribo),
       );
@@ -695,10 +698,6 @@ export function modeloIfc(
     }
   }
 
-  if (grampos.size > 0)
-    avisos.push(
-      `Grampos das vigas ${[...grampos].join(", ")} não entram como barras no IFC (estão no quadro de ferros).`,
-    );
   if (semArmaduraPoligonal.size > 0)
     avisos.push(
       `Pilares de seção poligonal (${[...semArmaduraPoligonal].join(", ")}) saem sem as barras.`,

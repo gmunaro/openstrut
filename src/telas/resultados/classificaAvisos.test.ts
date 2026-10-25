@@ -97,6 +97,12 @@ describe("classificarAviso", () => {
       "apoio 2",
     ],
     [
+      "V9 N1: ancoragem no apoio 1 com grampo N2 (1 φ6,3), como o SISTRUT: lb,ef = 9,0 cm < 16,9 cm.",
+      "Ancoragem com grampo",
+      "info",
+      "apoio 1",
+    ],
+    [
       "L1 N2: ancoragem no bordo 3 insuficiente (lb,ef = 5 cm < 9 cm); aumente o apoio ou use barras mais finas.",
       "Ancoragem insuficiente",
       "atencao",

@@ -34,7 +34,8 @@ export interface PosicaoGeometria {
     | "pele"
     | "construtiva"
     | "longitudinal"
-    | "estribo";
+    | "estribo"
+    | "grampo";
   /** Bitola, mm. */
   phi: number;
   aco: string;
@@ -51,7 +52,9 @@ export interface PosicaoGeometria {
  *  estribos com a abscissa de cada um. */
 export interface BarraViga {
   nome: string;
-  tipo: PosicaoGeometria["tipo"] | "grampo";
+  tipo: PosicaoGeometria["tipo"];
+  /** Grampo: a ponta em que a travessa fecha o U (a do apoio). */
+  travessa?: "inicio" | "fim";
   phi: number;
   quantidade: number;
   comprimento: number;
@@ -81,6 +84,7 @@ export function barrasDaV2(posicoes: readonly PosicaoArmadura[], origem: number)
     fim: origem + p.xFim / 100,
     ganchoInicio: p.ganchoInicio / 100,
     ganchoFim: p.ganchoFim / 100,
+    ...(p.travessa ? { travessa: p.travessa } : {}),
     ...(p.tipo === "estribo"
       ? { estribos: espalhar(origem + p.xInicio / 100, origem + p.xFim / 100, p.quantidade) }
       : {}),
@@ -109,7 +113,8 @@ const naLargura = (n: number, largura: number) =>
  *  Longitudinais numa camada (positivas embaixo; negativas e porta-estribos em cima;
  *  pele nas faces), a `cobrimento + φestribo + φ/2` das faces e com os ganchos voltados
  *  para dentro da viga; estribos retangulares na alma, a `cobrimento + φ/2` das faces.
- *  `secaoEm(x)` dá bw e h (m) da alma no ponto x. Grampos não entram. */
+ *  `secaoEm(x)` dá bw e h (m) da alma no ponto x. Grampo: U deitado no fundo, por
+ *  dentro dos estribos, com a travessa na ponta do apoio; os vários, um sobre o outro. */
 export function armaduraViga(
   barras: readonly BarraViga[],
   secaoEm: (x: number) => { bw: number; h: number },
@@ -121,8 +126,29 @@ export function armaduraViga(
   const c = cobrimento / 100;
   const pos: PosicaoGeometria[] = [];
   for (const b of barras) {
-    if (b.tipo === "grampo" || b.quantidade <= 0 || b.phi <= 0) continue;
+    if (b.quantidade <= 0 || b.phi <= 0) continue;
     const phi = b.phi / 1000;
+    if (b.tipo === "grampo") {
+      const { bw, h } = secaoEm((b.inicio + b.fim) / 2);
+      const meia = Math.max(bw / 2 - c - phiEstribo - phi / 2, 0);
+      const z = -h + c + phiEstribo + phi / 2;
+      const [fechado, aberto] = b.travessa === "fim" ? [b.fim, b.inicio] : [b.inicio, b.fim];
+      pos.push({
+        nome: b.nome,
+        tipo: "grampo",
+        phi: b.phi,
+        aco,
+        comprimento: b.comprimento,
+        forma: [
+          { x: aberto, y: -meia, z },
+          { x: fechado, y: -meia, z },
+          { x: fechado, y: meia, z },
+          { x: aberto, y: meia, z },
+        ],
+        copias: Array.from({ length: b.quantidade }, (_, i) => ({ x: 0, y: 0, z: 2 * phi * i })),
+      });
+      continue;
+    }
     if (b.tipo === "estribo") {
       const xs = b.estribos ?? [];
       if (xs.length === 0) continue;

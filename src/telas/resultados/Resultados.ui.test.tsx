@@ -107,7 +107,9 @@ describe.each<NormaId>(["nb1-78", "nbr6118-2023"])("resultados pela %s", (norma)
           expect(v).toMatch(NUMERO);
           expect(lerNumeroBr(v ?? "")).toBeGreaterThan(0);
         }
-        expect(tipo).toMatch(/^(positiva|negativa|porta-estribos|construtiva|estribo c\/[\d,]+)$/);
+        expect(tipo).toMatch(
+          /^(positiva|negativa|porta-estribos|construtiva|grampo|estribo c\/[\d,]+)$/,
+        );
       }
       // esquema: uma barra (path) por posição longitudinal, com o rótulo "N1 2φ10 c=…"
       const svg = within(bloco).getByRole("img", {

@@ -629,7 +629,8 @@ export interface PosicaoGeometria {
     | "pele"
     | "construtiva"
     | "longitudinal"
-    | "estribo";
+    | "estribo"
+    | "grampo";
   /** Bitola, mm. */
   phi: number;
   aco: string;
@@ -754,9 +755,18 @@ export interface PosicaoArmadura {
   xFim: number;
   /** Espaçamento dos estribos, cm; null nas barras longitudinais. */
   espacamento: number | null;
+  /** Grampo: U deitado no fundo da viga, dois ramos de xInicio a xFim e a travessa na
+   *  largura, na ponta do apoio (`travessa`); `reto` = comprimento do U inteiro. */
+  travessa?: "inicio" | "fim";
 }
 
-export type TipoPosicao = "positiva" | "negativa" | "porta-estribos" | "construtiva" | "estribo";
+export type TipoPosicao =
+  | "positiva"
+  | "negativa"
+  | "porta-estribos"
+  | "construtiva"
+  | "estribo"
+  | "grampo";
 
 export interface VigaDetalhamento extends ComMemoria {
   nome: string;

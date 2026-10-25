@@ -122,3 +122,44 @@ describe("armaduraPilar", () => {
     ).toEqual([]);
   });
 });
+
+// Grampo do positivo no apoio (detalhamento/vigas.ts grampoNoApoio): U deitado no fundo,
+// por dentro dos estribos, travessa na ponta do apoio. Viga 20 × 50, c = 2,5, φe 5:
+// meia largura = 0,10 − 0,025 − 0,005 − 0,00315 = 0,06685; z = −0,5 + 0,03 + 0,00315.
+describe("armaduraViga: grampo", () => {
+  const grampo = (travessa: "inicio" | "fim", quantidade = 1) =>
+    armaduraViga(
+      [
+        barra({ nome: "N3", tipo: "estribo", phi: 5, quantidade: 1, estribos: [0.1] }),
+        barra({
+          nome: "N2",
+          tipo: "grampo",
+          phi: 6.3,
+          quantidade,
+          inicio: 0.02,
+          fim: 0.58,
+          travessa,
+        }),
+      ],
+      () => ({ bw: 0.2, h: 0.5 }),
+      2.5,
+      "CA-50",
+      "CA-60",
+    ).find((p) => p.tipo === "grampo")!;
+  const z = -0.5 + 0.03 + 0.00315;
+  const y = 0.1 - 0.025 - 0.005 - 0.00315;
+
+  it("travessa no início: U fechado em x = 0,02 m", () => {
+    expect(grampo("inicio").forma).toEqual([
+      { x: 0.58, y: expect.closeTo(-y, 9), z: expect.closeTo(z, 9) },
+      { x: 0.02, y: expect.closeTo(-y, 9), z: expect.closeTo(z, 9) },
+      { x: 0.02, y: expect.closeTo(y, 9), z: expect.closeTo(z, 9) },
+      { x: 0.58, y: expect.closeTo(y, 9), z: expect.closeTo(z, 9) },
+    ]);
+  });
+  it("travessa no fim e dois grampos, um sobre o outro (2φ)", () => {
+    const g = grampo("fim", 2);
+    expect(g.forma.map((p) => p.x)).toEqual([0.02, 0.58, 0.58, 0.02]);
+    expect(g.copias.map((c) => c.z)).toEqual([0, expect.closeTo(0.0126, 9)]);
+  });
+});

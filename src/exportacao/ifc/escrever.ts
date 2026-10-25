@@ -35,6 +35,7 @@ const TIPO_BARRA: Record<PosicaoIfc["tipo"], string> = {
   construtiva: "MAIN",
   pele: "EDGE",
   estribo: "LIGATURE",
+  grampo: "ANCHORING",
 };
 
 const NOME_TIPO_BARRA: Record<PosicaoIfc["tipo"], string> = {
@@ -44,6 +45,7 @@ const NOME_TIPO_BARRA: Record<PosicaoIfc["tipo"], string> = {
   construtiva: "Armadura construtiva",
   pele: "Armadura de pele",
   estribo: "Estribo",
+  grampo: "Grampo",
 };
 
 /** Valor de propriedade com o tipo do select IfcValue. */

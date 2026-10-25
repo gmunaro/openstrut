@@ -28,6 +28,13 @@ interface Regra {
 const REGRAS: readonly Regra[] = [
   // ---- erros: o elemento fica sem resultado ----
   {
+    // calculo/detalhamento/vigas.ts (grampoNoApoio): a ancoragem que não cabia ganhou
+    // grampo, como o SISTRUT
+    grupo: "Ancoragem com grampo",
+    severidade: "info",
+    re: /ancoragem no (?<ponto>apoio \d+) com grampo/,
+  },
+  {
     // calculo/sistrut/obra.ts (dimensionamento/detalhamento, quadro editado, pilar),
     // calculo/sistrut/pilaresDaObra.ts (predimensionamento, verificação)
     grupo: "Dimensionamento não concluído",
