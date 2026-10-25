@@ -40,6 +40,26 @@ O GitHub recusa URL longa demais, então o link fica em até 7500 caracteres. Se
 
 Na fila, um relato que o relay recusa (conteúdo inválido) não é reenviado. O diálogo mostra esse relato com as opções "Baixar arquivo" e "Descartar".
 
+## Relato automático da importação
+
+Ao importar uma obra do SISTRUT, o app manda sozinho um relato quando algo dá errado. Só existe no caminho com relay.
+
+- **Quando:**
+  - a importação não abre a obra (`erros`);
+  - o importador lança exceção: a tela mostra "Erro inesperado na importação" em vez de não mostrar nada, e a pilha vai ao coletor de erros;
+  - a obra importa, mas o cálculo que a tela da obra roda ao abrir lança exceção ou deixa pavimento com falha.
+  
+  A decisão fica em `src/telas/relatoImportacao.ts`, e o envio, em `src/components/relato/automatico.ts`.
+- **O que vai:**
+  - o diagnóstico, sem a obra;
+  - as mensagens de erro e a lista de arquivos;
+  - como anexo, `arquivos-sistrut.json`: os arquivos escolhidos inteiros, em base64, e a obra montada quando existe.
+  
+  O anexo vai ao repositório privado dos anexos, e a issue só leva o link. No texto público, o nome da obra, o do `.COL` e o das pastas saem como "OBRA". Acima de 2 MiB, o anexo leva só a lista dos arquivos.
+- **Limites:** um relato por problema (mesmos arquivos e mesmas mensagens, guardados no `localStorage`) e no máximo 5 por dia. Sem rede, o relato vai para a fila.
+- **Para o usuário:** o diálogo da importação tem a opção "Enviar relato automático…", ligada por padrão (`localStorage` `openstrut.relatoAutomatico`), e diz o número da issue quando o relato sai.
+- **Para reproduzir:** `bun scripts/relatos/baixar.ts <número da issue> [pasta]` baixa o anexo pelo `gh` e grava os arquivos do SISTRUT (e a obra, se houver) na pasta, prontos para importar. Do relato do botão, grava a obra da V2.
+
 ## Como a triagem acha os relatos
 
 Quem não é colaborador do repositório abre a issue sem label, porque o GitHub ignora o `labels=bug` da URL. Por isso, nos dois caminhos:

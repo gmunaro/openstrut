@@ -89,7 +89,7 @@ export async function relatoParaRelay(d: DadosRelato): Promise<RelatoEnviado> {
 }
 
 /** Envia com um token novo do Turnstile, se o build pede. */
-async function enviarComToken(url: string, relato: RelatoEnviado) {
+export async function enviarComToken(url: string, relato: RelatoEnviado) {
   const sitekey = import.meta.env.VITE_TURNSTILE_SITEKEY;
   if (!sitekey) return enviarAoRelay(url, relato);
   try {
