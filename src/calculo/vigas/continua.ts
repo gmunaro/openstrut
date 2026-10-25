@@ -28,6 +28,16 @@ interface ForcaPontual {
   p: number;
 }
 
+/** Carga distribuída num trecho [a, b] do tramo, somada à uniforme do tramo. */
+export interface CargaParcial {
+  /** Início e fim do trecho, m a partir do apoio esquerdo (0 ≤ a < b ≤ comprimento). */
+  a: number;
+  b: number;
+  /** kN/m: g no caso permanente, q (padrão 0) no caso variável do tramo. */
+  g: number;
+  q?: number;
+}
+
 export interface TramoEntrada {
   /** Vão teórico, m. */
   comprimento: number;
@@ -35,6 +45,8 @@ export interface TramoEntrada {
   g: number;
   q: number;
   concentradas?: CargaConcentrada[];
+  /** Cargas distribuídas em trechos (ex.: as divisões do .VIG do SISTRUT). */
+  parciais?: CargaParcial[];
 }
 
 export interface VigaContinuaEntrada {
@@ -88,9 +100,17 @@ export const NPT = 50;
 
 const REF = "V1 VIGCALC.BM";
 
+/** Carga distribuída w (kN/m) de a a b num caso de carga. */
+interface TrechoCarregado {
+  a: number;
+  b: number;
+  w: number;
+}
+
 interface CasoTramo {
   q: number;
   conc: ForcaPontual[];
+  parc: TrechoCarregado[];
   m0: number;
   v0: number;
   mL: number;
@@ -101,11 +121,25 @@ const preenchido = (n: number, v: number) => Array.from({ length: n }, () => v);
 const somaConc = (conc: ForcaPontual[], f: (c: ForcaPontual) => number) =>
   conc.reduce((s, c) => s + f(c), 0);
 
-/** Momento a x m do início do tramo (V1 VcMomentoX). */
+/** ∫ w·f(s) ds de a a b, somado nos trechos, com F a primitiva de f. */
+const somaParc = (parc: TrechoCarregado[], F: (s: number) => number) =>
+  parc.reduce((s, { a, b, w }) => s + w * (F(b) - F(a)), 0);
+
+/** Carga total do caso no tramo de vão L, kN (uniforme, concentradas e trechos). */
+const cargaDoCaso = (c: { q: number; conc: ForcaPontual[]; parc: TrechoCarregado[] }, L: number) =>
+  c.q * L + somaConc(c.conc, (cc) => cc.p) + somaParc(c.parc, (s) => s);
+
+/** Momento a x m do início do tramo (V1 VcMomentoX, mais os trechos carregados:
+ *  −∫ w (x − s) ds de a até mín(x, b)). */
 function momentoX(c: CasoTramo, x: number) {
+  const trechos = c.parc.reduce((m, { a, b, w }) => {
+    if (x <= a) return m;
+    const f = Math.min(x, b);
+    return m - w * (x * (f - a) - (f * f - a * a) / 2);
+  }, 0);
   return c.conc.reduce(
     (m, { a, p }) => (x > a ? m - p * (x - a) : m),
-    c.m0 + c.v0 * x - (c.q * x * x) / 2,
+    c.m0 + c.v0 * x - (c.q * x * x) / 2 + trechos,
   );
 }
 
@@ -151,6 +185,12 @@ function resolveCaso(e: VigaContinuaEntrada, acidental: number | null): CasoTram
         : t === acidental
           ? (tr.concentradas ?? []).map((c) => ({ a: c.a, p: c.q ?? 0 }))
           : [],
+    parc:
+      acidental === null
+        ? (tr.parciais ?? []).map((c) => ({ a: c.a, b: c.b, w: c.g }))
+        : t === acidental
+          ? (tr.parciais ?? []).map((c) => ({ a: c.a, b: c.b, w: c.q ?? 0 }))
+          : [],
   }));
 
   // uma rotação por nó extremo de tramo que não é balanço
@@ -174,18 +214,34 @@ function resolveCaso(e: VigaContinuaEntrada, acidental: number | null): CasoTram
   // momentos de engastamento perfeito (horário positivo na barra)
   const mab = preenchido(n, 0);
   const mba = preenchido(n, 0);
-  cargas.forEach(({ L, q, conc }, t) => {
+  // trechos carregados: as fórmulas da concentrada integradas com P = w ds
+  // (primitivas de s(L − s)², s²(L − s), L − s e s)
+  cargas.forEach(({ L, q, conc, parc }, t) => {
     const i = dof[t] ?? -1;
     const j = dof[t + 1] ?? -1;
+    const L2 = L * L;
     if (balancoEsq(t)) {
-      mba[t] = (q * L * L) / 2 + somaConc(conc, (c) => c.p * (L - c.a));
+      mba[t] =
+        (q * L2) / 2 +
+        somaConc(conc, (c) => c.p * (L - c.a)) +
+        somaParc(parc, (s) => L * s - (s * s) / 2);
       somaRhs(j, -(mba[t] ?? 0));
     } else if (balancoDir(t)) {
-      mab[t] = -((q * L * L) / 2 + somaConc(conc, (c) => c.p * c.a));
+      mab[t] = -(
+        (q * L2) / 2 +
+        somaConc(conc, (c) => c.p * c.a) +
+        somaParc(parc, (s) => (s * s) / 2)
+      );
       somaRhs(i, -(mab[t] ?? 0));
     } else {
-      const fab = (-q * L * L) / 12 - somaConc(conc, (c) => (c.p * c.a * (L - c.a) ** 2) / L ** 2);
-      const fba = (q * L * L) / 12 + somaConc(conc, (c) => (c.p * c.a ** 2 * (L - c.a)) / L ** 2);
+      const fab =
+        (-q * L2) / 12 -
+        somaConc(conc, (c) => (c.p * c.a * (L - c.a) ** 2) / L2) -
+        somaParc(parc, (s) => (L2 * s * s) / 2 - (2 * L * s ** 3) / 3 + s ** 4 / 4) / L2;
+      const fba =
+        (q * L2) / 12 +
+        somaConc(conc, (c) => (c.p * c.a ** 2 * (L - c.a)) / L2) +
+        somaParc(parc, (s) => (L * s ** 3) / 3 - s ** 4 / 4) / L2;
       mab[t] = fab;
       mba[t] = fba;
       const kk = 2 / L;
@@ -201,7 +257,7 @@ function resolveCaso(e: VigaContinuaEntrada, acidental: number | null): CasoTram
   const th = resolveSistema(k, rhs);
   const rot = (t: number) => th[dof[t] ?? -1] ?? 0;
 
-  return cargas.map(({ L, q, conc }, t) => {
+  return cargas.map(({ L, q, conc, parc }, t) => {
     let ab = mab[t] ?? 0;
     let ba = mba[t] ?? 0;
     if (!balancoEsq(t) && !balancoDir(t)) {
@@ -210,9 +266,15 @@ function resolveCaso(e: VigaContinuaEntrada, acidental: number | null): CasoTram
       ba += kk * (rot(t) + 2 * rot(t + 1));
     }
     const mL = -ba;
-    if (balancoEsq(t)) return { q, conc, m0: 0, v0: 0, mL };
-    const v0 = (mL - ab + (q * L * L) / 2 + somaConc(conc, (c) => c.p * (L - c.a))) / L;
-    return { q, conc, m0: ab, v0, mL };
+    if (balancoEsq(t)) return { q, conc, parc, m0: 0, v0: 0, mL };
+    const v0 =
+      (mL -
+        ab +
+        (q * L * L) / 2 +
+        somaConc(conc, (c) => c.p * (L - c.a)) +
+        somaParc(parc, (s) => L * s - (s * s) / 2)) /
+      L;
+    return { q, conc, parc, m0: ab, v0, mL };
   });
 }
 
@@ -227,6 +289,13 @@ function problemas(e: VigaContinuaEntrada) {
     for (const c of tr.concentradas ?? []) {
       if (![c.g, c.q ?? 0].every(Number.isFinite) || !(c.a >= 0 && c.a <= tr.comprimento))
         erros.push(`Tramo ${t + 1}: carga concentrada fora do tramo (a = ${c.a} m).`);
+    }
+    for (const c of tr.parciais ?? []) {
+      if (
+        ![c.g, c.q ?? 0].every(Number.isFinite) ||
+        !(c.a >= 0 && c.a < c.b && c.b <= tr.comprimento)
+      )
+        erros.push(`Tramo ${t + 1}: trecho de carga fora do tramo (de ${c.a} a ${c.b} m).`);
     }
   });
   // V1 VcCaso: pelo menos 2 apoios reais; balanço só nas extremidades (garantido pela entrada)
@@ -255,7 +324,8 @@ export function analisaVigaContinua(e: VigaContinuaEntrada): VigaContinuaResulta
   ];
   // caso 0 = permanente; caso t + 1 = q só no tramo t
   const casos = [resolveCaso(e, null), ...e.tramos.map((_, t) => resolveCaso(e, t))];
-  const caso = (c: number, t: number) => casos[c]?.[t] ?? { q: 0, conc: [], m0: 0, v0: 0, mL: 0 };
+  const caso = (c: number, t: number) =>
+    casos[c]?.[t] ?? { q: 0, conc: [], parc: [], m0: 0, v0: 0, mL: 0 };
 
   const tramos = e.tramos.map((tr, t): TramoResultado => {
     const L = tr.comprimento;
@@ -281,7 +351,7 @@ export function analisaVigaContinua(e: VigaContinuaEntrada): VigaContinuaResulta
     const vE = casos.map((_, c) => caso(c, t).v0);
     const vD = casos.map((_, c) => {
       const ct = caso(c, t);
-      return ct.v0 - ct.q * L - somaConc(ct.conc, (cc) => cc.p);
+      return ct.v0 - cargaDoCaso(ct, L);
     });
     return {
       comprimento: L,
@@ -303,7 +373,7 @@ export function analisaVigaContinua(e: VigaContinuaEntrada): VigaContinuaResulta
       if (k === 0) return dir;
       const ct = caso(c, k - 1);
       const L = e.tramos[k - 1]?.comprimento ?? 0;
-      return dir - (ct.v0 - ct.q * L - somaConc(ct.conc, (cc) => cc.p));
+      return dir - (ct.v0 - cargaDoCaso(ct, L));
     });
     const g = porCaso[0] ?? 0;
     return {

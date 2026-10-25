@@ -270,3 +270,119 @@ describe("viga instável ou inválida", () => {
     expect(analisaVigaContinua({ tramos: [] }).ok).toBe(false);
   });
 });
+
+// Carga distribuída em trechos (as divisões do .VIG do SISTRUT na NBR 6118).
+describe("cargas em trechos do tramo", () => {
+  const ok = (e: VigaContinuaEntrada) => {
+    const r = analisaVigaContinua(e);
+    if (!r.ok) throw new Error(r.avisos.join(" "));
+    return r;
+  };
+
+  // biapoiada L = 4, w = 10 em [0, 2]: R_A = 10·2·3/4 = 15, R_B = 5; V = 0 em x = 1,5;
+  // M máx = 15·1,5 − 10·1,5²/2 = 11,25
+  it("biapoiada com meio vão carregado: reações 15 e 5 kN, M = 11,25 kN·m", () => {
+    const r = ok({ tramos: [{ comprimento: 4, g: 0, q: 0, parciais: [{ a: 0, b: 2, g: 10 }] }] });
+    expect(r.apoios[0]!.reacaoG).toBeCloseTo(15, 9);
+    expect(r.apoios[1]!.reacaoG).toBeCloseTo(5, 9);
+    expect(r.tramos[0]!.vEsq).toBeCloseTo(15, 9);
+    expect(r.tramos[0]!.vDir).toBeCloseTo(5, 9);
+    expect(r.tramos[0]!.mPos).toBeCloseTo(11.25, 2);
+  });
+
+  // dois vãos iguais de 4 m, w = 10 só no 1º: M_B = −wL²/16 = −10
+  it("dois vãos com o 1º carregado: −10 kN·m no apoio central, igual à uniforme", () => {
+    const uniforme = ok({
+      tramos: [
+        { comprimento: 4, g: 10, q: 0 },
+        { comprimento: 4, g: 0, q: 0 },
+      ],
+    });
+    const trechos = ok({
+      tramos: [
+        {
+          comprimento: 4,
+          g: 0,
+          q: 0,
+          parciais: [
+            { a: 0, b: 1.5, g: 10 },
+            { a: 1.5, b: 4, g: 10 },
+          ],
+        },
+        { comprimento: 4, g: 0, q: 0 },
+      ],
+    });
+    for (const r of [uniforme, trechos]) expect(r.tramos[0]!.mNegDir).toBeCloseTo(-10, 9);
+    expect(trechos.apoios.map((a) => a.reacaoG)).toEqual(
+      uniforme.apoios.map((a) => expect.closeTo(a.reacaoG, 9)),
+    );
+  });
+
+  // balanço de 1,5 m com w = 10 em [0,5; 1,5] (a partir do apoio): resultante 10 kN a
+  // 1,0 m do apoio, M = −10 kN·m
+  it("balanço com trecho carregado: −10 kN·m no apoio", () => {
+    const r = ok({
+      tramos: [
+        { comprimento: 4, g: 0, q: 0 },
+        { comprimento: 1.5, g: 0, q: 0, parciais: [{ a: 0.5, b: 1.5, g: 10 }] },
+      ],
+      balancoDireito: true,
+    });
+    expect(r.tramos[1]!.mNegEsq).toBeCloseTo(-10, 9);
+    expect(r.tramos[0]!.mNegDir).toBeCloseTo(-10, 9);
+  });
+
+  // três tramos com balanço, trechos g e q: igual à mesma carga em 2000 concentradas
+  // por trecho (o caminho das concentradas tem os casos da V1 acima)
+  it("trechos g e q equivalem à carga discretizada em concentradas", () => {
+    const parciais = [
+      [
+        { a: 0, b: 0.88, g: 5.4, q: 1.2 },
+        { a: 0.88, b: 3.8, g: 1.2, q: 0.3 },
+      ],
+      [{ a: 1.02, b: 1.72, g: 7.5, q: 2 }],
+      [{ a: 0.2, b: 1.1, g: 3, q: 1 }],
+    ];
+    const comprimentos = [3.8, 1.72, 1.25];
+    const N = 2000;
+    const comTrechos = ok({
+      tramos: comprimentos.map((comprimento, t) => ({
+        comprimento,
+        g: 1,
+        q: 0.5,
+        parciais: parciais[t] ?? [],
+      })),
+      balancoDireito: true,
+    });
+    const discretizada = ok({
+      tramos: comprimentos.map((comprimento, t) => ({
+        comprimento,
+        g: 1,
+        q: 0.5,
+        concentradas: parciais[t]!.flatMap(({ a, b, g, q }) =>
+          Array.from({ length: N }, (_, k) => ({
+            a: a + ((k + 0.5) * (b - a)) / N,
+            g: (g * (b - a)) / N,
+            q: (q * (b - a)) / N,
+          })),
+        ),
+      })),
+      balancoDireito: true,
+    });
+    comTrechos.tramos.forEach((t, i) => {
+      const d = discretizada.tramos[i]!;
+      for (const k of ["mPos", "mNegEsq", "mNegDir", "vEsq", "vDir"] as const)
+        expect(t[k]).toBeCloseTo(d[k], 3);
+    });
+    comTrechos.apoios.forEach((a, k) =>
+      expect(a.reacaoMax).toBeCloseTo(discretizada.apoios[k]!.reacaoMax, 6),
+    );
+  });
+
+  it("trecho fora do tramo é recusado", () => {
+    const r = analisaVigaContinua({
+      tramos: [{ comprimento: 4, g: 0, q: 0, parciais: [{ a: 3, b: 5, g: 1 }] }],
+    });
+    expect(r.ok).toBe(false);
+  });
+});

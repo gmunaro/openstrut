@@ -13,6 +13,7 @@ import {
   montarPavimento,
   verificarEquilibrio,
 } from "./montagem";
+import { analisarViga } from "./fluxo";
 import { tfParaKn } from "./unidades";
 
 const GAMA = 25; // kN/m³
@@ -364,5 +365,83 @@ describe("balanço", () => {
     // sem os pilares de cima, a viga superior e as duas verticais ficam com um apoio
     expect(m.naoCalculadas).toHaveLength(3);
     expect(verificarEquilibrio(e, m).ok).toBe(false);
+  });
+});
+
+// Cargas próprias (as do .VIG do SISTRUT na NBR 6118): no lugar das das lajes.
+describe("cargasProprias", () => {
+  // viga de 4 m entre P1 (x = 0) e P2 (x = 4): uniforme 10 kN/m, trecho de 5 kN/m em
+  // [0, 2] e concentrada de 8 kN em 1 m. Isostática: R1 = 10·4/2 + 5·2·3/4 + 8·3/4 =
+  // 20 + 7,5 + 6 = 33,5; R2 = 40 + 10 + 8 − 33,5 = 24,5
+  function pavimento(): Pavimento {
+    const pav = pavimentoNovo("P");
+    return {
+      ...pav,
+      vigas: [{ id: "v", nome: "V1", x1: 0, y1: 0, x2: 4, y2: 0, bw: 20, h: 50, cargaLinear: 3 }],
+      pilares: [
+        { id: "p1", nome: "P1", x: 0, y: 0, b: 20, h: 20 },
+        { id: "p2", nome: "P2", x: 4, y: 0, b: 20, h: 20 },
+      ],
+    };
+  }
+  const proprias = {
+    v: [
+      {
+        vao: 4,
+        g: 10,
+        q: 0,
+        parciais: [{ a: 0, b: 2, g: 5 }],
+        concentradas: [{ a: 1, g: 8, q: 0 }],
+      },
+    ],
+  };
+
+  it("substituem peso próprio e carga linear e chegam aos pilares: 33,5 e 24,5 kN", () => {
+    const e = { ...entrada(pavimento(), {}), cargasProprias: proprias };
+    const m = montarPavimento(e, analisarViga);
+    const n = Object.fromEntries(m.pilares.map((p) => [p.nome, p.n]));
+    expect(n.P1).toBeCloseTo(33.5, 9);
+    expect(n.P2).toBeCloseTo(24.5, 9);
+    const eq = verificarEquilibrio(e, m);
+    expect(eq.cargaVigas).toBeCloseTo(58, 9);
+    expect(eq.avisos).toEqual([]);
+  });
+
+  it("comprimento diferente do da planta: ficam as cargas da montagem, com aviso", () => {
+    const e = {
+      ...entrada(pavimento(), {}),
+      cargasProprias: { v: [...proprias.v, ...proprias.v] },
+    };
+    const m = montarPavimento(e, analisarViga);
+    // peso próprio 0,2 · 0,5 · 25 = 2,5 + carga linear 3 = 5,5 kN/m · 4 m / 2 = 11 kN
+    expect(m.pilares.find((p) => p.nome === "P1")?.n).toBeCloseTo(11, 9);
+    expect(m.avisos).toContainEqual(
+      expect.stringMatching(/^Viga V1: o comprimento no .VIG do SISTRUT difere do da planta/),
+    );
+  });
+
+  // .VIG com 1 tramo de 4 m e a planta com P3 em x = 2 (2 tramos): pela posição,
+  // tramo 1 = 10 em [0, 2] + 5 em [0, 2] + 8 em 1; tramo 2 = 10 em [0, 2]. Total 58 kN.
+  it("número de tramos diferente: as cargas vão pela posição ao longo da viga", () => {
+    const pav = pavimento();
+    const comP3 = {
+      ...pav,
+      pilares: [...pav.pilares, { id: "p3", nome: "P3", x: 2, y: 0, b: 20, h: 20 }],
+    };
+    const e = { ...entrada(comP3, {}), cargasProprias: proprias };
+    const m = montarPavimento(e, analisarViga);
+    const [t1, t2] = m.vigas[0]!.tramos;
+    expect(t1).toMatchObject({ vao: 2, g: 0, q: 0 });
+    expect(t1!.parciais).toEqual([
+      { a: 0, b: 2, g: 10, q: 0 },
+      { a: 0, b: 2, g: 5 },
+    ]);
+    expect(t1!.concentradas).toMatchObject([{ a: 1, g: 8, q: 0, origem: "" }]);
+    expect(t2!.parciais).toEqual([{ a: 0, b: 2, g: 10, q: 0 }]);
+    expect(t2!.concentradas).toEqual([]);
+    expect(m.pilares.reduce((s, p) => s + p.n, 0)).toBeCloseTo(58, 9);
+    expect(m.avisos).toContainEqual(
+      expect.stringMatching(/^Viga V1: 1 tramos no .VIG do SISTRUT e 2 na planta/),
+    );
   });
 });

@@ -136,6 +136,30 @@ describe("pilar que termina num pavimento intermediário", () => {
     expect(r.transicoes[0]).toMatchObject({ nome: "P1", pavimentoId: "B", repeticao: 1 });
     expect(r.transicoes[0]?.nk).toBeCloseTo(103, 9);
   });
+
+  // coluna do SISTRUT que nasce sobre viga com a carga lançada nela (fluxo.ts)
+  it("com fim dado: a carga para ali, sem transição, com o aviso do fim", () => {
+    const r = cargaAcumulada(
+      [
+        {
+          id: "A",
+          nome: "A",
+          peDireito: 3,
+          repeticoes: 1,
+          pilares: [{ pilar: "k1", nome: "P1", secao: q20, carga: 100 }],
+        },
+        { id: "B", nome: "B", peDireito: 3, repeticoes: 1, pilares: [] },
+        { id: "C", nome: "C", peDireito: 3, repeticoes: 1, pilares: [] },
+      ],
+      PESO,
+      new Map([["k1", "P1 nasce sobre viga."]]),
+    );
+    expect(nk(r, 0, "k1")).toBeCloseTo(103, 9);
+    expect(r.niveis[1]?.pilares).toEqual([]);
+    expect(r.niveis[2]?.pilares).toEqual([]);
+    expect(r.avisos).toEqual(["P1 nasce sobre viga."]);
+    expect(r.transicoes).toEqual([]);
+  });
 });
 
 describe("pavimentos com o mesmo nome", () => {

@@ -12,7 +12,8 @@ import { importarVigasSistrut } from "../armazenamento/sistrut/viga";
 import { arquivoOraculo } from "../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { KN_POR_TF } from "../calculo/sistrut/base/unidades";
 import { calcularObra } from "../calculo/fluxo";
-import { nbr6118 } from "../calculo/normas";
+import { nb178, nbr6118 } from "../calculo/normas";
+import { obraExemplo } from "../dominio/exemplo";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
 import {
   arquivo,
@@ -59,25 +60,25 @@ describe("importarObraSistrut", () => {
     expect(tPorM).toEqual([120, 120, 120, 150, 150, 150]);
   });
 
-  it("NBR 6118 avisa que os dados do VIGA do SISTRUT não entram", () => {
+  it("NBR 6118 na obra importada: as vigas levam as cargas do SISTRUT aos pilares", () => {
     const { obra } = importa(OBRA_E2E);
-    const [pav] = obra.pavimentos;
-    const v1 = pav!.vigas[0]!;
-    const comCargas = {
-      ...obra,
-      pavimentos: [
-        { ...pav!, vigas: [{ ...v1, somenteCargasProprias: true }, ...pav!.vigas.slice(1)] },
-      ],
-    };
-    const avisos = calcularObra(comCargas, nbr6118).avisos;
-    expect(avisos).toContainEqual(
-      expect.stringMatching(
-        /^Cargas digitadas no VIGA do SISTRUT não entram na NBR 6118 \(vigas V1\)/,
-      ),
-    );
-    expect(calcularObra(obra, nbr6118).avisos.some((a) => a.includes("VIGA do SISTRUT"))).toBe(
-      false,
-    );
+    // referência: as reações nos pilares do SISTRUT no modo corrigido (o VICALC com as
+    // cargas do .VIG); com q em todos os tramos elas não dependem da alternância de q
+    // que a análise da V2 faz e o VICALC não
+    const sistrut = calcularObra({ ...obra, modoCalculo: "corrigido" }, nb178);
+    const r6118 = calcularObra({ ...obra, norma: "nbr6118-2023" }, nbr6118);
+    const n = (r: typeof r6118) =>
+      Object.fromEntries(r.pavimentos[0]!.montagem.pilares.map((p) => [p.nome, p.n]));
+    const esperado = n(sistrut);
+    expect(Object.keys(esperado)).toHaveLength(9);
+    for (const [nome, valor] of Object.entries(n(r6118)))
+      expect(valor, nome).toBeCloseTo(esperado[nome]!, 6);
+    expect(r6118.avisos).toContainEqual(expect.stringMatching(/^Obra com dados do SISTRUT/));
+  });
+
+  it("NBR 6118 na obra desenhada na V2: sem cargas do SISTRUT", () => {
+    const avisos = calcularObra(obraExemplo(), nbr6118).avisos;
+    expect(avisos.some((a) => a.includes("SISTRUT"))).toBe(false);
   });
 
   it("monta a obra da E2E com as lajes, vigas e pilares do pavimento", () => {
