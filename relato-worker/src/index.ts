@@ -107,6 +107,10 @@ async function publicar(relato: Relato, env: Env) {
   if (!token) throw new Error("GITHUB_TOKEN ausente");
   const repo = env.GITHUB_REPO || "gmunaro/openstrut";
   const repoArquivos = env.GITHUB_REPO_ARQUIVOS || repo;
+  // anexos noutro repositório (privado): a issue pública só leva links, e a obra vai
+  // com nome fixo, para o nome da obra do cliente não aparecer no corpo
+  const separados = repoArquivos !== repo;
+  const nomeObra = relato.obra && (separados ? "obra.openstrut.json" : relato.obra.nome);
   const branch = env.BRANCH_ARQUIVOS || "relatos";
   const labels = (env.LABELS ?? "relato,triagem,bug")
     .split(",")
@@ -128,7 +132,7 @@ async function publicar(relato: Relato, env: Env) {
     if (relato.obra) {
       await arquivos.enviarArquivo(
         branch,
-        `relatos/${id}/${relato.obra.nome}`,
+        `relatos/${id}/${nomeObra}`,
         textoParaBase64(relato.obra.json),
         `Relato ${id}: obra`,
       );
@@ -140,7 +144,8 @@ async function publicar(relato: Relato, env: Env) {
     branch,
     id,
     temPrint: relato.print !== undefined,
-    nomeObra: relato.obra?.nome,
+    nomeObra,
+    separados,
   };
   return clienteGitHub(token, repo).criarIssue(
     tituloIssue(relato.titulo),

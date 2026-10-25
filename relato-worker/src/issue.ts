@@ -14,6 +14,9 @@ export interface Anexos {
   id: string;
   temPrint: boolean;
   nomeObra: string | undefined;
+  /** Anexos noutro repositório (privado): link em vez da imagem embutida, que o
+   *  GitHub não mostra de repositório privado. */
+  separados?: boolean;
 }
 
 /** `@nome` vira `@` + espaço de largura zero + `nome`: o GitHub não notifica ninguém. */
@@ -49,8 +52,10 @@ export function tituloIssue(titulo: string) {
   return `[Relato] ${neutralizarMencoes(titulo)}`;
 }
 
-export function urlPrint({ repoArquivos, branch, id }: Anexos) {
-  return `https://raw.githubusercontent.com/${repoArquivos}/${branch}/relatos/${id}/print.png`;
+export function urlPrint({ repoArquivos, branch, id, separados }: Anexos) {
+  return separados
+    ? `https://github.com/${repoArquivos}/blob/${branch}/relatos/${id}/print.png`
+    : `https://raw.githubusercontent.com/${repoArquivos}/${branch}/relatos/${id}/print.png`;
 }
 
 export function urlObra({ repoArquivos, branch, id }: Anexos, nomeObra: string) {
@@ -82,9 +87,17 @@ export function corpoIssue(relato: Relato, anexos: Anexos) {
     `### O que aconteceu\n\n${citar(relato.aconteceu)}`,
     `### O que esperava\n\n${relato.esperado ? citar(relato.esperado) : "_Não informado._"}`,
   ];
-  if (anexos.temPrint) secoes.push(`### Print\n\n![print](${urlPrint(anexos)})`);
+  const privado = anexos.separados ? " (no repositório privado dos anexos)" : "";
+  if (anexos.temPrint)
+    secoes.push(
+      anexos.separados
+        ? `### Print\n\n[print.png](${urlPrint(anexos)})${privado}`
+        : `### Print\n\n![print](${urlPrint(anexos)})`,
+    );
   if (anexos.nomeObra) {
-    secoes.push(`### Obra\n\n[${anexos.nomeObra}](${urlObra(anexos, anexos.nomeObra)})`);
+    secoes.push(
+      `### Obra\n\n[${anexos.nomeObra}](${urlObra(anexos, anexos.nomeObra)})${privado}`,
+    );
   }
   secoes.push(`### Diagnóstico\n\n${tabelaDiagnostico(relato.diagnostico)}`);
 

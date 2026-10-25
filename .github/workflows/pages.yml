@@ -36,6 +36,9 @@ jobs:
           # importação pelo Google Drive (docs/GOOGLE-DRIVE.md); vazias, a opção fica desabilitada
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           VITE_GOOGLE_API_KEY: ${{ vars.GOOGLE_API_KEY }}
+          # relay do "Relatar problema" sem conta GitHub (docs/RELATO.md); vazia = sem relay
+          VITE_RELATO_URL: ${{ vars.RELATO_URL }}
+          VITE_TURNSTILE_SITEKEY: ${{ vars.TURNSTILE_SITEKEY }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

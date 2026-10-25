@@ -410,10 +410,15 @@ describe("GitHub", () => {
     expect(issue?.url).toBe("https://api.github.com/repos/gmunaro/openstrut/issues");
     expect(issue?.token).toBe("Bearer token-principal");
     const body = campo(issue?.corpo, "body");
-    expect(body).toContain(
-      "https://raw.githubusercontent.com/gmunaro/openstrut-relatos/anexos/relatos/",
+    // repositório de anexos privado: links (a imagem embutida não aparece) e a obra
+    // com nome fixo, sem o nome da obra do cliente na issue pública
+    expect(body).not.toContain("raw.githubusercontent.com");
+    expect(body).toMatch(
+      /\[print\.png\]\(https:\/\/github\.com\/gmunaro\/openstrut-relatos\/blob\/anexos\/relatos\/[^/]+\/print\.png\)/,
     );
-    expect(body).toContain("https://github.com/gmunaro/openstrut-relatos/blob/anexos/relatos/");
+    expect(body).toMatch(/\/blob\/anexos\/relatos\/[^/]+\/obra\.openstrut\.json\)/);
+    expect(anexos.some((c) => c.url.endsWith("/obra.openstrut.json"))).toBe(true);
+    expect(body).not.toContain("Edifício Sol");
   });
 
   it("todas as chamadas ao GitHub levam os cabeçalhos da API", async () => {
