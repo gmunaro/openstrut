@@ -525,3 +525,31 @@ describe("entrada inconsistente", () => {
     expect(r.avisos).toHaveLength(1);
   });
 });
+
+// Armadura dupla no vão da biapoiada 20 × 50 (h ≤ 70: porta-estribos 2 φ6,3 =
+// 2 · π · 0,63²/4 = 0,6234 cm²): A's que cabe nele fica com ele (aviso informativo);
+// a que não cabe continua "não está detalhada".
+describe("armadura dupla no vão", () => {
+  const comAs = (asComprimida: number) => {
+    const e = biapoiada([20, 20]);
+    const pos = e.dimensionamento[0]!.positivo;
+    return detalharViga({
+      ...e,
+      dimensionamento: [
+        { ...e.dimensionamento[0]!, positivo: { ...pos, flexao: { as: 4.7, asComprimida } } },
+      ],
+    });
+  };
+  const dupla = (r: ReturnType<typeof detalharViga>) =>
+    r.avisos.filter((a) => a.includes("armadura comprimida"));
+  it("A's = 0,08 cm²: fica com os porta-estribos 2 φ6,3 = 0,62 cm²", () => {
+    expect(dupla(comAs(0.08))).toEqual([
+      "V1 tramo 1: armadura dupla; a armadura comprimida (A's = 0,08 cm²) fica com os porta-estribos (2 φ6,3 = 0,62 cm²); confira o travamento delas pelos estribos.",
+    ]);
+  });
+  it("A's = 0,80 cm² > 0,62: não está detalhada", () => {
+    expect(dupla(comAs(0.8))).toEqual([
+      "V1 tramo 1: armadura dupla; a armadura comprimida (A's = 0,80 cm²) não está detalhada.",
+    ]);
+  });
+});

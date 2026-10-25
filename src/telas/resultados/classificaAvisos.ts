@@ -77,7 +77,14 @@ const REGRAS: readonly Regra[] = [
     re: /ancoragem no (?<ponto>(?:apoio|bordo) \d+) insuficiente/,
   },
   {
-    // calculo/detalhamento/vigas.ts:415 (apoio) e 498 (tramo)
+    // calculo/detalhamento/vigas.ts (armaduraDupla): a A's cabe nas barras de cima do
+    // tramo; antes de "Armadura dupla não detalhada"
+    grupo: "Armadura comprimida nas barras de cima",
+    severidade: "info",
+    re: /(?<ponto>tramo \d+): armadura dupla; a armadura comprimida .* fica com /,
+  },
+  {
+    // calculo/detalhamento/vigas.ts (negativo do apoio; e armaduraDupla, no tramo)
     grupo: "Armadura dupla não detalhada",
     severidade: "atencao",
     re: /(?<ponto>(?:tramo|apoio) \d+): armadura dupla.*não está detalhada/,
