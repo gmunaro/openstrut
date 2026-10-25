@@ -104,6 +104,90 @@ export interface RegrasDetalhamento {
   gancho(phi: number, aco: Aco): number;
   /** Soma dos dois ganchos do estribo fechado, cm. */
   ganchosEstribo(phiT: number): number;
+  /** Comprimento exigido dentro do apoio extremo para o positivo com gancho, cm. */
+  ancoragemApoioExtremo(a: ApoioExtremoEntrada): ApoioExtremoExigido;
+}
+
+/** O positivo que chega a um apoio extremo. */
+export interface ApoioExtremoEntrada {
+  basica: AncoragemBasica;
+  /** Cortante de cálculo no apoio, kN. */
+  vd: number;
+  /** Decalagem e altura útil, cm. */
+  al: number;
+  d: number;
+  /** As calculada e efetiva do positivo, cm². */
+  asCalc: number;
+  asEf: number;
+  mat: MateriaisCalc;
+}
+
+export interface ApoioExtremoExigido {
+  exigido: number;
+  memoria: Etapa[];
+}
+
+/** NBR 6118 18.3.2.4 e 18.3.2.4.1: As,anc = (al/d)·Vd/fyd; exigido = máx(lb,nec com
+ *  gancho, com lb,mín; r + 5,5 φ; 6 cm). Também para o negativo de extremidade da
+ *  ligação viga-pilar (As,anc = a As dele). */
+export function apoioExtremo6118(
+  basica: AncoragemBasica,
+  asAnc: number,
+  asEf: number,
+  aco: Aco,
+): ApoioExtremoExigido {
+  const phi = basica.phi;
+  const anc = ancoragemNecessaria6118(basica, asAnc, asEf, true);
+  const r = (pinoDobramento(phi, aco) / 2) * (phi / 10);
+  const exigido = Math.max(anc.lbNec, r + (5.5 * phi) / 10, 6);
+  return {
+    exigido,
+    memoria: [
+      ...anc.memoria.map((m) => ({
+        ...m,
+        descricao: `As,anc = ${num(asAnc, 2)} cm²: ${m.descricao}`,
+      })),
+      {
+        descricao: "Comprimento exigido no apoio extremo",
+        formula: `máx(lb,nec com gancho; r + 5,5 φ; 6 cm) = ${num(exigido, 1)}`,
+        valor: exigido,
+        unidade: "cm",
+        ref: "6118:2023 18.3.2.4 e 18.3.2.4.1 (Bastos, Vigas, Eq. 39 a 44)",
+      },
+    ],
+  };
+}
+
+/** NB-1/78 como o SISTRUT confere a ancoragem do positivo no apoio extremo ao decidir
+ *  os grampos (DESINIT.BAS:2092-2225; `grampos` em sistrut/vigas/desinitBarras.ts):
+ *  Anec = máx(Vd/(2 fyd); As/3); exigido = máx(lb·máx(0,33; Anec/As,ef) − 10 φ; 13,5 φ;
+ *  6 cm), em que o −10 φ é o gancho. A parcela As,mín/3 do original não entra: a As
+ *  calculada já tem o mínimo. Na obra de 1994 do André, a V1 (φ12,5 em apoio de 19 cm)
+ *  passa por 1 mm no SISTRUT: 16,9 ≤ 17,0 cm. */
+export function apoioExtremoNb178(a: ApoioExtremoEntrada): ApoioExtremoExigido {
+  const phi = a.basica.phi;
+  const anec = Math.max(a.vd / (2 * (a.mat.fyd / 10)), a.asCalc / 3);
+  const razao = a.asEf > 0 ? Math.max(0.33, anec / a.asEf) : 1;
+  const exigido = Math.max(a.basica.lb * razao - phi, 1.35 * phi, 6);
+  return {
+    exigido,
+    memoria: [
+      {
+        descricao: "Armadura a ancorar no apoio extremo",
+        formula: `Anec = máx(Vd/(2 fyd); As/3) = máx(${num(a.vd / (2 * (a.mat.fyd / 10)), 2)}; ${num(a.asCalc / 3, 2)})`,
+        valor: anec,
+        unidade: "cm²",
+        ref: "NB-1/78 pelo SISTRUT (DESINIT.BAS:2092-2225)",
+      },
+      {
+        descricao: "Comprimento exigido no apoio extremo (com gancho)",
+        formula: `máx(lb·máx(0,33; Anec/As,ef) − 10 φ; 13,5 φ; 6 cm) = máx(${num(a.basica.lb, 1)} · ${num(razao, 3)} − ${num(phi, 1)}; ${num(1.35 * phi, 1)}; 6) = ${num(exigido, 1)}`,
+        valor: exigido,
+        unidade: "cm",
+        ref: "NB-1/78 pelo SISTRUT (DESINIT.BAS:2092-2225)",
+      },
+    ],
+  };
 }
 
 export const REGRAS_6118: RegrasDetalhamento = {
@@ -114,6 +198,8 @@ export const REGRAS_6118: RegrasDetalhamento = {
   decalagem: decalagem6118,
   gancho: gancho6118,
   ganchosEstribo: ganchosEstribo6118,
+  ancoragemApoioExtremo: (a) =>
+    apoioExtremo6118(a.basica, (a.al / a.d) * (a.vd / (a.mat.fyd / 10)), a.asEf, a.mat.aco),
 };
 
 export const REGRAS_NB178: RegrasDetalhamento = {
@@ -124,6 +210,7 @@ export const REGRAS_NB178: RegrasDetalhamento = {
   decalagem: (_vsd, _bw, d) => decalagemNb178(d),
   gancho: (phi) => ganchoNb178(phi),
   ganchosEstribo: ganchosEstriboNb178,
+  ancoragemApoioExtremo: apoioExtremoNb178,
 };
 
 export const regrasDetalhamento = (id: NormaId) => (id === "nb1-78" ? REGRAS_NB178 : REGRAS_6118);
@@ -330,36 +417,26 @@ export function detalharViga(
   };
 
   /** Confere a ancoragem de barra com gancho em apoio extremo de largura b:
-   *  lb,ef = b − c ≥ máx(lb,nec com gancho; r + 5,5 φ; 6 cm) (6118 18.3.2.4.1).
-   *  Nas duas normas o lb,nec é o da 6118 (redução por As,anc/As,ef e gancho, com
-   *  lb,mín), sobre o lb e a decalagem da norma da obra. [VERIFICAR] o texto da
-   *  NB-1/78 não foi lido; a V1 não confere, e o lb cheio sem reduções reprovava
-   *  quase todo apoio extremo (obra Alpha1: 66 cm de φ12,5 em apoio de 19 cm). */
+   *  lb,ef = b − c ≥ o exigido pela norma (`RegrasDetalhamento.ancoragemApoioExtremo`:
+   *  6118 18.3.2.4.1; NB-1/78 como o SISTRUT confere ao decidir os grampos). */
   const confereApoioExtremo = (
     nome: string,
     k: number,
-    basica: AncoragemBasica,
-    asAnc: number,
-    asEf: number,
+    { exigido, memoria: m }: ApoioExtremoExigido,
   ) => {
-    const phi = basica.phi;
-    const anc = ancoragemNecessaria6118(basica, asAnc, asEf, true);
-    const nec = anc.lbNec;
-    const r = (pinoDobramento(phi, mat.aco) / 2) * (phi / 10);
-    const exigido = Math.max(nec, r + (5.5 * phi) / 10, 6);
     const disponivel = largura(k) - c;
     memoria.push(
-      ...anc.memoria.map((m) => ({
-        ...m,
-        descricao: `${nome}: apoio ${k + 1} (extremo), As,anc = ${num(asAnc, 2)} cm²: ${m.descricao}`,
-      })),
+      ...m.map((x) => ({ ...x, descricao: `${nome}: apoio ${k + 1} (extremo): ${x.descricao}` })),
     );
     memoria.push({
       descricao: `${nome}: ancoragem no apoio ${k + 1} (extremo)`,
-      formula: `lb,ef = b − c = ${num(disponivel, 1)} ≥ máx(lb,nec com gancho; r + 5,5 φ; 6 cm) = ${num(exigido, 1)}`,
+      formula: `lb,ef = b − c = ${num(disponivel, 1)} ≥ exigido = ${num(exigido, 1)}`,
       valor: exigido,
       unidade: "cm",
-      ref: "6118:2023 18.3.2.4 e 18.3.2.4.1 (Bastos, Vigas, Eq. 39 a 44)",
+      ref:
+        regras.norma === "nb1-78"
+          ? "NB-1/78 pelo SISTRUT (DESINIT.BAS:2092-2225)"
+          : "6118:2023 18.3.2.4.1",
     });
     if (disponivel < exigido) {
       avisos.push(
@@ -477,7 +554,12 @@ export function detalharViga(
     const dir = k < n ? extensao(k, 1) : { ext: largura(k) / 2 - c, gancho: true };
     if (k > 0) cobFim[k - 1] = esq.ext;
     if (k < n) cobInicio[k] = dir.ext;
-    if (extremo(k)) confereApoioExtremo(nome, k, basica, s.flexao?.as ?? 0, s.barras.area);
+    if (extremo(k))
+      confereApoioExtremo(
+        nome,
+        k,
+        apoioExtremo6118(basica, s.flexao?.as ?? 0, s.barras.area, mat.aco),
+      );
 
     adiciona({
       tipo: "negativa",
@@ -513,7 +595,17 @@ export function detalharViga(
     const gancho = regras.gancho(phi, mat.aco);
     const ativo = (m: number) => m > EPS_M;
     const dezPhi = (10 * phi) / 10; // 10 φ em cm
-    const asAnc = (v: number) => (a / e.d) * ((e.gamaF * v) / (mat.fyd / 10)); // 18.3.2.4 b, cm²
+    /** O exigido no apoio extremo pela norma, com o cortante característico v do apoio. */
+    const exigidoNoApoio = (v: number) =>
+      regras.ancoragemApoioExtremo({
+        basica,
+        vd: e.gamaF * v,
+        al: a,
+        d: e.d,
+        asCalc: s.flexao?.as ?? 0,
+        asEf: area,
+        mat,
+      });
 
     // início (nó t) e fim (nó t + 1), em abscissa do tramo
     let ini: number;
@@ -521,7 +613,7 @@ export function detalharViga(
     if (extremo(t)) {
       ini = -(largura(t) / 2 - c);
       ganchoIni = gancho;
-      confereApoioExtremo(nome, t, basica, asAnc(tr.vEsq), area);
+      confereApoioExtremo(nome, t, exigidoNoApoio(tr.vEsq));
     } else if (livre(t)) {
       ini = c;
       ganchoIni = gancho;
@@ -535,7 +627,7 @@ export function detalharViga(
     if (extremo(t + 1)) {
       fim = vao(t) + largura(t + 1) / 2 - c;
       ganchoFim = gancho;
-      confereApoioExtremo(nome, t + 1, basica, asAnc(tr.vDir), area);
+      confereApoioExtremo(nome, t + 1, exigidoNoApoio(tr.vDir));
     } else if (livre(t + 1)) {
       fim = vao(t) - c;
       ganchoFim = gancho;

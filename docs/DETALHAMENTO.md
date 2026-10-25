@@ -51,7 +51,7 @@ A referência de comportamento é a V1 (repositório da V1, privado), nos arquiv
 | lb, barra lisa (CA-25) | τbu = 0,28 fcd^(1/2) (ηb ≤ 1). Ex.: C15, φ10: lb = 59,3 cm (com 0,42 fcd^(2/3) daria 26,6) | Fiorin, dissertação EESC-USP (1998), item 5.1, p. 137 do PDF, citando a NBR 6118:1978. A V1 só tem a fórmula da nervurada |
 | Gancho obrigatório na barra lisa | Mesma geometria da 6118 (todas as pontas tracionadas), com o gancho de 10 φ da V1 | A favor da segurança; Fiorin (1998, p. 138 do PDF) também cita o gancho obrigatório na barra lisa |
 | Zona de aderência | Barra superior com h ≥ 30 cm: má aderência, τbu × 2/3, ou seja, lb × 1,5. O resto é boa | V1 `DcAncoragemNeg#` |
-| lb,nec | Igual a lb, sem redução por As,calc/As,ef nem por gancho. Exceção: na conferência do apoio extremo vale o lb,nec da 6118 (reduções e lb,mín) sobre o lb da NB-1/78 | V1 `DcDetalha%`; DSP linha 332 ("reduzir ancoragem positiva" = N) |
+| lb,nec | Igual a lb, sem redução por As,calc/As,ef nem por gancho. Exceção: no apoio extremo vale a regra do SISTRUT (item 4) | V1 `DcDetalha%`; DSP linha 332 ("reduzir ancoragem positiva" = N) |
 | Gancho de barra | 10 φ | V1 `DcDetalha%` |
 | Ganchos do estribo | 2 × 10 φt | V1 `DcComprEstribo#` |
 | Decalagem | al = 0,75 d | DSP linha 84. A V1 reconstruída não decala |
@@ -103,7 +103,7 @@ Por isso, na NB-1/78, só os valores de lb, gancho e estribo batem com a V1. Os 
 1. NB-1/78, τbu = 0,42 fcd^(2/3) e o fator 1,5 de má aderência: o item da NB-1/78 não foi lido. Vêm da V1 reconstruída.
 2. NB-1/78, reduções de lb (As,calc/As,ef e gancho): não aplicadas, como na V1. Fica o comprimento maior.
 3. NB-1/78, decalagem de 0,75 d: é o padrão do SISTRUT 4.0, e o item da norma não foi lido.
-4. NB-1/78, ancoragem no apoio extremo: usa a conferência da 6118, com as reduções por As,anc/As,ef e gancho e o lb,mín, sobre o lb e a decalagem (0,75 d) da NB-1/78. A V1 não confere. Antes valia o lb cheio, sem reduções, e quase todo apoio extremo reprovava: na obra Alpha1, 66 cm de φ12,5 num apoio de 19 cm.
+4. NB-1/78, ancoragem no apoio extremo: a regra com que o SISTRUT decide os grampos (DESINIT.BAS:2092-2225; `grampos` em `sistrut/vigas/desinitBarras.ts`): Anec = máx(Vd/(2 fyd); As/3) e exigido = máx(lb·máx(0,33; Anec/As,ef) − 10 φ; 13,5 φ; 6 cm), em que o −10 φ é o gancho (`apoioExtremoNb178`). O aviso sai onde o SISTRUT automático poria grampo. A regra da 6118 com o mínimo de 0,3·lb, usada antes, acusava as V1 da obra do André (φ12,5 em apoio de 19 cm: 19,8 > 17 cm), que o SISTRUT nunca acusou (16,9 ≤ 17,0). A redução da parcela As,mín/3 do original não entra, porque a As calculada já tem o mínimo.
 5. Tabela 9.1 sem CA-60 com φ ≥ 20 mm: usa 8 φ.
 6. η1 = 1,0 para CA-60: valor de F4 para a edição 2023. `docs/norma/NBR6118-2023.md` ainda marca o item como [VERIFICAR].
 13. NB-1/78, τbu = 0,28 fcd^(1/2) da barra lisa: fonte secundária (Fiorin, 1998); o texto da NB-1/78 não foi lido. A mesma fonte põe o CA-60 no grupo ηb ≤ 1 (0,28 fcd^(1/2)); aqui o CA-60 continua com a fórmula da V1 (0,42 fcd^(2/3)), que dá lb menor.
