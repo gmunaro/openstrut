@@ -16,6 +16,7 @@ export const COR_TIPO: Record<TipoBarra, string> = {
   construtiva: "#ca8a04",
   longitudinal: "#ea580c",
   estribo: "#64748b",
+  grampo: "#16a34a",
 };
 
 export const NOME_TIPO: Record<TipoBarra, string> = {
@@ -26,6 +27,7 @@ export const NOME_TIPO: Record<TipoBarra, string> = {
   construtiva: "construtiva",
   longitudinal: "longitudinal",
   estribo: "estribo",
+  grampo: "grampo",
 };
 
 /** Ordem da legenda e das malhas. */
@@ -36,6 +38,7 @@ export const TIPOS: readonly TipoBarra[] = [
   "pele",
   "construtiva",
   "longitudinal",
+  "grampo",
   "estribo",
 ];
 

@@ -204,15 +204,39 @@ describe("viga biapoiada (NB-1/78, ganchos da V1)", () => {
   it("ancoragem no apoio extremo pela regra do SISTRUT: 17,5 ≥ 16,9, sem aviso", () => {
     expect(r.avisos).toEqual([]);
   });
-  it("apoio de 12 cm: lb,ef = 9,5 < 16,9, aviso nos dois apoios", () => {
+  // Apoio de 12 cm: lb,ef = 9,5 < 16,9 → grampo, como o SISTRUT (grampoNb178): φ12,5 → φ6,3;
+  // q = máx(1; ⌊(47,35/(12 − 2,5 + 12,5) · 1,567 − 4,909)/(2 · 0,312)⌋) = 1. Apoio 1:
+  // ramo de −6 + 2,5 = −3,5 até 6 + 47 = 53 (56,5); travessa 20 − 5 − 1 = 14; U = 127.
+  // Apoio 2: de 494 − 47 = 447 até 500 + 6 − 2,5 = 503,5; U = 127.
+  it("apoio de 12 cm: lb,ef = 9,5 < 16,9, grampo 1 φ6,3 de 127 cm em cada apoio", () => {
     const estreito = detalharViga(
       { ...biapoiada([12, 12]), mat: { ...c25, acoEstribo: "CA-50" } },
       REGRAS_NB178,
     );
-    expect(estreito.avisos).toEqual([
-      "V1 N1: ancoragem no apoio 1 insuficiente (lb,ef = 9,5 cm < 16,9 cm); use grampos ou aumente o apoio.",
-      "V1 N1: ancoragem no apoio 2 insuficiente (lb,ef = 9,5 cm < 16,9 cm); use grampos ou aumente o apoio.",
+    const grampos = estreito.posicoes.filter((p) => p.tipo === "grampo");
+    expect(
+      grampos.map((g) => [
+        g.nome,
+        g.phi,
+        g.quantidade,
+        g.comprimento,
+        g.xInicio,
+        g.xFim,
+        g.travessa,
+      ]),
+    ).toEqual([
+      ["N2", 6.3, 1, 127, -3.5, 53, "inicio"],
+      ["N3", 6.3, 1, 127, 447, 503.5, "fim"],
     ]);
+    expect(estreito.avisos).toEqual([
+      "V1 N1: ancoragem no apoio 1 com grampo N2 (1 φ6,3), como o SISTRUT: lb,ef = 9,5 cm < 16,9 cm.",
+      "V1 N1: ancoragem no apoio 2 com grampo N3 (1 φ6,3), como o SISTRUT: lb,ef = 9,5 cm < 16,9 cm.",
+    ]);
+  });
+  it("na 6118 não há regra de grampo aqui: fica o aviso", () => {
+    const estreito = detalharViga(biapoiada([12, 12]));
+    expect(estreito.posicoes.some((p) => p.tipo === "grampo")).toBe(false);
+    expect(estreito.avisos.filter((a) => a.includes("insuficiente"))).toHaveLength(2);
   });
 });
 

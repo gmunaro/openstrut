@@ -126,16 +126,27 @@ describe("conta à mão (NB-1/78): vigas verticais de 5 m sobre pilares h = 20",
   const det = detalharVigasObra(c.resultado, obra);
   const verticais = det.vigas.filter((v) => v.nos.length === 2);
 
+  // Grampo (regra do SISTRUT, detalhamento/vigas.ts grampoNb178): no apoio de 20 cm
+  // cabem 17,5 cm; o exigido é ao menos 13,5 φ, então φ16 (21,6 cm) leva grampo e φ12,5
+  // (16,9 cm) não. Grampo de φ16: φ6,3; ramo de −7,5 até a face (10) + 7,5 · 6,3 = 47,
+  // ou seja 57 cm (64,5 cm); travessa 12 − 2 · 2,5 − 2 · 0,5 = 6; U = 2 · 64,5 + 6 = 135.
   it("posições e Σ quantidade × comprimento", () => {
     expect(verticais).toHaveLength(3);
     for (const v of verticais) {
-      const [pos, porta, estribo] = v.detalhamento.posicoes;
+      const do_ = (t: string) => v.detalhamento.posicoes.filter((p) => p.tipo === t);
+      const [pos] = do_("positiva");
+      const [porta] = do_("porta-estribos");
+      const [estribo] = do_("estribo");
+      const grampos = do_("grampo");
       if (!pos || !porta || !estribo) throw new Error(`${v.nome} sem as 3 posições`);
-      expect([pos.tipo, porta.tipo, estribo.tipo]).toEqual([
-        "positiva",
-        "porta-estribos",
-        "estribo",
-      ]);
+      expect(grampos.map((g) => [g.phi, g.quantidade, g.comprimento, g.xInicio, g.xFim])).toEqual(
+        1.35 * pos.phi > 17.5
+          ? [
+              [6.3, 1, 135, -7.5, 57],
+              [6.3, 1, 135, 443, 507.5],
+            ]
+          : [],
+      );
       expect(pos.reto).toBe(515);
       // gancho de 10 φ arredondado para cima em cada ponta (detalhamento/vigas.ts)
       const gancho = Math.ceil(pos.phi);
@@ -145,7 +156,11 @@ describe("conta à mão (NB-1/78): vigas verticais de 5 m sobre pilares h = 20",
       expect(estribo.comprimento).toBe(114);
       const s = estribo.espacamento ?? Number.NaN;
       expect(estribo.quantidade).toBe(Math.ceil(480 / s) + 1);
-      const soma = pos.quantidade * (515 + 2 * gancho) + 2 * 515 + estribo.quantidade * 114;
+      const soma =
+        pos.quantidade * (515 + 2 * gancho) +
+        2 * 515 +
+        estribo.quantidade * 114 +
+        grampos.reduce((x, g) => x + g.quantidade * g.comprimento, 0);
       expect(somaComprimentos(v.detalhamento.posicoes)).toBe(soma);
     }
   });

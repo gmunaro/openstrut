@@ -11,7 +11,9 @@ import path from "node:path";
 
 const OBRA = path.resolve("e2e/fixtures/ui-resultados/obra-paradas-original.openstrut.json");
 const PASTA = path.resolve("e2e/prints/ui-avisos");
-const ANCORAGEM = /ancoragem no apoio 1 insuficiente/;
+// a ancoragem que não cabe no apoio extremo ganha grampo pela NB-1/78, como o SISTRUT
+// (aviso informativo, no nível "Informativos", recolhido)
+const ANCORAGEM = /ancoragem no apoio 1 com grampo/;
 
 test.beforeAll(() => {
   fs.mkdirSync(PASTA, { recursive: true });
@@ -60,8 +62,12 @@ test("desktop: severidades, grupo recolhido que abre pelo teclado, selo e relat�
     painel.getByText(/^verificação (?:extra|de detalhamento) da V2$/).first(),
   ).toBeVisible();
 
-  // o grupo da ancoragem (muitos avisos) mostra o resumo e esconde os textos
-  const grupo = painel.locator("li", { hasText: "Ancoragem insuficiente" }).first();
+  // o nível "Informativos" começa recolhido; aberto, o grupo da ancoragem com grampo
+  // (muitos avisos) mostra o resumo e esconde os textos
+  const informativos = painel.getByRole("button", { name: /^Informativos \(\d+\)$/ }).first();
+  await expect(informativos).toHaveAttribute("aria-expanded", "false");
+  await informativos.click();
+  const grupo = painel.locator("li", { hasText: "Ancoragem com grampo" }).first();
   await expect(grupo.getByText(/^Pavimento 1 V1 \(apoios? [\d, e]+\)/)).toBeVisible();
   const texto = grupo.getByText(ANCORAGEM).first();
   await expect(texto).toBeHidden();
