@@ -1,6 +1,6 @@
 // Materiais pela NBR 6118:2023 (fontes: docs/norma/vigas-pilares.md, seção 1).
 // Escopo do app: concretos do Grupo I (C20 a C50); acima disso, aviso.
-import type { Aco, Materiais } from "../../../dominio/obra";
+import type { Aco, Caa, Materiais } from "../../../dominio/obra";
 import type { MateriaisCalc } from "../../tipos";
 
 /** Tabela 12.1, combinações normais. */
@@ -48,4 +48,22 @@ export function materiais6118(m: Materiais): MateriaisCalc {
     aco: m.aco,
     acoEstribo: m.acoEstribo,
   };
+}
+
+/** Classe mínima do concreto armado por classe de agressividade, MPa (Tabela 7.1;
+ *  docs/norma/durabilidade-lajes.md, seção 2). [VERIFICAR] valores da edição 2014,
+ *  a tabela de 2023 não foi lida. */
+export const FCK_MINIMO_CA: Record<Caa, number> = { 1: 20, 2: 25, 3: 30, 4: 40 };
+
+const CAA_ROMANO: Record<Caa, string> = { 1: "I", 2: "II", 3: "III", 4: "IV" };
+
+/** fck abaixo da classe mínima da Tabela 7.1 vira aviso; o cálculo segue com o fck dado
+ *  (a obra importada do SISTRUT costuma vir com C15). */
+export function avisosMateriais6118(m: Materiais): string[] {
+  const minimo = FCK_MINIMO_CA[m.caa];
+  return m.fck < minimo
+    ? [
+        `fck = ${m.fck} MPa abaixo do mínimo da NBR 6118 para concreto armado na classe de agressividade ${CAA_ROMANO[m.caa]}: C${minimo} (Tabela 7.1). O cálculo segue com o fck da obra; para a norma, aumente o fck em Materiais.`,
+      ]
+    : [];
 }

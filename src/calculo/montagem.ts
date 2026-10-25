@@ -27,6 +27,7 @@ import {
   sobreposicao,
 } from "../dominio/gerar";
 import type { ComMemoria, Etapa, LajeEsforcos } from "./tipos";
+import type { CargaParcial } from "./vigas/continua";
 
 const REF_V1 = "V1 LAJMONT.BM";
 
@@ -36,8 +37,23 @@ export interface CargaGQ {
   q: number;
 }
 
+/** Cargas de um tramo que substituem as da montagem (lajes, peso próprio, carga
+ *  linear): uniformes, em trechos e concentradas, características. As reações das
+ *  vigas apoiadas continuam vindo da montagem. */
+export interface CargasPropriasTramo extends CargaGQ {
+  /** Vão do tramo onde as posições foram medidas, m. */
+  vao: number;
+  parciais: CargaParcial[];
+  concentradas: { a: number; g: number; q: number }[];
+}
+
 export interface MontagemEntrada {
   pavimento: Pavimento;
+  /** Por id da viga, as cargas de cada tramo (na ordem do eixo), no lugar das que a
+   *  montagem tira das lajes: as do .VIG do SISTRUT na NBR 6118 (fluxo.ts). Recortadas
+   *  nos tramos da planta por cargasNosTramos; a viga cujo comprimento não bate fica
+   *  com as da montagem, com aviso. */
+  cargasProprias?: Readonly<Record<string, readonly CargasPropriasTramo[]>>;
   /** Reações características por bordo, kN/m, indexadas pelo id da laje. */
   reacoes: Readonly<Record<string, LajeEsforcos["reacoes"]>>;
   /** Peso específico do concreto armado, kN/m³ (Norma.pesoConcreto). */
@@ -58,7 +74,7 @@ export interface CargaConcentrada extends CargaGQ {
   /** A mesma reação com q em todos os tramos (AnaliseVigaMinima.reacoes), kN;
    *  g + q − total é o acréscimo da envoltória que entra no equilíbrio. */
   total: number;
-  /** Nome da viga que se apoia aqui. */
+  /** Nome da viga que se apoia aqui; "" na carga da própria viga (cargasProprias). */
   origem: string;
 }
 
@@ -66,6 +82,8 @@ export interface CargaConcentrada extends CargaGQ {
  *  g = lajes.g + pesoProprio + cargaLinear; q = lajes.q. */
 export interface TramoMontado extends CargaGQ {
   vao: number;
+  /** Cargas distribuídas em trechos do tramo, além de g e q (cargasProprias). */
+  parciais?: CargaParcial[];
   /** Reações das lajes (média sobre o tramo, como a V1), kN/m. */
   lajes: CargaGQ;
   /** bw · h · γc, kN/m. */
@@ -133,6 +151,13 @@ export function cargaLaje(l: Laje, pesoConcreto: number): CargaGQ {
 
 const somaGQ = (a: CargaGQ, b: CargaGQ) => ({ g: a.g + b.g, q: a.q + b.q });
 const total = (c: CargaGQ) => c.g + c.q;
+
+/** Carga do tramo sem as reações de viga sobre viga, kN: distribuídas · vão,
+ *  trechos e as concentradas próprias (origem ""). */
+const cargaPropria = (t: TramoMontado) =>
+  total(t) * t.vao +
+  (t.parciais ?? []).reduce((s, p) => s + (p.g + (p.q ?? 0)) * (p.b - p.a), 0) +
+  t.concentradas.filter((c) => c.origem === "").reduce((s, c) => s + total(c), 0);
 
 const pilarEm = (pilares: readonly Pilar[], x: number, y: number) =>
   pilares.find((p) => Math.abs(p.x - x) <= TOL && Math.abs(p.y - y) <= TOL);
@@ -360,10 +385,35 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
 
   const geometria = geometriaDasVigas(pavimento);
   avisos.push(...geometria.avisos);
+  /** Vigas montadas com as cargas próprias (cargasProprias). */
+  const comCargasProprias = new Set<string>();
   const montadas = geometria.vigas.map(({ viga, eixo, nos, apoios }): VigaMontada => {
     const pesoProprio = viga.pesoProprio ?? ((viga.bw * viga.h) / 10_000) * pesoConcreto;
+    const proprias = entrada.cargasProprias?.[viga.id];
+    const cargas = proprias && cargasNosTramos(proprias, nos);
+    if (proprias && !cargas)
+      avisos.push(
+        `Viga ${viga.nome}: o comprimento no .VIG do SISTRUT difere do da planta; ficam as cargas das lajes, do peso próprio e da carga linear.`,
+      );
+    else if (proprias && proprias.length !== nos.length - 1)
+      avisos.push(
+        `Viga ${viga.nome}: ${proprias.length} tramos no .VIG do SISTRUT e ${nos.length - 1} na planta; as cargas do SISTRUT foram distribuídas pela posição ao longo da viga.`,
+      );
+    if (cargas) comCargasProprias.add(viga.id);
     const tramos = nos.slice(1).map((fim, k): TramoMontado => {
       const inicio = nos[k] ?? eixo.s1;
+      const p = cargas?.[k];
+      if (p)
+        return {
+          vao: fim - inicio,
+          lajes: { g: 0, q: 0 },
+          pesoProprio: 0,
+          cargaLinear: 0,
+          g: p.g,
+          q: p.q,
+          parciais: p.parciais,
+          concentradas: p.concentradas.map((c) => ({ ...c, total: c.g + c.q, origem: "" })),
+        };
       const lajes = cargaDasLajesNoTramo(eixo, inicio, fim);
       return {
         vao: fim - inicio,
@@ -458,7 +508,18 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
   for (const i of ordem) {
     const v = montadas[i];
     if (!v || naoCalc.has(v.id)) continue;
+    const proprias = comCargasProprias.has(v.id);
     for (const t of v.tramos) {
+      if (proprias) {
+        memoria.push({
+          descricao: `${v.nome}: cargas do SISTRUT no tramo de ${fmt(t.vao)} m (uniforme ${fmt(t.g)} + ${fmt(t.q)}, ${t.parciais?.length ?? 0} trechos, ${t.concentradas.length} concentradas)`,
+          formula: "cargas do .VIG que o VIGA lê, sem as reações de viga sobre viga",
+          valor: cargaPropria(t),
+          unidade: "kN",
+          ref: "SISTRUT .VIG (sistrut/obra.ts, PavimentoSistrut.vig)",
+        });
+        continue;
+      }
       memoria.push({
         descricao: `${v.nome}: carga distribuída no tramo de ${fmt(t.vao)} m (lajes ${fmt(t.lajes.g)} + ${fmt(t.lajes.q)}, peso próprio ${fmt(t.pesoProprio)}, linear ${fmt(t.cargaLinear)})`,
         formula: "g = g_lajes + bw·h·γc + carga linear; q = q_lajes",
@@ -533,6 +594,64 @@ export function montarPavimento<R extends AnaliseVigaMinima>(
   return { vigas, naoCalculadas, pilares, avisos, memoria };
 }
 
+/** As cargas próprias de uma viga recortadas nos tramos da planta (`nos`, m ao longo
+ *  do eixo). Mesmo número de tramos: tramo a tramo, com as posições limitadas ao vão da
+ *  planta (o do .VIG pode diferir em até 5 mm, Viga.vaos). Número diferente (a planta
+ *  tem um apoio que o .VIG não tem, ou o contrário): pela posição ao longo da viga, se o
+ *  comprimento total bate a menos de 1 cm; senão, undefined. */
+export function cargasNosTramos(
+  proprias: readonly CargasPropriasTramo[],
+  nos: readonly number[],
+): CargasPropriasTramo[] | undefined {
+  const vaos = nos.slice(1).map((fim, k) => fim - (nos[k] ?? 0));
+  const limita = (x: number, L: number) => Math.min(Math.max(x, 0), L);
+  const recorta = (parciais: CargaParcial[], L: number) =>
+    parciais
+      .map((c) => ({ ...c, a: limita(c.a, L), b: limita(c.b, L) }))
+      .filter((c) => c.b - c.a > 1e-9);
+  if (proprias.length === vaos.length)
+    return proprias.map((p, k) => {
+      const L = vaos[k] ?? 0;
+      return {
+        ...p,
+        vao: L,
+        parciais: recorta(p.parciais, L),
+        concentradas: p.concentradas.map((c) => ({ ...c, a: limita(c.a, L) })),
+      };
+    });
+  const soma = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0);
+  if (Math.abs(soma(vaos) - soma(proprias.map((p) => p.vao))) > 0.01) return undefined;
+  // posições absolutas ao longo da viga, a partir do primeiro nó
+  const trechos: CargaParcial[] = [];
+  const concentradas: CargasPropriasTramo["concentradas"] = [];
+  let x0 = 0;
+  for (const p of proprias) {
+    if (p.g !== 0 || p.q !== 0) trechos.push({ a: x0, b: x0 + p.vao, g: p.g, q: p.q });
+    for (const c of p.parciais) trechos.push({ ...c, a: x0 + c.a, b: x0 + c.b });
+    for (const c of p.concentradas) concentradas.push({ ...c, a: x0 + c.a });
+    x0 += p.vao;
+  }
+  let inicio = 0;
+  return vaos.map((L, k) => {
+    const fim = inicio + L;
+    const ultimo = k === vaos.length - 1;
+    const tramo: CargasPropriasTramo = {
+      vao: L,
+      g: 0,
+      q: 0,
+      parciais: recorta(
+        trechos.map((c) => ({ ...c, a: c.a - inicio, b: c.b - inicio })),
+        L,
+      ),
+      concentradas: concentradas
+        .filter((c) => c.a >= inicio - 1e-9 && (c.a < fim - 1e-9 || ultimo))
+        .map((c) => ({ ...c, a: limita(c.a - inicio, L) })),
+    };
+    inicio = fim;
+    return tramo;
+  });
+}
+
 const nomeBordo = (l: Laje, b: Bordo) => `${l.nome}: bordo ${b} com reação e sem viga de apoio.`;
 
 const fmt = (x: number) => num(x, 2);
@@ -581,7 +700,7 @@ export function verificarEquilibrio<R extends AnaliseVigaMinima>(
   }
   const tramos = [...montagem.vigas, ...montagem.naoCalculadas].flatMap((v) => v.tramos);
   const lajesNasVigas = tramos.reduce((s, t) => s + total(t.lajes) * t.vao, 0);
-  const cargaVigas = tramos.reduce((s, t) => s + total(t) * t.vao, 0);
+  const cargaVigas = tramos.reduce((s, t) => s + cargaPropria(t), 0);
   const cargaPilares = montagem.pilares.reduce((s, p) => s + p.n, 0);
   const cargaPilaresProjeto = montagem.pilares.reduce((s, p) => s + p.nProjeto, 0);
   const acrescimoTransferido = montagem.vigas
@@ -600,7 +719,9 @@ export function verificarEquilibrio<R extends AnaliseVigaMinima>(
     avisos.push(
       `A somatória das reações das lajes (${fmt(reacoesLajes)} kN) difere da carga total das lajes (${fmt(cargaLajes)} kN) em ${num(excesso * 100, 1)}%.`,
     );
-  if (difere(lajesNasVigas, reacoesLajes, tolerancia))
+  // com cargas do SISTRUT (cargasProprias) as vigas não recebem as reações das lajes
+  const lajesNaMontagem = Object.keys(entrada.cargasProprias ?? {}).length === 0;
+  if (lajesNaMontagem && difere(lajesNasVigas, reacoesLajes, tolerancia))
     avisos.push(
       `Reações das lajes (${fmt(reacoesLajes)} kN) diferem da carga que chega às vigas (${fmt(lajesNasVigas)} kN).`,
     );

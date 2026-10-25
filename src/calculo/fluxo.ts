@@ -3,8 +3,8 @@
 // compatibilização, montagem, viga contínua, acumulação) e as da norma.
 import { num, numAte } from "./texto";
 import type { AvisoComOpcao } from "./avisos";
-import type { Laje, Obra, Pavimento, Pilar } from "../dominio/obra";
-import { calcularObraPeloSistrut } from "./fluxoSistrut";
+import type { Laje, Obra, Pavimento, Pilar, Viga } from "../dominio/obra";
+import { calcularObraPeloSistrut, cargasPropriasDoSistrut } from "./fluxoSistrut";
 import type { ResultadoSistrut } from "./sistrut/obra";
 import { escolheBarrasAlma, escolheEstribo, type BarrasNaAlma } from "./barras";
 import { compatibilizaLajes } from "./lajes/compatibilizacao";
@@ -14,6 +14,7 @@ import {
   montarPavimento,
   verificarEquilibrio,
   type CargaGQ,
+  type CargasPropriasTramo,
   type Equilibrio,
   type Montagem,
   type VigaMontada,
@@ -161,7 +162,11 @@ export const materiaisDe = (
 ) => r.porFamilia?.[familia].materiais ?? r.materiais;
 
 /** Pilares de pavimentos diferentes são o mesmo quando estão na mesma posição. */
-const chavePilar = (p: Pick<Pilar, "x" | "y">) => `${p.x.toFixed(3)};${p.y.toFixed(3)}`;
+/** Chave que casa os lances do mesmo pilar entre pavimentos. */
+type ChavePilar = (p: Pilar) => string;
+
+/** Na obra da V2, a posição do pilar. */
+const chavePosicao: ChavePilar = (p) => `${p.x.toFixed(3)};${p.y.toFixed(3)}`;
 
 const AVISO_VIGA_FALHA =
   "Pavimento com falha (ver equilíbrio): os esforços desta viga podem não incluir toda a carga.";
@@ -177,38 +182,64 @@ function marcarFalha(rp: ResultadoPavimento, falha: string) {
     if (!v.avisos.includes(AVISO_VIGA_FALHA)) v.avisos.push(AVISO_VIGA_FALHA);
 }
 
-/** Avisos do fluxo da V2 para a obra que traz dados do VIGA e do DESENHO do SISTRUT
- *  (obra importada), que só o caminho do SISTRUT lê: alvenarias e cargas de ocupação
- *  do pavimento, as cargas digitadas na viga e a seção de cada trecho. Sem eles a viga
- *  fica com menos carga ou outra seção. */
-function avisosDadosDoSistrut(obra: Obra): string[] {
-  const nomes = (teste: (v: Pavimento["vigas"][number]) => boolean) =>
-    obra.pavimentos.flatMap((p) =>
-      p.vigas
-        .filter(teste)
-        .map((v) => (obra.pavimentos.length > 1 ? `${p.nome} ${v.nome}` : v.nome)),
-    );
-  const comCargas = nomes((v) => (v.cargas?.length ?? 0) > 0 || v.somenteCargasProprias === true);
-  const comSecoes = nomes(
-    (v) => v.secoes?.trechos?.some((s) => s.bw !== v.bw || s.h !== v.h) === true,
+/** Obra com dados que só o caminho do SISTRUT lê (a importada, em geral): os campos
+ *  "só SISTRUT" do pavimento e da viga (dominio/obra.ts). A obra desenhada na V2 não
+ *  os tem. */
+function temDadosDoSistrut(obra: Obra) {
+  return obra.pavimentos.some(
+    (p) =>
+      (p.alvenarias?.length ?? 0) > 0 ||
+      (p.cargasOcupacao?.length ?? 0) > 0 ||
+      (p.trechosPilares?.length ?? 0) > 0 ||
+      (p.continuidadesLajes?.length ?? 0) > 0 ||
+      p.vigas.some(
+        (v) =>
+          (v.cargas?.length ?? 0) > 0 ||
+          v.somenteCargasProprias === true ||
+          v.secoes !== undefined ||
+          v.forma !== undefined ||
+          v.armaduraEditada !== undefined,
+      ),
   );
-  const avisos: string[] = [];
-  const comAlvenarias = obra.pavimentos
-    .filter((p) => (p.alvenarias?.length ?? 0) > 0 || (p.cargasOcupacao?.length ?? 0) > 0)
-    .map((p) => p.nome);
-  if (comAlvenarias.length > 0)
+}
+
+/** Cargas das vigas para o fluxo da V2 numa obra com dados do SISTRUT: as que o
+ *  SISTRUT monta (cargasPropriasDoSistrut), com os avisos. Obra sem esses dados:
+ *  nada muda. */
+function cargasDoSistrutNaV2(obra: Obra): {
+  porPavimento?: Map<string, Record<string, CargasPropriasTramo[]>>;
+  /** Chave dos pilares pelas colunas do SISTRUT (a posição não casa o lance deslocado
+   *  pelo .COL) e os fins de coluna sem transição. */
+  chave: ChavePilar;
+  fins: ReadonlyMap<string, string>;
+  avisos: string[];
+} {
+  if (!temDadosDoSistrut(obra)) return { chave: chavePosicao, fins: new Map(), avisos: [] };
+  const { porPavimento, colunas, fins, avisos } = cargasPropriasDoSistrut(obra);
+  const chave: ChavePilar = (p) => colunas.get(p.id) ?? chavePosicao(p);
+  const nome = (p: Pavimento, v: Viga) =>
+    obra.pavimentos.length > 1 ? `${p.nome} ${v.nome}` : v.nome;
+  const semCargas = obra.pavimentos.flatMap((p) =>
+    p.vigas.filter((v) => !porPavimento.get(p.id)?.[v.id]).map((v) => nome(p, v)),
+  );
+  const comSecoes = obra.pavimentos.flatMap((p) =>
+    p.vigas
+      .filter((v) => v.secoes?.trechos?.some((s) => s.bw !== v.bw || s.h !== v.h) === true)
+      .map((v) => nome(p, v)),
+  );
+  if (porPavimento.size > 0)
     avisos.push(
-      `Alvenarias e cargas de ocupação do SISTRUT não entram na NBR 6118 (${comAlvenarias.join(", ")}): as vigas e lajes ficam sem elas. Calcule pela NB-1/78 ou lance essas cargas como carga linear das vigas e sobrecarga das lajes.`,
+      "Obra com dados do SISTRUT: as vigas recebem as cargas que o SISTRUT monta no .VIG (lajes pelo LAJEMONT, peso próprio, alvenarias, cargas de ocupação e o que foi digitado no VIGA). A reação de viga sobre viga, os esforços e as armaduras saem pela NBR 6118. As reações das lajes que carregam as vigas são as do SISTRUT, e não as da tabela de lajes desta norma.",
     );
-  if (comCargas.length > 0)
+  if (porPavimento.size > 0 && semCargas.length > 0)
     avisos.push(
-      `Cargas digitadas no VIGA do SISTRUT não entram na NBR 6118 (vigas ${comCargas.join(", ")}): elas ficam só com o peso próprio, a carga linear e as reações das lajes e vigas. Calcule pela NB-1/78 ou lance essas cargas como carga linear.`,
+      `Vigas sem cargas do SISTRUT (${semCargas.join(", ")}): ficam com as cargas das lajes, do peso próprio e da carga linear.`,
     );
   if (comSecoes.length > 0)
     avisos.push(
       `Seções por trecho do .SEC não entram na NBR 6118 (vigas ${comSecoes.join(", ")}): a viga inteira é calculada com o bw × h dela.`,
     );
-  return avisos;
+  return { porPavimento, chave, fins, avisos };
 }
 
 /** Calcula a obra pela norma. A NB-1/78 (`norma.caminho === "sistrut"`) passa pelo
@@ -217,8 +248,14 @@ function avisosDadosDoSistrut(obra: Obra): string[] {
 export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
   if (norma.caminho === "sistrut") return calcularObraPeloSistrut(obra, norma);
   const mat = norma.materiais(obra.materiais);
-  const avisos: string[] = avisosDadosDoSistrut(obra);
-  const pavimentos = obra.pavimentos.map((p) => calcularPavimento(p, obra, norma, mat));
+  const doSistrut = cargasDoSistrutNaV2(obra);
+  const avisos: string[] = [
+    ...(norma.avisosMateriais?.(obra.materiais) ?? []),
+    ...doSistrut.avisos,
+  ];
+  const pavimentos = obra.pavimentos.map((p) =>
+    calcularPavimento(p, obra, norma, mat, doSistrut.porPavimento?.get(p.id)),
+  );
 
   // pilares: carga de projeto das vigas por pavimento, acumulada do topo para a
   // base; o mesmo pilar em pavimentos diferentes é casado pela posição, mas cada
@@ -229,13 +266,13 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
     peDireito: rp.pavimento.peDireito,
     repeticoes: rp.pavimento.repeticoes,
     pilares: rp.pavimento.pilares.map((p) => ({
-      pilar: chavePilar(p),
+      pilar: doSistrut.chave(p),
       nome: p.nome,
       secao: { forma: "retangular" as const, b: p.b, h: p.h },
       carga: rp.montagem.pilares.find((c) => c.id === p.id)?.nProjeto ?? 0,
     })),
   }));
-  const acumulado = cargaAcumulada(cargas, norma.pesoConcreto);
+  const acumulado = cargaAcumulada(cargas, norma.pesoConcreto, doSistrut.fins);
   avisos.push(...acumulado.avisos);
 
   const resultadoPorId = new Map(pavimentos.map((rp) => [rp.pavimento.id, rp]));
@@ -244,7 +281,7 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
   // vigas são redimensionadas com o negativo de extremidade antes de marcar as
   // transições, que acrescentam avisos a elas
   const ligacoes = norma.ligacaoVigaPilar
-    ? ligacoesPorNivel(acumulado.niveis, resultadoPorId)
+    ? ligacoesPorNivel(acumulado.niveis, resultadoPorId, doSistrut.chave)
     : null;
   if (ligacoes)
     for (const rp of pavimentos) {
@@ -280,11 +317,11 @@ export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
     }
     const pav = rp.pavimento;
     for (const n of nivel.pilares) {
-      const pilar = pav.pilares.find((p) => chavePilar(p) === n.pilar);
+      const pilar = pav.pilares.find((p) => doSistrut.chave(p) === n.pilar);
       // pilar sem lance neste pavimento (a carga só passa): não há seção a dimensionar
       if (!pilar) continue;
       const dLinha = obra.materiais.cobrimentoPilar + ACRESCIMO_ALTURA_UTIL;
-      const lig = ligacoes ? momentosLigacao(ligacoes, k, n.pilar) : null;
+      const lig = ligacoes ? momentosLigacao(ligacoes, k, n.pilar, doSistrut.chave) : null;
       const momentos = lig?.momentos ?? { mxTopo: 0, mxBase: 0, myTopo: 0, myBase: 0 };
       const calculado = norma.pilar(
         {
@@ -349,18 +386,19 @@ interface NivelLigacao {
   rotulo: string;
   /** Por id da viga (só as de análise ok). */
   vigas: Map<string, LigacaoVigaPilar>;
-  /** chavePilar de cada pilar do pavimento, por id. */
+  /** Chave (ChavePilar) de cada pilar do pavimento, por id. */
   chaves: Map<string, string>;
 }
 
 /** Ligação viga-pilar de cada viga em cada nível, alinhada com `niveis` (do topo
  *  para a base). A viga do nível k fica no topo do lance do nível k: lance
  *  inferior = o pilar no pavimento do nível k com o pé-direito dele; superior = o
- *  mesmo pilar (chavePilar) no nível k − 1, ou null sem lance acima (cobertura,
+ *  mesmo pilar (mesma chave) no nível k − 1, ou null sem lance acima (cobertura,
  *  pilar que nasce no nível). */
 function ligacoesPorNivel(
   niveis: readonly NivelAcumulado[],
   porId: ReadonlyMap<string, ResultadoPavimento>,
+  chavePilar: ChavePilar,
 ): (NivelLigacao | null)[] {
   const lance = (p: Pilar, altura: number): LancePilar => ({ b: p.b, h: p.h, altura });
   let acima: Pavimento | null = null;
@@ -472,7 +510,12 @@ function analiseComLigacao(
  *  transição): a base fica sem momento de ligação e o topo sem a parcela
  *  propagada. [VERIFICAR] As fontes lidas não tratam a base na fundação; propagar
  *  −Mtopo/2 (engaste) daria curvatura dupla e αb menor, contra a segurança. */
-function momentosLigacao(ligacoes: readonly (NivelLigacao | null)[], k: number, chave: string) {
+function momentosLigacao(
+  ligacoes: readonly (NivelLigacao | null)[],
+  k: number,
+  chave: string,
+  chavePilar: ChavePilar,
+) {
   const atual = ligacoes[k];
   const baixo = ligacoes[k + 1];
   const temLanceAbaixo = baixo?.pavimento.pavimento.pilares.some((p) => chavePilar(p) === chave);
@@ -551,6 +594,8 @@ export function calcularPavimento(
   obra: Obra,
   norma: Norma,
   mat: MateriaisCalc,
+  /** Por id da viga, as cargas do SISTRUT (cargasDoSistrutNaV2); ausente = as da montagem. */
+  cargasProprias?: Readonly<Record<string, CargasPropriasTramo[]>>,
 ): ResultadoPavimento {
   // lajes: vinculação pela vizinhança, esforços, compatibilização, armaduras
   const vinc = vinculacao(pavimento.lajes);
@@ -593,6 +638,7 @@ export function calcularPavimento(
     pavimento,
     reacoes: Object.fromEntries(lajes.map((r) => [r.laje.id, r.esforcos.reacoes])),
     pesoConcreto: norma.pesoConcreto,
+    ...(cargasProprias ? { cargasProprias } : {}),
   };
   const montagem = montarPavimento(entradaMontagem, analisarViga);
   const equilibrio = verificarEquilibrio(entradaMontagem, montagem, 1e-6);
@@ -631,6 +677,7 @@ export function analisarViga(v: VigaMontada): AnaliseViga {
       g: t.g,
       q: t.q,
       concentradas: t.concentradas.map((c) => ({ a: c.a, g: c.g, q: c.q })),
+      ...(t.parciais?.length ? { parciais: t.parciais } : {}),
     })),
     balancoEsquerdo: v.apoios[0]?.tipo === "livre",
     balancoDireito: v.apoios.at(-1)?.tipo === "livre",

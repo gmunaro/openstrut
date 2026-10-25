@@ -189,6 +189,9 @@ export interface Norma {
    *  lajes/compatibilizacao.ts). A V1 (NB-1/78) não fazia: false mantém a paridade. */
   recalculaBordoAliviado: boolean;
   materiais(m: Materiais): MateriaisCalc;
+  /** Avisos dos materiais da obra fora do que a norma admite (ex.: fck abaixo da
+   *  classe mínima). Ausente = nenhum. */
+  avisosMateriais?(m: Materiais): string[];
 
   lajeEsforcos(e: LajeEntrada, mat: MateriaisCalc): LajeEsforcos;
   /** Momento negativo único no bordo comum de duas lajes (características). */

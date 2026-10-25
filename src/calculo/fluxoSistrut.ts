@@ -22,7 +22,14 @@ import type {
   ResultadoViga,
   SecaoViga as SecaoVigaV2,
 } from "./fluxo";
-import type { CargaPilar, Equilibrio, TramoMontado, VigaCalculada, VigaMontada } from "./montagem";
+import type {
+  CargaPilar,
+  CargasPropriasTramo,
+  Equilibrio,
+  TramoMontado,
+  VigaCalculada,
+  VigaMontada,
+} from "./montagem";
 import { moduloConcreto } from "./normas/nb1-78/materiais";
 import type {
   AnaliseViga as AnaliseVigaContrato,
@@ -953,5 +960,102 @@ export function calcularObraPeloSistrut(obra: Obra, norma: Norma): ResultadoObra
     avisos: [...sistrut.avisos, ...avisosCoeficientes],
     avisosComOpcao: sistrut.avisosComOpcao,
     sistrut,
+  };
+}
+
+// ---------------------------------------------------------------- NBR 6118
+
+/** Cargas próprias das vigas pelo caminho do SISTRUT (modo corrigido, em SI), para a
+ *  NBR 6118 calcular a obra importada com as cargas que o SISTRUT monta: lajes pelo
+ *  LAJEMONT, peso próprio, alvenarias, cargas de ocupação e o que o usuário digitou
+ *  no VIGA (cargas em trechos e concentradas). Vêm do .VIG que o VIGA lê
+ *  (`PavimentoSistrut.vig`), antes de resolver as cargas indexadas: a reação de viga
+ *  sobre viga fica de fora (F = 0 na divisão indexada), porque a montagem da 6118 a
+ *  refaz com a análise dela. Por pavimento e por id da viga, um item por tramo na
+ *  ordem do eixo. Também as colunas de pilar do SISTRUT (as do .COL, como o modo
+ *  corrigido as monta): `colunas` dá a chave da coluna de cada pilar (por id), e
+ *  `fins`, por chave, o aviso da coluna cuja carga para onde ela para, sem
+ *  transição: a que nasce sobre viga, com a carga lançada nela, e o apoio de cálculo
+ *  (pilar de transição sem lance). Se o caminho do SISTRUT falha, nada vem, com aviso. */
+export function cargasPropriasDoSistrut(obra: Obra): {
+  porPavimento: Map<string, Record<string, CargasPropriasTramo[]>>;
+  colunas: Map<string, string>;
+  fins: Map<string, string>;
+  avisos: string[];
+} {
+  const porPavimento = new Map<string, Record<string, CargasPropriasTramo[]>>();
+  const colunas = new Map<string, string>();
+  const fins = new Map<string, string>();
+  let sistrut: ResultadoSistrut;
+  try {
+    sistrut = calcularObraSistrut(obra, { modo: "corrigido" });
+  } catch (e) {
+    return {
+      porPavimento,
+      colunas,
+      fins,
+      avisos: [
+        `As cargas do SISTRUT não puderam ser montadas (${e instanceof Error ? e.message : String(e)}); as vigas ficam com as cargas das lajes, do peso próprio e da carga linear.`,
+      ],
+    };
+  }
+  for (const ps of sistrut.pavimentos) {
+    const vigas: Record<string, CargasPropriasTramo[]> = {};
+    for (const d of ps.vig) {
+      const id = ps.idVigas[d.nome];
+      if (id) vigas[id] = tramosVig(d).map(({ tramo, tipo }) => cargasProprias(tramo, tipo));
+    }
+    porPavimento.set(ps.pavimentoId, vigas);
+  }
+  const pilares = obra.pavimentos.flatMap((pav) => pav.pilares.map((p) => ({ p, pav })));
+  const base = new Map<string, (typeof sistrut.lances)[number]>();
+  for (const l of sistrut.lances) {
+    colunas.set(l.pilarId, `sistrut:${l.coluna}`);
+    const b = base.get(l.coluna);
+    if (!b || l.nivel < b.nivel) base.set(l.coluna, l);
+  }
+  // a coluna que nasce acima da fundação termina sem falha só onde o SISTRUT achou a
+  // carga dela na viga de baixo (concentrada que a cobre) ou o pilar está marcado
+  // como transição (sistrut/obra.ts, fundações): o aviso do lance da base diz qual.
+  // Sem isso, a 6118 marca a transição como falha, como o SISTRUT.
+  for (const [coluna, l] of base) {
+    if (l.nivel === 0) continue;
+    const aviso = l.avisos.find((a) => /: nasce sobre (a viga|viga de transição)/.test(a));
+    if (aviso) fins.set(`sistrut:${coluna}`, `Pilar ${aviso}`);
+  }
+  for (const { p, pav } of pilares)
+    if (!colunas.has(p.id) && p.transicao) {
+      colunas.set(p.id, `apoio:${p.id}`);
+      fins.set(
+        `apoio:${p.id}`,
+        `Pilar ${p.nome} (${pav.nome}): só apoio de cálculo, como no SISTRUT; a carga dele não desce como pilar.`,
+      );
+    }
+  return { porPavimento, colunas, fins, avisos: [] };
+}
+
+/** Um tramo do .VIG em kN: a menor carga das divisões vira uniforme e o excesso de
+ *  cada divisão, trecho; as concentradas digitadas (F ≠ 0) separadas em g e q. */
+function cargasProprias(t: TramoViga, tipo: "balE" | "tramo" | "balD"): CargasPropriasTramo {
+  const c = cargasDoTramo(t, tipo);
+  const trechos = c.distribuidas
+    .filter((s) => s.b - s.a > 1e-9)
+    .map((s) => ({ a: s.a, b: s.b, g: tPorMParaKnPorM(s.p - s.pac), q: tPorMParaKnPorM(s.pac) }));
+  // uniforme só quando as divisões cobrem o tramo inteiro
+  const coberto = trechos.reduce((s, x) => s + (x.b - x.a), 0) >= t.vao - 1e-6;
+  const g = coberto && trechos.length ? Math.min(...trechos.map((x) => x.g)) : 0;
+  const q = coberto && trechos.length ? Math.min(...trechos.map((x) => x.q)) : 0;
+  return {
+    vao: t.vao,
+    g,
+    q,
+    parciais: trechos
+      .map((x) => ({ a: x.a, b: x.b, g: x.g - g, q: x.q - q }))
+      .filter((x) => Math.abs(x.g) > 1e-9 || Math.abs(x.q) > 1e-9),
+    concentradas: c.concentradas.map((f) => ({
+      a: f.a,
+      g: tParaKn(f.f - f.fac),
+      q: tParaKn(f.fac),
+    })),
   };
 }

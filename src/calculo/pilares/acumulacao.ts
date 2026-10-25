@@ -83,6 +83,10 @@ export const areaSecao = (s: SecaoPilar) =>
 export function cargaAcumulada(
   pavimentos: PavimentoCargas[],
   pesoEspecifico: number,
+  /** Pilares (pela chave) cuja carga termina onde o lance deles termina, sem
+   *  transição nem falha, com o aviso dado: a coluna do SISTRUT que nasce sobre
+   *  viga com a carga lançada nela, e o apoio de cálculo (fluxo.ts). */
+  fins: ReadonlyMap<string, string> = new Map(),
 ): CargasAcumuladas {
   const avisos: string[] = [];
   const memoria: Etapa[] = [];
@@ -123,6 +127,12 @@ export function cargaAcumulada(
       }
       for (const [pilar, nk] of acima) {
         if (doNivel.has(pilar)) continue;
+        const fim = fins.get(pilar);
+        if (fim !== undefined) {
+          if (!semLance.has(pilar)) avisos.push(fim);
+          semLance.add(pilar);
+          continue;
+        }
         if (!semLance.has(pilar)) {
           const nome = nomes.get(pilar) ?? pilar;
           const aviso = `Pilar ${nome} termina no pavimento ${nivel}: a carga (${num(nk, 2)} kN) NÃO foi transferida a viga de transição — modele a transição.`;

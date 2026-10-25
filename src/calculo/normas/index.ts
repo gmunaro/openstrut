@@ -10,7 +10,7 @@ import {
   lajeArmadura6118,
   lajeEsforcos6118,
 } from "./nbr6118-2023/lajes";
-import { GAMA_G, GAMA_Q, materiais6118 } from "./nbr6118-2023/materiais";
+import { avisosMateriais6118, GAMA_G, GAMA_Q, materiais6118 } from "./nbr6118-2023/materiais";
 import { pilar6118 } from "./nbr6118-2023/pilares";
 import { vigaCortante6118, vigaFlexao6118 } from "./nbr6118-2023/vigas";
 
@@ -99,6 +99,7 @@ export const nbr6118: Norma = {
   ligacaoVigaPilar: true,
   recalculaBordoAliviado: true,
   materiais: materiais6118,
+  avisosMateriais: avisosMateriais6118,
   lajeEsforcos: lajeEsforcos6118,
   compatibilizaNegativo: compatibilizaNegativo6118,
   lajeArmadura: lajeArmadura6118,
