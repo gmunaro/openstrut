@@ -143,10 +143,10 @@ test("camada Original × Corrigido: contagens, lista, seleção, filtro, tolerâ
   // tolerância padrão de 1 %
   await expect
     .poll(() => contagens(page))
-    .toEqual({ maior: 14, igual: 23, menor: 22, situacao: 0 });
+    .toEqual({ maior: 20, igual: 25, menor: 14, situacao: 0 });
 
   const lista = page.getByTestId("comparar-lista");
-  await expect(lista.locator("li")).toHaveCount(36);
+  await expect(lista.locator("li")).toHaveCount(34);
   await expect(lista.locator("li").first()).toContainText("Viga V2 · TER");
   await expect(lista.locator("li").first()).toContainText("(+2,4 %)");
 
@@ -174,7 +174,7 @@ test("camada Original × Corrigido: contagens, lista, seleção, filtro, tolerâ
   await tolerancia.fill("1");
   await expect
     .poll(() => contagens(page))
-    .toEqual({ maior: 14, igual: 23, menor: 22, situacao: 0 });
+    .toEqual({ maior: 20, igual: 25, menor: 14, situacao: 0 });
 
   // obra editada (modo de cálculo trocado em Materiais): a camada refaz a comparação com o
   // outro modo; as categorias são sempre "no original", então as contagens não mudam
@@ -191,7 +191,7 @@ test("camada Original × Corrigido: contagens, lista, seleção, filtro, tolerâ
   await expect(painel.getByText("Calculando no modo")).toHaveCount(0, { timeout: 30_000 });
   await expect
     .poll(() => contagens(page))
-    .toEqual({ maior: 14, igual: 23, menor: 22, situacao: 0 });
+    .toEqual({ maior: 20, igual: 25, menor: 14, situacao: 0 });
 
   // desligar: o painel some, a camada tira cor e filtro, e a laje volta a aparecer
   await page.getByRole("button", { name: "Original × Corrigido" }).click();

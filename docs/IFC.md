@@ -124,7 +124,7 @@ O GlobalId é um hash de 128 bits do nome da obra com o id do elemento, o nível
 
 ## Limitações
 
-- A seção da viga é a do `.SEC` quando existe, que pode diferir de bw × h da planta (na E2E, 12 × 40 contra 12 × 50). A viga vai de eixo a eixo dos apoios e sobrepõe os pilares e a laje; a mesa da seção T sobrepõe a laje. Quem tira quantitativo de concreto do IFC precisa descontar essas sobreposições.
+- A seção da viga é a do `.SEC` quando existe. O bw × h da viga importada é o do 1º tramo do `.SEC`; os outros trechos podem diferir dele. A viga vai de eixo a eixo dos apoios e sobrepõe os pilares e a laje; a mesa da seção T sobrepõe a laje. Quem tira quantitativo de concreto do IFC precisa descontar essas sobreposições.
 - A rotação do pilar é em torno do centro da seção. O PILDADOS gira em torno do canto (0, 0); a planta da V2 não desenha a rotação.
 - O pilar vai de piso a piso, sem a excentricidade entre lances (`Pilar.excentricidade`). A laje rebaixada (grupo negativo do SISTRUT) fica no nível.
 - Não entram como barras: as das lajes, os grampos das vigas, a segunda camada (todas as barras numa camada) e o estribo duplo (`ladoALado`). Também não entram os traspasses dos pilares nem a armadura de pilar poligonal. O arquivo lista os grampos e os pilares poligonais em `AvisosExportacao`.
