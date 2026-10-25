@@ -330,8 +330,10 @@ export function detalharViga(
 
   /** Confere a ancoragem de barra com gancho em apoio extremo de largura b:
    *  lb,ef = b − c ≥ máx(lb,nec com gancho; r + 5,5 φ; 6 cm) (6118 18.3.2.4.1).
-   *  [VERIFICAR] a NB-1/78 usa a mesma conferência com o lb dela, sem reduções
-   *  (a V1 não confere; a favor da segurança). */
+   *  Nas duas normas o lb,nec é o da 6118 (redução por As,anc/As,ef e gancho, com
+   *  lb,mín), sobre o lb e a decalagem da norma da obra. [VERIFICAR] o texto da
+   *  NB-1/78 não foi lido; a V1 não confere, e o lb cheio sem reduções reprovava
+   *  quase todo apoio extremo (obra Alpha1: 66 cm de φ12,5 em apoio de 19 cm). */
   const confereApoioExtremo = (
     nome: string,
     k: number,
@@ -340,10 +342,17 @@ export function detalharViga(
     asEf: number,
   ) => {
     const phi = basica.phi;
-    const nec = regras.ancoragemNecessaria(basica, asAnc, asEf, true).lbNec;
+    const anc = ancoragemNecessaria6118(basica, asAnc, asEf, true);
+    const nec = anc.lbNec;
     const r = (pinoDobramento(phi, mat.aco) / 2) * (phi / 10);
     const exigido = Math.max(nec, r + (5.5 * phi) / 10, 6);
     const disponivel = largura(k) - c;
+    memoria.push(
+      ...anc.memoria.map((m) => ({
+        ...m,
+        descricao: `${nome}: apoio ${k + 1} (extremo), As,anc = ${num(asAnc, 2)} cm²: ${m.descricao}`,
+      })),
+    );
     memoria.push({
       descricao: `${nome}: ancoragem no apoio ${k + 1} (extremo)`,
       formula: `lb,ef = b − c = ${num(disponivel, 1)} ≥ máx(lb,nec com gancho; r + 5,5 φ; 6 cm) = ${num(exigido, 1)}`,

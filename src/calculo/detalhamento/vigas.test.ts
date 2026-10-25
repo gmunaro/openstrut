@@ -196,9 +196,22 @@ describe("viga biapoiada (NB-1/78, ganchos da V1)", () => {
     expect(r.posicoes[2]?.comprimento).toBe(130);
   });
   // lb NB-1/78 φ12,5: τbu = 0,42 · (25/1,4)^(2/3) = 0,42 · 6,8322 = 2,8695 MPa;
-  // lb = 1,25/4 · 434,78/2,8695 = 47,35 cm > lb,ef = 17,5 → aviso (sem redução na NB-1/78)
-  it("ancoragem no apoio extremo pela lb cheia: aviso nos dois apoios", () => {
-    expect(r.avisos).toHaveLength(2);
+  // lb = 1,25/4 · 434,78/2,8695 = 47,35 cm. No apoio extremo, a conta da 6118 com esse
+  // lb e al = 0,75 d: As,anc = 0,75 · 1,4 · 50/43,478 = 1,2075 cm²;
+  // lb,nec = 0,7 · 47,35 · 1,2075/4,909 = 8,15 < lb,mín = 0,3 · 47,35 = 14,2;
+  // r + 5,5 φ = 2,5 · 1,25 + 6,875 = 10,0. Exigido 14,2 cm.
+  it("ancoragem no apoio extremo pela conta da 6118 com o lb da NB-1/78: 17,5 ≥ 14,2, sem aviso", () => {
+    expect(r.avisos).toEqual([]);
+  });
+  it("apoio de 12 cm: lb,ef = 9,5 < 14,2, aviso nos dois apoios", () => {
+    const estreito = detalharViga(
+      { ...biapoiada([12, 12]), mat: { ...c25, acoEstribo: "CA-50" } },
+      REGRAS_NB178,
+    );
+    expect(estreito.avisos).toEqual([
+      "V1 N1: ancoragem no apoio 1 insuficiente (lb,ef = 9,5 cm < 14,2 cm); use grampos ou aumente o apoio.",
+      "V1 N1: ancoragem no apoio 2 insuficiente (lb,ef = 9,5 cm < 14,2 cm); use grampos ou aumente o apoio.",
+    ]);
   });
 });
 

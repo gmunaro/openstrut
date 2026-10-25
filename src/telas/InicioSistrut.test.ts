@@ -11,6 +11,8 @@ import { importarLaj } from "../armazenamento/sistrut/laje";
 import { importarVigasSistrut } from "../armazenamento/sistrut/viga";
 import { arquivoOraculo } from "../calculo/sistrut/__oraculo__/arquivosOraculo";
 import { KN_POR_TF } from "../calculo/sistrut/base/unidades";
+import { calcularObra } from "../calculo/fluxo";
+import { nbr6118 } from "../calculo/normas";
 import { calcularObraSistrut } from "../calculo/sistrut/obra";
 import {
   arquivo,
@@ -47,6 +49,37 @@ const importa = (arquivos: readonly ArquivoEntrada[]) => {
 };
 
 describe("importarObraSistrut", () => {
+  it("viga com bw × h do .SEC (E2E: 12 × 40, não os 12 × 50 da planta) e o peso da montagem", () => {
+    const { obra } = importa(OBRA_E2E);
+    const vigas = obra.pavimentos[0]!.vigas;
+    expect(vigas.map((v) => `${v.bw}x${v.h}`)).toEqual(Array(vigas.length).fill("12x40"));
+    // V1 a V3: os 120 kg/m do .VIG; V4 a V6, sem peso digitado, o da seção provisória:
+    // 0,12 · 0,50 · 2,5 = 0,15 t/m, e não o dos 12 × 40 (0,12 t/m)
+    const tPorM = vigas.map((v) => Math.round((v.pesoProprio! / KN_POR_TF) * 1000));
+    expect(tPorM).toEqual([120, 120, 120, 150, 150, 150]);
+  });
+
+  it("NBR 6118 avisa que os dados do VIGA do SISTRUT não entram", () => {
+    const { obra } = importa(OBRA_E2E);
+    const [pav] = obra.pavimentos;
+    const v1 = pav!.vigas[0]!;
+    const comCargas = {
+      ...obra,
+      pavimentos: [
+        { ...pav!, vigas: [{ ...v1, somenteCargasProprias: true }, ...pav!.vigas.slice(1)] },
+      ],
+    };
+    const avisos = calcularObra(comCargas, nbr6118).avisos;
+    expect(avisos).toContainEqual(
+      expect.stringMatching(
+        /^Cargas digitadas no VIGA do SISTRUT não entram na NBR 6118 \(vigas V1\)/,
+      ),
+    );
+    expect(calcularObra(obra, nbr6118).avisos.some((a) => a.includes("VIGA do SISTRUT"))).toBe(
+      false,
+    );
+  });
+
   it("monta a obra da E2E com as lajes, vigas e pilares do pavimento", () => {
     const r = importarObraSistrut(OBRA_E2E);
     expect(r.ok).toBe(true);

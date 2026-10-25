@@ -31,7 +31,12 @@ import { qbCint, sng } from "../../calculo/sistrut/base/f32";
 import { PARAMETROS_DSP, PARAMETROS_VIGA } from "../../calculo/sistrut/base/parametros";
 import { numeroDoPilar } from "../../calculo/sistrut/montagem/vigas";
 import type { DadosViga, DivisaoCarga, TramoViga } from "../../calculo/sistrut/base/tipos";
-import { tmParaKnm, tParaKn, tPorMParaKnPorM } from "../../calculo/sistrut/base/unidades";
+import {
+  DENSIDADE_CONCRETO_TM3,
+  tmParaKnm,
+  tParaKn,
+  tPorMParaKnPorM,
+} from "../../calculo/sistrut/base/unidades";
 import { materiaisPadrao, novoId, pavimentoNovo } from "../../dominio/criar";
 import type {
   Aco,
@@ -1146,6 +1151,16 @@ function completar(
     if (marcas.some((x, k) => x !== 0 && x !== 471 && x !== daPlanta[k]))
       viga.pilaresNoRep = marcas.map((x) => (x === 0 || x === 471 ? null : x));
     if (entrada.secoes) viga.secoes = entrada.secoes;
+    // bw × h da viga = 1º tramo do .SEC, como em `gerar`: o .LAJ não grava seção e a
+    // planta põe uma provisória (laje.ts), que a tela, o detalhamento e a 6118 usariam.
+    // A provisória também dá o peso próprio do LAJEMONT (12 × 50 → 150 kg/m); sem peso
+    // digitado, ele fica fixo, para a seção real não mudar a carga
+    const s1 = secoes[iv]?.[1]?.trecho;
+    if (s1?.bw && s1.hw && (s1.bw !== viga.bw || s1.hw !== viga.h)) {
+      viga.pesoProprio ??= tPorMParaKnPorM(((viga.bw * viga.h) / 10_000) * DENSIDADE_CONCRETO_TM3);
+      viga.bw = s1.bw;
+      viga.h = s1.hw;
+    }
     if (entrada.forma) viga.forma = entrada.forma;
   });
   for (const [kg, vigas] of pesosDoVig) {

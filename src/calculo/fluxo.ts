@@ -177,13 +177,47 @@ function marcarFalha(rp: ResultadoPavimento, falha: string) {
     if (!v.avisos.includes(AVISO_VIGA_FALHA)) v.avisos.push(AVISO_VIGA_FALHA);
 }
 
+/** Avisos do fluxo da V2 para a obra que traz dados do VIGA e do DESENHO do SISTRUT
+ *  (obra importada), que só o caminho do SISTRUT lê: alvenarias e cargas de ocupação
+ *  do pavimento, as cargas digitadas na viga e a seção de cada trecho. Sem eles a viga
+ *  fica com menos carga ou outra seção. */
+function avisosDadosDoSistrut(obra: Obra): string[] {
+  const nomes = (teste: (v: Pavimento["vigas"][number]) => boolean) =>
+    obra.pavimentos.flatMap((p) =>
+      p.vigas
+        .filter(teste)
+        .map((v) => (obra.pavimentos.length > 1 ? `${p.nome} ${v.nome}` : v.nome)),
+    );
+  const comCargas = nomes((v) => (v.cargas?.length ?? 0) > 0 || v.somenteCargasProprias === true);
+  const comSecoes = nomes(
+    (v) => v.secoes?.trechos?.some((s) => s.bw !== v.bw || s.h !== v.h) === true,
+  );
+  const avisos: string[] = [];
+  const comAlvenarias = obra.pavimentos
+    .filter((p) => (p.alvenarias?.length ?? 0) > 0 || (p.cargasOcupacao?.length ?? 0) > 0)
+    .map((p) => p.nome);
+  if (comAlvenarias.length > 0)
+    avisos.push(
+      `Alvenarias e cargas de ocupação do SISTRUT não entram na NBR 6118 (${comAlvenarias.join(", ")}): as vigas e lajes ficam sem elas. Calcule pela NB-1/78 ou lance essas cargas como carga linear das vigas e sobrecarga das lajes.`,
+    );
+  if (comCargas.length > 0)
+    avisos.push(
+      `Cargas digitadas no VIGA do SISTRUT não entram na NBR 6118 (vigas ${comCargas.join(", ")}): elas ficam só com o peso próprio, a carga linear e as reações das lajes e vigas. Calcule pela NB-1/78 ou lance essas cargas como carga linear.`,
+    );
+  if (comSecoes.length > 0)
+    avisos.push(
+      `Seções por trecho do .SEC não entram na NBR 6118 (vigas ${comSecoes.join(", ")}): a viga inteira é calculada com o bw × h dela.`,
+    );
+  return avisos;
+}
+
 /** Calcula a obra pela norma. A NB-1/78 (`norma.caminho === "sistrut"`) passa pelo
  *  caminho do SISTRUT 4.0 no modo da obra (`obra.modoCalculo`, docs/MODO-CALCULO.md);
  *  as outras, pelo fluxo da V2 abaixo. */
 export function calcularObra(obra: Obra, norma: Norma): ResultadoObra {
   if (norma.caminho === "sistrut") return calcularObraPeloSistrut(obra, norma);
   const mat = norma.materiais(obra.materiais);
-  const avisos: string[] = [];
+  const avisos: string[] = avisosDadosDoSistrut(obra);
   const pavimentos = obra.pavimentos.map((p) => calcularPavimento(p, obra, norma, mat));
 
   // pilares: carga de projeto das vigas por pavimento, acumulada do topo para a
