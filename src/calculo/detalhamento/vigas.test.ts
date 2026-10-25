@@ -11,6 +11,7 @@ import {
   decalagem6118,
   decalagemNb178,
   detalharViga,
+  apoioExtremoNb178,
   REGRAS_NB178,
   type PosicaoArmadura,
   type SecaoDetalhada,
@@ -196,22 +197,43 @@ describe("viga biapoiada (NB-1/78, ganchos da V1)", () => {
     expect(r.posicoes[2]?.comprimento).toBe(130);
   });
   // lb NB-1/78 φ12,5: τbu = 0,42 · (25/1,4)^(2/3) = 0,42 · 6,8322 = 2,8695 MPa;
-  // lb = 1,25/4 · 434,78/2,8695 = 47,35 cm. No apoio extremo, a conta da 6118 com esse
-  // lb e al = 0,75 d: As,anc = 0,75 · 1,4 · 50/43,478 = 1,2075 cm²;
-  // lb,nec = 0,7 · 47,35 · 1,2075/4,909 = 8,15 < lb,mín = 0,3 · 47,35 = 14,2;
-  // r + 5,5 φ = 2,5 · 1,25 + 6,875 = 10,0. Exigido 14,2 cm.
-  it("ancoragem no apoio extremo pela conta da 6118 com o lb da NB-1/78: 17,5 ≥ 14,2, sem aviso", () => {
+  // lb = 1,25/4 · 434,78/2,8695 = 47,35 cm. No apoio extremo, a regra do SISTRUT
+  // (DESINIT.BAS:2092-2225): Vd = 1,4 · 50 = 70 kN; Anec = máx(70/(2 · 43,478) = 0,805;
+  // 4,7/3 = 1,567) = 1,567 cm²; Anec/As,ef = 1,567/4,909 = 0,319 → 0,33;
+  // exigido = máx(47,35 · 0,33 − 12,5 = 3,1; 13,5 · 1,25 = 16,875; 6) = 16,9 cm.
+  it("ancoragem no apoio extremo pela regra do SISTRUT: 17,5 ≥ 16,9, sem aviso", () => {
     expect(r.avisos).toEqual([]);
   });
-  it("apoio de 12 cm: lb,ef = 9,5 < 14,2, aviso nos dois apoios", () => {
+  it("apoio de 12 cm: lb,ef = 9,5 < 16,9, aviso nos dois apoios", () => {
     const estreito = detalharViga(
       { ...biapoiada([12, 12]), mat: { ...c25, acoEstribo: "CA-50" } },
       REGRAS_NB178,
     );
     expect(estreito.avisos).toEqual([
-      "V1 N1: ancoragem no apoio 1 insuficiente (lb,ef = 9,5 cm < 14,2 cm); use grampos ou aumente o apoio.",
-      "V1 N1: ancoragem no apoio 2 insuficiente (lb,ef = 9,5 cm < 14,2 cm); use grampos ou aumente o apoio.",
+      "V1 N1: ancoragem no apoio 1 insuficiente (lb,ef = 9,5 cm < 16,9 cm); use grampos ou aumente o apoio.",
+      "V1 N1: ancoragem no apoio 2 insuficiente (lb,ef = 9,5 cm < 16,9 cm); use grampos ou aumente o apoio.",
     ]);
+  });
+});
+
+// A V1 da obra de 1994 do André (11 × 30, 2 φ12,5, apoio em viga de 19 cm, c = 2): os
+// números que o próprio SISTRUT usa na conferência dos grampos (port de
+// DESINIT.BAS:2092-2225, desinitBarras.ts `grampos`): lb = 66,92 cm, Anec = As/3 =
+// 1,81/3 = 0,603 cm² > Vd/(2 fyd) = 20/86,96 = 0,23; As,ef = 2,45 → 0,33;
+// exigido = máx(66,92 · 0,33 − 12,5 = 9,58; 16,875; 6) = 16,875 ≤ 17,0: passa.
+describe("apoioExtremoNb178: a V1 da obra de 1994 passa como no SISTRUT", () => {
+  it("exigido 16,875 cm no apoio de 17 cm úteis", () => {
+    const r = apoioExtremoNb178({
+      basica: { phi: 12.5, aderencia: "boa", fbd: 2.03, lb: 66.92, memoria: [] },
+      vd: 20,
+      al: 0.75 * 26,
+      d: 26,
+      asCalc: 1.81,
+      asEf: 2 * areaBarra(12.5),
+      mat: { ...c25, fyd: 500 / 1.15 },
+    });
+    expect(r.exigido).toBeCloseTo(16.875, 9);
+    expect(r.exigido).toBeLessThanOrEqual(19 - 2);
   });
 });
 
