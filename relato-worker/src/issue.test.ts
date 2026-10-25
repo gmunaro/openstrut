@@ -95,6 +95,21 @@ describe("corpoIssue", () => {
     );
     expect(corpo.length).toBeLessThanOrEqual(65_536);
   });
+
+  it("anexos no repositório privado: links, sem imagem embutida", () => {
+    const corpo = corpoIssue(relato, {
+      ...anexos,
+      repoArquivos: "gmunaro/openstrut-relatos",
+      temPrint: true,
+      nomeObra: "obra.openstrut.json",
+      separados: true,
+    });
+    const base = "https://github.com/gmunaro/openstrut-relatos/blob/relatos/relatos/2026-10-16-abcd1234";
+    expect(corpo).toContain(`[print.png](${base}/print.png) (no repositório privado dos anexos)`);
+    expect(corpo).toContain(`[obra.openstrut.json](${base}/obra.openstrut.json)`);
+    expect(corpo).not.toContain("raw.githubusercontent.com");
+    expect(corpo).not.toContain("![print]");
+  });
 });
 
 describe("marcador da triagem", () => {

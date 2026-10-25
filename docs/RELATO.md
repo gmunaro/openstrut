@@ -59,20 +59,18 @@ O Vite lê variáveis `VITE_*` do ambiente do `bun run build:pages`.
 | `VITE_TURNSTILE_SITEKEY` | Chave pública do Turnstile, só quando o Worker exige (`TURNSTILE_SECRET`). |
 | `VITE_COMMIT` | Commit do build no diagnóstico. O `pages.yml` já passa `${{ github.sha }}`. Sem ela, o diagnóstico diz "não informado no build", e o marcador da triagem usa o nome do arquivo do bundle. |
 
-O `pages.yml` já passa `VITE_COMMIT`, e `src/components/relato/build.test.ts` confere isso. Para ligar o relay no GitHub Pages, acrescente ao `env:` que já existe nesse passo de build:
+O `pages.yml` passa `VITE_COMMIT`, `VITE_RELATO_URL` (da variável `RELATO_URL`) e `VITE_TURNSTILE_SITEKEY` (de `TURNSTILE_SITEKEY`), e `src/components/relato/build.test.ts` confere as duas primeiras. Os valores ficam em Settings → Secrets and variables → Actions → **Variables** do repositório. Não são segredo: vão para o JavaScript público.
 
-```yaml
-      - run: bun run build:pages
-        env:
-          VITE_RELATO_URL: ${{ vars.RELATO_URL }}            # vazio = sem relay
-          VITE_TURNSTILE_SITEKEY: ${{ vars.TURNSTILE_SITEKEY }}
-```
+## Estado do relay
 
-Os valores ficam em Settings → Secrets and variables → Actions → **Variables** do repositório. Não são segredo: vão para o JavaScript público.
+- Worker `openstrut-relato` publicado na conta Cloudflare do dono: `https://openstrut-relato.openstrut-relato.workers.dev/relato`, que é o valor da variável `RELATO_URL` do repositório.
+- KV `RELATOS_KV` criado (id no `wrangler.toml`); secret `SAL_IP` gravado com valor aleatório.
+- Anexos (print e obra) no repositório **privado** `gmunaro/openstrut-relatos`. A issue pública leva só os links; a obra vai com o nome fixo `obra.openstrut.json`, para o nome da obra do cliente não aparecer na issue.
+- Secrets `GITHUB_TOKEN` (Issues em `gmunaro/openstrut`) e `GITHUB_TOKEN_ARQUIVOS` (Contents em `gmunaro/openstrut-relatos`) gravados, com tokens sem validade. Relato de teste em 25/10/2026: issue #7, com os anexos no repositório privado (fechada).
+- O repositório de anexos precisa ter um commit: em repositório vazio o GitHub não cria o branch `relatos`, e o Worker responde 502.
+- O deploy no Windows foi feito com `npx -y wrangler@4 deploy`: pelo `bun x`, o esbuild falhou ao gravar o bundle ("Access is denied").
 
 ## Ligar o relay (passo a passo do dono)
-
-Nada disto foi feito: não há deploy, token nem secret criados.
 
 ### 1. Conta Cloudflare
 
