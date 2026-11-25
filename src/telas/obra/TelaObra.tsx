@@ -192,10 +192,16 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const pedido3d = useVer3d((s) => s.pedido);
   const [foco3d, setFoco3d] = useState<Ver3d | null>(null);
-  /** Troca de aba; sair da 3D esquece o foco pedido (voltar a ela abre o prédio inteiro). */
+  // vista 3D pedida pelo link (explodido, cor, camada): só na primeira abertura da aba
+  const [inicio3d, setInicio3d] = useState(demo?.aba === "3d" ? demo.vista3d : null);
+  /** Troca de aba; sair da 3D esquece o foco e a vista pedidos (voltar a ela abre o prédio
+   *  inteiro na vista padrão). */
   const setAba = (v: string) => {
     setAbaBruta(v);
-    if (v !== "3d") setFoco3d(null);
+    if (v !== "3d") {
+      setFoco3d(null);
+      setInicio3d(null);
+    }
   };
   const navegar = useNavigate();
   useEffect(() => {
@@ -587,7 +593,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
             obra={obra}
             calculo={calculo}
             foco={foco3d}
-            inicial={demo?.aba === "3d" ? demo.vista3d : null}
+            inicial={inicio3d}
             aoVerNaPlanta={(v) => {
               selecionarPavimento(v.pavimentoId);
               selecionar({ tipo: v.tipo, id: v.id });

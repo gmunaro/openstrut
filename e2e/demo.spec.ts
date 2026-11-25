@@ -106,6 +106,21 @@ for (const [camada, norma, nome] of [
     expect(erros).toEqual([]);
   });
 
+test("a vista pedida pelo link vale só na primeira abertura da aba 3D", async ({ page }) => {
+  await page.goto("/?exemplo=nb1-78&aba=3d&explodido=1&camada=comparar&embed=1");
+  const camada = page.getByRole("button", { name: "Original × Corrigido", exact: true });
+  const explodido = page.getByRole("button", { name: /Explodido/ });
+  await expect(camada).toHaveAttribute("aria-pressed", "true");
+  await expect(explodido).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("tab", { name: "Planta" }).click();
+  await page.getByRole("tab", { name: "3D" }).click();
+  await page.waitForFunction(() => "__vista3d" in window);
+  await page.waitForTimeout(800);
+  await expect(camada).toHaveAttribute("aria-pressed", "false");
+  await expect(explodido).toHaveAttribute("aria-pressed", "false");
+});
+
 test("num iframe de outro site, o link abre a demo", async ({ page, baseURL }) => {
   // a página de fora, noutra origem e em https, com o iframe como o site do estúdio monta
   const pai = "https://site.teste/";
