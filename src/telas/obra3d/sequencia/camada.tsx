@@ -450,7 +450,8 @@ export const camada: Camada = {
       s.alternarReproducao();
     }
     return () => {
-      if (link?.reproduzir) opcoes.passo = passoAntes;
+      // só se o usuário não escolheu outro passo com a camada ligada
+      if (link?.reproduzir && opcoes.passo === "etapa") opcoes.passo = passoAntes;
       limpar();
       if (sessao === s) sessao = null;
       avisar();

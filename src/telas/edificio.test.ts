@@ -39,7 +39,13 @@ describe("obraEdificio", () => {
       new Set(obra.pavimentos.find((p) => p.nome === nome)?.pilares.map((p) => `${p.b}x${p.h}`));
     // canto, borda (nas duas direções) e interior
     expect(secoes("1º pavimento")).toEqual(new Set(["35x50", "25x60", "60x25", "30x70"]));
-    expect(secoes("Tipo")).toEqual(new Set(["30x45", "20x50", "50x20", "25x60"]));
+    expect(secoes("Tipo")).toEqual(new Set(["30x45", "25x45", "45x25", "25x60"]));
+    // a casa de máquinas continua os pilares da cobertura, com a mesma seção
+    const cobertura = obra.pavimentos.find((p) => p.nome === "Cobertura");
+    for (const p of obra.pavimentos[0]?.pilares ?? []) {
+      const q = cobertura?.pilares.find((c) => c.x === p.x && c.y === p.y);
+      expect([p.b, p.h]).toEqual([q?.b, q?.h]);
+    }
   });
 
   it("a casa de máquinas pesa na cobertura: piso de 7,5 kN/m² e paredes no contorno", () => {
@@ -49,8 +55,11 @@ describe("obraEdificio", () => {
       [4.6, 5.2],
       [4.6, 7.6],
     ]);
-    // vigas em x = 4,6 e 9,2 e em y = 5,2 e 12,8: platibanda 2 + paredes da casa 3 kN/m
-    expect(cobertura?.vigas.filter((v) => v.cargaLinear === 5)).toHaveLength(4);
+    // vigas em x = 4,6 e 9,2 e em y = 5,2 e 12,8: platibanda 2 + paredes da casa 4,3 kN/m
+    const eixo = (v: { x1: number; x2: number; y1: number }) =>
+      v.x1 === v.x2 ? `x=${v.x1}` : `y=${v.y1}`;
+    const comCasa = cobertura?.vigas.filter((v) => v.cargaLinear === 6.3).map(eixo);
+    expect(comCasa?.toSorted()).toEqual(["x=4.6", "x=9.2", "y=12.8", "y=5.2"]);
     expect(cobertura?.vigas.filter((v) => v.cargaLinear === 2)).toHaveLength(5);
   });
 
