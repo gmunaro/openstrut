@@ -49,7 +49,7 @@ import {
   useSalvarArquivo,
 } from "../acoes";
 import { calcular, NOME_NORMA } from "../calculo";
-import { useDemo } from "../demo";
+import { acharFoco, useDemo } from "../demo";
 import { DetalhamentoContexto, type DetalhamentoObra, detalharObra } from "../detalhamento";
 import { TelaOrcamento } from "../orcamento/TelaOrcamento";
 import { Erros } from "../Erros";
@@ -188,10 +188,16 @@ function ObraAberta({ obra }: { obra: Obra }) {
     if (demo) useDemo.setState({ pedido: null });
   }, [demo]);
   const [aba, setAbaBruta] = useState<string>(demo?.aba ?? "planta");
+  // link com moldura=0: na 3D, sem o cabeçalho e a barra de pavimentos, o desenho ocupa a
+  // tela; nas outras abas a moldura volta (a planta e os resultados trocam de pavimento nela)
+  const semMoldura = demo?.moldura === false && aba === "3d";
   // "ver em 3D": pedido da planta/resultados (useVer3d) ou ?ver3d= na URL abre a aba 3D focada
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const pedido3d = useVer3d((s) => s.pedido);
-  const [foco3d, setFoco3d] = useState<Ver3d | null>(null);
+  // o link de demonstração também pode pedir um elemento em foco na 3D, pelo nome
+  const [foco3d, setFoco3d] = useState<Ver3d | null>(() =>
+    demo?.aba === "3d" ? acharFoco(obra, demo.foco) : null,
+  );
   // vista 3D pedida pelo link (explodido, cor, camada): só na primeira abertura da aba
   const [inicio3d, setInicio3d] = useState(demo?.aba === "3d" ? demo.vista3d : null);
   /** Troca de aba; sair da 3D esquece o foco e a vista pedidos (voltar a ela abre o prédio
@@ -291,7 +297,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
 
   return (
     <Tabs value={aba} onValueChange={setAba} className="flex min-h-0 flex-1 flex-col gap-0">
-      {compacto ? (
+      {semMoldura ? null : compacto ? (
         <header className="flex items-center gap-0.5 border-b px-1 py-0.5 print:hidden">
           <Button asChild variant="ghost" size="icon" className="size-11" aria-label="Início">
             <Link to="/">
@@ -562,9 +568,10 @@ function ObraAberta({ obra }: { obra: Obra }) {
         </div>
       )}
 
-      <BarraPavimentos obra={obra} ativoId={pavimentoId} />
+      {!semMoldura && <BarraPavimentos obra={obra} ativoId={pavimentoId} />}
 
-      {!paisagem && abas}
+      {/* sem o cabeçalho, as abas do celular deitado descem para cá */}
+      {(!paisagem || semMoldura) && abas}
       <TabsContent value="planta" className="min-h-0 flex-1">
         <EditorPlanta
           {...(resultadoPavimento ? { resultado: resultadoPavimento } : {})}

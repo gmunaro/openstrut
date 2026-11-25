@@ -439,9 +439,14 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
 }
 
 export const camada: Camada = {
-  ativar(ctx) {
+  ativar(ctx, link) {
     const { sessao: s, limpar } = criarSessao(ctx);
     sessao = s;
+    // link de demonstração: a obra se construindo etapa por etapa (2 por segundo)
+    if (link?.reproduzir) {
+      opcoes.passo = "etapa";
+      s.alternarReproducao();
+    }
     return () => {
       limpar();
       if (sessao === s) sessao = null;

@@ -77,6 +77,8 @@ Para ligar o botão "Ver em 3D" no painel de propriedades da planta ou numa linh
 
 **Situação.** As cores são as da planta (`COR_SITUACAO` em `planta/Desenho.tsx`): verde sem avisos, âmbar com avisos e vermelho com falha. A regra que decide a situação também é a da planta (`planta/situacao.ts`). Sem cálculo, cada tipo fica num cinza próprio. A legenda conta lajes, vigas e pilares por situação, e o painel lista as peças com falha. As vigas da escada recebem a situação do cálculo delas.
 
+**Concreto.** Cada tipo numa cor de concreto (`CONCRETO` em `obra3d/cores.ts`), sem a situação do cálculo: lajes e pilares claros, vigas um tom mais escuro. Serve para mostrar a forma do prédio, com o render realista ou numa imagem. A legenda lembra que a situação fica em Resultados.
+
 **Grandeza.** O mapa de cor opcional pinta um tipo numa rampa azul de um só matiz, do claro (menor) ao escuro (maior), e deixa os outros tipos transparentes. As grandezas são o Nk de cada lance de pilar (na base do lance), a taxa de armadura das vigas (o maior As / bw·h entre os tramos, cada tramo com a sua seção) e o maior momento positivo das lajes. A legenda mostra a unidade e os extremos, já convertidos para tf quando a obra está em tf.
 
 **Defeitos do original.** No modo "Como o SISTRUT original", uma placa "!" fúcsia marca as peças que algum erro documentado em `docs/MODO-CALCULO.md` atinge. Ela não usa o vermelho de falha:
@@ -168,6 +170,8 @@ Uma camada é um objeto `Camada` com `ativar(ctx)` e, opcionalmente, um `Painel`
 
 `ativar` roda uma vez ao ligar. A função que ele devolve roda ao desligar o botão e também ao sair da aba 3D, sempre antes de a cena ser destruída. Ela deve desfazer tudo o que a camada fez: tirar objetos da cena, cancelar `aoQuadro` e `aoMudar`, remover filtros e planos de corte, devolver os materiais e destravar os controles. O `Painel` é um componente React comum, montado na seção "Camadas" do painel lateral, logo abaixo dos botões, enquanto a camada está ligada. Ele recebe `{ ctx, verNosResultados }` (`PropsCamada`) e some quando a camada desliga. O `Cartao` é outro componente, opcional, montado no cartão da peça selecionada, abaixo da situação e dos defeitos, enquanto a camada está ligada; recebe também a `chave` da peça e volta `null` quando não tem o que dizer dela. `verNosResultados(chave, ancora?)` troca para a aba Resultados no pavimento da peça e, com `ancora`, rola até o elemento com esse id quando ele aparecer (a camada `comparar` usa a âncora da explicação de um erro do original, `ancoraErro` de `telas/resultados/errosOriginal.tsx`). O painel lateral já usa texto `text-xs` e tem 20 a 24 rem de largura (no celular, a largura da tela); o Painel não precisa de título, porque o botão da camada fica logo acima. Use as classes do Tailwind e os componentes do app de `src/components/ui/`, que já estão no pacote principal. O mais usado é o botão: `import { Button } from "@/components/ui/button";`, com `variant` `"default"`, `"outline"`, `"secondary"`, `"ghost"`, `"destructive"` ou `"link"` e `size` `"xs"`, `"sm"`, `"default"`, `"lg"`, `"icon"`, `"icon-xs"`, `"icon-sm"` ou `"icon-lg"`; os botões da vista usam `size="xs"`. Para listas, a vista usa `<select>` nativo com `className="border-input bg-background h-9 rounded-md border px-2"`. Erros e mensagens para o usuário vão no próprio Painel (não há canal de log da vista). Estado que precisa sobreviver entre ligar e desligar fica no módulo da camada.
 
+Quando o link de demonstração (`src/telas/demo.ts`) liga a camada, `ativar` recebe também `link: OpcoesLink`, com as opções que o link pediu: `tracado` (o render liga o path tracing) e `reproduzir` (a sequência começa tocando). Ligada pelo botão, `link` vem `undefined`. A armadura usa a presença de `link` para enquadrar de perto a peça em foco. Uma opção nova entra em `OpcoesLink` (`camadas.ts`) e na leitura do link em `lerLinkDemo`.
+
 ### Objetos da camada
 
 `ctx.cena` é o mesmo objeto durante toda a vida da vista: o que a camada põe direto nela fica lá até a camada tirar, e nenhum evento mexe nisso. Os grupos dos níveis (`grupoDoNivel`) são recriados a cada `"cena"`. O clique de seleção só testa as peças da vista e as marcas "!": objetos da camada não são selecionáveis e não bloqueiam o clique nas peças atrás deles. Para seleção própria, a camada usa um `Raycaster` do three no `ctx.renderer.domElement`.
@@ -247,9 +251,18 @@ export interface PropsCamada {
   verNosResultados(chave: string, ancora?: string): void;
 }
 
+/** Opções do link de demonstração para as camadas que ele liga. */
+export interface OpcoesLink {
+  /** Render realista: liga o path tracing. */
+  tracado: boolean;
+  /** Sequência construtiva: começa reproduzindo. */
+  reproduzir: boolean;
+}
+
 export interface Camada {
-  /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
-  ativar(ctx: ContextoVista): (() => void) | void;
+  /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). `link`
+   *  vem só quando o link de demonstração liga a camada. */
+  ativar(ctx: ContextoVista, link?: OpcoesLink): (() => void) | void;
   /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
   Painel?: ComponentType<PropsCamada>;
   /** Linhas da camada no cartão da peça selecionada (`chave`), enquanto ela estiver ligada. */

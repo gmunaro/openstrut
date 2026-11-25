@@ -43,6 +43,7 @@ export type {
   EventoVista,
   Exibicao,
   FabricaMateriais,
+  OpcoesLink,
   PapelMaterial,
   PropsCamada,
 } from "./camadas";

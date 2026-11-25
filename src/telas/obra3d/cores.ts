@@ -14,6 +14,16 @@ export const NEUTRO: Record<TipoElemento, string> = {
   fundacao: "#78716c",
 };
 
+/** Modo "concreto": tons de concreto por tipo (stone 200 a 500), para o render realista e
+ *  as fotos; a situação de cada peça continua na aba Resultados e no cartão da peça. */
+export const CONCRETO: Record<TipoElemento, string> = {
+  laje: "#d6d3d1",
+  viga: "#a8a29e",
+  pilar: "#e7e5e4",
+  escada: "#a8a29e",
+  fundacao: "#78716c",
+};
+
 /** As cores da planta (COR_SITUACAO): ok #22c55e, aviso #f59e0b, falha #ef4444. */
 export const COR_ESTADO: Record<Exclude<Estado, "sem">, string> = COR_SITUACAO;
 

@@ -55,7 +55,7 @@ import type {
   FabricaMateriais,
   PapelMaterial,
 } from "./camadas";
-import { COR_DEFEITO, COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
+import { CONCRETO, COR_DEFEITO, COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
 import { COR_SELECAO, FUNDO, LUZES, materiaisPadrao } from "./materiais";
 import { type DadosElemento, faixaDaGrandeza, GRANDEZAS, type GrandezaMapa } from "./dados";
 import { type Malha, malhaVazia, paraCena, triangular } from "./geometria";
@@ -63,7 +63,11 @@ import type { Elemento3D, Modelo3D, TipoElemento } from "./modelo";
 import { elementosNoEixo, type Foco, MEIA_FAIXA_EIXO, vizinhos } from "./partes";
 
 export type Vista = "perspectiva" | "frente" | "lado" | "topo";
-export type ModoCor = "estado" | GrandezaMapa;
+/** Cor das peças: situação do cálculo, concreto (por tipo, para o render e as fotos) ou
+ *  mapa de uma grandeza. */
+export type ModoCor = "estado" | "concreto" | GrandezaMapa;
+/** O modo é um mapa de grandeza (rampa, legenda com a faixa, outros tipos transparentes). */
+export const ehGrandeza = (m: ModoCor): m is GrandezaMapa => m !== "estado" && m !== "concreto";
 export const TIPOS: readonly TipoElemento[] = ["laje", "viga", "pilar", "escada", "fundacao"];
 
 /** Distância da câmera ao nível acima da qual as arestas somem (LOD), m. */
@@ -532,7 +536,7 @@ export class Cena3D implements ContextoVista {
       }
       // no mapa de uma grandeza, os outros tipos ficam transparentes (contexto)
       const modo = this.estado.modoCor;
-      if (x === "solido" && modo !== "estado" && GRANDEZAS[modo].tipo !== e.tipo) x = "fantasma";
+      if (x === "solido" && ehGrandeza(modo) && GRANDEZAS[modo].tipo !== e.tipo) x = "fantasma";
       if (tiposOcultos.has(e.tipo) || niveisOcultos.has(e.nivel)) x = "oculto";
       mapa.set(e.chave, x);
     }
@@ -547,6 +551,7 @@ export class Cena3D implements ContextoVista {
     }
     const d = this.dados.get(e.chave);
     const modo = this.estado.modoCor;
+    if (modo === "concreto") return CONCRETO[e.tipo];
     if (modo === "estado") {
       if (!d || d.estado === "sem") return NEUTRO[e.tipo];
       return COR_ESTADO[d.estado];
@@ -582,8 +587,7 @@ export class Cena3D implements ContextoVista {
   reconstruir() {
     this.porChave = new Map(this.modelo.elementos.map((e) => [e.chave, e]));
     const modo = this.estado.modoCor;
-    this.faixaAtual =
-      modo === "estado" ? undefined : faixaDaGrandeza(this.modelo, this.dados, modo);
+    this.faixaAtual = ehGrandeza(modo) ? faixaDaGrandeza(this.modelo, this.dados, modo) : undefined;
     this.limparGrupos();
     const exib = this.exibicoes();
     this.exib = exib;

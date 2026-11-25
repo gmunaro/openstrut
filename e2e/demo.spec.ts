@@ -144,6 +144,56 @@ test("num iframe de outro site, o link abre a demo", async ({ page, baseURL }) =
   await expect(app.getByText(AVISO)).toBeVisible();
 });
 
+// As demos do edifício que o site do estúdio embute: aba 3D sem moldura e sem painel, com
+// as camadas ligadas pelo link. `sinal` é o texto que só aparece com a demo no ar.
+const EDIFICIO = "/?exemplo=edificio&aba=3d&moldura=0&painel=0&embed=1";
+for (const [nome, q, camadas, sinal] of [
+  ["tour", "&cor=concreto&camada=render,tour", ["Render realista", "Tour"], /Parada \d+ de/],
+  ["nk", "&explodido=1&cor=nkPilares", [], "Nk nos pilares (kN)"],
+  [
+    "sequencia",
+    "&cor=concreto&camada=render,sequencia&reproduzir=1",
+    ["Render realista", "Sequência construtiva 4D"],
+    "Etapa em andamento",
+  ],
+  [
+    "armadura",
+    "&cor=concreto&foco=pilar~1º pavimento~P6&camada=render,armadura",
+    ["Render realista", "Armadura"],
+    "Pilar P6",
+  ],
+] as const)
+  test(`edifício: demo ${nome}`, async ({ page }) => {
+    const erros = vigiarErros(page);
+    await page.goto(EDIFICIO + q);
+    await expect(page).toHaveURL(/\/obra$/);
+    await expect(page.getByText(sinal).first()).toBeVisible({ timeout: 20_000 });
+    // sem cabeçalho, barra de pavimentos e painel; as abas e o aviso ficam
+    await expect(page.getByRole("navigation", { name: "Pavimentos" })).toHaveCount(0);
+    await expect(page.locator("#painel-3d")).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "3D" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText(AVISO)).toBeVisible();
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: path.join(PRINTS, `edificio-${nome}.png`) });
+    // o painel, aberto agora, mostra as camadas que o link ligou
+    await page.getByRole("button", { name: "Painel", exact: true }).click();
+    for (const c of camadas)
+      await expect(page.getByRole("button", { name: c, exact: true })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    expect(await contarRascunhos(page)).toBe(0);
+    expect(erros).toEqual([]);
+  });
+
+test("edifício: fora da 3D a barra de pavimentos volta", async ({ page }) => {
+  await page.goto(`${EDIFICIO}&cor=concreto`);
+  await page.waitForFunction(() => "__vista3d" in window);
+  await expect(page.getByRole("navigation", { name: "Pavimentos" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Planta" }).click();
+  await expect(page.getByRole("navigation", { name: "Pavimentos" })).toBeVisible();
+});
+
 test("sem embed, o link abre a demo e mostra a dica da tela", async ({ page }) => {
   await page.goto("/?exemplo=nbr6118-2023&aba=resultados");
   await expect(page).toHaveURL(/\/obra$/);
