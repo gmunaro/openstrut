@@ -28,6 +28,37 @@ const AVISO = "Os resultados exigem conferência de engenheiro responsável.";
 
 type Cena = { estado: { explodido: boolean; modoCor: string } };
 
+/** O pedaço da cena viva (window.__vista3d) que os testes da câmera leem. */
+type Vec = { x: number; y: number; z: number };
+type CenaCamera = {
+  camera: { position: Vec };
+  controles: { target: Vec };
+  selecao: string | null;
+  caixaDe(chave: string): { min: Vec; max: Vec } | undefined;
+};
+
+/** Direção da câmera ao alvo, normalizada. */
+const direcaoDaCamera = (page: Page) =>
+  page.evaluate(() => {
+    const c = (window as unknown as { __vista3d: CenaCamera }).__vista3d;
+    const p = c.camera.position;
+    const t = c.controles.target;
+    const d = [p.x - t.x, p.y - t.y, p.z - t.z];
+    const n = Math.hypot(...d);
+    return d.map((v) => v / n);
+  });
+
+/** Distância da câmera ao centro da peça selecionada, m. */
+const distanciaAoSelecionado = (page: Page) =>
+  page.evaluate(() => {
+    const c = (window as unknown as { __vista3d: CenaCamera }).__vista3d;
+    const b = c.selecao ? c.caixaDe(c.selecao) : undefined;
+    if (!b) return Number.POSITIVE_INFINITY;
+    const p = c.camera.position;
+    const centro = [(b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, (b.min.z + b.max.z) / 2];
+    return Math.hypot(p.x - (centro[0] ?? 0), p.y - (centro[1] ?? 0), p.z - (centro[2] ?? 0));
+  });
+
 function vigiarErros(page: Page): string[] {
   const erros: string[] = [];
   page.on("console", (m) => {
@@ -142,6 +173,84 @@ test("num iframe de outro site, o link abre a demo", async ({ page, baseURL }) =
     "true",
   );
   await expect(app.getByText(AVISO)).toBeVisible();
+});
+
+// As demos do edifício que o site do estúdio embute: aba 3D sem moldura e sem painel, com
+// as camadas ligadas pelo link. `sinal` é o texto que só aparece com a demo no ar.
+const EDIFICIO = "/?exemplo=edificio&aba=3d&moldura=0&painel=0&embed=1";
+for (const [nome, q, camadas, sinal] of [
+  ["tour", "&cor=concreto&camada=render,tour", ["Render realista", "Tour"], /Parada \d+ de/],
+  ["nk", "&explodido=1&cor=nkPilares", [], "Nk nos pilares (kN)"],
+  [
+    "sequencia",
+    "&cor=concreto&camada=render,sequencia&reproduzir=1",
+    ["Render realista", "Sequência construtiva 4D"],
+    "Etapa em andamento",
+  ],
+  [
+    "armadura",
+    "&cor=concreto&foco=pilar~1º pavimento~P6&camada=render,armadura",
+    ["Render realista", "Armadura"],
+    "Pilar P6",
+  ],
+] as const)
+  test(`edifício: demo ${nome}`, async ({ page }) => {
+    const erros = vigiarErros(page);
+    await page.goto(EDIFICIO + q);
+    await expect(page).toHaveURL(/\/obra$/);
+    await expect(page.getByText(sinal).first()).toBeVisible({ timeout: 20_000 });
+    // sem cabeçalho, barra de pavimentos e painel; as abas e o aviso ficam
+    await expect(page.getByRole("navigation", { name: "Pavimentos" })).toHaveCount(0);
+    await expect(page.locator("#painel-3d")).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "3D" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText(AVISO)).toBeVisible();
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: path.join(PRINTS, `edificio-${nome}.png`) });
+    // foco: a câmera chega perto do lance (o prédio inteiro fica a dezenas de m)
+    if (nome === "armadura") expect(await distanciaAoSelecionado(page)).toBeLessThan(12);
+    // o painel, aberto agora, mostra as camadas que o link ligou
+    await page.getByRole("button", { name: "Painel", exact: true }).click();
+    for (const c of camadas)
+      await expect(page.getByRole("button", { name: c, exact: true })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    // reproduzir=1: a sequência tocou por etapa (o passo que só o link escolhe; a esta altura
+    // ela pode já ter terminado)
+    if (nome === "sequencia")
+      await expect(page.getByRole("combobox", { name: "Passo da linha do tempo" })).toHaveValue(
+        "etapa",
+      );
+    expect(await contarRascunhos(page)).toBe(0);
+    expect(erros).toEqual([]);
+  });
+
+test("edifício: a moldura volta fora da 3D e não some de novo ao voltar", async ({ page }) => {
+  await page.goto(`${EDIFICIO}&cor=concreto`);
+  await page.waitForFunction(() => "__vista3d" in window);
+  await expect(page.getByRole("navigation", { name: "Pavimentos" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Planta" }).click();
+  await expect(page.getByRole("navigation", { name: "Pavimentos" })).toBeVisible();
+  await page.getByRole("tab", { name: "3D" }).click();
+  await page.waitForFunction(() => "__vista3d" in window);
+  await expect(page.getByRole("navigation", { name: "Pavimentos" })).toBeVisible();
+});
+
+test("edifício: vista=frente vale mesmo com explodido=1", async ({ page }) => {
+  await page.goto("/?exemplo=edificio&aba=3d&vista=frente&embed=1");
+  await page.waitForFunction(() => "__vista3d" in window);
+  await page.waitForTimeout(1500);
+  const frente = await direcaoDaCamera(page);
+  await page.goto("/?exemplo=edificio&aba=3d&vista=frente&explodido=1&embed=1");
+  await page.waitForFunction(() => "__vista3d" in window);
+  await expect(page.getByRole("button", { name: "Frente", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.waitForTimeout(1500);
+  const explodida = await direcaoDaCamera(page);
+  const cos = frente.reduce((s, v, i) => s + v * (explodida[i] ?? 0), 0);
+  expect(cos).toBeGreaterThan(0.999);
 });
 
 test("sem embed, o link abre a demo e mostra a dica da tela", async ({ page }) => {

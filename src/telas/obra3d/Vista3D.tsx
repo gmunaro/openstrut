@@ -21,9 +21,23 @@ import { DetalhamentoContexto } from "../detalhamento";
 import { useSessao } from "../sessao";
 import { useCompacto } from "../tela";
 import type { PropsVista3D } from "./AbaVista3D";
-import { CAMADAS, type Camada, type ContextoVista, type LegendaCamada } from "./camadas";
-import { Cena3D, ESTADO_INICIAL, type EstadoVisual, type ModoCor, TIPOS, type Vista } from "./cena";
-import { COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA, ROTULO_ESTADO } from "./cores";
+import {
+  CAMADAS,
+  type Camada,
+  type ContextoVista,
+  type LegendaCamada,
+  type OpcoesLink,
+} from "./camadas";
+import {
+  Cena3D,
+  ehGrandeza,
+  ESTADO_INICIAL,
+  type EstadoVisual,
+  type ModoCor,
+  TIPOS,
+  type Vista,
+} from "./cena";
+import { CONCRETO, COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA, ROTULO_ESTADO } from "./cores";
 import { dadosDosElementos, type Estado, GRANDEZAS, type GrandezaMapa } from "./dados";
 import type { Ver3d } from "./link";
 import { type Elemento3D, montarModelo, type TipoElemento } from "./modelo";
@@ -199,7 +213,8 @@ export default function Vista3D({
   const [camadasLigadas, setCamadasLigadas] = useState<string[]>([]);
   const [carregando, setCarregando] = useState<string | null>(null);
   const ctx = useMemo<ContextoVista | null>(() => cena, [cena]);
-  const alternarCamada = async (id: string) => {
+  /** Liga ou desliga a camada `id`; `link` = as opções do link de demonstração que a liga. */
+  const alternarCamada = async (id: string, link?: OpcoesLink) => {
     if (!ctx) return;
     const ligada = ativas.current.get(id);
     if (ligada) {
@@ -214,9 +229,10 @@ export default function Vista3D({
     setCarregando(id);
     try {
       const camada = await def.carregar();
-      // a vista pode ter fechado enquanto o código da camada baixava
-      if (cenaRef.current !== ctx) return;
-      ativas.current.set(id, { camada, limpar: camada.ativar(ctx) });
+      // a vista pode ter fechado enquanto o código da camada baixava, e outro pedido (o
+      // link e um clique) pode ter ligado a mesma camada nesse meio-tempo
+      if (cenaRef.current !== ctx || ativas.current.has(id)) return;
+      ativas.current.set(id, { camada, limpar: camada.ativar(ctx, link) });
       setCamadasLigadas((l) => [...l, id]);
       ctx.pedirRender();
     } catch (e) {
@@ -228,15 +244,27 @@ export default function Vista3D({
     }
   };
 
-  // link de demonstração (telas/demo.ts): explodido, mapa de cor e camada ao abrir. Uma vez
-  // por pedido: ligar a camada de novo a desligaria.
+  // link de demonstração (telas/demo.ts): painel, câmera, explodido, mapa de cor e camadas
+  // ao abrir. Uma vez por pedido: ligar a camada de novo a desligaria. A câmera salta sem
+  // animar, para os enquadramentos seguintes (explodido, camadas) manterem a direção dela.
+  // As camadas ligam uma depois da outra, na ordem do link (a de cima vale por último); a
+  // que o usuário já ligou nesse meio-tempo fica como está.
   const inicialAplicado = useRef<typeof inicial>(null);
   useEffect(() => {
     if (!cena || !inicial || inicialAplicado.current === inicial) return;
     inicialAplicado.current = inicial;
-    const { explodido, cor, camada } = inicial;
+    const { explodido, cor, camadas, opcoes, vista: v, painel: comPainel } = inicial;
+    if (!comPainel) setPainel(false);
+    if (v) {
+      setVista(v);
+      cena.definirVista(v, false);
+    }
     if (explodido || cor) mudarEstado({ explodido, modoCor: cor ?? "estado" }, explodido);
-    if (camada && CAMADAS.some((c) => c.id === camada)) void alternarCamada(camada);
+    void (async () => {
+      for (const id of camadas)
+        if (CAMADAS.some((c) => c.id === id) && !ativas.current.has(id))
+          await alternarCamada(id, opcoes);
+    })();
   });
 
   // ---- derivados para a tela -----------------------------------------------------------
@@ -259,7 +287,7 @@ export default function Vista3D({
         : [],
     [original, modelo, dados],
   );
-  const faixa = cena && ev.modoCor !== "estado" ? cena.faixa : undefined;
+  const faixa = cena && ehGrandeza(ev.modoCor) ? cena.faixa : undefined;
   // as peças com falha, em lista (a vista não é o único jeito de achá-las)
   const comFalha = useMemo(
     () => modelo.elementos.filter((e) => dados.get(e.chave)?.estado === "falha"),
@@ -416,7 +444,13 @@ export default function Vista3D({
       className="compacto:flex-col compacto:overflow-auto flex h-full min-h-0 flex-1"
       data-testid="vista-3d"
     >
-      <div className="compacto:h-[58vh] compacto:flex-none relative min-h-0 min-w-0 flex-1">
+      {/* no celular o desenho cede 42 % da altura ao painel; sem painel, fica com tudo */}
+      <div
+        className={cn(
+          "relative min-h-0 min-w-0 flex-1",
+          painel && "compacto:h-[58vh] compacto:flex-none",
+        )}
+      >
         <div
           ref={caixa}
           className="absolute inset-0"
@@ -505,7 +539,7 @@ export default function Vista3D({
           contagem={contagem}
           calculado={calculado}
           faixa={faixa}
-          unidadeTexto={ev.modoCor === "estado" ? "" : GRANDEZAS[ev.modoCor].unidade(unidades)}
+          unidadeTexto={ehGrandeza(ev.modoCor) ? GRANDEZAS[ev.modoCor].unidade(unidades) : ""}
           converter={(v) =>
             ev.modoCor === "nkPilares"
               ? converter(v, "forca", unidades)
@@ -669,6 +703,7 @@ export default function Vista3D({
               onChange={(e) => mudarEstado({ modoCor: e.target.value as ModoCor })}
             >
               <option value="estado">Situação do cálculo</option>
+              <option value="concreto">Concreto</option>
               {(Object.keys(GRANDEZAS) as GrandezaMapa[]).map((g) => (
                 <option key={g} value={g} disabled={!calculado}>
                   {GRANDEZAS[g].rotulo}
@@ -880,6 +915,21 @@ function Legenda({
                 <span className="text-muted-foreground tabular-nums">({contagem[e]})</span>
               </li>
             ))}
+        </ul>
+      ) : modoCor === "concreto" ? (
+        <ul className="grid gap-0.5">
+          <li className="font-semibold">Concreto</li>
+          {(["laje", "viga", "pilar", "fundacao"] as const).map((t) => (
+            <li key={t} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block size-2.5 rounded-sm border"
+                style={{ background: CONCRETO[t] }}
+              />
+              {ROTULO_TIPO[t]}
+            </li>
+          ))}
+          <li className="text-muted-foreground">A situação de cada peça fica em Resultados.</li>
         </ul>
       ) : (
         <div className="grid gap-0.5">

@@ -439,10 +439,19 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
 }
 
 export const camada: Camada = {
-  ativar(ctx) {
+  ativar(ctx, link) {
     const { sessao: s, limpar } = criarSessao(ctx);
     sessao = s;
+    // link de demonstração: a obra se construindo etapa por etapa (2 por segundo); o passo
+    // do usuário volta ao desligar
+    const passoAntes = opcoes.passo;
+    if (link?.reproduzir) {
+      opcoes.passo = "etapa";
+      s.alternarReproducao();
+    }
     return () => {
+      // só se o usuário não escolheu outro passo com a camada ligada
+      if (link?.reproduzir && opcoes.passo === "etapa") opcoes.passo = passoAntes;
       limpar();
       if (sessao === s) sessao = null;
       avisar();

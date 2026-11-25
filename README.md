@@ -22,18 +22,33 @@ Para instalar como app, use a seção **Instalar** da tela inicial. Ela mostra o
 
 ### Link de demonstração
 
-Um link pode abrir a obra-exemplo já calculada, na aba e na vista pedidas, sem passo manual. Serve para mostrar o app num link direto ou embutido em outro site, num iframe:
+Um link pode abrir uma obra-exemplo já calculada, na aba e na vista pedidas, sem passo manual. Serve para mostrar o app num link direto ou embutido em outro site, num iframe:
 
-- `?exemplo=nbr6118-2023` ou `?exemplo=nb1-78`: abre a obra-exemplo dessa norma;
+- `?exemplo=nbr6118-2023` ou `?exemplo=nb1-78`: abre o sobrado-exemplo dessa norma;
+- `?exemplo=edificio`: abre o edifício de demonstração, com 9 níveis (1º pavimento, tipo × 6, cobertura e casa de máquinas), planta em L, varandas em balanço e pilares de seções diferentes, calculado pela NBR 6118:2023 (`src/dominio/edificio.ts`);
 - `&aba=planta|resultados|relatorio|3d|orcamento`: a aba ao abrir (padrão: planta);
-- `&explodido=1`, `&cor=nkPilares|taxaVigas|momentoLajes` e `&camada=<id>`: a vista 3D ao abrir (os ids das camadas estão em `src/telas/obra3d/camadas.ts`);
+- com `aba=3d`, a vista 3D ao abrir (só na primeira abertura da aba; voltar a ela abre a vista padrão):
+  - `&explodido=1` e `&cor=concreto|nkPilares|taxaVigas|momentoLajes`;
+  - `&camada=<id>[,<id>...]`: liga camadas da 3D, na ordem (os ids estão em `src/telas/obra3d/camadas.ts`). Com `render`, `&tracado=1` liga o path tracing; com `sequencia`, `&reproduzir=1` começa a obra se construindo;
+  - `&foco=<tipo>~<pavimento>~<nome>`: a peça em foco, selecionada e enquadrada de perto, pelos nomes (ex.: `pilar~1º pavimento~P6`); a camada `armadura` mostra as barras dela;
+  - `&vista=perspectiva|frente|lado|topo`: a câmera da 3D;
+  - `&painel=0`: sem o painel lateral;
+  - `&moldura=0`: sem o cabeçalho e a barra de pavimentos; sair da 3D os devolve;
 - `&embed=1`: modo embutido, sem as dicas de primeiro uso, sem gravar rascunho no navegador e sem a confirmação ao sair. O aviso de conferência continua no rodapé.
 
-Exemplos:
+Exemplos com o edifício:
 
-- 3D explodida com os pilares pelo Nk: https://gmunaro.github.io/openstrut/?exemplo=nbr6118-2023&aba=3d&explodido=1&cor=nkPilares&embed=1
+- Tour guiado com render: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&cor=concreto&camada=render,tour&embed=1
+- 3D explodida com os pilares pelo Nk: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&explodido=1&cor=nkPilares&embed=1
+- Sequência construtiva 4D: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&cor=concreto&camada=render,sequencia&reproduzir=1&embed=1
+- Armadura do pilar P6: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&cor=concreto&foco=pilar~1º%20pavimento~P6&camada=render,armadura&embed=1
+
+Com o sobrado:
+
 - Planta: https://gmunaro.github.io/openstrut/?exemplo=nbr6118-2023&aba=planta&embed=1
 - Original × Corrigido pela NB-1/78: https://gmunaro.github.io/openstrut/?exemplo=nb1-78&aba=3d&camada=comparar&embed=1
+
+O path tracing compila um shader grande: a aba pode travar por dezenas de segundos antes da primeira amostra (medido: ~27 s numa GTX 1080 Ti). Por isso as demos acima usam o render sem ele.
 
 O código fica em `src/telas/demo.ts`.
 

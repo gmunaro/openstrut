@@ -253,9 +253,19 @@ export interface PropsCamada {
   verNosResultados(chave: string, ancora?: string): void;
 }
 
+/** Opções do link de demonstração (telas/demo.ts) para as camadas que ele liga. Cada
+ *  camada atende a sua e ignora as outras. */
+export interface OpcoesLink {
+  /** Render realista: liga o path tracing. */
+  tracado: boolean;
+  /** Sequência construtiva: começa reproduzindo. */
+  reproduzir: boolean;
+}
+
 export interface Camada {
-  /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). */
-  ativar(ctx: ContextoVista): (() => void) | void;
+  /** Liga a camada; devolve a limpeza (chamada ao desligar ou ao sair da vista). `link`
+   *  vem só quando o link de demonstração liga a camada. */
+  ativar(ctx: ContextoVista, link?: OpcoesLink): (() => void) | void;
   /** Controles da camada, no painel lateral enquanto ela estiver ligada. */
   Painel?: ComponentType<PropsCamada>;
   /** Linhas da camada no cartão da peça selecionada (`chave`), enquanto ela estiver ligada. */

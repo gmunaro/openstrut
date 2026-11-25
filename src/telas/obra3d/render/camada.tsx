@@ -192,7 +192,7 @@ function Painel({ ctx }: { ctx: ContextoVista }) {
 }
 
 export const camada: Camada = {
-  ativar(ctx) {
+  ativar(ctx, link) {
     const materiais: Partial<Record<PapelMaterial, Material>> = {};
     const luz = ligarIluminacao(ctx, estado.luz, estado.sombras);
     const s = { ctx, materiais, luz, tracador: null as Tracador | null };
@@ -220,7 +220,7 @@ export const camada: Camada = {
       ctx.aoMudar("selecao", () => s.tracador?.cenaMudou()),
       ctx.aoMudar("camera", () => s.tracador?.cameraMexeu()),
     ];
-    if (estado.querTracado) void ligarTracado(true);
+    if (estado.querTracado || link?.tracado) void ligarTracado(true);
     return () => {
       parar.forEach((f) => f());
       s.tracador?.limpar();

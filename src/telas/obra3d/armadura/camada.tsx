@@ -13,7 +13,7 @@ import {
   MeshLambertMaterial,
 } from "three";
 import { Button } from "@/components/ui/button";
-import type { Camada, ContextoVista } from "../api";
+import type { Camada, ContextoVista, OpcoesLink } from "../api";
 import {
   agruparPorMaterial,
   type Alvo,
@@ -67,7 +67,20 @@ function motivoSemCalculo(ctx: ContextoVista): string | null {
   return null;
 }
 
-function ativar(ctx: ContextoVista) {
+/** Enquadra as peças com barras desenhadas. */
+function enquadrarArmadura(ctx: ContextoVista, chaves: string[]) {
+  const caixa = new Box3();
+  for (const k of chaves) {
+    const c = ctx.caixaDe(k);
+    if (c) caixa.union(c);
+  }
+  if (!caixa.isEmpty()) void ctx.enquadrarEm(caixa);
+}
+
+/** Com `link` (ligada pelo link de demonstração), enquadra de perto a peça selecionada (na
+ *  coluna, só o lance dela, onde as barras aparecem), depois que as barras existem: o
+ *  enquadramento do foco, feito antes, pode ter ficado com a coluna inteira. */
+function ativar(ctx: ContextoVista, link?: OpcoesLink) {
   const raiz = new Group();
   raiz.name = "armadura";
   ctx.cena.add(raiz);
@@ -188,6 +201,10 @@ function ativar(ctx: ContextoVista) {
   // se ligado, continua dono deles)
   ctx.definirTransparencia("armadura", () => true);
   refazer();
+  if (link) {
+    const foco = ctx.selecao;
+    enquadrarArmadura(ctx, foco && situacao.chaves.includes(foco) ? [foco] : situacao.chaves);
+  }
   // "visibilidade" vem depois de toda "cena" (obra editada, foco, tipos ocultos)
   const parar = [
     ctx.aoMudar("selecao", refazer),
@@ -207,14 +224,7 @@ function ativar(ctx: ContextoVista) {
 function Painel({ ctx }: { ctx: ContextoVista }) {
   const s = useSyncExternalStore(assinar, () => situacao);
   const coluna = s.alvo.tipo === "coluna";
-  const enquadrar = () => {
-    const caixa = new Box3();
-    for (const k of s.chaves) {
-      const c = ctx.caixaDe(k);
-      if (c) caixa.union(c);
-    }
-    if (!caixa.isEmpty()) void ctx.enquadrarEm(caixa);
-  };
+  const enquadrar = () => enquadrarArmadura(ctx, s.chaves);
   // linhas da coluna agrupadas pelo lance, de cima para baixo como na lista de elementos
   const blocos = coluna
     ? [...new Set(s.linhas.map((l) => l.chave))]
