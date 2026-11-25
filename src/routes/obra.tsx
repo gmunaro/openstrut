@@ -12,13 +12,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useObra } from "../estado/obra";
+import { estaEmbutido } from "../telas/demo";
 import { TelaObra } from "../telas/obra/TelaObra";
 import { useSessao } from "../telas/sessao";
 
-/** Há obra aberta com alterações que não foram para o arquivo. Lê o estado no momento da chamada. */
+/** Há obra aberta com alterações que não foram para o arquivo. Lê o estado no momento da
+ *  chamada. Embutido em outro site (telas/demo.ts), a obra é de demonstração: sem aviso. */
 function temAlteracoesNaoSalvas(): boolean {
   const obra = useObra.getState().obra;
-  return obra !== null && obra !== useSessao.getState().obraSalva;
+  return !estaEmbutido() && obra !== null && obra !== useSessao.getState().obraSalva;
 }
 
 export const Route = createFileRoute("/obra")({ component: ObraComGuarda });

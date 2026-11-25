@@ -20,6 +20,23 @@ Para instalar como app, use a seção **Instalar** da tela inicial. Ela mostra o
 - **Mac (Safari, macOS 14 ou mais novo):** Arquivo → Adicionar ao Dock.
 - **Firefox no computador:** não instala apps da web; use pelo navegador.
 
+### Link de demonstração
+
+Um link pode abrir a obra-exemplo já calculada, na aba e na vista pedidas, sem passo manual. Serve para mostrar o app num link direto ou embutido em outro site, num iframe:
+
+- `?exemplo=nbr6118-2023` ou `?exemplo=nb1-78`: abre a obra-exemplo dessa norma;
+- `&aba=planta|resultados|relatorio|3d|orcamento`: a aba ao abrir (padrão: planta);
+- `&explodido=1`, `&cor=nkPilares|taxaVigas|momentoLajes` e `&camada=<id>`: a vista 3D ao abrir (os ids das camadas estão em `src/telas/obra3d/camadas.ts`);
+- `&embed=1`: modo embutido, sem as dicas de primeiro uso, sem gravar rascunho no navegador e sem a confirmação ao sair. O aviso de conferência continua no rodapé.
+
+Exemplos:
+
+- 3D explodida com os pilares pelo Nk: https://gmunaro.github.io/openstrut/?exemplo=nbr6118-2023&aba=3d&explodido=1&cor=nkPilares&embed=1
+- Planta: https://gmunaro.github.io/openstrut/?exemplo=nbr6118-2023&aba=planta&embed=1
+- Original × Corrigido pela NB-1/78: https://gmunaro.github.io/openstrut/?exemplo=nb1-78&aba=3d&camada=comparar&embed=1
+
+O código fica em `src/telas/demo.ts`.
+
 ## Rodar localmente
 
 Requer [Bun](https://bun.sh).

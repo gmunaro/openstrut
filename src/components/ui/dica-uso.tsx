@@ -3,6 +3,7 @@
 import { Lightbulb, X } from "lucide-react";
 import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useDemo } from "../../telas/demo";
 
 const CHAVE = "openstrut:dicas-fechadas";
 const ouvintes = new Set<() => void>();
@@ -38,13 +39,15 @@ const assinar = (f: () => void) => {
   return () => ouvintes.delete(f);
 };
 
-/** A dica `id` ainda deve aparecer. */
+/** A dica `id` ainda deve aparecer. No modo embutido (telas/demo.ts), nenhuma aparece. */
 export function useDicaAberta(id: string) {
-  return useSyncExternalStore(
+  const embutido = useDemo((s) => s.embutido);
+  const aberta = useSyncExternalStore(
     assinar,
     () => !memoria.has(id) && !lerFechadas().includes(id),
     () => false,
   );
+  return aberta && !embutido;
 }
 
 /** Caixa de dica com botão de fechar. `id` identifica a dica no armazenamento. */

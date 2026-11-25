@@ -2,7 +2,8 @@
 // unidades), barra de pavimentos e as abas Planta | Resultados | Relatório.
 // No celular (useCompacto) o cabeçalho fica numa linha e as outras ações vão para
 // a folha "Mais ações"; deitado, as abas sobem para o cabeçalho.
-// Salva o rascunho no navegador a cada edição (com debounce).
+// Salva o rascunho no navegador a cada edição (com debounce), menos no modo embutido.
+// O link de demonstração (telas/demo.ts) escolhe a aba e a vista 3D ao abrir.
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -48,6 +49,7 @@ import {
   useSalvarArquivo,
 } from "../acoes";
 import { calcular, NOME_NORMA } from "../calculo";
+import { useDemo } from "../demo";
 import { DetalhamentoContexto, type DetalhamentoObra, detalharObra } from "../detalhamento";
 import { TelaOrcamento } from "../orcamento/TelaOrcamento";
 import { Erros } from "../Erros";
@@ -82,9 +84,11 @@ export function TelaObra() {
   return <ObraAberta obra={obra} />;
 }
 
-/** Grava o rascunho a cada mudança da obra e descarrega ao esconder a aba ou sair da tela. */
+/** Grava o rascunho a cada mudança da obra e descarrega ao esconder a aba ou sair da tela.
+ *  No modo embutido não grava: a obra é de demonstração e o rascunho do usuário fica intacto. */
 function useRascunhoAutomatico(obra: Obra) {
-  const rascunhoId = useSessao((s) => s.rascunhoId);
+  const embutido = useDemo((s) => s.embutido);
+  const rascunhoId = useSessao((s) => (embutido ? null : s.rascunhoId));
   const [erro, setErro] = useState<string | null>(null);
   const salvador = useRef(
     criarSalvadorRascunho(800, (e) => setErro(`Rascunho não salvo no navegador: ${String(e)}`)),
@@ -178,7 +182,12 @@ function ObraAberta({ obra }: { obra: Obra }) {
   const botaoUnidades = useRef<HTMLButtonElement>(null);
   const botaoAbrir = useRef<HTMLButtonElement>(null);
   const { confirmar, dialogo: dialogoConfirmacao } = useConfirmacao(botaoAbrir);
-  const [aba, setAbaBruta] = useState("planta");
+  // o pedido do link de demonstração vale uma vez: lido ao montar, zerado logo depois
+  const [demo] = useState(() => useDemo.getState().pedido);
+  useEffect(() => {
+    if (demo) useDemo.setState({ pedido: null });
+  }, [demo]);
+  const [aba, setAbaBruta] = useState<string>(demo?.aba ?? "planta");
   // "ver em 3D": pedido da planta/resultados (useVer3d) ou ?ver3d= na URL abre a aba 3D focada
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const pedido3d = useVer3d((s) => s.pedido);
@@ -578,6 +587,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
             obra={obra}
             calculo={calculo}
             foco={foco3d}
+            inicial={demo?.aba === "3d" ? demo.vista3d : null}
             aoVerNaPlanta={(v) => {
               selecionarPavimento(v.pavimentoId);
               selecionar({ tipo: v.tipo, id: v.id });
