@@ -40,6 +40,12 @@ describe("obraEdificio", () => {
     // canto, borda (nas duas direções) e interior
     expect(secoes("1º pavimento")).toEqual(new Set(["35x50", "25x60", "60x25", "30x70"]));
     expect(secoes("Tipo")).toEqual(new Set(["30x45", "25x45", "45x25", "25x60"]));
+    // borda: lado maior perpendicular à fachada (b em x, h em y)
+    const tipo = obra.pavimentos.find((p) => p.nome === "Tipo");
+    const em = (x: number, y: number) => tipo?.pilares.find((p) => p.x === x && p.y === y);
+    expect([em(4.6, 0)?.b, em(4.6, 0)?.h]).toEqual([25, 45]);
+    expect([em(0, 5.2)?.b, em(0, 5.2)?.h]).toEqual([45, 25]);
+    expect(secoes("Cobertura")).toEqual(secoes("Tipo"));
     // a casa de máquinas continua os pilares da cobertura, com a mesma seção
     const cobertura = obra.pavimentos.find((p) => p.nome === "Cobertura");
     for (const p of obra.pavimentos[0]?.pilares ?? []) {
