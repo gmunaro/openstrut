@@ -27,12 +27,13 @@ Um link pode abrir uma obra-exemplo já calculada, na aba e na vista pedidas, se
 - `?exemplo=nbr6118-2023` ou `?exemplo=nb1-78`: abre o sobrado-exemplo dessa norma;
 - `?exemplo=edificio`: abre o edifício de demonstração, com 9 níveis (1º pavimento, tipo × 6, cobertura e casa de máquinas), planta em L, varandas em balanço e pilares de seções diferentes, calculado pela NBR 6118:2023 (`src/dominio/edificio.ts`);
 - `&aba=planta|resultados|relatorio|3d|orcamento`: a aba ao abrir (padrão: planta);
-- `&explodido=1` e `&cor=concreto|nkPilares|taxaVigas|momentoLajes`: a vista 3D ao abrir;
-- `&camada=<id>[,<id>...]`: liga camadas da 3D, na ordem (os ids estão em `src/telas/obra3d/camadas.ts`). Com `render`, `&tracado=1` liga o path tracing; com `sequencia`, `&reproduzir=1` começa a obra se construindo. A camada `armadura` enquadra de perto a peça em foco;
-- `&foco=<tipo>~<pavimento>~<nome>`: a peça em foco e selecionada, pelos nomes (ex.: `pilar~1º pavimento~P6`);
-- `&vista=perspectiva|frente|lado|topo`: a câmera da 3D;
-- `&painel=0`: a 3D sem o painel lateral;
-- `&moldura=0`: a aba 3D sem o cabeçalho e a barra de pavimentos; nas outras abas eles voltam;
+- com `aba=3d`, a vista 3D ao abrir (só na primeira abertura da aba; voltar a ela abre a vista padrão):
+  - `&explodido=1` e `&cor=concreto|nkPilares|taxaVigas|momentoLajes`;
+  - `&camada=<id>[,<id>...]`: liga camadas da 3D, na ordem (os ids estão em `src/telas/obra3d/camadas.ts`). Com `render`, `&tracado=1` liga o path tracing; com `sequencia`, `&reproduzir=1` começa a obra se construindo;
+  - `&foco=<tipo>~<pavimento>~<nome>`: a peça em foco, selecionada e enquadrada de perto, pelos nomes (ex.: `pilar~1º pavimento~P6`); a camada `armadura` mostra as barras dela;
+  - `&vista=perspectiva|frente|lado|topo`: a câmera da 3D;
+  - `&painel=0`: sem o painel lateral;
+  - `&moldura=0`: sem o cabeçalho e a barra de pavimentos; sair da 3D os devolve;
 - `&embed=1`: modo embutido, sem as dicas de primeiro uso, sem gravar rascunho no navegador e sem a confirmação ao sair. O aviso de conferência continua no rodapé.
 
 Exemplos com o edifício:

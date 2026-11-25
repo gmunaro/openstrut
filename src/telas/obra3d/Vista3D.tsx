@@ -229,8 +229,9 @@ export default function Vista3D({
     setCarregando(id);
     try {
       const camada = await def.carregar();
-      // a vista pode ter fechado enquanto o código da camada baixava
-      if (cenaRef.current !== ctx) return;
+      // a vista pode ter fechado enquanto o código da camada baixava, e outro pedido (o
+      // link e um clique) pode ter ligado a mesma camada nesse meio-tempo
+      if (cenaRef.current !== ctx || ativas.current.has(id)) return;
       ativas.current.set(id, { camada, limpar: camada.ativar(ctx, link) });
       setCamadasLigadas((l) => [...l, id]);
       ctx.pedirRender();
@@ -244,8 +245,10 @@ export default function Vista3D({
   };
 
   // link de demonstração (telas/demo.ts): painel, câmera, explodido, mapa de cor e camadas
-  // ao abrir. Uma vez por pedido: ligar a camada de novo a desligaria. As camadas ligam uma
-  // depois da outra, na ordem do link (a de cima vale por último).
+  // ao abrir. Uma vez por pedido: ligar a camada de novo a desligaria. A câmera salta sem
+  // animar, para os enquadramentos seguintes (explodido, camadas) manterem a direção dela.
+  // As camadas ligam uma depois da outra, na ordem do link (a de cima vale por último); a
+  // que o usuário já ligou nesse meio-tempo fica como está.
   const inicialAplicado = useRef<typeof inicial>(null);
   useEffect(() => {
     if (!cena || !inicial || inicialAplicado.current === inicial) return;
@@ -254,12 +257,13 @@ export default function Vista3D({
     if (!comPainel) setPainel(false);
     if (v) {
       setVista(v);
-      cena.definirVista(v);
+      cena.definirVista(v, false);
     }
     if (explodido || cor) mudarEstado({ explodido, modoCor: cor ?? "estado" }, explodido);
     void (async () => {
       for (const id of camadas)
-        if (CAMADAS.some((c) => c.id === id)) await alternarCamada(id, opcoes);
+        if (CAMADAS.some((c) => c.id === id) && !ativas.current.has(id))
+          await alternarCamada(id, opcoes);
     })();
   });
 
@@ -915,7 +919,7 @@ function Legenda({
       ) : modoCor === "concreto" ? (
         <ul className="grid gap-0.5">
           <li className="font-semibold">Concreto</li>
-          {(["laje", "viga", "pilar"] as const).map((t) => (
+          {(["laje", "viga", "pilar", "fundacao"] as const).map((t) => (
             <li key={t} className="flex items-center gap-1.5">
               <span
                 aria-hidden

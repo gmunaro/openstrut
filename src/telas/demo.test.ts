@@ -33,7 +33,7 @@ describe("lerLinkDemo", () => {
 
   it("lê o edifício, várias camadas, as opções delas, foco, câmera e painel", () => {
     const l = lerLinkDemo(
-      "?exemplo=edificio&aba=3d&camada=render,sequencia&tracado=1&reproduzir=1" +
+      "?exemplo=edificio&aba=3d&camada=render,sequencia,render&tracado=1&reproduzir=1" +
         "&foco=pilar~1%C2%BA%20pavimento~P6&vista=frente&painel=0&moldura=0",
     );
     expect(l.exemplo).toBe("edificio");

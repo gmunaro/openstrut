@@ -3,7 +3,7 @@
 // docs/VISTA-3D.md ("Ponto de extensão: camadas"), que copia as declarações abaixo.
 //
 // Referência rápida (ctx: ContextoVista; chave = Elemento3D.chave):
-// - ligar e limpar: `camada.ativar(ctx)` devolve a função de limpeza; `Painel({ ctx })`
+// - ligar e limpar: `camada.ativar(ctx, link?)` devolve a função de limpeza; `Painel({ ctx })`
 //   no painel lateral e `Cartao({ ctx, chave })` no cartão da peça selecionada; os dois
 //   recebem `verNosResultados(chave, ancora?)`, que leva à aba Resultados.
 // - peças: `ctx.modelo.elementos` (Elemento3D[]), `ctx.elemento(chave)`, níveis em

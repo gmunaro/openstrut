@@ -42,6 +42,18 @@ describe("obraEdificio", () => {
     expect(secoes("Tipo")).toEqual(new Set(["30x45", "20x50", "50x20", "25x60"]));
   });
 
+  it("a casa de máquinas pesa na cobertura: piso de 7,5 kN/m² e paredes no contorno", () => {
+    const cobertura = obra.pavimentos.find((p) => p.nome === "Cobertura");
+    // piso da casa: as duas lajes do meio (x 4,6 a 9,2), sobre o corredor e o hall
+    expect(cobertura?.lajes.filter((l) => l.sobrecarga === 7.5).map((l) => [l.x, l.y])).toEqual([
+      [4.6, 5.2],
+      [4.6, 7.6],
+    ]);
+    // vigas em x = 4,6 e 9,2 e em y = 5,2 e 12,8: platibanda 2 + paredes da casa 3 kN/m
+    expect(cobertura?.vigas.filter((v) => v.cargaLinear === 5)).toHaveLength(4);
+    expect(cobertura?.vigas.filter((v) => v.cargaLinear === 2)).toHaveLength(5);
+  });
+
   it("calcula pela NBR 6118:2023 sem falha, com todas as peças sem aviso", () => {
     const c = calcular(obra);
     expect(c.tipo).toBe("ok");

@@ -188,9 +188,10 @@ function ObraAberta({ obra }: { obra: Obra }) {
     if (demo) useDemo.setState({ pedido: null });
   }, [demo]);
   const [aba, setAbaBruta] = useState<string>(demo?.aba ?? "planta");
-  // link com moldura=0: na 3D, sem o cabeçalho e a barra de pavimentos, o desenho ocupa a
-  // tela; nas outras abas a moldura volta (a planta e os resultados trocam de pavimento nela)
-  const semMoldura = demo?.moldura === false && aba === "3d";
+  // link com moldura=0 e aba=3d: sem o cabeçalho e a barra de pavimentos, o desenho ocupa a
+  // tela. Como a vista pedida, só na primeira abertura da 3D: sair dela devolve a moldura (a
+  // planta e os resultados trocam de pavimento nela)
+  const [semMoldura, setSemMoldura] = useState(demo?.aba === "3d" && demo.moldura === false);
   // "ver em 3D": pedido da planta/resultados (useVer3d) ou ?ver3d= na URL abre a aba 3D focada
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const pedido3d = useVer3d((s) => s.pedido);
@@ -207,6 +208,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
     if (v !== "3d") {
       setFoco3d(null);
       setInicio3d(null);
+      setSemMoldura(false);
     }
   };
   const navegar = useNavigate();
@@ -275,7 +277,7 @@ function ObraAberta({ obra }: { obra: Obra }) {
       variant="line"
       className={
         compacto
-          ? paisagem
+          ? paisagem && !semMoldura
             ? "h-auto! shrink-0 p-0 print:hidden [&>button]:min-h-11 [&>button]:min-w-11"
             : "h-auto! w-full shrink-0 border-b px-1 py-0.5 print:hidden [&>button]:min-h-11 [&>button]:min-w-11"
           : "mx-4 mt-2 print:hidden"

@@ -14,7 +14,7 @@
 //                                  (ex.: pilar~1º pavimento~P6); a camada "armadura" o mostra
 //   &vista=perspectiva|frente|lado|topo   câmera da 3D
 //   &painel=0                      3D sem o painel lateral (mais área para o prédio)
-//   &moldura=0                     aba 3D sem o cabeçalho e a barra de pavimentos da obra
+//   &moldura=0                     1ª abertura da 3D sem o cabeçalho e a barra de pavimentos
 //   &embed=1                       modo embutido (vale sem `exemplo` também)
 //
 // O modo embutido vale até a página fechar: esconde as dicas de primeiro uso, não grava o
@@ -112,7 +112,7 @@ export function lerLinkDemo(searchStr: string): LinkDemo {
       vista3d: {
         explodido: ligado(valor("explodido")),
         cor: daLista(CORES, valor("cor")),
-        camadas: (valor("camada") ?? "").split(",").filter((c) => c !== ""),
+        camadas: [...new Set((valor("camada") ?? "").split(",").filter((c) => c !== ""))],
         opcoes: { tracado: ligado(valor("tracado")), reproduzir: ligado(valor("reproduzir")) },
         vista: daLista(VISTAS, valor("vista")),
         painel: padraoLigado(valor("painel")),

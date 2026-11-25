@@ -77,8 +77,9 @@ function enquadrarArmadura(ctx: ContextoVista, chaves: string[]) {
   if (!caixa.isEmpty()) void ctx.enquadrarEm(caixa);
 }
 
-/** Com `link` (ligada pelo link de demonstração), enquadra a peça em foco, ou a armadura
- *  inteira sem foco: na coluna, o lance selecionado de perto mostra as barras. */
+/** Com `link` (ligada pelo link de demonstração), enquadra de perto a peça selecionada (na
+ *  coluna, só o lance dela, onde as barras aparecem), depois que as barras existem: o
+ *  enquadramento do foco, feito antes, pode ter ficado com a coluna inteira. */
 function ativar(ctx: ContextoVista, link?: OpcoesLink) {
   const raiz = new Group();
   raiz.name = "armadura";

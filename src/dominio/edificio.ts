@@ -7,7 +7,7 @@
 // cálculo do app.
 import { lajeNova, obraNova, pavimentoNovo, type Retangulo } from "./criar";
 import { gerarEstrutura, TOL } from "./gerar";
-import type { Laje, Obra, Pavimento, Pilar } from "./obra";
+import type { Laje, Obra, Pavimento, Pilar, Viga } from "./obra";
 
 export const NOME_EDIFICIO = "Edifício exemplo";
 
@@ -58,6 +58,27 @@ const SECOES = {
 } as const;
 type Porte = keyof typeof SECOES;
 
+/** Células sob a casa de máquinas (o corredor e o hall do meio). */
+const CASA: [number, number][] = [
+  [1, 1],
+  [1, 2],
+];
+const naCasa = (i: number, j: number) => CASA.some(([a, b]) => a === i && b === j);
+/** Piso da casa de máquinas, kN/m²: o mínimo da NBR 6120:1980, tabela 2, com o peso das
+ *  máquinas. */
+const SOBRECARGA_CASA = 7.5;
+
+/** Viga da planta no contorno da casa de máquinas (x 4,6 a 9,2; y 5,2 a 12,8). */
+function noContornoDaCasa(v: Viga) {
+  const [x0, x1] = [X[1], X[2]];
+  const [y0, y1] = [Y[1], Y[3]];
+  const sobre = (a: number, b: number, lo: number, hi: number) =>
+    Math.min(a, b) < hi - TOL && Math.max(a, b) > lo + TOL;
+  if (Math.abs(v.x1 - v.x2) <= TOL)
+    return (Math.abs(v.x1 - x0) <= TOL || Math.abs(v.x1 - x1) <= TOL) && sobre(v.y1, v.y2, y0, y1);
+  return (Math.abs(v.y1 - y0) <= TOL || Math.abs(v.y1 - y1) <= TOL) && sobre(v.x1, v.x2, x0, x1);
+}
+
 /** As lajes (sem as varandas) que têm o ponto no contorno. */
 function lajesNoPonto(lajes: readonly Laje[], p: { x: number; y: number }) {
   return lajes.filter(
@@ -85,12 +106,12 @@ function secao(pilar: Pilar, lajes: readonly Laje[], porte: Porte): Pick<Pilar, 
 
 interface OpcoesPlanta {
   celulas: readonly [number, number][];
-  /** Sobrecarga fixa, kN/m²; sem ela, a de FAIXAS. */
-  sobrecarga?: number;
+  /** Sobrecarga da célula (i, j), kN/m²; sem ela, a de FAIXAS. */
+  sobrecarga?: (i: number, j: number) => number;
   varandas: boolean;
   porte: Porte;
-  /** Alvenaria sobre as vigas, kN/m. */
-  paredes: number;
+  /** Alvenaria sobre cada viga, kN/m. */
+  paredes: (v: Viga) => number;
 }
 
 /** Pavimento com as lajes das células, as varandas, a estrutura gerada, vigas de 15 cm e
@@ -101,7 +122,10 @@ function planta(nome: string, peDireito: number, repeticoes: number, o: OpcoesPl
   for (const [i, j] of o.celulas) {
     const faixa = FAIXAS[j] ?? FAIXAS[0];
     pav.lajes.push(
-      lajeNova(pav, celula(i, j), { h: faixa.h, sobrecarga: o.sobrecarga ?? faixa.sobrecarga }),
+      lajeNova(pav, celula(i, j), {
+        h: faixa.h,
+        sobrecarga: o.sobrecarga?.(i, j) ?? faixa.sobrecarga,
+      }),
     );
   }
   if (o.varandas)
@@ -126,42 +150,45 @@ function planta(nome: string, peDireito: number, repeticoes: number, o: OpcoesPl
   const gerado = gerarEstrutura(pav);
   return {
     ...gerado,
-    vigas: gerado.vigas.map((v) => ({ ...v, bw: 15, cargaLinear: o.paredes })),
+    vigas: gerado.vigas.map((v) => ({ ...v, bw: 15, cargaLinear: o.paredes(v) })),
     pilares: gerado.pilares.map((p) => ({ ...p, ...secao(p, gerado.lajes, o.porte) })),
   };
 }
 
 /**
  * Edifício de demonstração pela NBR 6118:2023 (C30, CAA II), de cima para baixo:
- * - casa de máquinas sobre o corredor e o hall (2 lajes), 2,6 m;
- * - cobertura sem acesso (0,5 kN/m²), platibanda de 2 kN/m nas vigas, 3,0 m;
+ * - casa de máquinas sobre o corredor e o hall (2 lajes), 2,6 m: laje de cima sem acesso
+ *   (0,5 kN/m²) e platibanda baixa de 1 kN/m;
+ * - cobertura sem acesso (0,5 kN/m²), platibanda de 2 kN/m nas vigas, 3,0 m. Sob a casa de
+ *   máquinas, o piso dela (7,5 kN/m²) e, nas vigas do contorno, as paredes (+3 kN/m, a
+ *   viga inteira: a favor da segurança onde a casa só cobre parte dela);
  * - andar-tipo repetido 6 vezes, com as varandas, 3,0 m;
  * - 1º pavimento, com os pilares mais robustos, 3,5 m.
  * Alvenaria de 5 kN/m nas vigas dos andares com apartamentos.
  */
 export function obraEdificio(): Obra {
   const obra = obraNova(NOME_EDIFICIO, "nbr6118-2023");
-  const apartamentos = { celulas: CELULAS, varandas: true, paredes: 5 } as const;
+  const apartamentos = { celulas: CELULAS, varandas: true, paredes: () => 5 } as const;
   return {
     ...obra,
     materiais: { ...obra.materiais, fck: 30 },
     pavimentos: [
       planta("Casa de máquinas", 2.6, 1, {
-        celulas: [
-          [1, 1],
-          [1, 2],
-        ],
-        sobrecarga: 0.5,
+        celulas: CASA,
+        sobrecarga: () => 0.5,
         varandas: false,
-        porte: "topo",
-        paredes: 3,
+        // seções do tipo: a base dos pilares recebe o momento das vigas carregadas da
+        // cobertura, e a de 25 × 30 do topo não acomoda as barras
+        porte: "tipo",
+        paredes: () => 1,
       }),
       planta("Cobertura", 3, 1, {
         celulas: CELULAS,
-        sobrecarga: 0.5,
+        sobrecarga: (i, j) => (naCasa(i, j) ? SOBRECARGA_CASA : 0.5),
         varandas: false,
         porte: "topo",
-        paredes: 2,
+        // platibanda de 2 kN/m; no contorno da casa de máquinas, mais as paredes dela
+        paredes: (v) => (noContornoDaCasa(v) ? 5 : 2),
       }),
       planta("Tipo", 3, 6, { ...apartamentos, porte: "tipo" }),
       planta("1º pavimento", 3.5, 1, { ...apartamentos, porte: "base" }),
