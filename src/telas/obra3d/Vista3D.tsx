@@ -970,11 +970,12 @@ function Legenda({
   const caixa =
     "bg-background/85 absolute bottom-2 left-2 max-w-[min(18rem,calc(100%-1rem))] rounded-md border p-2 text-[11px] shadow-sm";
   return recolhida ? (
+    // aberta, não sobe sobre a trilha e a barra de vistas (≈ 5,5 rem no topo)
     <details
       aria-label="Legenda das cores"
-      className={cn(caixa, "max-h-[calc(100%-1rem)] overflow-auto")}
+      className={cn(caixa, "max-h-[calc(100%-6rem)] overflow-auto")}
     >
-      <summary className="cursor-pointer py-2 font-semibold">Legenda</summary>
+      <summary className="cursor-pointer py-2.5 font-semibold">Legenda</summary>
       <div className="mt-1 grid gap-1">{conteudo}</div>
     </details>
   ) : (

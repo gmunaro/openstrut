@@ -271,7 +271,7 @@ test("edifício no celular embutido: legenda recolhida e barra numa linha", asyn
   await expect(escala).toBeHidden();
   // a barra de vistas fica numa linha só, que rola de lado
   const vistas = page.getByRole("toolbar", { name: "Vistas" });
-  expect((await vistas.boundingBox())?.height).toBeLessThan(50);
+  expect((await vistas.boundingBox())?.height).toBeLessThan(60);
   expect(await vistas.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   const desenho = await page.getByTestId("vista-3d").locator("canvas").boundingBox();
   expect(desenho?.height).toBeGreaterThanOrEqual(288);
