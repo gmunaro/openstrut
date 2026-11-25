@@ -91,6 +91,7 @@ export default function Vista3D({
   obra,
   calculo,
   foco: pedido,
+  inicial,
   aoVerNaPlanta,
   aoVerNosResultados,
 }: PropsVista3D) {
@@ -226,6 +227,17 @@ export default function Vista3D({
       setCarregando(null);
     }
   };
+
+  // link de demonstração (telas/demo.ts): explodido, mapa de cor e camada ao abrir. Uma vez
+  // por pedido: ligar a camada de novo a desligaria.
+  const inicialAplicado = useRef<typeof inicial>(null);
+  useEffect(() => {
+    if (!cena || !inicial || inicialAplicado.current === inicial) return;
+    inicialAplicado.current = inicial;
+    const { explodido, cor, camada } = inicial;
+    if (explodido || cor) mudarEstado({ explodido, modoCor: cor ?? "estado" }, explodido);
+    if (camada && CAMADAS.some((c) => c.id === camada)) void alternarCamada(camada);
+  });
 
   // ---- derivados para a tela -----------------------------------------------------------
   const sel = selecao ? modelo.elementos.find((e) => e.chave === selecao) : undefined;

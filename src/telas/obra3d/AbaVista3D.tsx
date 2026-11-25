@@ -3,6 +3,7 @@
 import { Component, lazy, type ReactNode, Suspense, useMemo, useState } from "react";
 import type { Calculo } from "../calculo";
 import type { Obra } from "../../dominio/obra";
+import type { Inicio3d } from "../demo";
 import type { Ver3d } from "./link";
 
 /** O import da vista; outro import (tentar de novo) cria um lazy novo. */
@@ -13,6 +14,8 @@ export interface PropsVista3D {
   calculo: Calculo;
   /** Elemento em foco ao abrir (entrada "ver em 3D"). */
   foco?: Ver3d | null;
+  /** Vista ao abrir pedida pelo link de demonstração (explodido, cor, camada). */
+  inicial?: Inicio3d | null;
   aoVerNaPlanta: (v: Ver3d) => void;
   aoVerNosResultados: (v: Ver3d) => void;
 }

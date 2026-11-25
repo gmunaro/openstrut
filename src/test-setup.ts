@@ -15,6 +15,7 @@ import { useObra } from "./estado/obra";
 import { acrescentarLaje, substituirPavimento } from "./planta/edicao";
 import { routeTree } from "./routeTree.gen";
 import { abrirNaSessao } from "./telas/acoes";
+import { useDemo } from "./telas/demo";
 import { useSessao } from "./telas/sessao";
 
 /** Tamanho que o ResizeObserver informa para todo elemento observado (a área do SVG). */
@@ -66,6 +67,7 @@ afterEach(async () => {
     obraSalva: null,
     unidades: "si",
   });
+  useDemo.setState({ embutido: false, pedido: null });
   localStorage.clear();
   for (const r of await listarRascunhos()) await apagarRascunho(r.id);
 });
