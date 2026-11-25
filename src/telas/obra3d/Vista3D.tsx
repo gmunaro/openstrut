@@ -493,7 +493,7 @@ export default function Vista3D({
             className={cn(
               barra,
               "bg-background/85 pointer-events-auto w-fit rounded-md border p-0.5 shadow-sm",
-              enxuto && "max-w-full flex-nowrap overflow-x-auto",
+              enxuto && "max-w-full flex-nowrap overflow-x-auto p-1",
             )}
           >
             {VISTAS.map(({ v, rotulo }) => (
@@ -970,8 +970,11 @@ function Legenda({
   const caixa =
     "bg-background/85 absolute bottom-2 left-2 max-w-[min(18rem,calc(100%-1rem))] rounded-md border p-2 text-[11px] shadow-sm";
   return recolhida ? (
-    <details aria-label="Legenda das cores" className={caixa}>
-      <summary className="cursor-pointer py-1.5 font-semibold">Legenda</summary>
+    <details
+      aria-label="Legenda das cores"
+      className={cn(caixa, "max-h-[calc(100%-1rem)] overflow-auto")}
+    >
+      <summary className="cursor-pointer py-2 font-semibold">Legenda</summary>
       <div className="mt-1 grid gap-1">{conteudo}</div>
     </details>
   ) : (

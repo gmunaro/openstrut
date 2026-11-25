@@ -265,10 +265,14 @@ test("edifício no celular embutido: legenda recolhida e barra numa linha", asyn
   await page.goto(`${EDIFICIO}&explodido=1&cor=nkPilares`);
   await page.waitForFunction(() => "__vista3d" in window);
   const legenda = page.getByLabel("Legenda das cores");
-  await expect(legenda).not.toHaveAttribute("open");
-  // a barra de vistas fica numa linha só
-  const barra = await page.getByRole("toolbar", { name: "Vistas" }).boundingBox();
-  expect(barra?.height).toBeLessThan(50);
+  const escala = legenda.getByText("Nk nos pilares (kN)");
+  // recolhida: um <details> fechado, com a escala escondida
+  await expect(legenda).toHaveJSProperty("tagName", "DETAILS");
+  await expect(escala).toBeHidden();
+  // a barra de vistas fica numa linha só, que rola de lado
+  const vistas = page.getByRole("toolbar", { name: "Vistas" });
+  expect((await vistas.boundingBox())?.height).toBeLessThan(50);
+  expect(await vistas.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   const desenho = await page.getByTestId("vista-3d").locator("canvas").boundingBox();
   expect(desenho?.height).toBeGreaterThanOrEqual(288);
   await expect(page.getByText(AVISO)).toBeVisible();
@@ -276,7 +280,8 @@ test("edifício no celular embutido: legenda recolhida e barra numa linha", asyn
   await page.screenshot({ path: path.join(PRINTS, "edificio-celular.png") });
   // aberta, a legenda mostra a escala do Nk
   await legenda.getByText("Legenda", { exact: true }).click();
-  await expect(legenda).toContainText("Nk nos pilares (kN)");
+  await expect(legenda).toHaveAttribute("open", "");
+  await expect(escala).toBeVisible();
   expect(erros).toEqual([]);
   await contexto.close();
 });
