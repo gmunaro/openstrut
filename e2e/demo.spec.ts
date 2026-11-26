@@ -442,6 +442,8 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
   const chave =
     (await page.evaluate(() => (window as unknown as { __vista3d: CenaCamera }).__vista3d.selecao)) ??
     undefined;
+  // sem a chave, caixaNaTela mediria o prédio inteiro, não o pilar
+  expect(chave).toBeTruthy();
   // aberto: rola por dentro, sem passar do aviso, e o desenho guarda 11 rem
   await detalhes.click();
   await expect(cartao.getByRole("button", { name: "Resumo" })).toHaveAttribute(
