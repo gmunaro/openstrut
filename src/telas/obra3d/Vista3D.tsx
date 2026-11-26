@@ -180,7 +180,11 @@ export default function Vista3D({
     }
     cenaRef.current = c;
     setCena(c);
-    const parar = c.aoMudar("selecao", () => setSelecao(c.selecao));
+    // peça nova (ou nenhuma): o cartão do celular embutido volta ao resumo
+    const parar = c.aoMudar("selecao", () => {
+      setSelecao(c.selecao);
+      setCartaoAberto(false);
+    });
     const pararLegenda = c.aoMudar("legenda", () => setLegendas(c.legendasCamadas));
     // foco e visibilidade mudados por uma camada (definirFoco): a trilha e o painel seguem
     const pararCena = c.aoMudar("cena", () => setEv(c.estado));
@@ -398,13 +402,14 @@ export default function Vista3D({
           ? cn(
               "bg-background w-full border-b p-3 text-xs",
               enxuto && "min-h-0 shrink-0 overflow-auto py-2",
-              enxuto && cartaoAberto && "shrink",
+              // aberto, encolhe no que sobra, sem sumir (o container rola se faltar)
+              enxuto && cartaoAberto && "min-h-28 shrink",
             )
           : "bg-background/95 absolute right-2 bottom-2 max-h-[45%] w-[min(24rem,calc(100%-1rem))] overflow-auto rounded-md border p-3 text-xs shadow-md"
       }
     >
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="min-w-0 truncate text-sm font-semibold">
+      <div className={cn("flex justify-between gap-2", enxuto ? "items-center" : "items-start")}>
+        <h2 className={cn("text-sm font-semibold", resumido && "min-w-0 truncate")}>
           {NOME_TIPO[sel.tipo]} {sel.nome}
           {resumido && (
             <span className="text-muted-foreground font-normal">
@@ -556,7 +561,7 @@ export default function Vista3D({
             <Button
               size="xs"
               variant="outline"
-              className="bg-background dark:bg-background compacto:h-9 pointer-events-auto shadow-sm"
+              className="bg-background dark:bg-background dark:hover:bg-accent compacto:h-9 pointer-events-auto shadow-sm"
               aria-expanded={barraAberta}
               onClick={() => setBarraAberta((a) => !a)}
             >

@@ -415,11 +415,12 @@ test("edifício no celular embutido: legenda recolhida e barra numa linha", asyn
 test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o botão Vistas é opaco", async ({
   browser,
 }) => {
-  // o iframe do site no celular: 358 × 520
+  // o iframe do site no celular: 358 × 520, no tema escuro (o do site)
   const contexto = await browser.newContext({
     viewport: { width: 358, height: 520 },
     isMobile: true,
     hasTouch: true,
+    colorScheme: "dark",
   });
   const page = await contexto.newPage();
   const erros = vigiarErros(page);
@@ -453,6 +454,8 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
     page.locator(sel).first().evaluate((el) => {
       const c = document.createElement("canvas").getContext("2d");
       if (!c) return -1;
+      // começa transparente: cor que o canvas não entendesse daria 0, não 255
+      c.fillStyle = "rgba(0, 0, 0, 0)";
       c.fillStyle = getComputedStyle(el).backgroundColor;
       c.fillRect(0, 0, 1, 1);
       return c.getImageData(0, 0, 1, 1).data[3];
@@ -460,6 +463,23 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
   expect(await alfa("button[aria-expanded]:has-text('Vistas')")).toBe(255);
   expect(await alfa("details[aria-label='Legenda das cores']")).toBe(255);
   await page.screenshot({ path: path.join(PRINTS, "edificio-celular-armadura.png") });
+  // outra seleção volta ao resumo
+  const chave = await page.evaluate(
+    () => (window as unknown as { __vista3d: CenaCamera }).__vista3d.selecao,
+  );
+  await cartao.getByRole("button", { name: "Fechar seleção" }).click();
+  await expect(cartao).toHaveCount(0);
+  await page.evaluate(
+    (k) =>
+      (
+        window as unknown as { __vista3d: { selecionar(k: string | null): void } }
+      ).__vista3d.selecionar(k),
+    chave,
+  );
+  await expect(cartao.getByRole("button", { name: "Detalhes" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
   expect(erros).toEqual([]);
   await contexto.close();
 });
