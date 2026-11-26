@@ -501,12 +501,13 @@ export const camada: Camada = {
       void irPara(s, 0);
     } else tocar(s);
     return () => {
+      // primeiro devolve o movimento reduzido: o explodido que o ato desfaz segue a preferência
+      ctx.forcarMovimento(ID, false);
       parar.forEach((f) => f());
       sairLivre(s, false);
       pausar(s);
       pararAto(s);
       ctx.ocultarRotulosNiveis(ID, false);
-      ctx.forcarMovimento(ID, false);
       s.legenda.remover();
       ctx.travarControles(false);
       sessao = null;

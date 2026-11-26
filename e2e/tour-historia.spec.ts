@@ -378,22 +378,49 @@ test("tour guiado com movimento reduzido: atos no estado final, parados, e desfe
   await contexto.close();
 });
 
-test("tour guiado embutido: a aba congelada no meio de um ato segue ao voltar", async ({
+test("tour guiado embutido com movimento reduzido: a aba congelada no meio da obra segue ao voltar", async ({
   browser,
 }) => {
   test.setTimeout(120_000);
-  const contexto = await browser.newContext({ viewport: { width: 1200, height: 640 } });
+  const contexto = await browser.newContext({
+    viewport: { width: 1200, height: 640 },
+    reducedMotion: "reduce",
+  });
   const page = await contexto.newPage();
   const erros = vigiarErros(page);
   await page.goto(TOUR);
   const legenda = page.getByTestId("legenda-tour");
   await expect(legenda).toContainText(/A obra sobe/, { timeout: 20_000 });
-  // a aba em segundo plano no caso extremo: congelada (sem quadros nem timers) por 5 s
+  await page.waitForTimeout(1500);
+  // conta os quadros da página, para saber se o congelamento pegou
+  await page.evaluate(() => {
+    const w = window as unknown as { quadrosTeste: number };
+    w.quadrosTeste = 0;
+    const contar = () => {
+      w.quadrosTeste++;
+      requestAnimationFrame(contar);
+    };
+    requestAnimationFrame(contar);
+  });
+  const quadros = () =>
+    page.evaluate(() => (window as unknown as { quadrosTeste: number }).quadrosTeste);
+  const visiveis = async () => (await cena(page)).visiveis;
+  const antes = { quadros: await quadros(), pecas: await visiveis() };
+  // a aba em segundo plano no caso extremo: outra aba na frente e esta congelada (sem
+  // quadros nem timers) por 5 s
+  const outra = await contexto.newPage();
+  await outra.bringToFront();
   const cdp = await contexto.newCDPSession(page);
   await cdp.send("Page.setWebLifecycleState", { state: "frozen" });
   await new Promise((ok) => setTimeout(ok, 5000));
   await cdp.send("Page.setWebLifecycleState", { state: "active" });
-  // de volta, o ato termina e o tour segue para as paradas seguintes
+  await page.bringToFront();
+  // congelada, quase nenhum quadro passou (solta, a página desenha dezenas em 5 s)
+  expect((await quadros()) - antes.quadros).toBeLessThan(30);
+  // de volta, a obra continua subindo de onde estava (não pula para o fim) e o tour segue
+  const logo = await visiveis();
+  expect(logo).toBeLessThan((await cena(page)).total);
+  await expect.poll(visiveis).toBeGreaterThan(Math.max(antes.pecas, logo));
   await expect(legenda).toContainText(/Caminho das cargas/, { timeout: 20_000 });
   await expect(legenda).toContainText(/Armadura · /, { timeout: 20_000 });
   expect(erros).toEqual([]);

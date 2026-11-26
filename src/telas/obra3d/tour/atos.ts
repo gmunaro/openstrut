@@ -55,6 +55,11 @@ export interface Ato {
   parar(): void;
 }
 
+/** Maior passo de tempo de um quadro nos atos, s. A aba que volta do segundo plano traz no
+ *  primeiro quadro todo o tempo em que ficou oculta; com o teto, o ato continua de onde
+ *  estava em vez de pular para o fim. Acima de 4 quadros por segundo, segue o relógio. */
+const PASSO_MAXIMO = 0.25;
+
 /** Roda `passo(t)` com t de 0 a 1 ao longo de `ms`; resolve no fim ou ao parar. */
 function animar(ctx: ContextoVista, ms: number, passo: (t: number) => void) {
   let parar = () => {};
@@ -65,7 +70,7 @@ function animar(ctx: ContextoVista, ms: number, passo: (t: number) => void) {
       ok();
     };
     const cancelar = ctx.aoQuadro((dt) => {
-      decorrido += dt * 1000;
+      decorrido += Math.min(dt, PASSO_MAXIMO) * 1000;
       const t = Math.min(1, decorrido / ms);
       passo(t);
       if (t >= 1) fim();
@@ -285,7 +290,7 @@ function atoCargas(ctx: ContextoVista, caminho: CaminhoCargas, comAnimacao: bool
   let tempo = 0;
   const pararSetas = comAnimacao
     ? ctx.aoQuadro((dt) => {
-        tempo += dt;
+        tempo += Math.min(dt, PASSO_MAXIMO);
         porSetas(tempo / 1.2, frente);
       })
     : (porSetas(0, frente), () => {});
