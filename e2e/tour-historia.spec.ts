@@ -191,10 +191,9 @@ for (const [tela, viewport, celular, reduzido] of [
     expect(cargas.visiveis).toBe(cargas.total);
     expect(cargas.cores).toContain("tour");
     expect(cargas.setas).toBe(true);
-    // as setas descem em ciclo
+    // as setas descem em ciclo (no CI, com poucos quadros por segundo, espera o próximo)
     const setas = await alturasSetas(page);
-    await page.waitForTimeout(300);
-    expect(await alturasSetas(page)).not.toEqual(setas);
+    await expect.poll(() => alturasSetas(page), { timeout: 5000 }).not.toEqual(setas);
     if (celular) expect(await legendaCabe(page)).toBe(true);
     await page.waitForTimeout(3000);
     await foto("3-cargas");
