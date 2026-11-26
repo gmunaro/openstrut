@@ -104,7 +104,7 @@ for (const [tela, viewport, celular] of [
     await page.waitForTimeout(600);
     const meio = await cena(page);
     expect(meio.setas).toBe(false);
-    expect(page.getByTestId("tour-nk")).toHaveCount(0);
+    await expect(page.getByTestId("tour-nk")).toHaveCount(0);
     await page.waitForTimeout(2500);
     const cheia = await cena(page);
     expect(meio.barras).not.toBeNull();
@@ -129,3 +129,117 @@ for (const [tela, viewport, celular] of [
     expect(erros).toEqual([]);
     await contexto.close();
   });
+
+/** Fontes do tour ainda registradas, objetos dele na cena e o explodido. */
+const sobras = (page: Page) =>
+  page.evaluate(() => {
+    type Obj = { name: string; children: Obj[]; position: { y: number } };
+    const c = (
+      window as unknown as {
+        __vista3d: {
+          fontesAtivas(): Record<string, string[]>;
+          cena: Obj;
+          explodido: boolean;
+        };
+      }
+    ).__vista3d;
+    const nomes: string[] = [];
+    const andar = (o: Obj) => {
+      nomes.push(o.name);
+      o.children.forEach(andar);
+    };
+    andar(c.cena);
+    return {
+      fontes: Object.entries(c.fontesAtivas()).flatMap(([tipo, ids]) =>
+        ids.includes("tour") ? [tipo] : [],
+      ),
+      objetos: nomes.filter((n) => n.startsWith("tour")),
+      rotulo: document.querySelectorAll("[data-testid='tour-nk']").length,
+      explodido: c.explodido,
+    };
+  });
+
+test("tour guiado com movimento reduzido: atos no estado final, parados, e desfeitos ao sair", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const contexto = await browser.newContext({
+    viewport: { width: 1366, height: 768 },
+    reducedMotion: "reduce",
+  });
+  const page = await contexto.newPage();
+  const erros = vigiarErros(page);
+  await page.goto("/?exemplo=edificio&aba=3d&moldura=0&cor=concreto&camada=tour");
+  const legenda = page.getByTestId("legenda-tour");
+  const painel = page.locator("#painel-3d");
+  await expect(legenda).toContainText("Parada 1 de", { timeout: 20_000 });
+  const proxima = () => painel.getByRole("button", { name: "Próxima" }).click();
+
+  // a obra: com movimento reduzido, já inteira
+  await proxima();
+  await expect(legenda).toContainText("A obra sobe");
+  expect((await cena(page)).visiveis).toBe((await cena(page)).total);
+
+  // as cargas: lajes e vigas acesas em âmbar, o resto transparente, setas paradas
+  await proxima();
+  await expect(legenda).toContainText("Caminho das cargas");
+  await expect(page.getByTestId("tour-nk")).toContainText(/Nk = [\d.,]+ kN/);
+  const setas = () =>
+    page.evaluate(() => {
+      type Obj = { name: string; children: Obj[]; position: { y: number } };
+      const c = (window as unknown as { __vista3d: { cena: Obj } }).__vista3d;
+      const achar = (o: Obj): Obj | undefined =>
+        o.name === "tour setas" ? o : o.children.map(achar).find(Boolean);
+      return achar(c.cena)?.children.map((m) => m.position.y) ?? [];
+    });
+  const antes = await setas();
+  await page.waitForTimeout(700);
+  expect(await setas()).toEqual(antes);
+  expect(antes).toHaveLength(3);
+  const acesas = await page.evaluate(() => {
+    const c = (
+      window as unknown as {
+        __vista3d: { modelo: { elementos: { chave: string; tipo: string }[] }; corDe(k: string): string | undefined };
+      }
+    ).__vista3d;
+    return c.modelo.elementos
+      .filter((e) => c.corDe(e.chave) === "#fbbf24")
+      .map((e) => e.tipo);
+  });
+  expect(acesas).toContain("laje");
+  expect(acesas).toContain("viga");
+  expect((await sobras(page)).fontes).toEqual(
+    expect.arrayContaining(["cores", "transparencias", "legendas"]),
+  );
+
+  // a armadura: barras inteiras de uma vez; as setas e o rótulo saíram
+  await proxima();
+  await expect(legenda).toContainText("Armadura do");
+  expect((await cena(page)).barras).toBe(1);
+  expect((await sobras(page)).objetos).toEqual(["tour armadura"]);
+  expect((await sobras(page)).rotulo).toBe(0);
+
+  // o Nk: explodido; Anterior volta à armadura e junta o prédio
+  await proxima();
+  await expect(legenda).toContainText("Nk nos pilares");
+  expect((await sobras(page)).explodido).toBe(true);
+  await painel.getByRole("button", { name: "Anterior" }).click();
+  await expect(legenda).toContainText("Armadura do");
+  expect((await sobras(page)).explodido).toBe(false);
+
+  // entrar na caminhada no meio de um ato desfaz o ato
+  await painel.getByRole("button", { name: "Andar pela estrutura" }).click();
+  await expect(legenda).toContainText("Caminhando");
+  expect(await sobras(page)).toEqual({ fontes: [], objetos: [], rotulo: 0, explodido: false });
+
+  // sair da caminhada, ir às cargas e desligar a camada no meio do ato
+  await painel.getByRole("button", { name: "Sair da caminhada" }).click();
+  await painel.getByRole("button", { name: "Anterior" }).click();
+  await expect(legenda).toContainText("Caminho das cargas");
+  expect((await sobras(page)).objetos).toEqual(["tour setas"]);
+  await page.getByRole("button", { name: "Tour", exact: true }).click();
+  await expect(legenda).toHaveCount(0);
+  expect(await sobras(page)).toEqual({ fontes: [], objetos: [], rotulo: 0, explodido: false });
+  expect(erros).toEqual([]);
+  await contexto.close();
+});

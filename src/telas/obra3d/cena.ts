@@ -1002,15 +1002,18 @@ export class Cena3D implements ContextoVista {
     return caixa.isEmpty() ? undefined : caixa;
   }
 
-  /** O explodido ainda está animando (o próximo "explodido" não é o último). */
+  /** O prédio está explodido (ou indo para lá). */
   get explodido() {
     return this.estado.explodido;
   }
 
+  /** Explode ou junta os níveis, como o botão Explodido (a Vista3D acompanha pelo aviso
+   *  "explodido"). */
   definirExplodido(sim: boolean) {
     if (sim !== this.estado.explodido) this.definirEstado({ explodido: sim });
   }
 
+  /** O explodido ainda está animando (o próximo "explodido" não é o último). */
   get explodidoEmAnimacao() {
     return this.deslocamentos.some(
       (y, i) => Math.abs((this.deslocamentosAlvo[i] ?? 0) - y) >= 1e-3,

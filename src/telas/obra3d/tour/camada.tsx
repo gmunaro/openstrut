@@ -124,6 +124,7 @@ async function irPara(s: Sessao, i: number) {
   const p = s.paradas[i];
   if (!p) return;
   const ida = ++s.ida;
+  s.movendo = false;
   const valendo = () => s.ida === ida && sessao === s;
   pararAto(s);
   mudar({ indice: i });
@@ -131,6 +132,17 @@ async function irPara(s: Sessao, i: number) {
   const { ctx } = s;
   const animar = !movimentoReduzido();
   ctx.selecionar(p.tipo === "peca" && ctx.elemento(p.chave) ? p.chave : null);
+  // o ato lê as alturas da cena: espera o explodido (de um ato anterior) assentar
+  if (ctx.explodidoEmAnimacao) {
+    await new Promise<void>((ok) => {
+      const parar = ctx.aoQuadro(() => {
+        if (ctx.explodidoEmAnimacao && valendo()) return;
+        parar();
+        ok();
+      });
+    });
+    if (!valendo()) return;
+  }
   const ato = iniciarAto(ctx, p, animar);
   s.ato = ato;
   let alvo = ato ? ato.alvo : alvoDa(ctx, p);
@@ -442,13 +454,18 @@ export const camada: Camada = {
     };
     sessao = s;
     estado = { ...estado, modo: "guiado", indice: 0, aviso: "", ortografica: ortografica(ctx) };
-    let visto = { modelo: ctx.modelo, dados: ctx.dados };
+    let visto = { modelo: ctx.modelo, dados: ctx.dados, detalhamento: ctx.detalhamento };
     const parar = [
       // obra editada: paradas novas; a parada atual fica no limite da lista (os atos mudam
       // cores e transparências, que também avisam "cena", sem mudar a obra)
       ctx.aoMudar("cena", () => {
-        if (ctx.modelo === visto.modelo && ctx.dados === visto.dados) return;
-        visto = { modelo: ctx.modelo, dados: ctx.dados };
+        if (
+          ctx.modelo === visto.modelo &&
+          ctx.dados === visto.dados &&
+          ctx.detalhamento === visto.detalhamento
+        )
+          return;
+        visto = { modelo: ctx.modelo, dados: ctx.dados, detalhamento: ctx.detalhamento };
         s.paradas = montarParadas(ctx.modelo, ctx.dados, { armadura: ctx.detalhamento !== null });
         mudar({ indice: Math.min(estado.indice, Math.max(0, s.paradas.length - 1)) });
         if (s.livre) mostrarPiso(s);
@@ -464,8 +481,9 @@ export const camada: Camada = {
         const orto = ortografica(ctx);
         if (orto !== estado.ortografica) mudar({ ortografica: orto });
         if (orto && s.livre) sairLivre(s, false);
-        // tocando e parado numa parada: quem mexeu na câmera não foi o tour
-        if (estado.tocando && !s.movendo && s.timer !== null)
+        // tocando e parado numa parada (esperando o tempo dela ou o ato): quem mexeu na
+        // câmera não foi o tour
+        if (estado.tocando && !s.movendo && (s.timer !== null || s.ato !== null))
           pausar(s, "Tour pausado: outra ação levou a câmera.");
       }),
     ];

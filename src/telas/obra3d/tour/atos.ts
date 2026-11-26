@@ -218,16 +218,17 @@ function atoCargas(ctx: ContextoVista, caminho: CaminhoCargas, comAnimacao: bool
     m.renderOrder = 10;
     setas.add(m);
   }
-  const topo = caixaDas(
-    ctx,
-    passos.slice(0, 1).map((p) => p.chave),
-  );
-  const centro = topo?.getCenter(new Vector3()) ?? new Vector3();
-  const alto = topo?.max.y ?? 0;
-  const baixoDe = (n: number) => {
+  const centro = ctx.caixaDe(passos[0]?.chave ?? "")?.getCenter(new Vector3()) ?? new Vector3();
+  /** Põe as setas entre o topo da coluna e o pé do lance `n`, na fase f (0 a 1) do ciclo;
+   *  as alturas vêm da cena na hora (o explodido pode mudá-las). */
+  const porSetas = (f: number, n: number) => {
+    const alto = ctx.caixaDe(passos[0]?.chave ?? "")?.max.y ?? 0;
     const p = passos[Math.min(n, passos.length) - 1];
-    const c = p ? ctx.caixaDe(p.chave) : undefined;
-    return c?.min.y ?? alto;
+    const fundo = (p && ctx.caixaDe(p.chave)?.min.y) ?? alto;
+    setas.children.forEach((m, i) => {
+      const fase = (f + i / 3) % 1;
+      m.position.set(centro.x, alto - fase * (alto - fundo), centro.z);
+    });
   };
 
   // rótulo do lance com o Nk (o texto da legenda, por extenso, fica no canto)
@@ -240,56 +241,59 @@ function atoCargas(ctx: ContextoVista, caminho: CaminhoCargas, comAnimacao: bool
   rotulo.hidden = true;
   conteiner?.appendChild(rotulo);
   const ponto = new Vector3();
+  let largura = 0;
   const posicionar = (n: number) => {
     const p = passos[Math.min(n, passos.length) - 1];
     const c = p ? ctx.caixaDe(p.chave) : undefined;
     if (!p || !c || !conteiner) return;
     const nivel = ctx.modelo.niveis[p.nivel]?.nome ?? "";
     const texto = `${caminho.nome} · ${nivel}: ${textoNk(ctx.dados.get(p.chave)) ?? ""}`;
-    if (rotulo.textContent !== texto) rotulo.textContent = texto;
     rotulo.hidden = false;
+    // a largura só muda com o texto: ler o layout uma vez por troca, não a cada quadro
+    if (rotulo.textContent !== texto) {
+      rotulo.textContent = texto;
+      largura = rotulo.offsetWidth;
+    }
     c.getCenter(ponto).project(ctx.camera);
     const w = ctx.renderer.domElement.clientWidth;
     const h = ctx.renderer.domElement.clientHeight;
     const x = ((ponto.x + 1) / 2) * w + 14;
     const y = ((1 - ponto.y) / 2) * h;
-    const largura = rotulo.offsetWidth;
     rotulo.style.left = `${Math.max(4, Math.min(w - largura - 4, x))}px`;
     rotulo.style.top = `${Math.max(48, Math.min(h - 28, y - 10))}px`;
   };
 
   ctx.cena.add(setas);
-  let tempo = 0;
-  const andarSetas = (dt: number, frente: number) => {
-    tempo += dt;
-    const fundo = baixoDe(frente);
-    setas.children.forEach((m, i) => {
-      const f = (tempo / 1.2 + i / 3) % 1;
-      m.position.set(centro.x, alto - f * (alto - fundo), centro.z);
-    });
-  };
+  // o passo `total` acende a fundação junto com o lance de baixo
   const total = passos.length + 1;
   let frente = comAnimacao ? 1 : total;
   acender(frente);
-  // as setas e o rótulo seguem enquanto o ato estiver na tela
-  const pararQuadro = ctx.aoQuadro((dt) => {
-    andarSetas(dt, frente);
-    posicionar(frente);
-  });
+  // o rótulo segue a câmera depois de cada quadro desenhado (sem pedir quadros a mais)
+  const pararRotulo = ctx.depoisDoQuadro(() => posicionar(frente));
+  // com animação, as setas descem em ciclo enquanto o ato estiver na tela; sem, ficam
+  // paradas ao longo da coluna inteira
+  let tempo = 0;
+  const pararSetas = comAnimacao
+    ? ctx.aoQuadro((dt) => {
+        tempo += dt;
+        porSetas(tempo / 1.2, frente);
+      })
+    : (porSetas(0, frente), () => {});
   const a = comAnimacao
     ? animar(ctx, DURACAO_LANCE * total, (t) => {
         frente = Math.min(total, Math.floor(t * total) + 1);
-        acender(frente + (t >= 1 ? 1 : 0));
+        acender(frente);
       })
     : null;
-  if (!a) acender(total + 1);
+  ctx.pedirRender();
   return {
     pronto: a?.pronto ?? Promise.resolve(),
     enquadrarDepois: false,
     alvo,
     parar: () => {
       a?.parar();
-      pararQuadro();
+      pararSetas();
+      pararRotulo();
       ctx.cena.remove(setas);
       geometria.dispose();
       material.dispose();
