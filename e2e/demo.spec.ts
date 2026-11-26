@@ -67,10 +67,10 @@ async function abrirVistas(app: Page | FrameLocator) {
   await expect(app.getByRole("toolbar", { name: "Vistas" })).toBeVisible();
 }
 
-/** Onde o prédio visível cai na tela: a caixa das peças visíveis projetada pela câmera
+/** Onde o prédio visível (ou a peça `chave`) cai na tela: a caixa projetada pela câmera
  *  (px a partir do canto de cima do desenho) e o tamanho do desenho. */
-const caixaNaTela = (page: Page) =>
-  page.evaluate(() => {
+const caixaNaTela = (page: Page, chave?: string) =>
+  page.evaluate((chave) => {
     type M = { elements: number[] };
     const c = (
       window as unknown as {
@@ -78,12 +78,13 @@ const caixaNaTela = (page: Page) =>
           camera: { matrixWorldInverse: M; projectionMatrix: M };
           renderer: { domElement: HTMLCanvasElement };
           caixaVisivel(): { min: Vec; max: Vec };
+          caixaDe(k: string): { min: Vec; max: Vec } | undefined;
         };
       }
     ).__vista3d;
     const aplicar = (m: number[], p: number[]) =>
       [0, 1, 2, 3].map((r) => p.reduce((t, v, k) => t + (m[k * 4 + r] ?? 0) * v, 0));
-    const b = c.caixaVisivel();
+    const b = (chave && c.caixaDe(chave)) || c.caixaVisivel();
     const { clientWidth: w, clientHeight: h } = c.renderer.domElement;
     const xs: number[] = [];
     const ys: number[] = [];
@@ -103,7 +104,7 @@ const caixaNaTela = (page: Page) =>
       w,
       h,
     };
-  });
+  }, chave);
 
 function vigiarErros(page: Page): string[] {
   const erros: string[] = [];
@@ -415,9 +416,10 @@ test("edifício no celular embutido: legenda recolhida e barra numa linha", asyn
 test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o botão Vistas é opaco", async ({
   browser,
 }) => {
-  // o iframe do site no celular: 358 × 520, no tema escuro (o do site)
+  // o iframe do site no celular (medido em 360, 390 e 412 px de largura): 348 × 459, no
+  // tema escuro (o do site)
   const contexto = await browser.newContext({
-    viewport: { width: 358, height: 520 },
+    viewport: { width: 348, height: 459 },
     isMobile: true,
     hasTouch: true,
     colorScheme: "dark",
@@ -437,7 +439,10 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
   await expect(cartao).toContainText("1º pavimento");
   let caixa = await cartao.boundingBox();
   expect((caixa?.y ?? 0) + (caixa?.height ?? 0)).toBeLessThanOrEqual(aviso.y + 1);
-  // aberto: rola por dentro, sem passar do aviso, e o desenho guarda 18 rem
+  const chave =
+    (await page.evaluate(() => (window as unknown as { __vista3d: CenaCamera }).__vista3d.selecao)) ??
+    undefined;
+  // aberto: rola por dentro, sem passar do aviso, e o desenho guarda 11 rem
   await detalhes.click();
   await expect(cartao.getByRole("button", { name: "Resumo" })).toHaveAttribute(
     "aria-expanded",
@@ -445,7 +450,15 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
   );
   caixa = await cartao.boundingBox();
   expect((caixa?.y ?? 0) + (caixa?.height ?? 0)).toBeLessThanOrEqual(aviso.y + 1);
-  expect((await desenho.boundingBox())?.height).toBeGreaterThanOrEqual(288);
+  expect(caixa?.height).toBeGreaterThanOrEqual(112);
+  expect((await desenho.boundingBox())?.height).toBeGreaterThanOrEqual(176);
+  // o pilar continua inteiro no desenho menor
+  await page.waitForTimeout(300);
+  const p6 = await caixaNaTela(page, chave);
+  expect(p6.topo).toBeGreaterThanOrEqual(0);
+  expect(p6.base).toBeLessThanOrEqual(p6.h);
+  expect(p6.esq).toBeGreaterThanOrEqual(0);
+  expect(p6.dir).toBeLessThanOrEqual(p6.w);
   const ultimo = cartao.getByRole("button", { name: "Ver nos resultados" });
   await ultimo.scrollIntoViewIfNeeded();
   await expect(ultimo).toBeInViewport();
@@ -464,9 +477,6 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
   expect(await alfa("details[aria-label='Legenda das cores']")).toBe(255);
   await page.screenshot({ path: path.join(PRINTS, "edificio-celular-armadura.png") });
   // outra seleção volta ao resumo
-  const chave = await page.evaluate(
-    () => (window as unknown as { __vista3d: CenaCamera }).__vista3d.selecao,
-  );
   await cartao.getByRole("button", { name: "Fechar seleção" }).click();
   await expect(cartao).toHaveCount(0);
   await page.evaluate(
@@ -474,7 +484,7 @@ test("edifício no celular embutido: o cartão do pilar cabe acima do aviso e o 
       (
         window as unknown as { __vista3d: { selecionar(k: string | null): void } }
       ).__vista3d.selecionar(k),
-    chave,
+    chave ?? null,
   );
   await expect(cartao.getByRole("button", { name: "Detalhes" })).toHaveAttribute(
     "aria-expanded",

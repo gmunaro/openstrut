@@ -392,7 +392,7 @@ export default function Vista3D({
 
   // cartão do elemento: sobre o desenho no desktop; no celular, logo abaixo dele, para não
   // cobrir a vista. No celular embutido a altura é pouca: o cartão abre num resumo de uma
-  // linha e, aberto, rola por dentro no que o desenho deixa (o desenho guarda 18 rem)
+  // linha e, aberto, rola por dentro no que o desenho deixa (o desenho guarda 11 rem)
   const resumido = enxuto && !cartaoAberto;
   const cartao = sel && (
     <section
@@ -544,7 +544,9 @@ export default function Vista3D({
         className={cn(
           "relative min-h-0 min-w-0 flex-1",
           painel && "compacto:h-[58vh] compacto:flex-none",
-          enxuto && "min-h-72",
+          // com o cartão da peça aberto abaixo, o desenho cede altura a ele (o iframe do
+          // site no celular tem 459 px); o fov vertical fixo mantém a peça inteira
+          enxuto && (sel && cartaoAberto ? "min-h-44" : "min-h-72"),
         )}
       >
         <div
