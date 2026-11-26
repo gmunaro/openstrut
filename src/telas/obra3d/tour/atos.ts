@@ -330,8 +330,8 @@ function arestasDaCaixa(c: Box3) {
 }
 
 /** Raio-x: o prédio transparente, o lance com o contorno da seleção e as barras dele
- *  crescendo do pé ao topo. A câmera enquadra só o lance (como o link de demonstração da
- *  armadura), para as barras aparecerem grandes. */
+ *  crescendo do pé ao topo. A câmera enquadra só o lance e as barras dele (as esperas
+ *  passam do topo), como o link de demonstração da armadura, para elas aparecerem grandes. */
 function atoArmadura(ctx: ContextoVista, chave: string, comAnimacao: boolean): Ato {
   const e = ctx.elemento(chave);
   const caixa = ctx.caixaDe(chave);
@@ -372,6 +372,8 @@ function atoArmadura(ctx: ContextoVista, chave: string, comAnimacao: boolean): A
     }
   }
   ctx.cena.add(raiz);
+  // o alvo é medido com as barras inteiras, antes de elas encolherem para crescer
+  const alvo = caixa?.clone().union(new Box3().setFromObject(raiz));
   raiz.scale.y = comAnimacao ? 0.001 : 1;
   ctx.pedirRender();
   const a = comAnimacao
@@ -383,7 +385,7 @@ function atoArmadura(ctx: ContextoVista, chave: string, comAnimacao: boolean): A
   return {
     pronto: a?.pronto ?? Promise.resolve(),
     enquadrarDepois: false,
-    alvo: caixa,
+    alvo,
     parar: () => {
       a?.parar();
       raiz.traverse((o) => {

@@ -58,9 +58,10 @@ const cena = (page: Page) =>
     };
   });
 
-/** Caixa na tela (px do desenho) do lance da armadura (o contorno do tour) ou do prédio
- *  inteiro, o tamanho do desenho e quantos rótulos de nível estão na cena. */
-const naTela = (page: Page, alvo: "lance" | "predio") =>
+/** Caixa na tela (px do desenho) do lance da armadura (o contorno do tour), das barras
+ *  dele ou do prédio inteiro, o tamanho do desenho e quantos rótulos de nível estão na
+ *  cena. */
+const naTela = (page: Page, alvo: "lance" | "barras" | "predio") =>
   page.evaluate((alvo) => {
     type V = { x: number; y: number; z: number; clone(): V; project(c: unknown): V };
     type Caixa = {
@@ -87,12 +88,14 @@ const naTela = (page: Page, alvo: "lance" | "predio") =>
       o.children.forEach(andar);
     };
     andar(v.cena);
-    const contorno = todos.find((o) => o.name === "tour contorno");
+    const objeto = todos.find(
+      (o) => o.name === (alvo === "lance" ? "tour contorno" : "tour armadura"),
+    );
     const caixa =
       alvo === "predio"
         ? v.caixaNaCena()
-        : contorno
-          ? v.caixaNaCena().clone().makeEmpty().expandByObject(contorno)
+        : objeto
+          ? v.caixaNaCena().clone().makeEmpty().expandByObject(objeto)
           : null;
     const w = v.renderer.domElement.clientWidth;
     const h = v.renderer.domElement.clientHeight;
@@ -188,13 +191,19 @@ for (const [tela, viewport, celular] of [
     expect(cheia.barras).toBeCloseTo(1, 2);
     const lance = await naTela(page, "lance");
     expect(lance.x1).toBeGreaterThan(lance.x0);
-    expect((lance.y1 - lance.y0) / lance.h).toBeGreaterThan(0.7);
+    expect((lance.y1 - lance.y0) / lance.h).toBeGreaterThan(0.6);
     expect(lance.y0).toBeGreaterThan(-2);
     expect(lance.y1).toBeLessThan(lance.h + 2);
     const meioX = (lance.x0 + lance.x1) / 2 / lance.w;
     expect(meioX).toBeGreaterThan(0.3);
     expect(meioX).toBeLessThan(0.7);
     expect(lance.rotulos).toBe(0);
+    // as barras (com as esperas acima do lance) cabem inteiras no desenho
+    const barras = await naTela(page, "barras");
+    expect(barras.y1 - barras.y0).toBeGreaterThan(lance.y1 - lance.y0);
+    expect((barras.y1 - barras.y0) / barras.h).toBeGreaterThan(0.75);
+    expect(barras.y0).toBeGreaterThan(-2);
+    expect(barras.y1).toBeLessThan(barras.h + 2);
     if (celular) expect(await legendaCabe(page)).toBe(true);
     await foto("4-armadura");
 
