@@ -69,7 +69,12 @@ function mostrarParada(s: Sessao) {
   const { titulo, linhas } = p
     ? descreverParada(p, s.ctx.modelo, s.ctx.dados)
     : { titulo: "Sem paradas", linhas: [] };
-  s.legenda.mostrar(`Parada ${estado.indice + 1} de ${s.paradas.length}: ${titulo}`, linhas);
+  s.legenda.mostrar({
+    rotulo: `Parada ${estado.indice + 1} de ${s.paradas.length}`,
+    curto: `${estado.indice + 1}/${s.paradas.length}`,
+    titulo,
+    linhas,
+  });
   mudar({ titulo, linhas, total: s.paradas.length });
 }
 
@@ -199,11 +204,16 @@ function mostrarPiso(s: Sessao) {
   const piso = p
     ? `${p.nome} (+${p.cota.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} m)`
     : "";
-  s.legenda.mostrar(`Caminhando: ${piso}`, [
-    toque()
-      ? "Arraste o controle redondo para andar e girar"
-      : "W/S ou ↑/↓ andam, A/D de lado, ←/→ giram, Q/E descem e sobem, Esc sai",
-  ]);
+  s.legenda.mostrar({
+    rotulo: "Caminhando",
+    curto: "",
+    titulo: piso,
+    linhas: [
+      toque()
+        ? "Arraste o controle redondo para andar e girar"
+        : "W/S ou ↑/↓ andam, A/D de lado, ←/→ giram, Q/E descem e sobem, Esc sai",
+    ],
+  });
   mudar({ piso });
 }
 

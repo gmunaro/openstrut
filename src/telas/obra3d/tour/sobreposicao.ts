@@ -2,20 +2,54 @@
 // Ficam no contêiner do canvas (não no Painel), para aparecer também com o painel lateral
 // oculto e no celular, onde o painel fica abaixo do desenho. Só texto (textContent).
 
-/** Legenda da parada, no alto do desenho, abaixo da barra de vistas. */
+/** O que a legenda mostra: `rotulo` ("Parada 2 de 10"), `curto` ("2/10", no celular
+ *  embutido), o título e as linhas de detalhe. */
+export interface TextoLegenda {
+  rotulo: string;
+  curto: string;
+  titulo: string;
+  linhas: readonly string[];
+}
+
+const span = (texto: string, classe = "") => {
+  const s = document.createElement("span");
+  s.className = classe;
+  s.textContent = texto;
+  return s;
+};
+
+/** Legenda da parada. No app, no alto do desenho, abaixo da barra de vistas, com uma
+ *  linha por detalhe. Embutida (link de demonstração, `data-embutido` num ancestral), vai
+ *  ao canto de cima à direita, numa linha da altura do botão Vistas: fica na faixa de cima
+ *  que o enquadramento já deixa livre, sem cobrir o prédio, o botão nem a legenda das
+ *  cores (embaixo à esquerda). No celular, só o passo e o título ("2/10 · Térreo"). */
 export function criarLegenda(conteiner: HTMLElement) {
+  const embutida = conteiner.closest("[data-embutido]") !== null;
   const el = document.createElement("div");
   el.setAttribute("role", "status");
   el.setAttribute("aria-live", "polite");
   el.dataset.testid = "legenda-tour";
-  el.className =
-    "bg-background/90 pointer-events-none absolute top-24 left-1/2 max-sm:top-32 z-10 grid max-w-[min(22rem,calc(100%-1rem))] -translate-x-1/2 gap-0.5 rounded-md border px-3 py-1.5 text-center text-xs shadow-sm";
+  el.className = embutida
+    ? "bg-background pointer-events-none absolute top-2 right-2 z-10 flex h-6 compacto:h-9 max-w-[calc(100%-7rem)] items-center truncate rounded-md border px-2 text-xs shadow-sm"
+    : "bg-background/90 pointer-events-none absolute top-24 left-1/2 max-sm:top-32 z-10 grid max-w-[min(22rem,calc(100%-1rem))] -translate-x-1/2 gap-0.5 rounded-md border px-3 py-1.5 text-center text-xs shadow-sm";
   conteiner.appendChild(el);
   return {
-    mostrar(titulo: string, linhas: readonly string[]) {
+    mostrar({ rotulo, curto, titulo, linhas }: TextoLegenda) {
+      if (embutida) {
+        const linha = document.createElement("p");
+        linha.className = "min-w-0 truncate tabular-nums";
+        linha.append(
+          span(`${rotulo}: `, "compacto:hidden"),
+          span(curto ? `${curto} · ` : "", "hidden compacto:inline"),
+          span(titulo, "font-semibold"),
+          span(linhas.map((l) => ` · ${l}`).join(""), "compacto:hidden"),
+        );
+        el.replaceChildren(linha);
+        return;
+      }
       const t = document.createElement("p");
       t.className = "font-semibold";
-      t.textContent = titulo;
+      t.textContent = `${rotulo}: ${titulo}`;
       const resto = linhas.map((l) => {
         const p = document.createElement("p");
         p.className = "tabular-nums";
