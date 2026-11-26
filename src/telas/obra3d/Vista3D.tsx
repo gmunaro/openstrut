@@ -17,6 +17,7 @@ import {
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useDemo } from "../demo";
 import { DetalhamentoContexto } from "../detalhamento";
 import { useSessao } from "../sessao";
 import { useCompacto } from "../tela";
@@ -111,6 +112,11 @@ export default function Vista3D({
 }: PropsVista3D) {
   const unidades = useSessao((s) => s.unidades);
   const compacto = useCompacto();
+  // celular num iframe (link de demonstração com embed=1): pouca altura, então a legenda
+  // recolhe, a barra de vistas fica numa linha que rola de lado e o desenho guarda uma
+  // altura mínima (o cartão da peça desce abaixo dele)
+  const embutido = useDemo((s) => s.embutido);
+  const enxuto = compacto && embutido;
   const detalhamento = useContext(DetalhamentoContexto);
   const modelo = useMemo(() => montarModelo(obra), [obra]);
   const dados = useMemo(
@@ -449,6 +455,7 @@ export default function Vista3D({
         className={cn(
           "relative min-h-0 min-w-0 flex-1",
           painel && "compacto:h-[58vh] compacto:flex-none",
+          enxuto && "min-h-72",
         )}
       >
         <div
@@ -486,6 +493,7 @@ export default function Vista3D({
             className={cn(
               barra,
               "bg-background/85 pointer-events-auto w-fit rounded-md border p-0.5 shadow-sm",
+              enxuto && "max-w-full flex-nowrap overflow-x-auto p-1",
             )}
           >
             {VISTAS.map(({ v, rotulo }) => (
@@ -549,6 +557,7 @@ export default function Vista3D({
           }
           original={original && comDefeito.length > 0}
           camadas={legendas}
+          recolhida={enxuto}
         />
 
         {!compacto && cartao}
@@ -873,6 +882,7 @@ function Legenda({
   converter,
   original,
   camadas,
+  recolhida,
 }: {
   modoCor: ModoCor;
   contagem: Record<Estado, number>;
@@ -882,13 +892,12 @@ function Legenda({
   converter: (v: number) => number;
   original: boolean;
   camadas: LegendaCamada[];
+  /** Começa fechada, só com o título "Legenda" (celular embutido). */
+  recolhida: boolean;
 }) {
   const num = (v: number) => converter(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
-  return (
-    <div
-      aria-label="Legenda das cores"
-      className="bg-background/85 absolute bottom-2 left-2 grid max-w-[min(18rem,calc(100%-1rem))] gap-1 rounded-md border p-2 text-[11px] shadow-sm"
-    >
+  const conteudo = (
+    <>
       {camadas.map((l) => (
         <ul key={l.titulo} className="grid gap-0.5">
           <li className="font-semibold">{l.titulo}</li>
@@ -956,6 +965,22 @@ function Legenda({
           afetado por defeito do original (não é falha)
         </span>
       )}
+    </>
+  );
+  const caixa =
+    "bg-background/85 absolute bottom-2 left-2 max-w-[min(18rem,calc(100%-1rem))] rounded-md border p-2 text-[11px] shadow-sm";
+  return recolhida ? (
+    // aberta, não sobe sobre a trilha e a barra de vistas (≈ 5,5 rem no topo)
+    <details
+      aria-label="Legenda das cores"
+      className={cn(caixa, "max-h-[calc(100%-6rem)] overflow-auto")}
+    >
+      <summary className="cursor-pointer py-2.5 font-semibold">Legenda</summary>
+      <div className="mt-1 grid gap-1">{conteudo}</div>
+    </details>
+  ) : (
+    <div aria-label="Legenda das cores" className={cn(caixa, "grid gap-1")}>
+      {conteudo}
     </div>
   );
 }

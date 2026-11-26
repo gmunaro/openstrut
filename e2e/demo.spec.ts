@@ -253,6 +253,39 @@ test("edifício: vista=frente vale mesmo com explodido=1", async ({ page }) => {
   expect(cos).toBeGreaterThan(0.999);
 });
 
+test("edifício no celular embutido: legenda recolhida e barra numa linha", async ({ browser }) => {
+  // o iframe do site no celular: 358 × 520
+  const contexto = await browser.newContext({
+    viewport: { width: 358, height: 520 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await contexto.newPage();
+  const erros = vigiarErros(page);
+  await page.goto(`${EDIFICIO}&explodido=1&cor=nkPilares`);
+  await page.waitForFunction(() => "__vista3d" in window);
+  const legenda = page.getByLabel("Legenda das cores");
+  const escala = legenda.getByText("Nk nos pilares (kN)");
+  // recolhida: um <details> fechado, com a escala escondida
+  await expect(legenda).toHaveJSProperty("tagName", "DETAILS");
+  await expect(escala).toBeHidden();
+  // a barra de vistas fica numa linha só, que rola de lado
+  const vistas = page.getByRole("toolbar", { name: "Vistas" });
+  expect((await vistas.boundingBox())?.height).toBeLessThan(60);
+  expect(await vistas.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  const desenho = await page.getByTestId("vista-3d").locator("canvas").boundingBox();
+  expect(desenho?.height).toBeGreaterThanOrEqual(288);
+  await expect(page.getByText(AVISO)).toBeVisible();
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: path.join(PRINTS, "edificio-celular.png") });
+  // aberta, a legenda mostra a escala do Nk
+  await legenda.getByText("Legenda", { exact: true }).click();
+  await expect(legenda).toHaveAttribute("open", "");
+  await expect(escala).toBeVisible();
+  expect(erros).toEqual([]);
+  await contexto.close();
+});
+
 test("sem embed, o link abre a demo e mostra a dica da tela", async ({ page }) => {
   await page.goto("/?exemplo=nbr6118-2023&aba=resultados");
   await expect(page).toHaveURL(/\/obra$/);
