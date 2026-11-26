@@ -2,7 +2,8 @@
 // obra subindo, o caminho das cargas, a armadura em raio-x e o Nk no explodido, cada um
 // desfeito ao sair, no computador e no iframe do celular (348 × 459), com o console limpo.
 // O enquadramento usa a altura livre (o prédio final na obra, o lance na armadura), os
-// rótulos dos níveis somem de perto e a legenda do celular cabe numa linha.
+// rótulos dos níveis somem de perto e a legenda do celular cabe numa linha. Embutido, o
+// tour toca e anima mesmo com prefers-reduced-motion e segue depois da aba congelada.
 // Rode com bun x playwright test e2e/tour-historia.spec.ts.
 import { expect, type Page, test } from "@playwright/test";
 import fs from "node:fs";
@@ -123,9 +124,21 @@ const legendaCabe = (page: Page) =>
     .first()
     .evaluate((p) => p.scrollWidth <= p.clientWidth + 1);
 
-for (const [tela, viewport, celular] of [
-  ["computador", { width: 1200, height: 640 }, false],
-  ["celular", { width: 348, height: 459 }, true],
+/** Alturas das setas do caminho das cargas (vazio sem elas). */
+const alturasSetas = (page: Page) =>
+  page.evaluate(() => {
+    type Obj = { name: string; children: Obj[]; position: { y: number } };
+    const c = (window as unknown as { __vista3d: { cena: Obj } }).__vista3d;
+    const achar = (o: Obj): Obj | undefined =>
+      o.name === "tour setas" ? o : o.children.map(achar).find(Boolean);
+    return achar(c.cena)?.children.map((m) => m.position.y) ?? [];
+  });
+
+// o embutido ignora o movimento reduzido: o mesmo tour, animado, que avança sozinho
+for (const [tela, viewport, celular, reduzido] of [
+  ["computador", { width: 1200, height: 640 }, false, false],
+  ["celular", { width: 348, height: 459 }, true, false],
+  ["computador, movimento reduzido", { width: 1200, height: 640 }, false, true],
 ] as const)
   test(`tour guiado embutido (${tela}): os atos da obra, das cargas, da armadura e do Nk`, async ({
     browser,
@@ -136,14 +149,18 @@ for (const [tela, viewport, celular] of [
       isMobile: celular,
       hasTouch: celular,
       colorScheme: "dark",
+      reducedMotion: reduzido ? "reduce" : "no-preference",
     });
     const page = await contexto.newPage();
     const erros = vigiarErros(page);
     await page.goto(TOUR);
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(
+      reduzido,
+    );
     const legenda = page.getByTestId("legenda-tour");
     const texto = (t: RegExp) => expect(legenda).toContainText(t, { timeout: 20_000 });
     const foto = (nome: string) =>
-      page.screenshot({ path: path.join(PRINTS, `${tela}-${nome}.png`) });
+      page.screenshot({ path: path.join(PRINTS, `${tela.replace(/\W+/g, "-")}-${nome}.png`) });
     await texto(/Prédio inteiro/);
     await page.waitForTimeout(1200);
     // o celular embutido nunca mostra os rótulos; no computador, o prédio inteiro os mostra
@@ -174,6 +191,10 @@ for (const [tela, viewport, celular] of [
     expect(cargas.visiveis).toBe(cargas.total);
     expect(cargas.cores).toContain("tour");
     expect(cargas.setas).toBe(true);
+    // as setas descem em ciclo
+    const setas = await alturasSetas(page);
+    await page.waitForTimeout(300);
+    expect(await alturasSetas(page)).not.toEqual(setas);
     if (celular) expect(await legendaCabe(page)).toBe(true);
     await page.waitForTimeout(3000);
     await foto("3-cargas");
@@ -188,6 +209,8 @@ for (const [tela, viewport, celular] of [
     await page.waitForTimeout(2500);
     const cheia = await cena(page);
     expect(meio.barras).not.toBeNull();
+    // ainda crescendo aos 0,6 s dos 2,5 s
+    expect(meio.barras!).toBeLessThan(0.99);
     expect(cheia.barras).toBeCloseTo(1, 2);
     const lance = await naTela(page, "lance");
     expect(lance.x1).toBeGreaterThan(lance.x0);
@@ -351,6 +374,28 @@ test("tour guiado com movimento reduzido: atos no estado final, parados, e desfe
   await page.getByRole("button", { name: "Tour", exact: true }).click();
   await expect(legenda).toHaveCount(0);
   expect(await sobras(page)).toEqual({ fontes: [], objetos: [], rotulo: 0, explodido: false });
+  expect(erros).toEqual([]);
+  await contexto.close();
+});
+
+test("tour guiado embutido: a aba congelada no meio de um ato segue ao voltar", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const contexto = await browser.newContext({ viewport: { width: 1200, height: 640 } });
+  const page = await contexto.newPage();
+  const erros = vigiarErros(page);
+  await page.goto(TOUR);
+  const legenda = page.getByTestId("legenda-tour");
+  await expect(legenda).toContainText(/A obra sobe/, { timeout: 20_000 });
+  // a aba em segundo plano no caso extremo: congelada (sem quadros nem timers) por 5 s
+  const cdp = await contexto.newCDPSession(page);
+  await cdp.send("Page.setWebLifecycleState", { state: "frozen" });
+  await new Promise((ok) => setTimeout(ok, 5000));
+  await cdp.send("Page.setWebLifecycleState", { state: "active" });
+  // de volta, o ato termina e o tour segue para as paradas seguintes
+  await expect(legenda).toContainText(/Caminho das cargas/, { timeout: 20_000 });
+  await expect(legenda).toContainText(/Armadura · /, { timeout: 20_000 });
   expect(erros).toEqual([]);
   await contexto.close();
 });

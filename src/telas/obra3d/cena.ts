@@ -149,7 +149,7 @@ export const ESTADO_INICIAL: EstadoVisual = {
   marcas: true,
 };
 
-const movimentoReduzido = () =>
+const prefereMovimentoReduzido = () =>
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -264,7 +264,7 @@ export class Cena3D implements ContextoVista {
     this.cena.add(this.destaque);
 
     this.controles = new OrbitControls(this.camera, canvas);
-    this.controles.enableDamping = !movimentoReduzido();
+    this.controles.enableDamping = !prefereMovimentoReduzido();
     this.controles.screenSpacePanning = true;
     this.controles.listenToKeyEvents(canvas);
     this.controles.addEventListener("change", () => {
@@ -462,6 +462,7 @@ export class Cena3D implements ContextoVista {
       planos: [...this.planos.keys()].filter((k) => k !== "eixo"),
       legendas: [...this.legendas.keys()],
       rotulosOcultos: [...this.rotulosOcultos],
+      movimentoForcado: [...this.movimentoForcado],
     };
   }
 
@@ -512,7 +513,7 @@ export class Cena3D implements ContextoVista {
     // o explodido só move os grupos dos níveis: não refaz a geometria
     if (Object.keys(parcial).every((k) => k === "explodido")) {
       this.definirDeslocamentos();
-      if (movimentoReduzido()) this.aplicarDeslocamentos();
+      if (this.movimentoReduzido) this.aplicarDeslocamentos();
       this.sujo = true;
       this.emitir("explodido");
       return;
@@ -525,7 +526,7 @@ export class Cena3D implements ContextoVista {
     const n = this.modelo.niveis.length;
     const gap = this.estado.explodido ? this.vaoExplodido() : 0;
     this.deslocamentosAlvo = Array.from({ length: n }, (_, i) => i * gap);
-    if (this.deslocamentos.length !== n || movimentoReduzido())
+    if (this.deslocamentos.length !== n || this.movimentoReduzido)
       this.deslocamentos = [...this.deslocamentosAlvo];
   }
 
@@ -1318,6 +1319,18 @@ export class Cena3D implements ContextoVista {
     this.margens = m;
   }
 
+  /** Fontes que pedem movimento mesmo com prefers-reduced-motion (forcarMovimento). */
+  private movimentoForcado = new Set<string>();
+
+  get movimentoReduzido() {
+    return this.movimentoForcado.size === 0 && prefereMovimentoReduzido();
+  }
+
+  forcarMovimento(id: string, sim: boolean) {
+    if (sim) this.movimentoForcado.add(id);
+    else this.movimentoForcado.delete(id);
+  }
+
   /** Fontes que pediram os rótulos dos níveis escondidos (ocultarRotulosNiveis). */
   private rotulosOcultos = new Set<string>();
 
@@ -1521,7 +1534,7 @@ export class Cena3D implements ContextoVista {
     const alvoDe = this.controles.target.clone();
     const destino = posicao.clone();
     const alvoFinal = alvo.clone();
-    if (!animar || movimentoReduzido() || de.lengthSq() === 0) {
+    if (!animar || this.movimentoReduzido || de.lengthSq() === 0) {
       this.camera.position.copy(destino);
       this.controles.target.copy(alvoFinal);
       this.controles.update();

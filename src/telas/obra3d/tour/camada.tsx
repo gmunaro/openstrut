@@ -5,7 +5,8 @@
 // da animação, e recomeça. Com Anterior, Próxima e Pausar. Outra ação que leva a câmera (botão de vista, outra camada)
 // pausa o tour. Livre: anda pela estrutura em primeira pessoa (caminhada.ts), pelo teclado
 // ou pelo joystick na tela, com a órbita travada. Com prefers-reduced-motion, a câmera
-// salta sem animar e o tour só avança pelos botões.
+// salta sem animar e o tour só avança pelos botões; no embutido (embed=1, o tour do site),
+// a preferência não vale: toca e anima sempre, com Pausar.
 import { useSyncExternalStore } from "react";
 import { Box3, Sphere, Vector3 } from "three";
 import { Button } from "@/components/ui/button";
@@ -18,8 +19,6 @@ import { criarJoystick, criarLegenda } from "./sobreposicao";
 /** Tempo em cada parada depois que a câmera chega, ms. */
 export const DURACAO_PARADA = 2500;
 
-const movimentoReduzido = () =>
-  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const toque = () => typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 const ortografica = (ctx: ContextoVista) => "isOrthographicCamera" in ctx.camera;
 
@@ -109,7 +108,8 @@ function alvoDa(ctx: ContextoVista, p: Parada) {
 /** Paradas de perto (uma peça, um grupo, um nível, a armadura): sem os rótulos dos níveis,
  *  que ficam ao lado do prédio inteiro, longe do que a câmera mostra. */
 const DE_PERTO = new Set<Parada["tipo"]>(["armadura", "nivel", "peca", "grupo"]);
-const ID_ROTULOS = "tour";
+/** Fonte do tour nas escolhas da vista (rótulos dos níveis, movimento forçado). */
+const ID = "tour";
 
 function pararAto(s: Sessao) {
   s.ato?.parar();
@@ -135,10 +135,10 @@ async function irPara(s: Sessao, i: number) {
   mudar({ indice: i });
   mostrarParada(s);
   const { ctx } = s;
-  const animar = !movimentoReduzido();
+  const animar = !ctx.movimentoReduzido;
   ctx.selecionar(p.tipo === "peca" && ctx.elemento(p.chave) ? p.chave : null);
   // de perto, o rótulo do nível fica longe do desenho e rouba largura do enquadramento
-  ctx.ocultarRotulosNiveis(ID_ROTULOS, DE_PERTO.has(p.tipo));
+  ctx.ocultarRotulosNiveis(ID, DE_PERTO.has(p.tipo));
   // o ato lê as alturas da cena: espera o explodido (de um ato anterior) assentar
   if (ctx.explodidoEmAnimacao) {
     await new Promise<void>((ok) => {
@@ -283,7 +283,7 @@ function entrarLivre(s: Sessao) {
   pausar(s);
   pararAto(s);
   ctx.selecionar(null);
-  ctx.ocultarRotulosNiveis(ID_ROTULOS, false);
+  ctx.ocultarRotulosNiveis(ID, false);
   ctx.travarControles(true);
   // começa no chão, 4 m à frente da fachada de y mínimo (z máximo na cena), olhando o prédio
   const caixa = ctx.caixaNaCena();
@@ -349,7 +349,7 @@ function sairLivre(s: Sessao, enquadrar = true) {
   s.ctx.travarControles(false);
   mudar({ modo: "guiado", piso: "" });
   mostrarParada(s);
-  if (enquadrar) void s.ctx.enquadrarEm(s.ctx.caixaVisivel(), !movimentoReduzido());
+  if (enquadrar) void s.ctx.enquadrarEm(s.ctx.caixaVisivel(), !s.ctx.movimentoReduzido);
 }
 
 // ---- Painel e ciclo de vida -------------------------------------------------------------
@@ -460,6 +460,9 @@ export const camada: Camada = {
     };
     sessao = s;
     estado = { ...estado, modo: "guiado", indice: 0, aviso: "", ortografica: ortografica(ctx) };
+    // o tour embutido no site toca sozinho em qualquer navegador, com as animações, mesmo
+    // com prefers-reduced-motion (o visitante pausa pelo botão)
+    if (conteiner.closest("[data-embutido]")) ctx.forcarMovimento(ID, true);
     let visto = { modelo: ctx.modelo, dados: ctx.dados, detalhamento: ctx.detalhamento };
     const parar = [
       // obra editada: paradas novas; a parada atual fica no limite da lista (os atos mudam
@@ -493,7 +496,7 @@ export const camada: Camada = {
           pausar(s, "Tour pausado: outra ação levou a câmera.");
       }),
     ];
-    if (movimentoReduzido()) {
+    if (ctx.movimentoReduzido) {
       mudar({ aviso: "Movimento reduzido: o tour não anima e avança pelos botões." });
       void irPara(s, 0);
     } else tocar(s);
@@ -502,7 +505,8 @@ export const camada: Camada = {
       sairLivre(s, false);
       pausar(s);
       pararAto(s);
-      ctx.ocultarRotulosNiveis(ID_ROTULOS, false);
+      ctx.ocultarRotulosNiveis(ID, false);
+      ctx.forcarMovimento(ID, false);
       s.legenda.remover();
       ctx.travarControles(false);
       sessao = null;
