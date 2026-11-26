@@ -144,9 +144,11 @@ export function descreverParada(
   if (p.tipo === "armadura") {
     const e = modelo.elementos.find((x) => x.chave === p.chave);
     const d = dados.get(p.chave);
+    const nivel = e && modelo.niveis[e.nivel]?.nome;
+    // título curto: no celular embutido a legenda é uma linha só, sem as linhas
     return {
-      titulo: `Armadura do ${p.coluna} · ${(e && modelo.niveis[e.nivel]?.nome) ?? "—"}`,
-      linhas: d?.principal ? [d.principal] : [],
+      titulo: `Armadura · ${p.coluna}`,
+      linhas: [...(nivel ? [nivel] : []), ...(d?.principal ? [d.principal] : [])],
     };
   }
   if (p.tipo === "nk") {

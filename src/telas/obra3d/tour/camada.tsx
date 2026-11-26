@@ -106,6 +106,11 @@ function alvoDa(ctx: ContextoVista, p: Parada) {
   return esfera;
 }
 
+/** Paradas de perto (uma peça, um grupo, um nível, a armadura): sem os rótulos dos níveis,
+ *  que ficam ao lado do prédio inteiro, longe do que a câmera mostra. */
+const DE_PERTO = new Set<Parada["tipo"]>(["armadura", "nivel", "peca", "grupo"]);
+const ID_ROTULOS = "tour";
+
 function pararAto(s: Sessao) {
   s.ato?.parar();
   s.ato = null;
@@ -132,6 +137,8 @@ async function irPara(s: Sessao, i: number) {
   const { ctx } = s;
   const animar = !movimentoReduzido();
   ctx.selecionar(p.tipo === "peca" && ctx.elemento(p.chave) ? p.chave : null);
+  // de perto, o rótulo do nível fica longe do desenho e rouba largura do enquadramento
+  ctx.ocultarRotulosNiveis(ID_ROTULOS, DE_PERTO.has(p.tipo));
   // o ato lê as alturas da cena: espera o explodido (de um ato anterior) assentar
   if (ctx.explodidoEmAnimacao) {
     await new Promise<void>((ok) => {
@@ -276,6 +283,7 @@ function entrarLivre(s: Sessao) {
   pausar(s);
   pararAto(s);
   ctx.selecionar(null);
+  ctx.ocultarRotulosNiveis(ID_ROTULOS, false);
   ctx.travarControles(true);
   // começa no chão, 4 m à frente da fachada de y mínimo (z máximo na cena), olhando o prédio
   const caixa = ctx.caixaNaCena();
@@ -494,6 +502,7 @@ export const camada: Camada = {
       sairLivre(s, false);
       pausar(s);
       pararAto(s);
+      ctx.ocultarRotulosNiveis(ID_ROTULOS, false);
       s.legenda.remover();
       ctx.travarControles(false);
       sessao = null;

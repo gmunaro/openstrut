@@ -461,6 +461,7 @@ export class Cena3D implements ContextoVista {
       materiais: [...this.fabricas.keys()],
       planos: [...this.planos.keys()].filter((k) => k !== "eixo"),
       legendas: [...this.legendas.keys()],
+      rotulosOcultos: [...this.rotulosOcultos],
     };
   }
 
@@ -622,7 +623,8 @@ export class Cena3D implements ContextoVista {
     const cor = new Color();
     const original = this.obra.modoCalculo === "original";
     const foco = this.estado.foco;
-    const mostraRotulos = foco.tipo !== "elemento" && this.rotulosNiveis;
+    const mostraRotulos =
+      foco.tipo !== "elemento" && this.rotulosNiveis && this.rotulosOcultos.size === 0;
     const eixo =
       foco.tipo === "eixo" ? this.modelo.eixos.find((x) => x.chave === foco.chave) : undefined;
 
@@ -1314,6 +1316,16 @@ export class Cena3D implements ContextoVista {
   /** Margens da interface sobre o desenho; valem a partir do próximo enquadramento. */
   definirMargens(m: Margens) {
     this.margens = m;
+  }
+
+  /** Fontes que pediram os rótulos dos níveis escondidos (ocultarRotulosNiveis). */
+  private rotulosOcultos = new Set<string>();
+
+  ocultarRotulosNiveis(id: string, sim: boolean) {
+    const antes = this.rotulosOcultos.size > 0;
+    if (sim) this.rotulosOcultos.add(id);
+    else this.rotulosOcultos.delete(id);
+    if (this.rotulosOcultos.size > 0 !== antes) this.reconstruir();
   }
 
   /** Liga ou desliga os rótulos dos níveis (o celular embutido os esconde). */
