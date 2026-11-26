@@ -100,6 +100,7 @@ export interface FontesAtivas {
   materiais: string[];
   planos: string[];
   legendas: string[];
+  rotulosOcultos: string[];
 }
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
@@ -194,6 +195,10 @@ export interface ContextoVista {
    *  animação; não mexe na câmera. Quem explode para mostrar algo devolve o estado de
    *  antes na limpeza. */
   definirExplodido(sim: boolean): void;
+  /** Esconde (`sim`) os rótulos dos níveis ao lado do prédio enquanto alguma fonte pedir
+   *  (o tour, de perto numa peça ou num nível, onde o rótulo ficaria longe do desenho);
+   *  `false` tira o pedido desta fonte. Refaz a geometria só quando a soma muda. */
+  ocultarRotulosNiveis(id: string, sim: boolean): void;
   /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
   caixaDe(chave: string): Box3 | undefined;
   /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */

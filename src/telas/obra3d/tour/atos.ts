@@ -10,13 +10,15 @@ import {
   DoubleSide,
   Float32BufferAttribute,
   Group,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
   Sphere,
   Vector3,
 } from "three";
-import type { ContextoVista } from "../api";
+import { COR_SELECAO, type ContextoVista } from "../api";
 import {
   agruparPorMaterial,
   COR_TIPO,
@@ -314,15 +316,39 @@ function atoCargas(ctx: ContextoVista, caminho: CaminhoCargas, comAnimacao: bool
   };
 }
 
-/** Raio-x: o prédio transparente e as barras do lance crescendo do pé ao topo dele. */
+/** As 12 arestas de uma caixa, em pares de pontos para LineSegments. */
+function arestasDaCaixa(c: Box3) {
+  const p = (i: number) => [
+    i & 1 ? c.max.x : c.min.x,
+    i & 2 ? c.max.y : c.min.y,
+    i & 4 ? c.max.z : c.min.z,
+  ];
+  const pares = [0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 1, 3, 4, 6, 5, 7, 0, 4, 1, 5, 2, 6, 3, 7];
+  const geo = new BufferGeometry();
+  geo.setAttribute("position", new Float32BufferAttribute(pares.flatMap(p), 3));
+  return geo;
+}
+
+/** Raio-x: o prédio transparente, o lance com o contorno da seleção e as barras dele
+ *  crescendo do pé ao topo. A câmera enquadra só o lance e as barras dele (as esperas
+ *  passam do topo), como o link de demonstração da armadura, para elas aparecerem grandes. */
 function atoArmadura(ctx: ContextoVista, chave: string, comAnimacao: boolean): Ato {
   const e = ctx.elemento(chave);
   const caixa = ctx.caixaDe(chave);
-  const esfera = caixa?.getBoundingSphere(new Sphere());
-  if (esfera) esfera.radius = Math.max(esfera.radius * 1.6, 3);
   ctx.definirTransparencia(ID, () => true);
   const raiz = new Group();
   raiz.name = "tour armadura";
+  const contorno = caixa
+    ? new LineSegments(
+        arestasDaCaixa(caixa),
+        new LineBasicMaterial({ color: COR_SELECAO, depthTest: false }),
+      )
+    : null;
+  if (contorno) {
+    contorno.name = "tour contorno";
+    contorno.renderOrder = 6;
+    ctx.cena.add(contorno);
+  }
   const materiais = new Map<TipoBarra, MeshLambertMaterial>();
   const barras = e ? ctx.barrasDe(chave) : undefined;
   if (e && caixa && barras) {
@@ -346,6 +372,8 @@ function atoArmadura(ctx: ContextoVista, chave: string, comAnimacao: boolean): A
     }
   }
   ctx.cena.add(raiz);
+  // o alvo é medido com as barras inteiras, antes de elas encolherem para crescer
+  const alvo = caixa?.clone().union(new Box3().setFromObject(raiz));
   raiz.scale.y = comAnimacao ? 0.001 : 1;
   ctx.pedirRender();
   const a = comAnimacao
@@ -357,13 +385,18 @@ function atoArmadura(ctx: ContextoVista, chave: string, comAnimacao: boolean): A
   return {
     pronto: a?.pronto ?? Promise.resolve(),
     enquadrarDepois: false,
-    alvo: esfera,
+    alvo,
     parar: () => {
       a?.parar();
       raiz.traverse((o) => {
         if (o instanceof Mesh) o.geometry.dispose();
       });
       ctx.cena.remove(raiz);
+      if (contorno) {
+        ctx.cena.remove(contorno);
+        contorno.geometry.dispose();
+        contorno.material.dispose();
+      }
       for (const m of materiais.values()) m.dispose();
       ctx.definirTransparencia(ID, null);
       ctx.pedirRender();

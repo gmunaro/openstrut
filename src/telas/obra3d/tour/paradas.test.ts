@@ -151,8 +151,8 @@ describe("atos da estrutura", () => {
     expect(
       descreverParada({ tipo: "armadura", chave: p1.chave, coluna: "P1" }, modelo, comNk),
     ).toEqual({
-      titulo: "Armadura do P1 · Primeiro",
-      linhas: ["Nk = 640,00 kN, Nd = 896,00 kN; As = 9,07 cm² (0,45 %)"],
+      titulo: "Armadura · P1",
+      linhas: ["Primeiro", "Nk = 640,00 kN, Nd = 896,00 kN; As = 9,07 cm² (0,45 %)"],
     });
     expect(descreverParada({ tipo: "nk", caminho }, modelo, comNk)).toEqual({
       titulo: "Nk nos pilares",

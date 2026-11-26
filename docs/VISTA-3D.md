@@ -166,7 +166,7 @@ Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original ×
 | `comparar` | `comparar/` | Original × Corrigido: calcula o outro modo, pinta as diferenças e diz, na lista e no cartão da peça, que defeitos do original a atingem, com link para a explicação em Resultados |
 | `ar` | `ar/` | realidade aumentada no celular (WebXR, maquete na mesa ou 1:1) |
 | `render` | `render/` | materiais PBR, luz de estúdio, sombras e path tracing progressivo |
-| `tour` | `tour/` | tour guiado que conta a estrutura em atos animados com o cálculo da obra (a obra subindo pelas etapas da 4D, o caminho das cargas pela coluna mais carregada com o Nk de cada lance, a armadura do lance de baixo em raio-x e o Nk dos pilares no explodido), depois para nos níveis, nas falhas e nos defeitos agrupados por nível e recomeça; e caminhada em primeira pessoa |
+| `tour` | `tour/` | tour guiado que conta a estrutura em atos animados com o cálculo da obra (a obra subindo pelas etapas da 4D, o caminho das cargas pela coluna mais carregada com o Nk de cada lance, a armadura do lance de baixo em raio-x e o Nk dos pilares no explodido), depois para nos níveis, nas falhas e nos defeitos agrupados por nível (de perto, sem os rótulos dos níveis) e recomeça; e caminhada em primeira pessoa |
 
 ### Ciclo de vida
 
@@ -365,6 +365,10 @@ export interface ContextoVista {
    *  animação; não mexe na câmera. Quem explode para mostrar algo devolve o estado de
    *  antes na limpeza. */
   definirExplodido(sim: boolean): void;
+  /** Esconde (`sim`) os rótulos dos níveis ao lado do prédio enquanto alguma fonte pedir
+   *  (o tour, de perto numa peça ou num nível, onde o rótulo ficaria longe do desenho);
+   *  `false` tira o pedido desta fonte. Refaz a geometria só quando a soma muda. */
+  ocultarRotulosNiveis(id: string, sim: boolean): void;
   /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
   caixaDe(chave: string): Box3 | undefined;
   /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */
@@ -433,6 +437,7 @@ export interface FontesAtivas {
   materiais: string[];
   planos: string[];
   legendas: string[];
+  rotulosOcultos: string[];
 }
 
 /** Legenda de uma camada, mostrada na legenda da vista. Com `substitui`, esconde a
@@ -939,6 +944,7 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()`, `caixaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera e caixa das peças visíveis (`Sphere` e `Box3`, com o explodido; para enquadrar o prédio, a caixa) |
 | `caixaDoNivel(i)`, `enquadrarEm(caixa)` | caixa das lajes, vigas e pilares do nível na cena (`Box3`, com o explodido) e o enquadramento dela com a direção atual da câmera e a margem do botão Enquadrar. Para ir a um nível: `ctx.enquadrarEm(ctx.caixaDoNivel(i)!)` |
 | `explodidoEmAnimacao` | `true` enquanto o explodido anima; no último aviso de `"explodido"` já é `false` |
+| `ocultarRotulosNiveis(id, sim)` | esconde os rótulos dos níveis enquanto alguma fonte pedir (o tour nos closes de peça e de nível). Refaz a geometria quando a soma muda |
 | `explodido`, `definirExplodido(sim)` | se o prédio está explodido, e explodir ou juntar os níveis, como o botão Explodido (que acompanha). Quem explode para mostrar algo (o tour) devolve o estado de antes na limpeza |
 | `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |
 | `estaVisivel(chave)`, `exibicao(chave)` | se a peça aparece considerando tudo (foco, tipos e pavimentos ocultos, filtros de todas as camadas e planos de corte) e como o foco a mostra (`"solido"`, `"fantasma"` ou `"oculto"`) |
