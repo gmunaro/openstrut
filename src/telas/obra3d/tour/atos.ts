@@ -57,8 +57,8 @@ export interface Ato {
 
 /** Maior passo de tempo de um quadro nos atos, s. A aba que volta do segundo plano traz no
  *  primeiro quadro todo o tempo em que ficou oculta; com o teto, o ato continua de onde
- *  estava em vez de pular para o fim. Acima de 4 quadros por segundo, segue o relógio. */
-const PASSO_MAXIMO = 0.25;
+ *  estava em vez de pular para o fim. Acima de 2 quadros por segundo, segue o relógio. */
+const PASSO_MAXIMO = 0.5;
 
 /** Roda `passo(t)` com t de 0 a 1 ao longo de `ms`; resolve no fim ou ao parar. */
 function animar(ctx: ContextoVista, ms: number, passo: (t: number) => void) {

@@ -378,7 +378,7 @@ test("tour guiado com movimento reduzido: atos no estado final, parados, e desfe
   await contexto.close();
 });
 
-test("tour guiado embutido com movimento reduzido: a aba congelada no meio da obra segue ao voltar", async ({
+test("tour guiado embutido com movimento reduzido: a aba em segundo plano no meio da obra segue ao voltar", async ({
   browser,
 }) => {
   test.setTimeout(120_000);
@@ -392,31 +392,40 @@ test("tour guiado embutido com movimento reduzido: a aba congelada no meio da ob
   const legenda = page.getByTestId("legenda-tour");
   await expect(legenda).toContainText(/A obra sobe/, { timeout: 20_000 });
   await page.waitForTimeout(1500);
-  // conta os quadros da página, para saber se o congelamento pegou
+  // conta os quadros e os tiques de um relógio de 100 ms da página
   await page.evaluate(() => {
-    const w = window as unknown as { quadrosTeste: number };
+    const w = window as unknown as { quadrosTeste: number; tiquesTeste: number };
     w.quadrosTeste = 0;
+    w.tiquesTeste = 0;
     const contar = () => {
       w.quadrosTeste++;
       requestAnimationFrame(contar);
     };
     requestAnimationFrame(contar);
+    setInterval(() => w.tiquesTeste++, 100);
   });
-  const quadros = () =>
-    page.evaluate(() => (window as unknown as { quadrosTeste: number }).quadrosTeste);
+  const contagem = () =>
+    page.evaluate(() => {
+      const w = window as unknown as { quadrosTeste: number; tiquesTeste: number };
+      return { quadros: w.quadrosTeste, tiques: w.tiquesTeste };
+    });
   const visiveis = async () => (await cena(page)).visiveis;
-  const antes = { quadros: await quadros(), pecas: await visiveis() };
-  // a aba em segundo plano no caso extremo: outra aba na frente e esta congelada (sem
-  // quadros nem timers) por 5 s
+  // grupo de controle: quadros por tique com a aba na frente (o ritmo desta máquina)
+  const c0 = await contagem();
+  await page.waitForTimeout(1000);
+  const c1 = await contagem();
+  const ritmo = (c1.quadros - c0.quadros) / Math.max(1, c1.tiques - c0.tiques);
+  const antes = { ...(await contagem()), pecas: await visiveis() };
+  // em segundo plano (outra aba na frente) por 5 s: sem quadros, com os timers andando
   const outra = await contexto.newPage();
   await outra.bringToFront();
-  const cdp = await contexto.newCDPSession(page);
-  await cdp.send("Page.setWebLifecycleState", { state: "frozen" });
-  await new Promise((ok) => setTimeout(ok, 5000));
-  await cdp.send("Page.setWebLifecycleState", { state: "active" });
+  await outra.waitForTimeout(5000);
   await page.bringToFront();
-  // congelada, quase nenhum quadro passou (solta, a página desenha dezenas em 5 s)
-  expect((await quadros()) - antes.quadros).toBeLessThan(30);
+  const durante = await contagem();
+  const tiques = durante.tiques - antes.tiques;
+  expect(tiques).toBeGreaterThan(30);
+  // atrás, a página desenhou bem menos quadros por tique do que na frente
+  expect((durante.quadros - antes.quadros) / tiques).toBeLessThan(ritmo / 4);
   // de volta, a obra continua subindo de onde estava (não pula para o fim) e o tour segue
   const logo = await visiveis();
   expect(logo).toBeLessThan((await cena(page)).total);
