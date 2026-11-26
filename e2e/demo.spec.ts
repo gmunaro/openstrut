@@ -328,11 +328,11 @@ for (const [tela, viewport, celular] of [
     const desenho = await page.locator("canvas").first().boundingBox();
     const faixa = (caixa?.y ?? 0) + (caixa?.height ?? 0) - (desenho?.y ?? 0);
     expect(predio.topo).toBeGreaterThanOrEqual(faixa - 1);
-    // a próxima parada (um pavimento): o mesmo canto, com o texto novo
+    // a próxima parada (a obra subindo), no mesmo canto; o detalhe só no computador
     const segunda = celular ? /^2\/\d+ · / : /^Parada 2 de/;
     await expect(legenda).toContainText(segunda, { timeout: 8000, useInnerText: true });
-    if (celular) await expect(legenda).not.toContainText("peças", { useInnerText: true });
-    else await expect(legenda).toContainText("peças", { useInnerText: true });
+    if (celular) await expect(legenda).not.toContainText("Fundação", { useInnerText: true });
+    else await expect(legenda).toContainText("Fundação", { useInnerText: true });
     await page.waitForTimeout(1200);
     await confere(2);
     // com a barra aberta, o botão "Ocultar vistas" (mais largo) também fica livre

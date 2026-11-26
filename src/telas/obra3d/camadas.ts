@@ -188,6 +188,12 @@ export interface ContextoVista {
   caixaDoNivel(indice: number): Box3 | undefined;
   /** O explodido ainda está animando: o aviso de "explodido" atual não é o último. */
   readonly explodidoEmAnimacao: boolean;
+  /** O prédio está explodido (ou indo para lá). */
+  readonly explodido: boolean;
+  /** Explode ou junta os níveis, como o botão Explodido (que acompanha), com a mesma
+   *  animação; não mexe na câmera. Quem explode para mostrar algo devolve o estado de
+   *  antes na limpeza. */
+  definirExplodido(sim: boolean): void;
   /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
   caixaDe(chave: string): Box3 | undefined;
   /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */

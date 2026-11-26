@@ -188,6 +188,8 @@ export default function Vista3D({
     const pararLegenda = c.aoMudar("legenda", () => setLegendas(c.legendasCamadas));
     // foco e visibilidade mudados por uma camada (definirFoco): a trilha e o painel seguem
     const pararCena = c.aoMudar("cena", () => setEv(c.estado));
+    // uma camada (o tour) pode explodir o prédio: o botão Explodido acompanha
+    const pararExplodido = c.aoMudar("explodido", () => setEv(c.estado));
     // e2e e depuração: a cena viva, só para leitura
     (window as { __vista3d?: Cena3D }).__vista3d = c;
     const camadas = ativas.current;
@@ -195,6 +197,7 @@ export default function Vista3D({
       parar();
       pararLegenda();
       pararCena();
+      pararExplodido();
       for (const a of camadas.values()) a.limpar?.();
       camadas.clear();
       delete (window as { __vista3d?: Cena3D }).__vista3d;
