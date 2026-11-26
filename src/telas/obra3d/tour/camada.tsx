@@ -1,6 +1,8 @@
-// Camada "Tour". Guiado: para no prédio inteiro, em cada nível de baixo para cima, nas
-// peças com falha e nas afetadas por defeito do original (paradas.ts), 2,5 s em cada, com
-// Anterior, Próxima e Pausar. Outra ação que leva a câmera (botão de vista, outra camada)
+// Camada "Tour". Guiado: para no prédio inteiro; conta a estrutura em atos animados com o
+// cálculo da obra (a obra subindo, o caminho das cargas, a armadura em raio-x e o Nk no
+// explodido, atos.ts); depois para em cada nível de baixo para cima, nas peças com falha
+// e nas afetadas por defeito do original (paradas.ts), 2,5 s em cada depois da câmera e
+// da animação, e recomeça. Com Anterior, Próxima e Pausar. Outra ação que leva a câmera (botão de vista, outra camada)
 // pausa o tour. Livre: anda pela estrutura em primeira pessoa (caminhada.ts), pelo teclado
 // ou pelo joystick na tela, com a órbita travada. Com prefers-reduced-motion, a câmera
 // salta sem animar e o tour só avança pelos botões.
@@ -8,6 +10,7 @@ import { useSyncExternalStore } from "react";
 import { Box3, Sphere, Vector3 } from "three";
 import { Button } from "@/components/ui/button";
 import type { Camada, ContextoVista } from "../api";
+import { type Ato, iniciarAto } from "./atos";
 import { ALTURA_OLHOS, type Caminhante, type Comando, frenteDe, passo, pisos } from "./caminhada";
 import { descreverParada, montarParadas, type Parada } from "./paradas";
 import { criarJoystick, criarLegenda } from "./sobreposicao";
@@ -61,6 +64,8 @@ interface Sessao {
   timer: ReturnType<typeof setTimeout> | null;
   legenda: ReturnType<typeof criarLegenda>;
   livre: Livre | null;
+  /** O ato animado da parada atual (desfeito ao sair dela). */
+  ato: Ato | null;
 }
 let sessao: Sessao | null = null;
 
@@ -85,6 +90,7 @@ const RAIO_PECA = 4;
 function alvoDa(ctx: ContextoVista, p: Parada) {
   if (p.tipo === "todo") return ctx.caixaVisivel();
   if (p.tipo === "nivel") return ctx.caixaDoNivel(p.nivel);
+  if (p.tipo !== "peca" && p.tipo !== "grupo") return undefined;
   if (p.tipo === "grupo") {
     // as peças do grupo juntas
     const caixa = new Box3();
@@ -99,38 +105,59 @@ function alvoDa(ctx: ContextoVista, p: Parada) {
   return esfera;
 }
 
+function pararAto(s: Sessao) {
+  s.ato?.parar();
+  s.ato = null;
+}
+
 function limparTimer(s: Sessao) {
   if (s.timer !== null) clearTimeout(s.timer);
   s.timer = null;
 }
 
-/** Vai à parada `i`: seleciona a peça (ou tira a seleção), enquadra e, tocando, agenda a
- *  próxima. "cancelada" vinda de outra ação pausa o tour; a de uma ida nossa mais nova,
+/** Vai à parada `i`: desfaz o ato da anterior, seleciona a peça (ou tira a seleção),
+ *  começa o ato desta, enquadra e, tocando, agenda a próxima depois da câmera e da
+ *  animação. "cancelada" vinda de outra ação pausa o tour; a de uma ida nossa mais nova,
  *  não. */
 async function irPara(s: Sessao, i: number) {
   limparTimer(s);
   const p = s.paradas[i];
   if (!p) return;
   const ida = ++s.ida;
+  const valendo = () => s.ida === ida && sessao === s;
+  pararAto(s);
   mudar({ indice: i });
   mostrarParada(s);
   const { ctx } = s;
+  const animar = !movimentoReduzido();
   ctx.selecionar(p.tipo === "peca" && ctx.elemento(p.chave) ? p.chave : null);
-  const alvo = alvoDa(ctx, p);
+  const ato = iniciarAto(ctx, p, animar);
+  s.ato = ato;
+  let alvo = ato ? ato.alvo : alvoDa(ctx, p);
+  if (ato?.enquadrarDepois) {
+    await ato.pronto;
+    if (!valendo()) return;
+    alvo = ctx.caixaVisivel();
+  }
   let fim: "concluida" | "cancelada" = "concluida";
   if (alvo) {
     s.movendo = true;
-    fim = await ctx.enquadrarEm(alvo, !movimentoReduzido());
-    if (s.ida !== ida || sessao !== s) return;
+    fim = await ctx.enquadrarEm(alvo, animar);
+    if (!valendo()) return;
     s.movendo = false;
   }
   if (fim === "cancelada") return pausar(s, "Tour pausado: outra ação levou a câmera.");
+  if (ato) {
+    await ato.pronto;
+    if (!valendo()) return;
+  }
   if (estado.tocando) s.timer = setTimeout(() => avancar(s, 1), DURACAO_PARADA);
 }
 
+/** Anda `passo` paradas; tocando, depois da última recomeça da primeira. */
 function avancar(s: Sessao, passo: number) {
   const i = estado.indice + passo;
-  if (i >= s.paradas.length) return pausar(s, "Fim do tour.");
+  if (i >= s.paradas.length) return estado.tocando ? void irPara(s, 0) : undefined;
   void irPara(s, Math.max(0, i));
 }
 
@@ -237,6 +264,7 @@ function entrarLivre(s: Sessao) {
   const { ctx } = s;
   if (s.livre || ortografica(ctx)) return;
   pausar(s);
+  pararAto(s);
   ctx.selecionar(null);
   ctx.travarControles(true);
   // começa no chão, 4 m à frente da fachada de y mínimo (z máximo na cena), olhando o prédio
@@ -404,19 +432,24 @@ export const camada: Camada = {
     const conteiner = ctx.renderer.domElement.parentElement ?? document.body;
     const s: Sessao = {
       ctx,
-      paradas: montarParadas(ctx.modelo, ctx.dados),
+      paradas: montarParadas(ctx.modelo, ctx.dados, { armadura: ctx.detalhamento !== null }),
       ida: 0,
       movendo: false,
       timer: null,
       legenda: criarLegenda(conteiner),
       livre: null,
+      ato: null,
     };
     sessao = s;
     estado = { ...estado, modo: "guiado", indice: 0, aviso: "", ortografica: ortografica(ctx) };
+    let visto = { modelo: ctx.modelo, dados: ctx.dados };
     const parar = [
-      // obra editada: paradas novas; a parada atual fica no limite da lista
+      // obra editada: paradas novas; a parada atual fica no limite da lista (os atos mudam
+      // cores e transparências, que também avisam "cena", sem mudar a obra)
       ctx.aoMudar("cena", () => {
-        s.paradas = montarParadas(ctx.modelo, ctx.dados);
+        if (ctx.modelo === visto.modelo && ctx.dados === visto.dados) return;
+        visto = { modelo: ctx.modelo, dados: ctx.dados };
+        s.paradas = montarParadas(ctx.modelo, ctx.dados, { armadura: ctx.detalhamento !== null });
         mudar({ indice: Math.min(estado.indice, Math.max(0, s.paradas.length - 1)) });
         if (s.livre) mostrarPiso(s);
         else mostrarParada(s);
@@ -444,6 +477,7 @@ export const camada: Camada = {
       parar.forEach((f) => f());
       sairLivre(s, false);
       pausar(s);
+      pararAto(s);
       s.legenda.remover();
       ctx.travarControles(false);
       sessao = null;

@@ -137,10 +137,12 @@ A aba carrega `Vista3D` por `import()` dinâmico. O three.js e o código da vist
 | `3d-GLTFExporter` | 36,8 kB | 10,8 kB | ao exportar glTF |
 | `3d-camadas-corte` | 1,5 kB | 0,8 kB | ao ligar a camada |
 | `3d-comparar-camada` | 7,6 kB | 3,1 kB | ao ligar a camada |
-| `3d-armadura-camada` | 8,5 kB | 3,6 kB | ao ligar a camada |
+| `3d-armadura-camada` | 5,5 kB | 2,4 kB | ao ligar a camada |
+| `3d-logica` (barras da armadura, também no tour) | 3,3 kB | 1,6 kB | ao ligar a armadura ou o tour |
 | `3d-render-camada` | 9,1 kB | 3,8 kB | ao ligar a camada |
-| `3d-sequencia-camada` | 9,5 kB | 4,0 kB | ao ligar a camada |
-| `3d-tour-camada` | 11,9 kB | 4,9 kB | ao ligar a camada |
+| `3d-sequencia-camada` | 8,0 kB | 3,3 kB | ao ligar a camada |
+| `3d-etapas` (etapas da 4D, também no tour) | 1,9 kB | 1,0 kB | ao ligar a 4D ou o tour |
+| `3d-tour-camada` | 20,7 kB | 8,1 kB | ao ligar a camada |
 | `3d-ar-camada` | 13,4 kB | 5,3 kB | ao ligar a camada |
 | `3d-render-tracado` (path tracing) | 205,3 kB | 59,1 kB | ao ligar o path tracing no render |
 | carregamento inicial (`index`) | +0,4 kB | +0,1 kB | sempre |
@@ -164,7 +166,7 @@ Recursos novos da vista (armadura 3D, render PBR, tour, comparação Original ×
 | `comparar` | `comparar/` | Original × Corrigido: calcula o outro modo, pinta as diferenças e diz, na lista e no cartão da peça, que defeitos do original a atingem, com link para a explicação em Resultados |
 | `ar` | `ar/` | realidade aumentada no celular (WebXR, maquete na mesa ou 1:1) |
 | `render` | `render/` | materiais PBR, luz de estúdio, sombras e path tracing progressivo |
-| `tour` | `tour/` | tour guiado pelas paradas (níveis, falhas e defeitos agrupados por nível) e caminhada em primeira pessoa |
+| `tour` | `tour/` | tour guiado que conta a estrutura em atos animados com o cálculo da obra (a obra subindo pelas etapas da 4D, o caminho das cargas pela coluna mais carregada com o Nk de cada lance, a armadura do lance de baixo em raio-x e o Nk dos pilares no explodido), depois para nos níveis, nas falhas e nos defeitos agrupados por nível e recomeça; e caminhada em primeira pessoa |
 
 ### Ciclo de vida
 
@@ -357,6 +359,12 @@ export interface ContextoVista {
   caixaDoNivel(indice: number): Box3 | undefined;
   /** O explodido ainda está animando: o aviso de "explodido" atual não é o último. */
   readonly explodidoEmAnimacao: boolean;
+  /** O prédio está explodido (ou indo para lá). */
+  readonly explodido: boolean;
+  /** Explode ou junta os níveis, como o botão Explodido (que acompanha), com a mesma
+   *  animação; não mexe na câmera. Quem explode para mostrar algo devolve o estado de
+   *  antes na limpeza. */
+  definirExplodido(sim: boolean): void;
   /** Caixa da peça na cena, com o explodido como está desenhado agora (topo = max.y). */
   caixaDe(chave: string): Box3 | undefined;
   /** Sólida, transparente ou oculta pelo foco e pela visibilidade por tipo e pavimento. */
@@ -931,6 +939,7 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()`, `caixaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera e caixa das peças visíveis (`Sphere` e `Box3`, com o explodido; para enquadrar o prédio, a caixa) |
 | `caixaDoNivel(i)`, `enquadrarEm(caixa)` | caixa das lajes, vigas e pilares do nível na cena (`Box3`, com o explodido) e o enquadramento dela com a direção atual da câmera e a margem do botão Enquadrar. Para ir a um nível: `ctx.enquadrarEm(ctx.caixaDoNivel(i)!)` |
 | `explodidoEmAnimacao` | `true` enquanto o explodido anima; no último aviso de `"explodido"` já é `false` |
+| `explodido`, `definirExplodido(sim)` | se o prédio está explodido, e explodir ou juntar os níveis, como o botão Explodido (que acompanha). Quem explode para mostrar algo (o tour) devolve o estado de antes na limpeza |
 | `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |
 | `estaVisivel(chave)`, `exibicao(chave)` | se a peça aparece considerando tudo (foco, tipos e pavimentos ocultos, filtros de todas as camadas e planos de corte) e como o foco a mostra (`"solido"`, `"fantasma"` ou `"oculto"`) |
 | `alturaNaCena(nivel, cota)` | a altura Y de uma cota, com o deslocamento do explodido como está desenhado agora |

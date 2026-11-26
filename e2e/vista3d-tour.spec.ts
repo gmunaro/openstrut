@@ -91,6 +91,7 @@ type Api = {
   selecao: string | null;
   modelo: { elementos: { chave: string; tipo: string; nome: string; nivel: number }[] };
   dados: Map<string, { estado: string; defeitos: string[] }>;
+  detalhamento: unknown;
   moverCamera: (p: V, a: V, animar?: boolean) => Promise<string>;
 };
 const api = <T>(page: Page, f: (c: Api) => T) =>
@@ -123,11 +124,13 @@ test("tour guiado: paradas, Anterior, Próxima, Pausar, interrupção e desligar
   await abrirObraJson(page, obraTresPavimentos());
   await abrir3d(page);
   expect((await camera(page)).orbita).toBe(true);
-  // paradas: o todo, os 3 níveis e cada peça com falha (sem defeitos fora do modo original)
+  // paradas: o todo, os atos (a obra, as cargas, a armadura com detalhamento e o Nk), os 3
+  // níveis e cada peça com falha (sem defeitos fora do modo original)
   const falhas = await api(page, (c) =>
     c.modelo.elementos.filter((e) => c.dados.get(e.chave)?.estado === "falha"),
   );
-  const total = 1 + 3 + falhas.length;
+  const atos = 3 + ((await api(page, (c) => c.detalhamento !== null)) ? 1 : 0);
+  const total = 1 + atos + 3 + falhas.length;
 
   await alternarCamada(page, "Tour", true);
   const painel = camadas(page);
@@ -136,7 +139,7 @@ test("tour guiado: paradas, Anterior, Próxima, Pausar, interrupção e desligar
   // tocando: a órbita do usuário fica travada
   expect((await camera(page)).orbita).toBe(false);
   // avança sozinho depois de 2,5 s na parada
-  await expect(legenda(page)).toContainText(`Parada 2 de ${total}: Primeiro (+3,00 m)`, {
+  await expect(legenda(page)).toContainText(`Parada 2 de ${total}: A obra sobe`, {
     timeout: 6000,
   });
   await page.waitForTimeout(700);
@@ -151,7 +154,7 @@ test("tour guiado: paradas, Anterior, Próxima, Pausar, interrupção e desligar
   // Próxima e Anterior, à mão
   const antes = await camera(page);
   await painel.getByRole("button", { name: "Próxima" }).click();
-  await expect(legenda(page)).toContainText(`Parada 3 de ${total}: Tipo (+6,00 m)`);
+  await expect(legenda(page)).toContainText(`Parada 3 de ${total}: Caminho das cargas`);
   await page.waitForTimeout(800);
   const depois = await camera(page);
   expect(Math.hypot(depois.x - antes.x, depois.y - antes.y, depois.z - antes.z)).toBeGreaterThan(
@@ -162,9 +165,10 @@ test("tour guiado: paradas, Anterior, Próxima, Pausar, interrupção e desligar
 
   // a parada de uma peça com falha seleciona a peça e mostra o resultado principal
   expect(falhas.length).toBeGreaterThan(0);
-  for (let i = 3; i <= 5; i++) await painel.getByRole("button", { name: "Próxima" }).click();
+  const primeira = 1 + atos + 3 + 1;
+  for (let i = 3; i <= primeira; i++) await painel.getByRole("button", { name: "Próxima" }).click();
   const p = falhas[0]!;
-  await expect(legenda(page)).toContainText(`Parada 5 de ${total}: Pilar ${p.nome}`);
+  await expect(legenda(page)).toContainText(`Parada ${primeira} de ${total}: Pilar ${p.nome}`);
   await expect(legenda(page)).toContainText("com falha");
   await expect.poll(() => api(page, (c) => c.selecao)).toBe(p.chave);
   await expect(page.getByRole("region", { name: /Elemento selecionado/ })).toBeVisible();

@@ -1,12 +1,23 @@
 // Paradas do tour guiado, a partir do modelo e dos dados da vista (lógica pura, testada em
-// paradas.test.ts): o prédio inteiro, cada nível de baixo para cima, as peças com falha e
-// as afetadas por defeito do SISTRUT original. Cada peça entra uma vez só. Num nível com
+// paradas.test.ts): o prédio inteiro; os atos que contam a estrutura (a obra subindo, o
+// caminho das cargas pela coluna mais carregada, a armadura do lance de baixo dela e o Nk
+// dos pilares no explodido, historia.ts); cada nível de baixo para cima; as peças com
+// falha e as afetadas por defeito do SISTRUT original. Cada peça entra uma vez só. Num nível com
 // mais de LIMITE_POR_NIVEL peças do mesmo motivo, elas viram uma parada só (o tour de uma
 // obra de 20 pavimentos não passa de 61 paradas).
 import type { DadosElemento, Elemento3D, Modelo3D, TipoElemento } from "../api";
+import { type CaminhoCargas, caminhoDasCargas, textoNk } from "./historia";
 
 export type Parada =
   | { tipo: "todo" }
+  /** A obra sobe pelas etapas da sequência construtiva. */
+  | { tipo: "obra" }
+  /** A carga desce pela coluna mais carregada, laje → viga → pilar → fundação. */
+  | { tipo: "cargas"; caminho: CaminhoCargas }
+  /** As barras do lance de baixo da coluna mais carregada, dentro do concreto. */
+  | { tipo: "armadura"; chave: string; coluna: string }
+  /** Os pilares pela rampa do Nk, com o prédio explodido. */
+  | { tipo: "nk"; caminho: CaminhoCargas }
   | { tipo: "nivel"; nivel: number }
   | { tipo: "peca"; chave: string; motivo: "falha" | "defeito" }
   /** As peças de um nível com o mesmo motivo, juntas, na ordem das peças. */
@@ -42,10 +53,12 @@ function ordemDasPecas(a: Elemento3D, b: Elemento3D) {
 }
 
 /** As paradas na ordem do tour. Os níveis sem laje, viga nem pilar ficam de fora (a vista
- *  não tem caixa para eles). */
+ *  não tem caixa para eles). Os atos das cargas e do Nk pedem pilar calculado; o da
+ *  armadura, também o detalhamento (`armadura`). */
 export function montarParadas(
-  modelo: Pick<Modelo3D, "niveis" | "elementos">,
+  modelo: Pick<Modelo3D, "niveis" | "elementos"> & Partial<Pick<Modelo3D, "colunas">>,
   dados: ReadonlyMap<string, DadosElemento>,
+  { armadura = false }: { armadura?: boolean } = {},
 ): Parada[] {
   const paradas: Parada[] = [{ tipo: "todo" }];
   const comPecas = new Set(
@@ -53,6 +66,15 @@ export function montarParadas(
       .filter((e) => e.tipo === "laje" || e.tipo === "viga" || e.tipo === "pilar")
       .map((e) => e.nivel),
   );
+  if (comPecas.size > 0) paradas.push({ tipo: "obra" });
+  const caminho = modelo.colunas && caminhoDasCargas({ ...modelo, colunas: modelo.colunas }, dados);
+  if (caminho) {
+    paradas.push({ tipo: "cargas", caminho });
+    const base = caminho.lances.at(-1);
+    if (armadura && base)
+      paradas.push({ tipo: "armadura", chave: base.chave, coluna: caminho.nome });
+    paradas.push({ tipo: "nk", caminho });
+  }
   for (const n of modelo.niveis)
     if (comPecas.has(n.indice)) paradas.push({ tipo: "nivel", nivel: n.indice });
   const pecas = [...modelo.elementos].sort(ordemDasPecas);
@@ -102,6 +124,48 @@ export function descreverParada(
           ? "Nenhuma peça com falha"
           : `${falhas} ${falhas === 1 ? "peça" : "peças"} com falha`,
       ],
+    };
+  }
+  if (p.tipo === "obra")
+    return {
+      titulo: "A obra sobe",
+      linhas: ["Fundação, pilares, vigas e lajes, na ordem da sequência construtiva"],
+    };
+  if (p.tipo === "cargas") {
+    const base = p.caminho.lances.at(-1);
+    return {
+      titulo: `Caminho das cargas · ${p.caminho.nome}`,
+      linhas: [
+        "Laje → viga → pilar → fundação",
+        `Lance de baixo: ${(base && textoNk(dados.get(base.chave))) ?? "sem Nk"}`,
+      ],
+    };
+  }
+  if (p.tipo === "armadura") {
+    const e = modelo.elementos.find((x) => x.chave === p.chave);
+    const d = dados.get(p.chave);
+    return {
+      titulo: `Armadura do ${p.coluna} · ${(e && modelo.niveis[e.nivel]?.nome) ?? "—"}`,
+      linhas: d?.principal ? [d.principal] : [],
+    };
+  }
+  if (p.tipo === "nk") {
+    const pilares = modelo.elementos.filter(
+      (e) => e.tipo === "pilar" && dados.get(e.chave)?.grandeza !== undefined,
+    );
+    const nk = (e: Elemento3D) => dados.get(e.chave)?.grandeza ?? 0;
+    const menor = pilares.reduce<Elemento3D | undefined>(
+      (m, e) => (!m || nk(e) < nk(m) ? e : m),
+      undefined,
+    );
+    const maior = pilares.reduce<Elemento3D | undefined>(
+      (m, e) => (!m || nk(e) > nk(m) ? e : m),
+      undefined,
+    );
+    const texto = (e: Elemento3D | undefined) => (e && textoNk(dados.get(e.chave))) ?? "—";
+    return {
+      titulo: "Nk nos pilares",
+      linhas: [`Menor ${texto(menor)} · maior ${texto(maior)}`],
     };
   }
   if (p.tipo === "nivel") {

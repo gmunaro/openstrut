@@ -54,6 +54,8 @@ describe("montarParadas", () => {
   it("todo, níveis com peças de baixo para cima, falhas e depois defeitos", () => {
     expect(montarParadas({ niveis, elementos }, dados)).toEqual([
       { tipo: "todo" },
+      // a obra subindo; sem colunas, sem os atos das cargas, da armadura e do Nk
+      { tipo: "obra" },
       { tipo: "nivel", nivel: 0 },
       // o nível 1 só tem a escada: fica de fora
       { tipo: "nivel", nivel: 2 },
@@ -94,9 +96,68 @@ describe("montarParadas", () => {
     const sem = new Map(elementos.map((e) => [e.chave, d("sem")]));
     expect(montarParadas({ niveis, elementos }, sem)).toEqual([
       { tipo: "todo" },
+      { tipo: "obra" },
       { tipo: "nivel", nivel: 0 },
       { tipo: "nivel", nivel: 2 },
     ]);
+  });
+});
+
+describe("atos da estrutura", () => {
+  // P1 sobe do nível 0 ao 2; o lance de cima (P1 no nível 2) leva menos carga
+  const p1topo = peca("pilar", "P1", 2);
+  const f1 = { ...peca("fundacao", "P1", 0), coluna: "c1" };
+  const colunas = [
+    { id: "c1", nome: "P1", chaves: [p1.chave, p1topo.chave], nasceEmTransicao: false },
+  ];
+  const comNk = new Map(dados);
+  comNk.set(
+    p1.chave,
+    d("ok", { grandeza: 640, principal: "Nk = 640,00 kN, Nd = 896,00 kN; As = 9,07 cm² (0,45 %)" }),
+  );
+  comNk.set(
+    p1topo.chave,
+    d("ok", { grandeza: 210, principal: "Nk = 210,00 kN, Nd = 294,00 kN; As = 4,00 cm² (0,20 %)" }),
+  );
+  const modelo = { niveis, elementos: [...elementos, p1topo, f1], colunas };
+  const caminho = {
+    nome: "P1",
+    lances: [
+      { chave: p1topo.chave, nivel: 2, nk: 210 },
+      { chave: p1.chave, nivel: 0, nk: 640 },
+    ],
+    fundacao: f1.chave,
+  };
+
+  it("depois do prédio: a obra, as cargas da coluna mais carregada, a armadura e o Nk", () => {
+    const paradas = montarParadas(modelo, comNk, { armadura: true });
+    expect(paradas.slice(0, 6)).toEqual([
+      { tipo: "todo" },
+      { tipo: "obra" },
+      { tipo: "cargas", caminho },
+      { tipo: "armadura", chave: p1.chave, coluna: "P1" },
+      { tipo: "nk", caminho },
+      { tipo: "nivel", nivel: 0 },
+    ]);
+    // sem detalhamento, sem o raio-x
+    expect(montarParadas(modelo, comNk).some((p) => p.tipo === "armadura")).toBe(false);
+  });
+
+  it("textos dos atos com o Nk do cálculo", () => {
+    expect(descreverParada({ tipo: "cargas", caminho }, modelo, comNk)).toEqual({
+      titulo: "Caminho das cargas · P1",
+      linhas: ["Laje → viga → pilar → fundação", "Lance de baixo: Nk = 640,00 kN"],
+    });
+    expect(
+      descreverParada({ tipo: "armadura", chave: p1.chave, coluna: "P1" }, modelo, comNk),
+    ).toEqual({
+      titulo: "Armadura do P1 · Primeiro",
+      linhas: ["Nk = 640,00 kN, Nd = 896,00 kN; As = 9,07 cm² (0,45 %)"],
+    });
+    expect(descreverParada({ tipo: "nk", caminho }, modelo, comNk)).toEqual({
+      titulo: "Nk nos pilares",
+      linhas: ["Menor Nk = 210,00 kN · maior Nk = 640,00 kN"],
+    });
   });
 });
 

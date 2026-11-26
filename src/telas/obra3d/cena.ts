@@ -1003,6 +1003,14 @@ export class Cena3D implements ContextoVista {
   }
 
   /** O explodido ainda está animando (o próximo "explodido" não é o último). */
+  get explodido() {
+    return this.estado.explodido;
+  }
+
+  definirExplodido(sim: boolean) {
+    if (sim !== this.estado.explodido) this.definirEstado({ explodido: sim });
+  }
+
   get explodidoEmAnimacao() {
     return this.deslocamentos.some(
       (y, i) => Math.abs((this.deslocamentosAlvo[i] ?? 0) - y) >= 1e-3,
