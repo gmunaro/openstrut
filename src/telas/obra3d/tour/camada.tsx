@@ -206,7 +206,7 @@ function mostrarPiso(s: Sessao) {
     : "";
   s.legenda.mostrar({
     rotulo: "Caminhando",
-    curto: "",
+    curto: "Caminhando",
     titulo: piso,
     linhas: [
       toque()

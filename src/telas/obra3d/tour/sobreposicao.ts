@@ -30,7 +30,7 @@ export function criarLegenda(conteiner: HTMLElement) {
   el.setAttribute("aria-live", "polite");
   el.dataset.testid = "legenda-tour";
   el.className = embutida
-    ? "bg-background pointer-events-none absolute top-2 right-2 z-10 flex h-6 compacto:h-9 max-w-[calc(100%-7rem)] items-center truncate rounded-md border px-2 text-xs shadow-sm"
+    ? "bg-background pointer-events-none absolute top-2 right-2 z-10 flex h-6 compacto:h-9 max-w-[calc(100%-9rem)] items-center truncate rounded-md border px-2 text-xs shadow-sm"
     : "bg-background/90 pointer-events-none absolute top-24 left-1/2 max-sm:top-32 z-10 grid max-w-[min(22rem,calc(100%-1rem))] -translate-x-1/2 gap-0.5 rounded-md border px-3 py-1.5 text-center text-xs shadow-sm";
   conteiner.appendChild(el);
   return {

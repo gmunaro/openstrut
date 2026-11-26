@@ -335,6 +335,11 @@ for (const [tela, viewport, celular] of [
     else await expect(legenda).toContainText("peças", { useInnerText: true });
     await page.waitForTimeout(1200);
     await confere(2);
+    // com a barra aberta, o botão "Ocultar vistas" (mais largo) também fica livre
+    await page.getByRole("button", { name: "Vistas", exact: true }).click();
+    const aberto = await page.getByRole("button", { name: "Ocultar vistas" }).boundingBox();
+    const depois = await legenda.boundingBox();
+    expect((depois?.x ?? 0) > (aberto?.x ?? 0) + (aberto?.width ?? 0)).toBe(true);
     expect(erros).toEqual([]);
     await contexto.close();
   });
