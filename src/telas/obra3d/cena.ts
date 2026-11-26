@@ -1318,7 +1318,8 @@ export class Cena3D implements ContextoVista {
    *  deslocamento lateral deixa todos os cantos do alvo entre as bordas livres, e centra o
    *  alvo entre elas. A caixa do canto (legenda) fica ao lado ou acima do alvo, o que
    *  deixar o desenho maior. */
-  private enquadrarAlvo(alvo: Box3 | Sphere, animar: boolean, dir?: Vector3) {
+  private enquadrarAlvo(alvo: Box3 | Sphere, animar: boolean, dir?: Vector3): Promise<FimCamera> {
+    if (alvo instanceof Box3 && alvo.isEmpty()) return Promise.resolve("cancelada");
     const atual = this.camera.position.clone().sub(this.controles.target);
     const d = (dir ?? (atual.lengthSq() > 1e-9 ? atual : this.direcao(this.vista)))
       .clone()
@@ -1338,9 +1339,21 @@ export class Cena3D implements ContextoVista {
         for (const y of [c.min.y, c.max.y])
           for (const z of [c.min.z, c.max.z]) cantos.push(new Vector3(x, y, z));
     } else {
+      // na perspectiva o contorno da esfera passa dos pontos dos eixos r e u: o raio visto
+      // de D sobe por 1/√(1 − (raio/D)²), no máximo 1/cos(meio campo) (a menor D que cabe)
       const raio = Math.max(alvo.radius, 0.5);
-      for (const e of [r, u, d])
-        for (const k of [raio, -raio]) cantos.push(centro.clone().addScaledVector(e, k));
+      const meio = Math.min(
+        (this.perspectiva.fov * Math.PI) / 360,
+        Math.atan(Math.tan((this.perspectiva.fov * Math.PI) / 360) * this.perspectiva.aspect),
+      );
+      const k = this.camera instanceof PerspectiveCamera ? 1 / Math.cos(meio) : 1;
+      for (const [e, fator] of [
+        [r, k],
+        [u, k],
+        [d, 1],
+      ] as const)
+        for (const sinal of [1, -1])
+          cantos.push(centro.clone().addScaledVector(e, raio * fator * sinal));
     }
 
     // cada ponto na base da câmera: x e y na tela, z para a câmera; o rótulo ocupa `esq`
@@ -1372,34 +1385,41 @@ export class Cena3D implements ContextoVista {
       else incluir(pos, larg, 0);
     });
 
-    // bordas livres em NDC (−1 a 1), com folga de 2 % da tela de cada lado; a margem que
-    // deixaria menos de 40 % da tela para o desenho é ignorada naquele eixo
+    // bordas livres em NDC (−1 a 1), com folga de 2 % da tela de cada lado. Margens que
+    // somam mais de 60 % do eixo encolhem na proporção, e o arranjo deixa de "caber"
     const livre = (m0: number, m1: number, n: number) => {
-      const a = -1 + (2 * m0) / n;
-      const b = 1 - (2 * m1) / n;
-      return b - a < 0.8 ? { a: -0.96, b: 0.96 } : { a: a + 0.04, b: b - 0.04 };
+      const f = Math.min(1, 1.2 / Math.max(1e-9, (2 * (m0 + m1)) / n));
+      return { a: -0.96 + (2 * m0 * f) / n, b: 0.96 - (2 * m1 * f) / n, cabe: f === 1 };
     };
     type Eixo = { v: number; z: number; a: number; b: number }[];
-    const eixos = (m: Margens): [Eixo, Eixo] => {
+    const eixos = (m: Margens) => {
       const lx = livre(m.esq, m.dir, w);
       const ly = livre(m.base, m.topo, h);
-      return [
-        pontos.map((p) => ({ v: p.x, z: p.z, a: lx.a + p.esq, b: Math.max(lx.a, lx.b - p.dir) })),
-        pontos.map((p) => ({ v: p.y, z: p.z, a: ly.a, b: ly.b })),
-      ];
+      const x: Eixo = pontos.map((p) => ({
+        v: p.x,
+        z: p.z,
+        a: lx.a + p.esq,
+        b: Math.max(lx.a, lx.b - p.dir),
+      }));
+      const y: Eixo = pontos.map((p) => ({ v: p.y, z: p.z, a: ly.a, b: ly.b }));
+      return { x, y, cabe: lx.cabe && ly.cabe };
     };
+    // a legenda ao lado ou acima do alvo; entre os arranjos que cabem, o de desenho maior
     const { canto, ...base } = this.margens;
-    const opcoes = canto
-      ? [
-          { ...base, esq: base.esq + canto.larg },
-          { ...base, base: base.base + canto.alt },
-        ]
-      : [base];
+    const todas = (
+      canto
+        ? [
+            { ...base, esq: base.esq + canto.larg },
+            { ...base, base: base.base + canto.alt },
+          ]
+        : [base]
+    ).map(eixos);
+    const opcoes = todas.some((o) => o.cabe) ? todas.filter((o) => o.cabe) : todas;
 
     if (this.camera instanceof OrthographicCamera) {
       const asp = this.perspectiva.aspect;
       // meia altura m: a ≤ (v − s) / (m·k) ≤ b para todos os pontos (k = aspecto em x)
-      const meiaAltura = ([ex, ey]: [Eixo, Eixo]) => {
+      const meiaAltura = ({ x: ex, y: ey }: { x: Eixo; y: Eixo }) => {
         let m = 0.5;
         for (const [eixo, k] of [
           [ex, asp],
@@ -1410,8 +1430,9 @@ export class Cena3D implements ContextoVista {
               if (i.b - j.a > 1e-9) m = Math.max(m, (i.v - j.v) / ((i.b - j.a) * k));
         return m;
       };
-      const [ex, ey] = opcoes.map(eixos).reduce((x, y) => (meiaAltura(y) < meiaAltura(x) ? y : x));
-      const m = meiaAltura([ex, ey]);
+      const melhor = opcoes.reduce((p, q) => (meiaAltura(q) < meiaAltura(p) ? q : p));
+      const { x: ex, y: ey } = melhor;
+      const m = meiaAltura(melhor);
       const deslocar = (eixo: Eixo, k: number) =>
         (Math.max(...eixo.map((p) => p.v - p.b * m * k)) +
           Math.min(...eixo.map((p) => p.v - p.a * m * k))) /
@@ -1431,7 +1452,7 @@ export class Cena3D implements ContextoVista {
     const tanH = tanV * this.perspectiva.aspect;
     // distância D: a ≤ (v − s) / ((D − z)·tan) ≤ b para todos os pontos; para cada par
     // (i na borda b, j na borda a), D·(b_i − a_j)·tan ≥ v_i − v_j + (b_i·z_i − a_j·z_j)·tan
-    const distancia = ([ex, ey]: [Eixo, Eixo]) => {
+    const distancia = ({ x: ex, y: ey }: { x: Eixo; y: Eixo }) => {
       let dist = Math.max(...pontos.map((p) => p.z)) + 1;
       for (const [eixo, t] of [
         [ex, tanH],
@@ -1444,8 +1465,9 @@ export class Cena3D implements ContextoVista {
           }
       return dist;
     };
-    const [ex, ey] = opcoes.map(eixos).reduce((x, y) => (distancia(y) < distancia(x) ? y : x));
-    const dist = distancia([ex, ey]);
+    const melhor = opcoes.reduce((p, q) => (distancia(q) < distancia(p) ? q : p));
+    const { x: ex, y: ey } = melhor;
+    const dist = distancia(melhor);
     const deslocar = (eixo: Eixo, t: number) =>
       (Math.max(...eixo.map((p) => p.v - p.b * t * (dist - p.z))) +
         Math.min(...eixo.map((p) => p.v - p.a * t * (dist - p.z)))) /

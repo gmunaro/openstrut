@@ -281,6 +281,9 @@ export default function Vista3D({
       ?.querySelector("[aria-label='Legenda das cores']")
       ?.getBoundingClientRect();
     if (!cena || !area || area.width === 0 || area.height === 0) return;
+    // celular embutido: sem os rótulos dos níveis (não cabem legíveis ao lado do prédio);
+    // antes do enquadramento, que conta a largura deles
+    cena.definirRotulosNiveis(!enxuto);
     cena.definirMargens({
       topo: topo ? topo.bottom - area.top : 0,
       base: 0,
@@ -296,11 +299,6 @@ export default function Vista3D({
       void cena.enquadrar(false);
     }
   });
-
-  // celular embutido: sem os rótulos dos níveis (não cabem legíveis ao lado do prédio)
-  useEffect(() => {
-    cena?.definirRotulosNiveis(!enxuto);
-  }, [cena, enxuto]);
 
   // link de demonstração (telas/demo.ts): painel, câmera, explodido, mapa de cor e camadas
   // ao abrir. Uma vez por pedido: ligar a camada de novo a desligaria. A câmera salta sem
