@@ -101,7 +101,7 @@ O cartão do elemento repete o texto do defeito, e o painel lista as peças marc
 - Mostrar e ocultar por tipo (lajes, vigas, pilares, escada, fundação) e por pavimento.
 - O explodido afasta os níveis 0,8 vez o pé-direito médio (no mínimo 1,5 m) e só move os grupos, sem refazer a geometria.
 - Todos os controles são botões, caixas de seleção e listas comuns, operáveis por teclado. A lista "Elemento (com os vizinhos)" seleciona qualquer peça sem apontar no desenho. Uma região `aria-live` anuncia a seleção.
-- Com `prefers-reduced-motion`, a câmera e o explodido mudam sem animação e a órbita não tem inércia.
+- Com `prefers-reduced-motion`, a câmera e o explodido mudam sem animação e a órbita não tem inércia. O tour embutido (`embed=1`) ignora a preferência com `forcarMovimento`: toca e anima sempre, com Pausar.
 - Sem WebGL, a aba mostra uma mensagem e indica as abas Planta e Resultados. O pedaço do three.js nem é baixado.
 
 ## Exportar
@@ -365,6 +365,13 @@ export interface ContextoVista {
    *  animação; não mexe na câmera. Quem explode para mostrar algo devolve o estado de
    *  antes na limpeza. */
   definirExplodido(sim: boolean): void;
+  /** prefers-reduced-motion vale agora: a câmera e o explodido mudam sem animação. Falso
+   *  enquanto alguma fonte forçar o movimento (`forcarMovimento`). */
+  readonly movimentoReduzido: boolean;
+  /** Anima a câmera e o explodido mesmo com prefers-reduced-motion enquanto alguma fonte
+   *  pedir (o tour embutido no site, que toca sozinho em qualquer navegador); `false` tira
+   *  o pedido desta fonte. Quem força também anima o que é seu e mantém Pausar. */
+  forcarMovimento(id: string, sim: boolean): void;
   /** Esconde (`sim`) os rótulos dos níveis ao lado do prédio enquanto alguma fonte pedir
    *  (o tour, de perto numa peça ou num nível, onde o rótulo ficaria longe do desenho);
    *  `false` tira o pedido desta fonte. Refaz a geometria só quando a soma muda. */
@@ -438,6 +445,7 @@ export interface FontesAtivas {
   planos: string[];
   legendas: string[];
   rotulosOcultos: string[];
+  movimentoForcado: string[];
 }
 
 /** Legenda de uma camada, mostrada na legenda da vista. Com `substitui`, esconde a
@@ -944,6 +952,7 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()`, `caixaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera e caixa das peças visíveis (`Sphere` e `Box3`, com o explodido; para enquadrar o prédio, a caixa) |
 | `caixaDoNivel(i)`, `enquadrarEm(caixa)` | caixa das lajes, vigas e pilares do nível na cena (`Box3`, com o explodido) e o enquadramento dela com a direção atual da câmera e a margem do botão Enquadrar. Para ir a um nível: `ctx.enquadrarEm(ctx.caixaDoNivel(i)!)` |
 | `explodidoEmAnimacao` | `true` enquanto o explodido anima; no último aviso de `"explodido"` já é `false` |
+| `movimentoReduzido`, `forcarMovimento(id, sim)` | se o prefers-reduced-motion vale agora, e animar a câmera e o explodido mesmo com ele enquanto alguma fonte pedir (o tour embutido no site, que toca sozinho; Pausar continua) |
 | `ocultarRotulosNiveis(id, sim)` | esconde os rótulos dos níveis enquanto alguma fonte pedir (o tour nos closes de peça e de nível). Refaz a geometria quando a soma muda |
 | `explodido`, `definirExplodido(sim)` | se o prédio está explodido, e explodir ou juntar os níveis, como o botão Explodido (que acompanha). Quem explode para mostrar algo (o tour) devolve o estado de antes na limpeza |
 | `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |

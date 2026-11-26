@@ -101,6 +101,7 @@ export interface FontesAtivas {
   planos: string[];
   legendas: string[];
   rotulosOcultos: string[];
+  movimentoForcado: string[];
 }
 
 /** O que a vista expõe para uma camada. Objetos do three.js são os vivos: a camada pode
@@ -195,6 +196,13 @@ export interface ContextoVista {
    *  animação; não mexe na câmera. Quem explode para mostrar algo devolve o estado de
    *  antes na limpeza. */
   definirExplodido(sim: boolean): void;
+  /** prefers-reduced-motion vale agora: a câmera e o explodido mudam sem animação. Falso
+   *  enquanto alguma fonte forçar o movimento (`forcarMovimento`). */
+  readonly movimentoReduzido: boolean;
+  /** Anima a câmera e o explodido mesmo com prefers-reduced-motion enquanto alguma fonte
+   *  pedir (o tour embutido no site, que toca sozinho em qualquer navegador); `false` tira
+   *  o pedido desta fonte. Quem força também anima o que é seu e mantém Pausar. */
+  forcarMovimento(id: string, sim: boolean): void;
   /** Esconde (`sim`) os rótulos dos níveis ao lado do prédio enquanto alguma fonte pedir
    *  (o tour, de perto numa peça ou num nível, onde o rótulo ficaria longe do desenho);
    *  `false` tira o pedido desta fonte. Refaz a geometria só quando a soma muda. */
