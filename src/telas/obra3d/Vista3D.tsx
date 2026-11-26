@@ -137,6 +137,8 @@ export default function Vista3D({
   // embutido, a trilha e a barra de vistas começam recolhidas num botão: a cena aparece
   // inteira
   const [barraAberta, setBarraAberta] = useState(!embutido);
+  // celular embutido: o cartão da peça começa num resumo de uma linha
+  const [cartaoAberto, setCartaoAberto] = useState(false);
   const detalhamento = useContext(DetalhamentoContexto);
   const modelo = useMemo(() => montarModelo(obra), [obra]);
   const dados = useMemo(
@@ -178,7 +180,11 @@ export default function Vista3D({
     }
     cenaRef.current = c;
     setCena(c);
-    const parar = c.aoMudar("selecao", () => setSelecao(c.selecao));
+    // peça nova (ou nenhuma): o cartão do celular embutido volta ao resumo
+    const parar = c.aoMudar("selecao", () => {
+      setSelecao(c.selecao);
+      setCartaoAberto(false);
+    });
     const pararLegenda = c.aoMudar("legenda", () => setLegendas(c.legendasCamadas));
     // foco e visibilidade mudados por uma camada (definirFoco): a trilha e o painel seguem
     const pararCena = c.aoMudar("cena", () => setEv(c.estado));
@@ -385,20 +391,44 @@ export default function Vista3D({
     );
 
   // cartão do elemento: sobre o desenho no desktop; no celular, logo abaixo dele, para não
-  // cobrir a vista
+  // cobrir a vista. No celular embutido a altura é pouca: o cartão abre num resumo de uma
+  // linha e, aberto, rola por dentro no que o desenho deixa (o desenho guarda 18 rem)
+  const resumido = enxuto && !cartaoAberto;
   const cartao = sel && (
     <section
       aria-label={`Elemento selecionado: ${sel.nome}`}
       className={
         compacto
-          ? "bg-background w-full border-b p-3 text-xs"
+          ? cn(
+              "bg-background w-full border-b p-3 text-xs",
+              enxuto && "min-h-0 shrink-0 overflow-auto py-2",
+              // aberto, encolhe no que sobra, sem sumir (o container rola se faltar)
+              enxuto && cartaoAberto && "min-h-28 shrink",
+            )
           : "bg-background/95 absolute right-2 bottom-2 max-h-[45%] w-[min(24rem,calc(100%-1rem))] overflow-auto rounded-md border p-3 text-xs shadow-md"
       }
     >
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold">
+      <div className={cn("flex justify-between gap-2", enxuto ? "items-center" : "items-start")}>
+        <h2 className={cn("text-sm font-semibold", resumido && "min-w-0 truncate")}>
           {NOME_TIPO[sel.tipo]} {sel.nome}
+          {resumido && (
+            <span className="text-muted-foreground font-normal">
+              {" "}
+              · {modelo.niveis[sel.nivel]?.nome ?? "—"} · {sel.secao}
+            </span>
+          )}
         </h2>
+        {enxuto && (
+          <Button
+            size="xs"
+            variant="outline"
+            className="h-9 shrink-0"
+            aria-expanded={cartaoAberto}
+            onClick={() => setCartaoAberto((a) => !a)}
+          >
+            {cartaoAberto ? "Resumo" : "Detalhes"}
+          </Button>
+        )}
         <Button
           size="icon-xs"
           variant="ghost"
@@ -408,90 +438,98 @@ export default function Vista3D({
           <X />
         </Button>
       </div>
-      <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
-        <dt className="text-muted-foreground">Nível</dt>
-        <dd>{modelo.niveis[sel.nivel]?.nome ?? "—"}</dd>
-        <dt className="text-muted-foreground">Seção</dt>
-        <dd>{sel.secao}</dd>
-        <dt className="text-muted-foreground">Situação</dt>
-        <dd>
-          <EstadoTexto estado={dadosSel?.estado ?? "sem"} />
-        </dd>
-        {dadosSel?.principal && (
-          <>
-            <dt className="text-muted-foreground">Resultado</dt>
-            <dd className="tabular-nums">{dadosSel.principal}</dd>
-          </>
-        )}
-      </dl>
-      {sel.notas.length > 0 && (
-        <ul className="text-muted-foreground mt-1 list-disc pl-4">
-          {sel.notas.map((n) => (
-            <li key={n}>{n}</li>
-          ))}
-        </ul>
-      )}
-      {original && (dadosSel?.defeitos.length ?? 0) > 0 && (
-        <div className="mt-2 rounded border p-1.5" style={{ borderColor: COR_DEFEITO }}>
-          <p className="font-semibold" style={{ color: COR_DEFEITO }}>
-            ! Afetado por defeito do SISTRUT original
-          </p>
-          <ul className="list-disc pl-4">
-            {dadosSel?.defeitos.map((d) => (
-              <li key={d}>{d}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {ctx &&
-        camadasLigadas.map((id) => {
-          const Cartao = ativas.current.get(id)?.camada.Cartao;
-          return Cartao ? (
-            <Cartao key={id} ctx={ctx} chave={sel.chave} verNosResultados={verNosResultados} />
-          ) : null;
-        })}
-      {(dadosSel?.mensagens.length ?? 0) > 0 && dadosSel?.estado !== "sem" && (
-        <details className="mt-1">
-          <summary className="cursor-pointer">Avisos ({dadosSel?.mensagens.length})</summary>
-          <ul className="list-disc pl-4">
-            {dadosSel?.mensagens.map((m) => (
-              <li key={m}>{m}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <div className="mt-2 flex flex-wrap gap-1">
-        {(sel.tipo === "pilar" || sel.tipo === "fundacao") && (
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
-          >
-            Coluna inteira
-          </Button>
-        )}
-        {sel.tipo !== "pilar" && sel.tipo !== "fundacao" && (
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
-          >
-            Isolar com vizinhos
-          </Button>
-        )}
-        {verDe(sel) && (
-          <>
-            <Button size="xs" variant="outline" onClick={() => aoVerNaPlanta(verDe(sel)!)}>
-              Ver na planta
-            </Button>
-            {calculado && (
-              <Button size="xs" variant="outline" onClick={() => aoVerNosResultados(verDe(sel)!)}>
-                Ver nos resultados
+      {!resumido && (
+        <>
+          <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+            <dt className="text-muted-foreground">Nível</dt>
+            <dd>{modelo.niveis[sel.nivel]?.nome ?? "—"}</dd>
+            <dt className="text-muted-foreground">Seção</dt>
+            <dd>{sel.secao}</dd>
+            <dt className="text-muted-foreground">Situação</dt>
+            <dd>
+              <EstadoTexto estado={dadosSel?.estado ?? "sem"} />
+            </dd>
+            {dadosSel?.principal && (
+              <>
+                <dt className="text-muted-foreground">Resultado</dt>
+                <dd className="tabular-nums">{dadosSel.principal}</dd>
+              </>
+            )}
+          </dl>
+          {sel.notas.length > 0 && (
+            <ul className="text-muted-foreground mt-1 list-disc pl-4">
+              {sel.notas.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          )}
+          {original && (dadosSel?.defeitos.length ?? 0) > 0 && (
+            <div className="mt-2 rounded border p-1.5" style={{ borderColor: COR_DEFEITO }}>
+              <p className="font-semibold" style={{ color: COR_DEFEITO }}>
+                ! Afetado por defeito do SISTRUT original
+              </p>
+              <ul className="list-disc pl-4">
+                {dadosSel?.defeitos.map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {ctx &&
+            camadasLigadas.map((id) => {
+              const Cartao = ativas.current.get(id)?.camada.Cartao;
+              return Cartao ? (
+                <Cartao key={id} ctx={ctx} chave={sel.chave} verNosResultados={verNosResultados} />
+              ) : null;
+            })}
+          {(dadosSel?.mensagens.length ?? 0) > 0 && dadosSel?.estado !== "sem" && (
+            <details className="mt-1">
+              <summary className="cursor-pointer">Avisos ({dadosSel?.mensagens.length})</summary>
+              <ul className="list-disc pl-4">
+                {dadosSel?.mensagens.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(sel.tipo === "pilar" || sel.tipo === "fundacao") && (
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
+              >
+                Coluna inteira
               </Button>
             )}
-          </>
-        )}
-      </div>
+            {sel.tipo !== "pilar" && sel.tipo !== "fundacao" && (
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => irPara({ tipo: "elemento", chave: sel.chave })}
+              >
+                Isolar com vizinhos
+              </Button>
+            )}
+            {verDe(sel) && (
+              <>
+                <Button size="xs" variant="outline" onClick={() => aoVerNaPlanta(verDe(sel)!)}>
+                  Ver na planta
+                </Button>
+                {calculado && (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => aoVerNosResultados(verDe(sel)!)}
+                  >
+                    Ver nos resultados
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 
@@ -523,7 +561,7 @@ export default function Vista3D({
             <Button
               size="xs"
               variant="outline"
-              className="bg-background/85 compacto:h-9 pointer-events-auto shadow-sm"
+              className="bg-background dark:bg-background dark:hover:bg-accent compacto:h-9 pointer-events-auto shadow-sm"
               aria-expanded={barraAberta}
               onClick={() => setBarraAberta((a) => !a)}
             >
@@ -1045,7 +1083,7 @@ function Legenda({
     // aberta, não sobe sobre a trilha e a barra de vistas (≈ 5,5 rem no topo)
     <details
       aria-label="Legenda das cores"
-      className={cn(caixa, "max-h-[calc(100%-6rem)] overflow-auto")}
+      className={cn(caixa, "bg-background max-h-[calc(100%-6rem)] overflow-auto")}
     >
       <summary className="cursor-pointer py-2.5 font-semibold">Legenda</summary>
       <div className="mt-1 grid gap-1">{conteudo}</div>
