@@ -7,6 +7,7 @@ import { acharFoco, lerLinkDemo } from "./demo";
 const VISTA_PADRAO = {
   explodido: false,
   cor: null,
+  rampa: null,
   camadas: [],
   opcoes: { tracado: false, reproduzir: false },
   vista: null,
@@ -17,14 +18,20 @@ describe("lerLinkDemo", () => {
   it("lê exemplo, aba, explodido, cor, camada e embed", () => {
     expect(
       lerLinkDemo(
-        "?exemplo=nbr6118-2023&aba=3d&explodido=1&cor=nkPilares&camada=sequencia&embed=1",
+        "?exemplo=nbr6118-2023&aba=3d&explodido=1&cor=nkPilares&rampa=calor&camada=sequencia&embed=1",
       ),
     ).toEqual({
       embutido: true,
       exemplo: "nbr6118-2023",
       pedido: {
         aba: "3d",
-        vista3d: { ...VISTA_PADRAO, explodido: true, cor: "nkPilares", camadas: ["sequencia"] },
+        vista3d: {
+          ...VISTA_PADRAO,
+          explodido: true,
+          cor: "nkPilares",
+          rampa: "calor",
+          camadas: ["sequencia"],
+        },
         foco: null,
         moldura: true,
       },

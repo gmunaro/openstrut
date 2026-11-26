@@ -78,7 +78,7 @@ function mostrarParada(s: Sessao) {
 const RAIO_PECA = 4;
 
 function alvoDa(ctx: ContextoVista, p: Parada) {
-  if (p.tipo === "todo") return ctx.esferaVisivel();
+  if (p.tipo === "todo") return ctx.caixaVisivel();
   if (p.tipo === "nivel") return ctx.caixaDoNivel(p.nivel);
   if (p.tipo === "grupo") {
     // as peças do grupo juntas
@@ -293,7 +293,7 @@ function sairLivre(s: Sessao, enquadrar = true) {
   s.ctx.travarControles(false);
   mudar({ modo: "guiado", piso: "" });
   mostrarParada(s);
-  if (enquadrar) void s.ctx.enquadrarEm(s.ctx.esferaVisivel(), !movimentoReduzido());
+  if (enquadrar) void s.ctx.enquadrarEm(s.ctx.caixaVisivel(), !movimentoReduzido());
 }
 
 // ---- Painel e ciclo de vida -------------------------------------------------------------

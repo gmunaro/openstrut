@@ -28,7 +28,7 @@ Um link pode abrir uma obra-exemplo já calculada, na aba e na vista pedidas, se
 - `?exemplo=edificio`: abre o edifício de demonstração, com 9 níveis (1º pavimento, tipo × 6, cobertura e casa de máquinas), planta em L, varandas em balanço e pilares de seções diferentes, calculado pela NBR 6118:2023 (`src/dominio/edificio.ts`);
 - `&aba=planta|resultados|relatorio|3d|orcamento`: a aba ao abrir (padrão: planta);
 - com `aba=3d`, a vista 3D ao abrir (só na primeira abertura da aba; voltar a ela abre a vista padrão):
-  - `&explodido=1` e `&cor=concreto|nkPilares|taxaVigas|momentoLajes`;
+  - `&explodido=1` e `&cor=concreto|nkPilares|taxaVigas|momentoLajes`; com um mapa de grandeza, `&rampa=calor` troca a rampa azul por uma de azul, âmbar e laranja, com mais contraste em fundo escuro;
   - `&camada=<id>[,<id>...]`: liga camadas da 3D, na ordem (os ids estão em `src/telas/obra3d/camadas.ts`). Com `render`, `&tracado=1` liga o path tracing; com `sequencia`, `&reproduzir=1` começa a obra se construindo;
   - `&foco=<tipo>~<pavimento>~<nome>`: a peça em foco, selecionada e enquadrada de perto, pelos nomes (ex.: `pilar~1º pavimento~P6`); a camada `armadura` mostra as barras dela;
   - `&vista=perspectiva|frente|lado|topo`: a câmera da 3D;
@@ -39,7 +39,7 @@ Um link pode abrir uma obra-exemplo já calculada, na aba e na vista pedidas, se
 Exemplos com o edifício:
 
 - Tour guiado com render: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&cor=concreto&camada=render,tour&embed=1
-- 3D explodida com os pilares pelo Nk: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&explodido=1&cor=nkPilares&embed=1
+- 3D explodida com os pilares pelo Nk: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&explodido=1&cor=nkPilares&rampa=calor&embed=1
 - Sequência construtiva 4D: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&cor=concreto&camada=render,sequencia&reproduzir=1&embed=1
 - Armadura do pilar P6: https://gmunaro.github.io/openstrut/?exemplo=edificio&aba=3d&moldura=0&painel=0&cor=concreto&foco=pilar~1º%20pavimento~P6&camada=render,armadura&embed=1
 

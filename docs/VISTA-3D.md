@@ -79,7 +79,7 @@ Para ligar o botão "Ver em 3D" no painel de propriedades da planta ou numa linh
 
 **Concreto.** Cada tipo numa cor de concreto (`CONCRETO` em `obra3d/cores.ts`), sem a situação do cálculo: lajes e pilares claros, vigas um tom mais escuro. Serve para mostrar a forma do prédio, com o render realista ou numa imagem. A legenda lembra que a situação fica em Resultados.
 
-**Grandeza.** O mapa de cor opcional pinta um tipo numa rampa azul de um só matiz, do claro (menor) ao escuro (maior), e deixa os outros tipos transparentes. As grandezas são o Nk de cada lance de pilar (na base do lance), a taxa de armadura das vigas (o maior As / bw·h entre os tramos, cada tramo com a sua seção) e o maior momento positivo das lajes. A legenda mostra a unidade e os extremos, já convertidos para tf quando a obra está em tf.
+**Grandeza.** O mapa de cor opcional pinta um tipo numa rampa azul de um só matiz, do claro (menor) ao escuro (maior), e deixa os outros tipos transparentes. O link de demonstração pode pedir a rampa "calor" (`&rampa=calor`: azul, âmbar e laranja, `RAMPAS` em `cores.ts`), com mais contraste entre valores vizinhos em fundo escuro. As grandezas são o Nk de cada lance de pilar (na base do lance), a taxa de armadura das vigas (o maior As / bw·h entre os tramos, cada tramo com a sua seção) e o maior momento positivo das lajes. A legenda mostra a unidade e os extremos, já convertidos para tf quando a obra está em tf.
 
 **Defeitos do original.** No modo "Como o SISTRUT original", uma placa "!" fúcsia marca as peças que algum erro documentado em `docs/MODO-CALCULO.md` atinge. Ela não usa o vermelho de falha:
 
@@ -95,6 +95,8 @@ O cartão do elemento repete o texto do defeito, e o painel lista as peças marc
 
 - Órbita, zoom e pan pelo `OrbitControls`. No mouse, arrastar gira, a roda aproxima e o botão direito move. No toque, um dedo gira e dois dedos fazem pinça e pan. Com o desenho em foco, as setas do teclado movem a vista.
 - Os botões de vista são Perspectiva, Frente, Lado, Topo e Enquadrar. Frente, lado e topo usam câmera ortográfica.
+- Enquadrar (e toda troca de vista, parte ou camada que enquadra) põe a caixa das peças visíveis o mais perto que cabe, com os rótulos dos níveis, na área que a barra do topo e a legenda deixam livre. O rótulo de um nível só aparece quando alguma peça dele aparece: na sequência 4D, os níveis ainda não construídos ficam sem rótulo.
+- No modo embutido (`embed=1`), a trilha e a barra de vistas começam recolhidas num botão "Vistas", para a cena aparecer inteira. No celular embutido, os rótulos dos níveis ficam ocultos: na tela estreita eles não cabem legíveis ao lado do prédio.
 - Tocar ou clicar numa peça seleciona e mostra o cartão com nome, nível, seção, situação e resultado principal (As, Nd ou momento). A seleção é um contorno ciano com um preenchimento leve, para a cor da situação (falha, aviso) continuar visível. No celular, o cartão fica logo abaixo do desenho, sem cobri-lo.
 - Mostrar e ocultar por tipo (lajes, vigas, pilares, escada, fundação) e por pavimento.
 - O explodido afasta os níveis 0,8 vez o pé-direito médio (no mínimo 1,5 m) e só move os grupos, sem refazer a geometria.
@@ -347,6 +349,9 @@ export interface ContextoVista {
   caixaNaCena(): Box3;
   /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
   esferaVisivel(): Sphere;
+  /** Caixa das peças sólidas visíveis (foco e filtros), com o explodido: o alvo justo para
+   *  `enquadrarEm` (o prédio inteiro, como o botão Enquadrar). */
+  caixaVisivel(): Box3;
   /** Caixa das lajes, vigas e pilares do nível `indice` na cena, com o explodido como
    *  está desenhado agora. Undefined se o nível não tem peças. */
   caixaDoNivel(indice: number): Box3 | undefined;
@@ -923,7 +928,7 @@ export const materiaisPadrao: FabricaMateriais = (papel: PapelMaterial): Materia
 | `cena`, `renderer`, `camera`, `controles` | os objetos vivos do three.js. `camera` troca entre perspectiva e ortográfica pelos botões de vista; leia `ctx.camera` na hora, sem guardar. `renderer.xr` serve à realidade aumentada |
 | `modelo`, `obra`, `calculo`, `dados` | o modelo 3D (`modelo.elementos` é a lista de peças), a obra, o cálculo (`calculo.tipo === "ok"` traz `calculo.resultado`) e os dados de cada peça, um `ReadonlyMap` pela `chave` do elemento. Sem cálculo, toda peça tem `estado: "sem"`. `estado` é `"ok"`, `"aviso"`, `"falha"` ou `"sem"`, com a mesma regra e as mesmas cores da planta. `defeitos` é uma lista de textos, vazia fora do modo "Como o SISTRUT original" (`ctx.obra.modoCalculo === "original"`) |
 | `elemento(chave)`, `grupoDoNivel(i)` | o elemento do modelo e o grupo do nível |
-| `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera das peças visíveis (`Sphere`, com o explodido) |
+| `paraCena(x, y, z)`, `caixaNaCena()`, `esferaVisivel()`, `caixaVisivel()` | conversão da planta (devolve `Vector3`), caixa do modelo inteiro (`Box3`, sem o explodido) e esfera e caixa das peças visíveis (`Sphere` e `Box3`, com o explodido; para enquadrar o prédio, a caixa) |
 | `caixaDoNivel(i)`, `enquadrarEm(caixa)` | caixa das lajes, vigas e pilares do nível na cena (`Box3`, com o explodido) e o enquadramento dela com a direção atual da câmera e a margem do botão Enquadrar. Para ir a um nível: `ctx.enquadrarEm(ctx.caixaDoNivel(i)!)` |
 | `explodidoEmAnimacao` | `true` enquanto o explodido anima; no último aviso de `"explodido"` já é `false` |
 | `caixaDe(chave)` | caixa da peça na cena (`Box3`), com o explodido como está desenhado agora; o topo é `max.y`. Para marcadores e paradas de tour |
