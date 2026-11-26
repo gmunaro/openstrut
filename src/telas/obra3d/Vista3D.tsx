@@ -538,6 +538,8 @@ export default function Vista3D({
     <div
       className="compacto:flex-col compacto:overflow-auto flex h-full min-h-0 flex-1"
       data-testid="vista-3d"
+      // as sobreposições das camadas (ex.: a legenda do tour) se arrumam para o embutido
+      data-embutido={embutido ? "" : undefined}
     >
       {/* no celular o desenho cede 42 % da altura ao painel; sem painel, fica com tudo */}
       <div

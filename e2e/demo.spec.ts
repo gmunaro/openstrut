@@ -276,6 +276,74 @@ for (const [nome, q, camadas, sinal] of [
     expect(erros).toEqual([]);
   });
 
+// A legenda do tour embutido fica no canto de cima à direita, na faixa do botão Vistas, que
+// o enquadramento deixa livre: não cobre o centro do desenho, o prédio, o botão nem a
+// legenda das cores. No celular (o iframe do site, 348 × 459), numa linha curta.
+for (const [tela, viewport, celular] of [
+  ["computador", { width: 1200, height: 640 }, false],
+  ["celular", { width: 348, height: 459 }, true],
+] as const)
+  test(`edifício: no tour embutido (${tela}), a legenda fica no canto de cima`, async ({
+    browser,
+  }) => {
+    const contexto = await browser.newContext({
+      viewport,
+      isMobile: celular,
+      hasTouch: celular,
+      colorScheme: "dark",
+    });
+    const page = await contexto.newPage();
+    const erros = vigiarErros(page);
+    await page.goto(`${EDIFICIO}&cor=concreto&camada=render,tour`);
+    const legenda = page.getByTestId("legenda-tour");
+    const primeira = celular ? /^1\/\d+ · Prédio inteiro$/ : /^Parada 1 de/;
+    // o texto visível (o detalhe fica oculto no celular)
+    await expect(legenda).toContainText(primeira, { timeout: 20_000, useInnerText: true });
+    const confere = async (parada: number) => {
+      const desenho = await page.locator("canvas").first().boundingBox();
+      const botao = await page.getByRole("button", { name: "Vistas", exact: true }).boundingBox();
+      const cores = await page.getByLabel("Legenda das cores").boundingBox();
+      const caixa = await legenda.boundingBox();
+      if (!desenho || !botao || !cores || !caixa)
+        throw new Error("sem desenho, botões ou legendas");
+      // à direita, na faixa de cima do botão Vistas, sem tocar nele
+      expect(caixa.x + caixa.width).toBeGreaterThan(desenho.x + desenho.width - 16);
+      expect(caixa.y).toBeGreaterThanOrEqual(desenho.y);
+      expect(caixa.y + caixa.height).toBeLessThanOrEqual(botao.y + botao.height + 1);
+      expect(caixa.x).toBeGreaterThan(botao.x + botao.width);
+      // longe do centro do desenho e da legenda das cores
+      const cx = desenho.x + desenho.width / 2;
+      const cy = desenho.y + desenho.height / 2;
+      expect(cy < caixa.y || cy > caixa.y + caixa.height || cx < caixa.x).toBe(true);
+      expect(caixa.y + caixa.height).toBeLessThan(cores.y);
+      // uma linha só
+      expect(caixa.height).toBeLessThanOrEqual(celular ? 40 : 28);
+      await page.screenshot({ path: path.join(PRINTS, `edificio-tour-${tela}-${parada}.png`) });
+    };
+    await confere(1);
+    // a parada inteira cabe abaixo da faixa de cima
+    await page.waitForTimeout(1200);
+    const predio = await caixaNaTela(page);
+    const caixa = await legenda.boundingBox();
+    const desenho = await page.locator("canvas").first().boundingBox();
+    const faixa = (caixa?.y ?? 0) + (caixa?.height ?? 0) - (desenho?.y ?? 0);
+    expect(predio.topo).toBeGreaterThanOrEqual(faixa - 1);
+    // a próxima parada (um pavimento): o mesmo canto, com o texto novo
+    const segunda = celular ? /^2\/\d+ · / : /^Parada 2 de/;
+    await expect(legenda).toContainText(segunda, { timeout: 8000, useInnerText: true });
+    if (celular) await expect(legenda).not.toContainText("peças", { useInnerText: true });
+    else await expect(legenda).toContainText("peças", { useInnerText: true });
+    await page.waitForTimeout(1200);
+    await confere(2);
+    // com a barra aberta, o botão "Ocultar vistas" (mais largo) também fica livre
+    await page.getByRole("button", { name: "Vistas", exact: true }).click();
+    const aberto = await page.getByRole("button", { name: "Ocultar vistas" }).boundingBox();
+    const depois = await legenda.boundingBox();
+    expect((depois?.x ?? 0) > (aberto?.x ?? 0) + (aberto?.width ?? 0)).toBe(true);
+    expect(erros).toEqual([]);
+    await contexto.close();
+  });
+
 test("edifício: a moldura volta fora da 3D e não some de novo ao voltar", async ({ page }) => {
   await page.goto(`${EDIFICIO}&cor=concreto`);
   await page.waitForFunction(() => "__vista3d" in window);
