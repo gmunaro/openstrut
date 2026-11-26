@@ -196,6 +196,14 @@ test("tour guiado com movimento reduzido: atos no estado final, parados, e desfe
   await page.waitForTimeout(700);
   expect(await setas()).toEqual(antes);
   expect(antes).toHaveLength(3);
+  // o explodido muda a altura da coluna: as setas paradas acompanham, ida e volta
+  const explodido = page
+    .getByRole("toolbar", { name: "Vistas" })
+    .getByRole("button", { name: "Explodido" });
+  await explodido.click();
+  await expect.poll(setas).not.toEqual(antes);
+  await explodido.click();
+  await expect.poll(setas).toEqual(antes);
   const acesas = await page.evaluate(() => {
     const c = (
       window as unknown as {

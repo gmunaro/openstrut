@@ -59,8 +59,9 @@ interface Sessao {
   paradas: Parada[];
   /** Cresce a cada ida a uma parada: a resposta de uma ida antiga é ignorada. */
   ida: number;
-  /** A câmera está indo para uma parada (os eventos "camera" são do tour). */
-  movendo: boolean;
+  /** Idas da câmera do tour ainda em voo (os eventos "camera" delas são do tour). Conta,
+   *  não liga e desliga: a ida antiga segue até a nova cancelá-la. */
+  voos: number;
   timer: ReturnType<typeof setTimeout> | null;
   legenda: ReturnType<typeof criarLegenda>;
   livre: Livre | null;
@@ -124,7 +125,6 @@ async function irPara(s: Sessao, i: number) {
   const p = s.paradas[i];
   if (!p) return;
   const ida = ++s.ida;
-  s.movendo = false;
   const valendo = () => s.ida === ida && sessao === s;
   pararAto(s);
   mudar({ indice: i });
@@ -153,10 +153,9 @@ async function irPara(s: Sessao, i: number) {
   }
   let fim: "concluida" | "cancelada" = "concluida";
   if (alvo) {
-    s.movendo = true;
-    fim = await ctx.enquadrarEm(alvo, animar);
+    s.voos++;
+    fim = await ctx.enquadrarEm(alvo, animar).finally(() => s.voos--);
     if (!valendo()) return;
-    s.movendo = false;
   }
   if (fim === "cancelada") return pausar(s, "Tour pausado: outra ação levou a câmera.");
   if (ato) {
@@ -184,7 +183,6 @@ function tocar(s: Sessao) {
 function pausar(s: Sessao, aviso = "") {
   limparTimer(s);
   s.ida++;
-  s.movendo = false;
   if (!s.livre) s.ctx.travarControles(false);
   mudar({ tocando: false, aviso });
 }
@@ -446,7 +444,7 @@ export const camada: Camada = {
       ctx,
       paradas: montarParadas(ctx.modelo, ctx.dados, { armadura: ctx.detalhamento !== null }),
       ida: 0,
-      movendo: false,
+      voos: 0,
       timer: null,
       legenda: criarLegenda(conteiner),
       livre: null,
@@ -483,7 +481,7 @@ export const camada: Camada = {
         if (orto && s.livre) sairLivre(s, false);
         // tocando e parado numa parada (esperando o tempo dela ou o ato): quem mexeu na
         // câmera não foi o tour
-        if (estado.tocando && !s.movendo && (s.timer !== null || s.ato !== null))
+        if (estado.tocando && s.voos === 0 && (s.timer !== null || s.ato !== null))
           pausar(s, "Tour pausado: outra ação levou a câmera.");
       }),
     ];

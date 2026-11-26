@@ -220,15 +220,19 @@ function atoCargas(ctx: ContextoVista, caminho: CaminhoCargas, comAnimacao: bool
   }
   const centro = ctx.caixaDe(passos[0]?.chave ?? "")?.getCenter(new Vector3()) ?? new Vector3();
   /** Põe as setas entre o topo da coluna e o pé do lance `n`, na fase f (0 a 1) do ciclo;
-   *  as alturas vêm da cena na hora (o explodido pode mudá-las). */
+   *  as alturas vêm da cena na hora (o explodido pode mudá-las). Diz se alguma mudou. */
   const porSetas = (f: number, n: number) => {
     const alto = ctx.caixaDe(passos[0]?.chave ?? "")?.max.y ?? 0;
     const p = passos[Math.min(n, passos.length) - 1];
     const fundo = (p && ctx.caixaDe(p.chave)?.min.y) ?? alto;
+    let mudou = false;
     setas.children.forEach((m, i) => {
       const fase = (f + i / 3) % 1;
-      m.position.set(centro.x, alto - fase * (alto - fundo), centro.z);
+      const y = alto - fase * (alto - fundo);
+      if (Math.abs(m.position.y - y) > 1e-6) mudou = true;
+      m.position.set(centro.x, y, centro.z);
     });
+    return mudou;
   };
 
   // rótulo do lance com o Nk (o texto da legenda, por extenso, fica no canto)
@@ -264,12 +268,16 @@ function atoCargas(ctx: ContextoVista, caminho: CaminhoCargas, comAnimacao: bool
   };
 
   ctx.cena.add(setas);
-  // o passo `total` acende a fundação junto com o lance de baixo
-  const total = passos.length + 1;
+  // um passo por lance, de cima para baixo, e o último, o da fundação (se houver)
+  const total = passos.length + (caminho.fundacao ? 1 : 0);
   let frente = comAnimacao ? 1 : total;
   acender(frente);
-  // o rótulo segue a câmera depois de cada quadro desenhado (sem pedir quadros a mais)
-  const pararRotulo = ctx.depoisDoQuadro(() => posicionar(frente));
+  // o rótulo (e, sem animação, as setas paradas) segue a câmera e o explodido depois de
+  // cada quadro desenhado; as setas só pedem outro quadro quando saem do lugar
+  const pararRotulo = ctx.depoisDoQuadro(() => {
+    posicionar(frente);
+    if (!comAnimacao && porSetas(0, frente)) ctx.pedirRender();
+  });
   // com animação, as setas descem em ciclo enquanto o ato estiver na tela; sem, ficam
   // paradas ao longo da coluna inteira
   let tempo = 0;
