@@ -39,6 +39,10 @@ export const COR_DEFEITO = "#a21caf";
 
 /** Rampa azul 100 → 700 (passos 100, 200, …, 700). */
 export const RAMPA = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+/** Rampas dos mapas de grandeza: "azul" (a padrão, um matiz) e "calor" (azul, âmbar e
+ *  laranja: mais contraste entre valores vizinhos, boa em fundo escuro). */
+export const RAMPAS = { azul: RAMPA, calor: ["#38bdf8", "#fbbf24", "#ff5a1f"] } as const;
+export type Rampa = keyof typeof RAMPAS;
 /** Elemento do tipo do mapa sem valor (sem cálculo). */
 export const SEM_VALOR = "#9ca3af";
 
@@ -47,10 +51,10 @@ const hex = (c: number[]) =>
   `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
 
 /** Cor da rampa para t em [0, 1] (interpolada entre os passos, em sRGB). */
-export function corNaRampa(t: number): string {
-  const x = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (RAMPA.length - 1);
-  const i = Math.min(RAMPA.length - 2, Math.floor(x));
+export function corNaRampa(t: number, rampa: readonly string[] = RAMPA): string {
+  const x = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (rampa.length - 1);
+  const i = Math.min(rampa.length - 2, Math.floor(x));
   const f = x - i;
-  const [a, b] = [rgb(RAMPA[i]!), rgb(RAMPA[i + 1]!)];
+  const [a, b] = [rgb(rampa[i]!), rgb(rampa[i + 1]!)];
   return hex(a.map((v, k) => v + (b[k]! - v) * f));
 }

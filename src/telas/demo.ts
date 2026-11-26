@@ -7,6 +7,7 @@
 //   &aba=planta|resultados|relatorio|3d|orcamento   aba ao abrir (padrão: planta)
 //   &explodido=1                   3D com os níveis afastados
 //   &cor=concreto|nkPilares|taxaVigas|momentoLajes   cor das peças na 3D
+//   &rampa=azul|calor              rampa dos mapas de grandeza (calor: azul, âmbar e laranja)
 //   &camada=<id>[,<id>...]         liga camadas da 3D, na ordem (ids em obra3d/camadas.ts)
 //   &tracado=1                     com a camada "render": path tracing ligado
 //   &reproduzir=1                  com a camada "sequencia": a obra já se construindo
@@ -25,6 +26,7 @@ import { create } from "zustand";
 import type { NormaId, Obra } from "../dominio/obra";
 import type { OpcoesLink } from "./obra3d/camadas";
 import type { ModoCor, Vista } from "./obra3d/cena";
+import type { Rampa } from "./obra3d/cores";
 import type { Ver3d } from "./obra3d/link";
 
 export const ABAS = ["planta", "resultados", "relatorio", "3d", "orcamento"] as const;
@@ -34,6 +36,7 @@ export type Aba = (typeof ABAS)[number];
 export type Exemplo = NormaId | "edificio";
 const EXEMPLOS: readonly Exemplo[] = ["nbr6118-2023", "nb1-78", "edificio"];
 const CORES: readonly CorLink[] = ["concreto", "nkPilares", "taxaVigas", "momentoLajes"];
+const RAMPAS: readonly Rampa[] = ["azul", "calor"];
 const VISTAS: readonly Vista[] = ["perspectiva", "frente", "lado", "topo"];
 const TIPOS_FOCO = ["laje", "viga", "pilar"] as const;
 
@@ -51,6 +54,7 @@ export interface FocoPorNome {
 export interface Inicio3d {
   explodido: boolean;
   cor: CorLink | null;
+  rampa: Rampa | null;
   /** Ids de camadas de CAMADAS, na ordem; um id desconhecido é ignorado pela vista. */
   camadas: string[];
   /** Opções que as camadas ligadas pelo link atendem (Camada.ativar). */
@@ -112,6 +116,7 @@ export function lerLinkDemo(searchStr: string): LinkDemo {
       vista3d: {
         explodido: ligado(valor("explodido")),
         cor: daLista(CORES, valor("cor")),
+        rampa: daLista(RAMPAS, valor("rampa")),
         camadas: [...new Set((valor("camada") ?? "").split(",").filter((c) => c !== ""))],
         opcoes: { tracado: ligado(valor("tracado")), reproduzir: ligado(valor("reproduzir")) },
         vista: daLista(VISTAS, valor("vista")),

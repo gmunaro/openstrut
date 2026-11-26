@@ -180,6 +180,9 @@ export interface ContextoVista {
   caixaNaCena(): Box3;
   /** Esfera das peças sólidas visíveis (foco e filtros), com o explodido. */
   esferaVisivel(): Sphere;
+  /** Caixa das peças sólidas visíveis (foco e filtros), com o explodido: o alvo justo para
+   *  `enquadrarEm` (o prédio inteiro, como o botão Enquadrar). */
+  caixaVisivel(): Box3;
   /** Caixa das lajes, vigas e pilares do nível `indice` na cena, com o explodido como
    *  está desenhado agora. Undefined se o nível não tem peças. */
   caixaDoNivel(indice: number): Box3 | undefined;

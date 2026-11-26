@@ -12,9 +12,18 @@ import {
   Layers,
   Maximize,
   MoveVertical,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDemo } from "../demo";
@@ -38,7 +47,15 @@ import {
   TIPOS,
   type Vista,
 } from "./cena";
-import { CONCRETO, COR_DEFEITO, COR_ESTADO, NEUTRO, RAMPA, ROTULO_ESTADO } from "./cores";
+import {
+  CONCRETO,
+  COR_DEFEITO,
+  COR_ESTADO,
+  NEUTRO,
+  RAMPAS,
+  type Rampa,
+  ROTULO_ESTADO,
+} from "./cores";
 import { dadosDosElementos, type Estado, GRANDEZAS, type GrandezaMapa } from "./dados";
 import type { Ver3d } from "./link";
 import { type Elemento3D, montarModelo, type TipoElemento } from "./modelo";
@@ -117,6 +134,9 @@ export default function Vista3D({
   // altura mínima (o cartão da peça desce abaixo dele)
   const embutido = useDemo((s) => s.embutido);
   const enxuto = compacto && embutido;
+  // embutido, a trilha e a barra de vistas começam recolhidas num botão: a cena aparece
+  // inteira
+  const [barraAberta, setBarraAberta] = useState(!embutido);
   const detalhamento = useContext(DetalhamentoContexto);
   const modelo = useMemo(() => montarModelo(obra), [obra]);
   const dados = useMemo(
@@ -124,6 +144,7 @@ export default function Vista3D({
     [modelo, calculo, obra, unidades],
   );
   const caixa = useRef<HTMLDivElement>(null);
+  const sobreposta = useRef<HTMLDivElement>(null);
   const cenaRef = useRef<Cena3D | null>(null);
   const [cena, setCena] = useState<Cena3D | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -250,6 +271,35 @@ export default function Vista3D({
     }
   };
 
+  // o enquadramento deixa livres a faixa das barras no topo e o canto da legenda; a cena
+  // nasce enquadrada sem saber delas, então a primeira medida reenquadra
+  const medida = useRef<Cena3D | null>(null);
+  useLayoutEffect(() => {
+    const area = caixa.current?.getBoundingClientRect();
+    const topo = sobreposta.current?.getBoundingClientRect();
+    const legenda = caixa.current?.parentElement
+      ?.querySelector("[aria-label='Legenda das cores']")
+      ?.getBoundingClientRect();
+    if (!cena || !area || area.width === 0 || area.height === 0) return;
+    // celular embutido: sem os rótulos dos níveis (não cabem legíveis ao lado do prédio);
+    // antes do enquadramento, que conta a largura deles
+    cena.definirRotulosNiveis(!enxuto);
+    cena.definirMargens({
+      topo: topo ? topo.bottom - area.top : 0,
+      base: 0,
+      esq: 0,
+      dir: 0,
+      canto:
+        legenda && legenda.width > 0
+          ? { larg: legenda.right - area.left, alt: area.bottom - legenda.top }
+          : undefined,
+    });
+    if (medida.current !== cena) {
+      medida.current = cena;
+      void cena.enquadrar(false);
+    }
+  });
+
   // link de demonstração (telas/demo.ts): painel, câmera, explodido, mapa de cor e camadas
   // ao abrir. Uma vez por pedido: ligar a camada de novo a desligaria. A câmera salta sem
   // animar, para os enquadramentos seguintes (explodido, camadas) manterem a direção dela.
@@ -259,13 +309,14 @@ export default function Vista3D({
   useEffect(() => {
     if (!cena || !inicial || inicialAplicado.current === inicial) return;
     inicialAplicado.current = inicial;
-    const { explodido, cor, camadas, opcoes, vista: v, painel: comPainel } = inicial;
+    const { explodido, cor, rampa, camadas, opcoes, vista: v, painel: comPainel } = inicial;
     if (!comPainel) setPainel(false);
     if (v) {
       setVista(v);
       cena.definirVista(v, false);
     }
-    if (explodido || cor) mudarEstado({ explodido, modoCor: cor ?? "estado" }, explodido);
+    if (explodido || cor || rampa)
+      mudarEstado({ explodido, modoCor: cor ?? "estado", rampa: rampa ?? "azul" }, explodido);
     void (async () => {
       for (const id of camadas)
         if (CAMADAS.some((c) => c.id === id) && !ativas.current.has(id))
@@ -464,86 +515,105 @@ export default function Vista3D({
           aria-label={`Vista 3D de ${obra.nome || "obra sem nome"}: ${modelo.niveis.length} níveis, ${modelo.elementos.length} peças. Os mesmos dados estão nas abas Planta e Resultados.`}
         />
         {/* barra de vistas, por cima do desenho */}
-        <div className="pointer-events-none absolute inset-x-2 top-2 grid gap-1">
-          <nav aria-label="Trilha da vista 3D" className="pointer-events-auto w-fit">
-            <ol className="bg-background/85 flex flex-wrap items-center gap-0.5 rounded-md border px-1 py-0.5 text-xs shadow-sm">
-              {passos.map((p, i) => (
-                <li key={`${i}-${p.rotulo}`} className="flex items-center gap-0.5">
-                  {i > 0 && <ChevronRight className="text-muted-foreground size-3" aria-hidden />}
-                  {i < passos.length - 1 ? (
-                    <button
-                      type="button"
-                      className="hover:bg-accent rounded px-1.5 py-1 underline-offset-2 hover:underline"
-                      onClick={() => irPara(p.foco)}
-                    >
-                      {p.rotulo}
-                    </button>
-                  ) : (
-                    <span aria-current="location" className="px-1.5 py-1 font-semibold">
-                      {p.rotulo}
-                    </span>
-                  )}
-                </li>
+        <div
+          ref={sobreposta}
+          className="pointer-events-none absolute inset-x-2 top-2 grid justify-items-start gap-1"
+        >
+          {embutido && (
+            <Button
+              size="xs"
+              variant="outline"
+              className="bg-background/85 compacto:h-9 pointer-events-auto shadow-sm"
+              aria-expanded={barraAberta}
+              onClick={() => setBarraAberta((a) => !a)}
+            >
+              <SlidersHorizontal /> {barraAberta ? "Ocultar vistas" : "Vistas"}
+            </Button>
+          )}
+          {barraAberta && (
+            <nav aria-label="Trilha da vista 3D" className="pointer-events-auto w-fit">
+              <ol className="bg-background/85 flex flex-wrap items-center gap-0.5 rounded-md border px-1 py-0.5 text-xs shadow-sm">
+                {passos.map((p, i) => (
+                  <li key={`${i}-${p.rotulo}`} className="flex items-center gap-0.5">
+                    {i > 0 && <ChevronRight className="text-muted-foreground size-3" aria-hidden />}
+                    {i < passos.length - 1 ? (
+                      <button
+                        type="button"
+                        className="hover:bg-accent rounded px-1.5 py-1 underline-offset-2 hover:underline"
+                        onClick={() => irPara(p.foco)}
+                      >
+                        {p.rotulo}
+                      </button>
+                    ) : (
+                      <span aria-current="location" className="px-1.5 py-1 font-semibold">
+                        {p.rotulo}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+          {barraAberta && (
+            <div
+              role="toolbar"
+              aria-label="Vistas"
+              className={cn(
+                barra,
+                "bg-background/85 pointer-events-auto w-fit rounded-md border p-0.5 shadow-sm",
+                enxuto && "max-w-full flex-nowrap overflow-x-auto p-1",
+              )}
+            >
+              {VISTAS.map(({ v, rotulo }) => (
+                <Button
+                  key={v}
+                  size="xs"
+                  variant={vista === v ? "secondary" : "ghost"}
+                  aria-pressed={vista === v}
+                  className="compacto:h-9"
+                  onClick={() => {
+                    setVista(v);
+                    cena?.definirVista(v);
+                  }}
+                >
+                  {v === "perspectiva" && <Box />}
+                  {rotulo}
+                </Button>
               ))}
-            </ol>
-          </nav>
-          <div
-            role="toolbar"
-            aria-label="Vistas"
-            className={cn(
-              barra,
-              "bg-background/85 pointer-events-auto w-fit rounded-md border p-0.5 shadow-sm",
-              enxuto && "max-w-full flex-nowrap overflow-x-auto p-1",
-            )}
-          >
-            {VISTAS.map(({ v, rotulo }) => (
               <Button
-                key={v}
                 size="xs"
-                variant={vista === v ? "secondary" : "ghost"}
-                aria-pressed={vista === v}
+                variant="ghost"
                 className="compacto:h-9"
-                onClick={() => {
-                  setVista(v);
-                  cena?.definirVista(v);
-                }}
+                onClick={() => void cena?.enquadrar(true)}
               >
-                {v === "perspectiva" && <Box />}
-                {rotulo}
+                <Maximize /> Enquadrar
               </Button>
-            ))}
-            <Button
-              size="xs"
-              variant="ghost"
-              className="compacto:h-9"
-              onClick={() => void cena?.enquadrar(true)}
-            >
-              <Maximize /> Enquadrar
-            </Button>
-            <Button
-              size="xs"
-              variant={ev.explodido ? "secondary" : "ghost"}
-              aria-pressed={ev.explodido}
-              className="compacto:h-9"
-              onClick={() => mudarEstado({ explodido: !ev.explodido }, true)}
-            >
-              <MoveVertical /> Explodido
-            </Button>
-            <Button
-              size="xs"
-              variant="ghost"
-              className="compacto:h-9"
-              aria-expanded={painel}
-              aria-controls="painel-3d"
-              onClick={() => setPainel((p) => !p)}
-            >
-              <Layers /> {painel ? "Ocultar painel" : "Painel"}
-            </Button>
-          </div>
+              <Button
+                size="xs"
+                variant={ev.explodido ? "secondary" : "ghost"}
+                aria-pressed={ev.explodido}
+                className="compacto:h-9"
+                onClick={() => mudarEstado({ explodido: !ev.explodido }, true)}
+              >
+                <MoveVertical /> Explodido
+              </Button>
+              <Button
+                size="xs"
+                variant="ghost"
+                className="compacto:h-9"
+                aria-expanded={painel}
+                aria-controls="painel-3d"
+                onClick={() => setPainel((p) => !p)}
+              >
+                <Layers /> {painel ? "Ocultar painel" : "Painel"}
+              </Button>
+            </div>
+          )}
         </div>
 
         <Legenda
           modoCor={ev.modoCor}
+          rampa={ev.rampa}
           contagem={contagem}
           calculado={calculado}
           faixa={faixa}
@@ -875,6 +945,7 @@ function EstadoTexto({ estado }: { estado: Estado }) {
 
 function Legenda({
   modoCor,
+  rampa,
   contagem,
   calculado,
   faixa,
@@ -885,6 +956,7 @@ function Legenda({
   recolhida,
 }: {
   modoCor: ModoCor;
+  rampa: Rampa;
   contagem: Record<Estado, number>;
   calculado: boolean;
   faixa: { min: number; max: number } | undefined;
@@ -948,7 +1020,7 @@ function Legenda({
           <span
             aria-hidden
             className="h-2.5 w-40 rounded-sm border"
-            style={{ background: `linear-gradient(to right, ${RAMPA.join(", ")})` }}
+            style={{ background: `linear-gradient(to right, ${RAMPAS[rampa].join(", ")})` }}
           />
           <span className="flex justify-between tabular-nums">
             <span>{faixa ? num(faixa.min) : "—"}</span>

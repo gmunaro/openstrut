@@ -3,7 +3,7 @@
 // embutido não aparece dica de primeiro uso nem é gravado rascunho no IndexedDB, e o aviso
 // de conferência continua no rodapé. Rode com PORT=4431 bun x playwright test e2e/demo.spec.ts
 // As fotos vão para e2e/prints/demo/.
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -57,6 +57,52 @@ const distanciaAoSelecionado = (page: Page) =>
     const p = c.camera.position;
     const centro = [(b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, (b.min.z + b.max.z) / 2];
     return Math.hypot(p.x - (centro[0] ?? 0), p.y - (centro[1] ?? 0), p.z - (centro[2] ?? 0));
+  });
+
+/** Embutida, a trilha e a barra de vistas começam recolhidas no botão "Vistas": abre. */
+async function abrirVistas(app: Page | FrameLocator) {
+  const botao = app.getByRole("button", { name: "Vistas", exact: true });
+  await expect(botao).toHaveAttribute("aria-expanded", "false");
+  await botao.click();
+  await expect(app.getByRole("toolbar", { name: "Vistas" })).toBeVisible();
+}
+
+/** Onde o prédio visível cai na tela: a caixa das peças visíveis projetada pela câmera
+ *  (px a partir do canto de cima do desenho) e o tamanho do desenho. */
+const caixaNaTela = (page: Page) =>
+  page.evaluate(() => {
+    type M = { elements: number[] };
+    const c = (
+      window as unknown as {
+        __vista3d: {
+          camera: { matrixWorldInverse: M; projectionMatrix: M };
+          renderer: { domElement: HTMLCanvasElement };
+          caixaVisivel(): { min: Vec; max: Vec };
+        };
+      }
+    ).__vista3d;
+    const aplicar = (m: number[], p: number[]) =>
+      [0, 1, 2, 3].map((r) => p.reduce((t, v, k) => t + (m[k * 4 + r] ?? 0) * v, 0));
+    const b = c.caixaVisivel();
+    const { clientWidth: w, clientHeight: h } = c.renderer.domElement;
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const x of [b.min.x, b.max.x])
+      for (const y of [b.min.y, b.max.y])
+        for (const z of [b.min.z, b.max.z]) {
+          const v = aplicar(c.camera.matrixWorldInverse.elements, [x, y, z, 1]);
+          const p = aplicar(c.camera.projectionMatrix.elements, v);
+          xs.push(((p[0]! / p[3]! + 1) / 2) * w);
+          ys.push(((1 - p[1]! / p[3]!) / 2) * h);
+        }
+    return {
+      esq: Math.min(...xs),
+      dir: Math.max(...xs),
+      topo: Math.min(...ys),
+      base: Math.max(...ys),
+      w,
+      h,
+    };
   });
 
 function vigiarErros(page: Page): string[] {
@@ -139,6 +185,7 @@ for (const [camada, norma, nome] of [
 
 test("a vista pedida pelo link vale só na primeira abertura da aba 3D", async ({ page }) => {
   await page.goto("/?exemplo=nb1-78&aba=3d&explodido=1&camada=comparar&embed=1");
+  await abrirVistas(page);
   const camada = page.getByRole("button", { name: "Original × Corrigido", exact: true });
   const explodido = page.getByRole("button", { name: /Explodido/ });
   await expect(camada).toHaveAttribute("aria-pressed", "true");
@@ -148,6 +195,7 @@ test("a vista pedida pelo link vale só na primeira abertura da aba 3D", async (
   await page.getByRole("tab", { name: "3D" }).click();
   await page.waitForFunction(() => "__vista3d" in window);
   await page.waitForTimeout(800);
+  await abrirVistas(page);
   await expect(camada).toHaveAttribute("aria-pressed", "false");
   await expect(explodido).toHaveAttribute("aria-pressed", "false");
 });
@@ -168,6 +216,7 @@ test("num iframe de outro site, o link abre a demo", async ({ page, baseURL }) =
   await expect(app.getByRole("tab", { name: "3D" })).toHaveAttribute("aria-selected", "true", {
     timeout: 20_000,
   });
+  await abrirVistas(app);
   await expect(app.getByRole("button", { name: /Explodido/ })).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -209,6 +258,7 @@ for (const [nome, q, camadas, sinal] of [
     // foco: a câmera chega perto do lance (o prédio inteiro fica a dezenas de m)
     if (nome === "armadura") expect(await distanciaAoSelecionado(page)).toBeLessThan(12);
     // o painel, aberto agora, mostra as camadas que o link ligou
+    await abrirVistas(page);
     await page.getByRole("button", { name: "Painel", exact: true }).click();
     for (const c of camadas)
       await expect(page.getByRole("button", { name: c, exact: true })).toHaveAttribute(
@@ -243,6 +293,7 @@ test("edifício: vista=frente vale mesmo com explodido=1", async ({ page }) => {
   const frente = await direcaoDaCamera(page);
   await page.goto("/?exemplo=edificio&aba=3d&vista=frente&explodido=1&embed=1");
   await page.waitForFunction(() => "__vista3d" in window);
+  await abrirVistas(page);
   await expect(page.getByRole("button", { name: "Frente", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -251,6 +302,64 @@ test("edifício: vista=frente vale mesmo com explodido=1", async ({ page }) => {
   const explodida = await direcaoDaCamera(page);
   const cos = frente.reduce((s, v, i) => s + v * (explodida[i] ?? 0), 0);
   expect(cos).toBeGreaterThan(0.999);
+});
+
+test("edifício: Nk explodido abre enquadrado entre o botão Vistas e a legenda", async ({ page }) => {
+  await page.goto(`${EDIFICIO}&explodido=1&cor=nkPilares&rampa=calor`);
+  await page.waitForFunction(() => "__vista3d" in window);
+  // a trilha e a barra de vistas ficam recolhidas; a cena fica livre
+  await expect(page.getByRole("toolbar", { name: "Vistas" })).toHaveCount(0);
+  await page.waitForTimeout(2000); // o explodido anima
+  const desenho = await page.getByTestId("vista-3d").locator("canvas").boundingBox();
+  const botao = await page.getByRole("button", { name: "Vistas", exact: true }).boundingBox();
+  const legenda = await page.getByLabel("Legenda das cores").boundingBox();
+  const c = await caixaNaTela(page);
+  if (!desenho || !botao || !legenda) throw new Error("sem desenho, botão ou legenda");
+  // abaixo do botão, dentro do desenho e fora do canto da legenda (ao lado ou acima dela)
+  const livreTopo = botao.y + botao.height - desenho.y;
+  expect(c.topo).toBeGreaterThan(livreTopo);
+  expect(c.dir).toBeLessThan(c.w);
+  expect(c.base).toBeLessThan(c.h);
+  const aoLado = c.esq > legenda.x + legenda.width - desenho.x;
+  const acima = c.base < legenda.y - desenho.y;
+  expect(aoLado || acima).toBe(true);
+  // e grande: o prédio alto, ao lado da legenda, ocupa quase toda a altura livre
+  expect(aoLado).toBe(true);
+  expect(c.base - c.topo).toBeGreaterThan(0.85 * (c.h - livreTopo));
+  // a rampa calor na legenda
+  await expect(page.getByLabel("Legenda das cores").locator("[style*='gradient']")).toHaveAttribute(
+    "style",
+    /56, 189, 248|38bdf8/i,
+  );
+});
+
+test("edifício: a sequência 4D só rotula os níveis com peças à vista", async ({ page }) => {
+  await page.goto(`${EDIFICIO}&camada=sequencia`);
+  await page.waitForFunction(() => "__vista3d" in window);
+  await expect(page.getByText("Etapa em andamento").first()).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(1000);
+  const r = await page.evaluate(() => {
+    type No = { visible: boolean; userData: { rotuloNivel?: boolean }; parent: { name: string } };
+    const c = (
+      window as unknown as {
+        __vista3d: {
+          cena: { traverse(f: (o: No) => void): void };
+          modelo: { niveis: { nome: string }[]; elementos: { chave: string; nivel: number }[] };
+          estaVisivel(chave: string): boolean;
+        };
+      }
+    ).__vista3d;
+    const rotulados: string[] = [];
+    c.cena.traverse((o) => {
+      if (o.userData.rotuloNivel && o.visible) rotulados.push(o.parent.name);
+    });
+    const comPecas = c.modelo.niveis
+      .filter((_, i) => c.modelo.elementos.some((e) => e.nivel === i && c.estaVisivel(e.chave)))
+      .map((n) => n.nome);
+    return { rotulados: rotulados.sort(), comPecas: comPecas.sort(), total: c.modelo.niveis.length };
+  });
+  expect(r.rotulados).toEqual(r.comPecas);
+  expect(r.rotulados.length).toBeLessThan(r.total);
 });
 
 test("edifício no celular embutido: legenda recolhida e barra numa linha", async ({ browser }) => {
@@ -269,7 +378,24 @@ test("edifício no celular embutido: legenda recolhida e barra numa linha", asyn
   // recolhida: um <details> fechado, com a escala escondida
   await expect(legenda).toHaveJSProperty("tagName", "DETAILS");
   await expect(escala).toBeHidden();
-  // a barra de vistas fica numa linha só, que rola de lado
+  // sem rótulos dos níveis na tela estreita
+  expect(
+    await page.evaluate(() => {
+      type No = { visible: boolean; userData: { rotuloNivel?: boolean } };
+      const c = (
+        window as unknown as {
+          __vista3d: { cena: { traverse(f: (o: No) => void): void } };
+        }
+      ).__vista3d;
+      let n = 0;
+      c.cena.traverse((o) => {
+        if (o.userData.rotuloNivel) n++;
+      });
+      return n;
+    }),
+  ).toBe(0);
+  // aberta, a barra de vistas fica numa linha só, que rola de lado
+  await abrirVistas(page);
   const vistas = page.getByRole("toolbar", { name: "Vistas" });
   expect((await vistas.boundingBox())?.height).toBeLessThan(60);
   expect(await vistas.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);

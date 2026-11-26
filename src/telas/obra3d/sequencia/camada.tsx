@@ -176,7 +176,7 @@ function criarSessao(ctx: ContextoVista): { sessao: Sessao; limpar: () => void }
       const nivel = etapa ? etapa.nivel : -1;
       if (!forcar && nivel === nivelEnquadrado) return;
       nivelEnquadrado = nivel;
-      const alvo = etapa ? ctx.caixaDoNivel(nivel) : ctx.esferaVisivel();
+      const alvo = etapa ? ctx.caixaDoNivel(nivel) : ctx.caixaVisivel();
       if (!alvo) return;
       // "cancelada": outra coisa (o usuário, a vista, outra camada) assumiu a câmera; não
       // insiste. O próximo nível enquadra de novo.

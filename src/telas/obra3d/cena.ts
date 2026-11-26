@@ -55,7 +55,16 @@ import type {
   FabricaMateriais,
   PapelMaterial,
 } from "./camadas";
-import { CONCRETO, COR_DEFEITO, COR_ESTADO, corNaRampa, NEUTRO, SEM_VALOR } from "./cores";
+import {
+  CONCRETO,
+  COR_DEFEITO,
+  COR_ESTADO,
+  corNaRampa,
+  NEUTRO,
+  RAMPAS,
+  type Rampa,
+  SEM_VALOR,
+} from "./cores";
 import { COR_SELECAO, FUNDO, LUZES, materiaisPadrao } from "./materiais";
 import { type DadosElemento, faixaDaGrandeza, GRANDEZAS, type GrandezaMapa } from "./dados";
 import { type Malha, malhaVazia, paraCena, triangular } from "./geometria";
@@ -68,6 +77,16 @@ export type Vista = "perspectiva" | "frente" | "lado" | "topo";
 export type ModoCor = "estado" | "concreto" | GrandezaMapa;
 /** O modo é um mapa de grandeza (rampa, legenda com a faixa, outros tipos transparentes). */
 export const ehGrandeza = (m: ModoCor): m is GrandezaMapa => m !== "estado" && m !== "concreto";
+/** Faixas da tela, em px, cobertas pela interface sobre o desenho (barras, legenda). */
+export interface Margens {
+  topo: number;
+  base: number;
+  esq: number;
+  dir: number;
+  /** Caixa no canto de baixo à esquerda (a legenda), px: o enquadramento deixa o desenho
+   *  ao lado ou acima dela, o que der o desenho maior. */
+  canto?: { larg: number; alt: number } | undefined;
+}
 export const TIPOS: readonly TipoElemento[] = ["laje", "viga", "pilar", "escada", "fundacao"];
 
 /** Distância da câmera ao nível acima da qual as arestas somem (LOD), m. */
@@ -113,6 +132,8 @@ export interface EstadoVisual {
   niveisOcultos: ReadonlySet<number>;
   explodido: boolean;
   modoCor: ModoCor;
+  /** Rampa dos mapas de grandeza (cores.ts). */
+  rampa: Rampa;
   /** Mostrar as marcas dos defeitos do original. */
   marcas: boolean;
 }
@@ -124,6 +145,7 @@ export const ESTADO_INICIAL: EstadoVisual = {
   niveisOcultos: new Set(),
   explodido: false,
   modoCor: "estado",
+  rampa: "azul",
   marcas: true,
 };
 
@@ -205,6 +227,10 @@ export class Cena3D implements ContextoVista {
   detalhamento: DetalhamentoObra | null;
   /** A vista atual (para os botões). */
   vista: Vista = "perspectiva";
+  /** O enquadramento centra o desenho na área que as margens deixam livre. */
+  private margens: Margens = { topo: 0, base: 0, esq: 0, dir: 0 };
+  /** Rótulos dos níveis ao lado do prédio. */
+  private rotulosNiveis = true;
 
   constructor(
     private conteiner: HTMLElement,
@@ -560,7 +586,7 @@ export class Cena3D implements ContextoVista {
     const faixa = this.faixaAtual;
     if (d?.grandeza === undefined || !faixa) return SEM_VALOR;
     const t = faixa.max > faixa.min ? (d.grandeza - faixa.min) / (faixa.max - faixa.min) : 1;
-    return corNaRampa(t);
+    return corNaRampa(t, RAMPAS[this.estado.rampa]);
   }
 
   /** Faixa da grandeza do mapa de cor da última reconstrução (cores e legenda). */
@@ -596,7 +622,7 @@ export class Cena3D implements ContextoVista {
     const cor = new Color();
     const original = this.obra.modoCalculo === "original";
     const foco = this.estado.foco;
-    const mostraRotulos = foco.tipo !== "elemento";
+    const mostraRotulos = foco.tipo !== "elemento" && this.rotulosNiveis;
     const eixo =
       foco.tipo === "eixo" ? this.modelo.eixos.find((x) => x.chave === foco.chave) : undefined;
 
@@ -728,6 +754,9 @@ export class Cena3D implements ContextoVista {
    *  Mostrar de novo copia as posições originais. Custo linear no número de vértices. */
   private aplicarFiltros() {
     for (const nivel of this.niveis) {
+      // o rótulo do nível some com todas as peças dele filtradas (o 4D não rotula o que
+      // ainda não foi construído)
+      let algum = false;
       for (const t of nivel.tipos.values()) {
         const pos = {
           solido: t.solido.geometry.getAttribute("position").array as Float32Array,
@@ -736,6 +765,7 @@ export class Cena3D implements ContextoVista {
         const ar = t.arestas.geometry.getAttribute("position").array as Float32Array;
         for (const f of t.faixas) {
           const mostra = this.passaFiltros(this.porChave.get(f.chave));
+          algum ||= mostra;
           const alvo = pos[f.malha];
           if (mostra) alvo.set(t.original[f.malha].subarray(f.ini, f.ini + f.n), f.ini);
           else alvo.fill(0, f.ini, f.ini + f.n);
@@ -748,6 +778,7 @@ export class Cena3D implements ContextoVista {
         t.fantasma.geometry.getAttribute("position").needsUpdate = true;
         t.arestas.geometry.getAttribute("position").needsUpdate = true;
       }
+      if (nivel.rotulo) nivel.rotulo.visible = algum;
       for (const o of nivel.marcas.children) {
         const chave = (o.userData as { chave?: string }).chave;
         if (chave) o.visible = this.passaFiltros(this.porChave.get(chave));
@@ -1208,25 +1239,25 @@ export class Cena3D implements ContextoVista {
 
   // ---- câmera -------------------------------------------------------------------------------
 
-  /** Esfera que envolve as peças sólidas visíveis (foco e filtros), na cena. */
-  esferaVisivel(): Sphere {
+  /** Caixa das peças sólidas visíveis (foco e filtros), na cena, com o explodido. */
+  caixaVisivel(): Box3 {
     const exib = this.exibicoes();
-    const min = new Vector3(Infinity, Infinity, Infinity);
-    const max = new Vector3(-Infinity, -Infinity, -Infinity);
+    const caixa = new Box3();
     const p = new Vector3();
     for (const e of this.modelo.elementos) {
       if (exib.get(e.chave) !== "solido" || !this.passaFiltros(e)) continue;
       const dy = this.deslocamentosAlvo[e.nivel] ?? 0;
       const pos = this.malhaDe(e.chave).posicoes;
-      for (let k = 0; k < pos.length; k += 3) {
-        p.set(pos[k]!, pos[k + 1]! + dy, pos[k + 2]!);
-        min.min(p);
-        max.max(p);
-      }
+      for (let k = 0; k < pos.length; k += 3)
+        caixa.expandByPoint(p.set(pos[k]!, pos[k + 1]! + dy, pos[k + 2]!));
     }
-    if (min.x === Infinity) return new Sphere(new Vector3(), 10);
-    const centro = min.clone().add(max).multiplyScalar(0.5);
-    return new Sphere(centro, Math.max(1, min.distanceTo(max) / 2));
+    return caixa.isEmpty() ? new Box3(new Vector3(-6, -6, -6), new Vector3(6, 6, 6)) : caixa;
+  }
+
+  /** Esfera que envolve caixaVisivel. */
+  esferaVisivel(): Sphere {
+    const c = this.caixaVisivel();
+    return new Sphere(c.getCenter(new Vector3()), Math.max(1, c.min.distanceTo(c.max) / 2));
   }
 
   /** Direção da câmera (da cena para a câmera) de cada vista. */
@@ -1260,39 +1291,195 @@ export class Cena3D implements ContextoVista {
 
   /** Enquadra o que está visível; sem `dir`, mantém a direção atual da câmera. */
   enquadrar(animar = true, dir?: Vector3) {
-    return this.enquadrarEsfera(this.esferaVisivel(), animar, dir);
+    return this.enquadrarAlvo(this.caixaVisivel(), animar, dir);
   }
 
   /** Enquadra uma caixa ou esfera da cena (um nível, uma peça), mantendo a direção da
    *  câmera; a mesma conta do botão Enquadrar. */
   enquadrarEm(alvo: Box3 | Sphere, animar = true) {
-    const esfera = alvo instanceof Box3 ? alvo.getBoundingSphere(new Sphere()) : alvo.clone();
-    esfera.radius = Math.max(esfera.radius, 0.5);
-    return this.enquadrarEsfera(esfera, animar);
+    return this.enquadrarAlvo(alvo, animar);
   }
 
-  private enquadrarEsfera(esfera: Sphere, animar: boolean, dir?: Vector3) {
+  /** Margens da interface sobre o desenho; valem a partir do próximo enquadramento. */
+  definirMargens(m: Margens) {
+    this.margens = m;
+  }
+
+  /** Liga ou desliga os rótulos dos níveis (o celular embutido os esconde). */
+  definirRotulosNiveis(sim: boolean) {
+    if (sim === this.rotulosNiveis) return;
+    this.rotulosNiveis = sim;
+    this.reconstruir();
+  }
+
+  /** Põe o alvo inteiro na área livre das margens, o mais perto que cabe, olhando de `dir`
+   *  (sem `dir`, da direção atual). Os rótulos dos níveis na altura do alvo entram com a
+   *  largura deles na tela. Em cada eixo da tela, a conta acha a menor distância em que um
+   *  deslocamento lateral deixa todos os cantos do alvo entre as bordas livres, e centra o
+   *  alvo entre elas. A caixa do canto (legenda) fica ao lado ou acima do alvo, o que
+   *  deixar o desenho maior. */
+  private enquadrarAlvo(alvo: Box3 | Sphere, animar: boolean, dir?: Vector3): Promise<FimCamera> {
+    if (alvo instanceof Box3 && alvo.isEmpty()) return Promise.resolve("cancelada");
     const atual = this.camera.position.clone().sub(this.controles.target);
     const d = (dir ?? (atual.lengthSq() > 1e-9 ? atual : this.direcao(this.vista)))
       .clone()
       .normalize();
+    // eixos da tela: r para a direita, u para cima (a câmera olha para −d)
+    const r = new Vector3().crossVectors(this.camera.up, d);
+    if (r.lengthSq() < 1e-12) r.set(1, 0, 0);
+    r.normalize();
+    const u = new Vector3().crossVectors(d, r).normalize();
+
+    const centro = alvo instanceof Box3 ? alvo.getCenter(new Vector3()) : alvo.center.clone();
+    const cantos: Vector3[] = [];
+    if (alvo instanceof Box3) {
+      const c = alvo.clone();
+      if (c.getSize(new Vector3()).length() < 1) c.expandByScalar(0.5);
+      for (const x of [c.min.x, c.max.x])
+        for (const y of [c.min.y, c.max.y])
+          for (const z of [c.min.z, c.max.z]) cantos.push(new Vector3(x, y, z));
+    } else {
+      // na perspectiva o contorno da esfera passa dos pontos dos eixos r e u: o raio visto
+      // de D sobe por 1/√(1 − (raio/D)²), no máximo 1/cos(meio campo) (a menor D que cabe)
+      const raio = Math.max(alvo.radius, 0.5);
+      const meio = Math.min(
+        (this.perspectiva.fov * Math.PI) / 360,
+        Math.atan(Math.tan((this.perspectiva.fov * Math.PI) / 360) * this.perspectiva.aspect),
+      );
+      const k = this.camera instanceof PerspectiveCamera ? 1 / Math.cos(meio) : 1;
+      for (const [e, fator] of [
+        [r, k],
+        [u, k],
+        [d, 1],
+      ] as const)
+        for (const sinal of [1, -1])
+          cantos.push(centro.clone().addScaledVector(e, raio * fator * sinal));
+    }
+
+    // cada ponto na base da câmera: x e y na tela, z para a câmera; o rótulo ocupa `esq`
+    // (ou `dir`) em NDC para o lado dele
+    const w = Math.max(1, this.renderer.domElement.clientWidth);
+    const h = Math.max(1, this.renderer.domElement.clientHeight);
+    type Ponto = { x: number; y: number; z: number; esq: number; dir: number };
+    const pontos: Ponto[] = [];
+    const rel = new Vector3();
+    const incluir = (p: Vector3, esq = 0, dir = 0) => {
+      rel.subVectors(p, centro);
+      pontos.push({ x: rel.dot(r), y: rel.dot(u), z: rel.dot(d), esq, dir });
+    };
+    for (const p of cantos) incluir(p);
+    const estreita = w < 520;
+    const yMin = alvo instanceof Box3 ? alvo.min.y : centro.y - alvo.radius;
+    const yMax = alvo instanceof Box3 ? alvo.max.y : centro.y + alvo.radius;
+    this.niveis.forEach((n, i) => {
+      const s = n.rotulo;
+      if (!s?.visible) return;
+      const pos = s.position.clone();
+      pos.y += this.deslocamentosAlvo[i] ?? 0;
+      if (pos.y < yMin - 0.01 || pos.y > yMax + 0.01) return;
+      const { alturaPx, aspecto } = s.userData as { alturaPx: number; aspecto: number };
+      // a escala de ajustarPlacas, em NDC; no máximo um terço da tela
+      const larg = Math.min((2 * alturaPx * (estreita ? 0.7 : 1) * aspecto) / w, 2 / 3);
+      // na tela larga o rótulo cresce para a esquerda (centro 1); na estreita, para dentro
+      if (estreita) incluir(pos, 0, larg);
+      else incluir(pos, larg, 0);
+    });
+
+    // bordas livres em NDC (−1 a 1), com folga de 2 % da tela de cada lado. Margens que
+    // somam mais de 60 % do eixo encolhem na proporção, e o arranjo deixa de "caber"
+    const livre = (m0: number, m1: number, n: number) => {
+      const f = Math.min(1, 1.2 / Math.max(1e-9, (2 * (m0 + m1)) / n));
+      return { a: -0.96 + (2 * m0 * f) / n, b: 0.96 - (2 * m1 * f) / n, cabe: f === 1 };
+    };
+    type Eixo = { v: number; z: number; a: number; b: number }[];
+    const eixos = (m: Margens) => {
+      const lx = livre(m.esq, m.dir, w);
+      const ly = livre(m.base, m.topo, h);
+      const x: Eixo = pontos.map((p) => ({
+        v: p.x,
+        z: p.z,
+        a: lx.a + p.esq,
+        b: Math.max(lx.a, lx.b - p.dir),
+      }));
+      const y: Eixo = pontos.map((p) => ({ v: p.y, z: p.z, a: ly.a, b: ly.b }));
+      return { x, y, cabe: lx.cabe && ly.cabe };
+    };
+    // a legenda ao lado ou acima do alvo; entre os arranjos que cabem, o de desenho maior
+    const { canto, ...base } = this.margens;
+    const todas = (
+      canto
+        ? [
+            { ...base, esq: base.esq + canto.larg },
+            { ...base, base: base.base + canto.alt },
+          ]
+        : [base]
+    ).map(eixos);
+    const opcoes = todas.some((o) => o.cabe) ? todas.filter((o) => o.cabe) : todas;
+
     if (this.camera instanceof OrthographicCamera) {
-      this.ajustarOrto(esfera.radius * 1.1);
+      const asp = this.perspectiva.aspect;
+      // meia altura m: a ≤ (v − s) / (m·k) ≤ b para todos os pontos (k = aspecto em x)
+      const meiaAltura = ({ x: ex, y: ey }: { x: Eixo; y: Eixo }) => {
+        let m = 0.5;
+        for (const [eixo, k] of [
+          [ex, asp],
+          [ey, 1],
+        ] as const)
+          for (const i of eixo)
+            for (const j of eixo)
+              if (i.b - j.a > 1e-9) m = Math.max(m, (i.v - j.v) / ((i.b - j.a) * k));
+        return m;
+      };
+      const melhor = opcoes.reduce((p, q) => (meiaAltura(q) < meiaAltura(p) ? q : p));
+      const { x: ex, y: ey } = melhor;
+      const m = meiaAltura(melhor);
+      const deslocar = (eixo: Eixo, k: number) =>
+        (Math.max(...eixo.map((p) => p.v - p.b * m * k)) +
+          Math.min(...eixo.map((p) => p.v - p.a * m * k))) /
+        2;
+      const alvoCam = centro
+        .clone()
+        .addScaledVector(r, deslocar(ex, asp))
+        .addScaledVector(u, deslocar(ey, 1));
+      this.ajustarOrto(m);
       this.orto.zoom = 1;
       this.orto.updateProjectionMatrix();
-      const pos = esfera.center.clone().add(d.multiplyScalar(esfera.radius * 4));
-      return this.moverCamera(pos, esfera.center, animar);
+      const raio = Math.max(1, ...cantos.map((p) => p.distanceTo(centro)));
+      return this.moverCamera(alvoCam.clone().addScaledVector(d, raio * 4), alvoCam, animar);
     }
-    const fov = (this.perspectiva.fov * Math.PI) / 180;
-    const fovH = 2 * Math.atan(Math.tan(fov / 2) * this.perspectiva.aspect);
-    // tela estreita (celular em pé): mais folga para os rótulos dos níveis
-    const folga = this.perspectiva.aspect < 1 ? 1.45 : 1.08;
-    const dist = (esfera.radius * folga) / Math.sin(Math.min(fov, fovH) / 2);
-    const pos = esfera.center.clone().add(d.multiplyScalar(dist));
+
+    const tanV = Math.tan((this.perspectiva.fov * Math.PI) / 360);
+    const tanH = tanV * this.perspectiva.aspect;
+    // distância D: a ≤ (v − s) / ((D − z)·tan) ≤ b para todos os pontos; para cada par
+    // (i na borda b, j na borda a), D·(b_i − a_j)·tan ≥ v_i − v_j + (b_i·z_i − a_j·z_j)·tan
+    const distancia = ({ x: ex, y: ey }: { x: Eixo; y: Eixo }) => {
+      let dist = Math.max(...pontos.map((p) => p.z)) + 1;
+      for (const [eixo, t] of [
+        [ex, tanH],
+        [ey, tanV],
+      ] as const)
+        for (const i of eixo)
+          for (const j of eixo) {
+            const den = (i.b - j.a) * t;
+            if (den > 1e-9) dist = Math.max(dist, (i.v - j.v + (i.b * i.z - j.a * j.z) * t) / den);
+          }
+      return dist;
+    };
+    const melhor = opcoes.reduce((p, q) => (distancia(q) < distancia(p) ? q : p));
+    const { x: ex, y: ey } = melhor;
+    const dist = distancia(melhor);
+    const deslocar = (eixo: Eixo, t: number) =>
+      (Math.max(...eixo.map((p) => p.v - p.b * t * (dist - p.z))) +
+        Math.min(...eixo.map((p) => p.v - p.a * t * (dist - p.z)))) /
+      2;
+    const alvoCam = centro
+      .clone()
+      .addScaledVector(r, deslocar(ex, tanH))
+      .addScaledVector(u, deslocar(ey, tanV));
     this.perspectiva.near = Math.max(0.05, dist / 500);
     this.perspectiva.far = dist * 20;
     this.perspectiva.updateProjectionMatrix();
-    return this.moverCamera(pos, esfera.center, animar);
+    return this.moverCamera(alvoCam.clone().addScaledVector(d, dist), alvoCam, animar);
   }
 
   private animacaoCamera: { passo: (dt: number) => void; fim: (r: FimCamera) => void } | null =
