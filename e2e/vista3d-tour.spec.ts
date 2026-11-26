@@ -228,7 +228,17 @@ test("tour guiado com movimento reduzido: sem animação, avança pelos botões"
   await expect(legenda(page)).toContainText("Parada 2 de");
   const a = await camera(page);
   await quadros(page);
-  expect(await camera(page)).toEqual(a);
+  // parada (com folga de arredondamento: o controle da órbita refaz as contas a cada quadro)
+  const b = await camera(page);
+  for (const [u, v] of [
+    [a.x, b.x],
+    [a.y, b.y],
+    [a.z, b.z],
+    [a.alvo.x, b.alvo.x],
+    [a.alvo.y, b.alvo.y],
+    [a.alvo.z, b.alvo.z],
+  ])
+    expect(Math.abs(u! - v!)).toBeLessThan(1e-6);
   expect(erros).toEqual([]);
   await contexto.close();
 });
